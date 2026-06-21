@@ -1,0 +1,10 @@
+parameters:
+  level: 6
+  parallel:
+    maximumNumberOfProcesses: 1
+  paths:
+    - src/Core
+    - src/Controller
+    - src/Model
+    - src/helpers.php
+    - public

@@ -1,0 +1,75 @@
+<?php
+
+use App\Model\Entry;
+
+?>
+<?php if (!empty($competitions)) : ?>
+<div class="card">
+    <h3><?= e(__('club.area.filter_by_competition')) ?></h3>
+    <form method="get" class="form-inline">
+        <input type="hidden" name="view" value="list">
+        <label><?= e(__('club.area.competition')) ?></label>
+        <select name="event" onchange="this.form.submit()">
+            <option value="0"><?= e(__('club.area.all_competitions')) ?></option>
+            <?php foreach ($competitions as $c) : ?>
+                <option value="<?= e((string) $c['id']) ?>" <?= $eventFilter === (int) $c['id'] ? 'selected' : '' ?>>
+                    <?= e($c['name'] . ' - ' . $c['date']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </form>
+</div>
+<?php endif; ?>
+
+<div class="card">
+    <h3><?= e(__('club.area.athlete_archive')) ?></h3>
+    <?php if (empty($athletes)) : ?>
+        <p><?= e(__('club.area.no_athletes')) ?></p>
+    <?php else : ?>
+        <table class="table-full">
+            <thead>
+                <tr>
+                    <th><?= e(__('club.area.athlete')) ?></th>
+                    <th><?= e(__('club.area.gender')) ?></th>
+                    <th><?= e(__('club.area.birth')) ?></th>
+                    <th><?= e(__('club.area.age_class')) ?></th>
+                    <th><?= e(__('club.area.weight')) ?></th>
+                    <th><?= e(__('club.area.weight_category')) ?></th>
+                    <th><?= e(__('club.area.registrations')) ?></th>
+                    <th><?= e(__('club.area.actions')) ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($athletes as $athlete) :
+                    $_birthYear = (int) substr($athlete->date_of_birth, 0, 4);
+                    $_eventYear = date('Y');
+                    $_ac = App\Model\AgeClass::calculate($_birthYear, $_eventYear, App\Localization::getLocale());
+                    $_ageClassLabel = $_ac['label'] ?? '';
+                    ?>
+                    <tr>
+                        <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>
+                        <td><?= e($athlete->genderLabel()) ?></td>
+                        <td><?= e($athlete->date_of_birth) ?></td>
+                        <td><?= e($_ageClassLabel) ?></td>
+                        <td><?= e((string) $athlete->weight_kg) ?></td>
+                        <td><?= e($athlete->weight_category) ?></td>
+                        <td>
+                            <?php
+                            $_regs = Entry::findByClub($club->id);
+                            $_athleteRegs = array_filter($_regs, fn($r) => (int) ($r['athlete_id'] ?? 0) === $athlete->id);
+                            if ($eventFilter > 0) {
+                                $_athleteRegs = array_filter($_athleteRegs, fn($r) => (int) ($r['event_id'] ?? 0) === $eventFilter);
+                            }
+                            echo e((string) count($_athleteRegs));
+                            ?>
+                        </td>
+                        <td>
+                            <a class="btn btn-sm" href="/club_area.php?view=add&edit=<?= e((string) $athlete->id) ?>"><?= e(__('club.area.edit')) ?></a>
+                            <a class="btn btn-sm red" href="/club_area.php?view=list&delete=<?= e((string) $athlete->id) ?>" onclick="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')"><?= e(__('club.area.delete')) ?></a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+</div>

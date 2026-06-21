@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -eu
+
+export COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-$(pwd)/.cache/composer}"
+
+echo "pre-push: running full local CI"
+composer ci

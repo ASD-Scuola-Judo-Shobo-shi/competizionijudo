@@ -1,0 +1,85 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Localization;
+
+function base_path(string $path = ''): string
+{
+    $base = dirname(__DIR__);
+
+    return $path === '' ? $base : $base . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR);
+}
+
+function config(string $key, mixed $default = null): mixed
+{
+    static $items = [];
+
+    if ($items === []) {
+        foreach (glob(base_path('config/*.php')) ?: [] as $file) {
+            $items[basename($file, '.php')] = require $file;
+        }
+    }
+
+    $value = $items;
+    foreach (explode('.', $key) as $segment) {
+        if (!is_array($value) || !array_key_exists($segment, $value)) {
+            return $default;
+        }
+
+        $value = $value[$segment];
+    }
+
+    return $value;
+}
+
+function env(string $key, mixed $default = null): mixed
+{
+    return $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key) ?: $default;
+}
+
+function e(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+/** @param array<string, string> $replacements */
+function translate(string $key, array $replacements = []): string
+{
+    return Localization::trans($key, $replacements);
+}
+
+/** @param array<string, string> $replacements */
+function __(string $key, array $replacements = []): string
+{
+    return translate($key, $replacements);
+}
+
+/** @return array{age_below: int|null, program: string, weight_category: string} */
+function calculateJudoCategory(string $birth, string $gender, float $weight, int $eventYear = 2026): array
+{
+    return App\Model\JudoCategory::calculate($birth, $gender, $weight, $eventYear);
+}
+
+function load_env(string $path): void
+{
+    if (!is_file($path)) {
+        return;
+    }
+
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+        $line = trim($line);
+
+        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+            continue;
+        }
+
+        [$key, $value] = explode('=', $line, 2);
+        $key = trim($key);
+        $value = trim($value, " \t\n\r\0\x0B\"'");
+
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+        putenv($key . '=' . $value);
+    }
+}

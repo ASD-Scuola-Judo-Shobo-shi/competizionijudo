@@ -1,0 +1,12 @@
+/.env
+/.cache/
+/build/
+/vendor/
+/var/cache/*
+/var/log/*
+!/var/cache/.gitkeep
+!/var/log/.gitkeep
+/.phpunit.cache/
+/.idea/
+/.vscode/
+.DS_Store

@@ -1,0 +1,7 @@
+RewriteEngine On
+
+RewriteRule ^(?:src|config|routes|views|tests|var|vendor)(?:/|$) - [F,L]
+RewriteRule ^(?:composer\.(?:json|lock)|phpunit\.xml|phpstan\.neon|phpcs\.xml|Makefile|README\.md|\.env.*)$ - [F,L]
+
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteRule ^(.*)$ public/$1 [L]

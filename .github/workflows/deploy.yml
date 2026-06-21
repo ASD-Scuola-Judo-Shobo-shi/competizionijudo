@@ -1,0 +1,128 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build artifact
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: dom, simplexml
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate Composer metadata
+        run: composer validate --strict --no-check-lock
+
+      - name: Install production dependencies
+        run: composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+      - name: Build deploy directory
+        run: bash scripts/build-deploy.sh
+
+      - name: Add production environment
+        if: github.ref_name == 'main'
+        env:
+          DEPLOY_APP_NAME: ${{ vars.APP_NAME || 'Competizioni Judo' }}
+        run: |
+          {
+            echo 'APP_ENV=production'
+            echo 'APP_DEBUG=false'
+            printf 'APP_NAME="%s"\n' "$DEPLOY_APP_NAME"
+            echo 'APP_URL=https://www.competizionijudo.it'
+          } > build/deploy/.env
+
+      - name: Add development environment
+        if: github.ref_name == 'dev'
+        env:
+          DEPLOY_APP_NAME: ${{ vars.APP_NAME || 'Competizioni Judo' }}
+        run: |
+          {
+            echo 'APP_ENV=development'
+            echo 'APP_DEBUG=true'
+            printf 'APP_NAME="%s"\n' "$DEPLOY_APP_NAME"
+            echo 'APP_URL=https://dev.competizionijudo.it'
+          } > build/deploy/.env
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ github.ref_name }}
+          path: build/deploy
+          if-no-files-found: error
+          retention-days: 3
+
+  deploy-production:
+    name: Deploy production
+    needs: build
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://www.competizionijudo.it
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-main
+          path: build/deploy
+
+      - name: Upload to production FTP directory
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          local-dir: build/deploy/
+          server-dir: ${{ vars.FTP_PROD_DIR || '/prod/' }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+
+  deploy-development:
+    name: Deploy development
+    needs: build
+    if: github.ref_name == 'dev'
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://dev.competizionijudo.it
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-dev
+          path: build/deploy
+
+      - name: Upload to development FTP directory
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          local-dir: build/deploy/
+          server-dir: ${{ vars.FTP_DEV_DIR || '/dev/' }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
