@@ -329,6 +329,12 @@ return [
         'message' => 'This website uses cookies to improve your user experience. By continuing to browse, you agree to our use of cookies.',
         'accept' => 'Accept',
     ],
+    'a11y' => [
+        'skip_to_content' => 'Skip to main content',
+        'language_selector' => 'Language selector',
+        'main_navigation' => 'Main navigation',
+        'submenu' => 'Section menu',
+    ],
     'footer' => [
         'brand' => 'ASD Scuola Judo Sho\'bo\'shi VV.FF.',
         'description' => 'via Bonorva 4 - 09044 Quartucciu (CA) - CF 92276860928',

@@ -88,10 +88,11 @@
     </script>
 </head>
 <body>
+<a href="#main-content" class="skip-link"><?= e(translate('a11y.skip_to_content')) ?></a>
 
-<div id="cookie-banner" class="cookie-banner cookie-hidden">
-    <p><?= translate('cookies.message') ?></p>
-    <button onclick="acceptCookies()"><?= translate('cookies.accept') ?></button>
+<div id="cookie-banner" class="cookie-banner cookie-hidden" role="dialog" aria-labelledby="cookie-message" aria-modal="true">
+    <p id="cookie-message"><?= translate('cookies.message') ?></p>
+    <button type="button" onclick="acceptCookies()"><?= translate('cookies.accept') ?></button>
 </div>
 
 <?php
@@ -153,8 +154,9 @@ if (in_array($current, $competitionPaths, true)) {
         <h1><?= translate('header.title') ?></h1>
         <p><?= translate('header.subtitle') ?></p>
     </div>
-    <form class="lang-switch" action="/language/switch" method="get">
-        <select name="locale" onchange="this.form.submit()">
+<form class="lang-switch" action="/language/switch" method="get" aria-label="<?= e(translate('a11y.language_selector')) ?>">
+    <label for="locale-select" class="sr-only"><?= e(translate('a11y.language_selector')) ?></label>
+    <select id="locale-select" name="locale" onchange="this.form.submit()">
             <option value="it" <?= \App\Localization::getLocale() === 'it' ? 'selected' : '' ?>>🇮🇹 Italiano</option>
             <option value="en" <?= \App\Localization::getLocale() === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
         </select>
@@ -168,7 +170,7 @@ if (in_array($current, $competitionPaths, true)) {
     <?php endif; ?>
 </header>
 
-<nav class="main-nav">
+<nav class="main-nav" aria-label="<?= e(translate('a11y.main_navigation')) ?>">
     <a href="/" class="<?= in_array($current, ['/', '/index.php'], true) ? 'active' : '' ?>"><?= translate('nav.home') ?></a>
     <a href="/events.php" class="<?= in_array($current, $competitionPaths, true) ? 'active' : '' ?>"><?= translate('nav.competitions') ?></a>
     <a href="<?= $isLoggedIn ? '/club_area.php' : '/club_login.php' ?>" class="<?= in_array($current, $clubPaths, true) ? 'active' : '' ?>"><?= translate('nav.clubs') ?></a>
@@ -176,8 +178,8 @@ if (in_array($current, $competitionPaths, true)) {
 </nav>
 
 <?php if ($showSubmenu && $submenuItems) : ?>
-<div class="submenu-wrap">
-        <div class="submenu">
+<div class="submenu-wrap" aria-label="<?= e(translate('a11y.submenu')) ?>">
+        <div class="submenu" role="navigation">
         <?php foreach ($submenuItems as $item) : ?>
             <?php
             $active = in_array($current, $item['paths'], true);
@@ -191,11 +193,11 @@ if (in_array($current, $competitionPaths, true)) {
 </div>
 <?php endif; ?>
 
-<main class="page-shell">
+<main class="page-shell" id="main-content">
     <?= $content ?>
 </main>
 
-<footer class="site-footer">
+<footer class="site-footer" role="contentinfo">
     <div>
         <strong><?= translate('footer.brand') ?></strong><br>
         <?= translate('footer.description') ?>
