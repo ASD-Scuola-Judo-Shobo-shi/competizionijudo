@@ -27,14 +27,28 @@ final class AdminController extends Controller
                 $errors[] = __('admin.login.errors.credentials_required');
             } elseif ($adminUser === null || $adminHash === null) {
                 $errors[] = __('admin.login.errors.not_configured');
-            } elseif ($user === $adminUser && password_verify($pass, $adminHash)) {
-                session_start();
-                session_regenerate_id(true);
-                $_SESSION['is_admin'] = true;
-
-                return $this->redirect('/admin_manage_events.php');
             } else {
-                $errors[] = __('admin.login.errors.invalid_credentials');
+                $attemptsKey = 'admin_login_attempts';
+                $lastAttemptKey = 'admin_login_last_attempt';
+
+                if (!isset($_SESSION[$attemptsKey]) || (time() - ($_SESSION[$lastAttemptKey] ?? 0)) > 300) {
+                    $_SESSION[$attemptsKey] = 0;
+                }
+                $_SESSION[$lastAttemptKey] = time();
+
+                if ($_SESSION[$attemptsKey] >= 5) {
+                    $errors[] = __('admin.login.errors.too_many_attempts');
+                } elseif ($user === $adminUser && password_verify($pass, $adminHash)) {
+                    session_start();
+                    session_regenerate_id(true);
+                    $_SESSION['is_admin'] = true;
+                    $_SESSION[$attemptsKey] = 0;
+
+                    return $this->redirect('/admin_manage_events.php');
+                } else {
+                    $_SESSION[$attemptsKey]++;
+                    $errors[] = __('admin.login.errors.invalid_credentials');
+                }
             }
         }
 
@@ -332,6 +346,11 @@ final class AdminController extends Controller
 
     public function editEvent(Request $request): Response
     {
+        session_start();
+        if (empty($_SESSION['is_admin'])) {
+            return $this->redirect('/admin_login.php');
+        }
+
         $id = (int) ($request->input('id') ?? $request->query('id'));
         if ($id <= 0) {
             return $this->redirect('/admin_manage_events.php');

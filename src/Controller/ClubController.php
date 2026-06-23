@@ -81,15 +81,30 @@ final class ClubController extends Controller
                 $errors[] = __('club.login.errors.credentials_required');
             } else {
                 try {
-                    $club = Club::findByEmail($email);
+                    $attemptsKey = 'club_login_attempts';
+                    $lastAttemptKey = 'club_login_last_attempt';
 
-                    if ($club === null || !password_verify($password, $club->password_hash)) {
-                        $errors[] = __('club.login.errors.invalid_credentials');
+                    if (!isset($_SESSION[$attemptsKey]) || (time() - ($_SESSION[$lastAttemptKey] ?? 0)) > 300) {
+                        $_SESSION[$attemptsKey] = 0;
+                    }
+                    $_SESSION[$lastAttemptKey] = time();
+
+                    if ($_SESSION[$attemptsKey] >= 5) {
+                        $errors[] = __('club.login.errors.too_many_attempts');
                     } else {
-                        session_start();
-                        $_SESSION['club_id'] = $club->id;
+                        $club = Club::findByEmail($email);
 
-                        return $this->redirect('/club_area.php?view=list');
+                        if ($club === null || !password_verify($password, $club->password_hash)) {
+                            $_SESSION[$attemptsKey]++;
+                            $errors[] = __('club.login.errors.invalid_credentials');
+                        } else {
+                            session_start();
+                            session_regenerate_id(true);
+                            $_SESSION['club_id'] = $club->id;
+                            $_SESSION[$attemptsKey] = 0;
+
+                            return $this->redirect('/club_area.php?view=list');
+                        }
                     }
                 } catch (\Throwable $exception) {
                     $errors[] = str_replace('{message}', $exception->getMessage(), __('club.login.errors.login_failed'));
@@ -124,6 +139,7 @@ final class ClubController extends Controller
     {
         $errors = [];
         $success = null;
+        $devLink = null;
 
         if ($request->method() === 'POST') {
             $email = trim((string) $request->input('email'));
@@ -141,10 +157,12 @@ final class ClubController extends Controller
                         $tokenHash = hash('sha256', $rawToken);
                         $expiresAt = (new \DateTime('now', new \DateTimeZone('UTC')))->modify('+1 hour')->format('Y-m-d H:i:s');
 
-                        $stmt = Database::connection()->prepare(
+                        $db = Database::connection();
+                        $db->prepare('UPDATE password_reset_tokens SET used = 1 WHERE club_id = ? AND used = 0')->execute([$club->id]);
+
+                        $db->prepare(
                             'INSERT INTO password_reset_tokens (club_id, token_hash, expires_at) VALUES (?, ?, ?)'
-                        );
-                        $stmt->execute([$club->id, $tokenHash, $expiresAt]);
+                        )->execute([$club->id, $tokenHash, $expiresAt]);
 
                         $resetUrl = sprintf(
                             '%s/club_reset_password.php?token=%s',
@@ -165,8 +183,8 @@ final class ClubController extends Controller
 
         return $this->view('club/forgot_password', [
             'errors' => $errors,
-            'success' => $success ?? null,
-            'dev_link' => $devLink ?? null,
+            'success' => $success,
+            'dev_link' => $devLink,
         ]);
     }
 

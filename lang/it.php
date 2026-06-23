@@ -237,6 +237,7 @@ return [
                 'credentials_required' => 'Inserisci username e password.',
                 'invalid_credentials' => 'Credenziali amministratore non valide.',
                 'not_configured' => 'Account amministratore non configurato.',
+                'too_many_attempts' => 'Troppi tentativi di accesso. Attendi 5 minuti e riprova.',
             ],
         ],
         'submenu' => [

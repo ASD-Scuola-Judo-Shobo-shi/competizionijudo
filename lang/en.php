@@ -238,6 +238,7 @@ return [
                 'credentials_required' => 'Please enter username and password.',
                 'invalid_credentials' => 'Invalid administrator credentials.',
                 'not_configured' => 'Administrator account is not configured.',
+                'too_many_attempts' => 'Too many login attempts. Please wait 5 minutes and try again.',
             ],
         ],
         'submenu' => [

@@ -141,6 +141,9 @@ final class EventController extends Controller
         }
 
         $clubFilter = (int) ($request->query('club') ?? 0);
+        if (!$isAdmin && $clubFilter !== 0) {
+            $clubFilter = $clubId ?? 0;
+        }
         $clubs = Entry::findClubsByEvent($eventId);
         $rows = Entry::findByEvent($eventId, $clubFilter);
 

@@ -1,15 +1,15 @@
 # Implementation Tracking Checklist
 
-Use this document to track progress on the security, architecture, and performance improvements outlined in `security_audit_and_remediation.md`.
+Use this document to track progress on the security, architecture, and performance improvements outlined in `audit.md`.
 
 ---
 
 ## How to Use
 
-- Copy tasks from the main remediation document here as you begin them
 - Mark items as `[ ]` (pending), `[/]` (in progress), or `[x]` (done)
 - Add notes or blockers in the `Notes` column
-- Commit this file with each milestone to track historical progress
+- Commit after completing each phase to track historical progress
+- **One phase per commit.**
 
 ---
 
@@ -23,89 +23,49 @@ Use this document to track progress on the security, architecture, and performan
 
 ---
 
-## Phase 1 – Critical Security Fixes
+## Phase 1 – Critical Security (Do First)
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| 1 | Remove auto-migration from production | [ ] | |
-| 2 | Implement CSRF protection on all forms | [ ] | |
-| 3 | Fix open redirect in language controller | [ ] | |
+| 1 | Lock down authentication & authorization | [x] | Done – secure sessions, rate-limit, token invalidation, entries restriction, edit guard |
+| 2 | CSRF protection on all forms | [ ] | Helpers + validation + token regeneration |
+| 3 | Fix open redirect & add security headers | [ ] | Language controller + .htaccess |
+| 4 | Disable auto-migrations & harden file uploads | [ ] | Env check + MIME verification + uploads .htaccess |
 
 **Phase 1 target:** Before any new feature development.
 
 ---
 
-## Phase 2 – High Severity Issues
+## Phase 2 – High Priority (Before External Testing)
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| 4 | Add brute-force protection to login endpoints | [ ] | |
-| 5 | Standardize session security | [ ] | |
-| 6 | Restrict event entries visibility (non-admin) | [ ] | |
-| 7 | Harden password reset token management | [ ] | |
-| 8 | Add security headers | [ ] | |
+| 5 | Sanitize & validate all inputs | [ ] | Superglobal replacement, validators, hardcoded year, layout escaping |
+| 6 | Fix race condition in event registration | [ ] | Duplicate registration feedback |
 
 **Phase 2 target:** Before first external user trial.
 
 ---
 
-## Phase 3 – Medium & Low Priority
+## Phase 3 – Architecture Improvements (Ongoing)
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| 9 | Replace raw superglobal access with Request object | [ ] | |
-| 10 | Add input validation rules | [ ] | |
-| 11 | Fix race condition in event registration | [ ] | |
-| 12 | Secure file upload handling | [ ] | |
-| 13 | Remove unused view parameters | [ ] | |
-| 14 | Fix hardcoded year in category calculation | [ ] | |
-| 15 | Add authorization guard to edit event route | [ ] | |
-| 16 | Sanitize view data in layout | [ ] | |
+| 7 | Centralize auth & navigation logic | [ ] | Session helper, submenu component, lazy club loading |
+| 8 | Add basic caching & query optimization | [ ] | DB indexes, N+1 fixes, file cache, localization cache |
 
-**Phase 3 target:** Before public launch.
+**Phase 3 target:** Ongoing, based on team bandwidth.
 
 ---
 
-## Phase 4 – Architecture Improvements
+## Phase 4 – Polish & Future-Proofing
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| A1 | Separate legacy entry points from modern MVC | [ ] | |
-| A2 | Introduce middleware pipeline | [ ] | |
-| A3 | Replace static model methods with Repository pattern | [ ] | |
-| A4 | Centralize session management | [ ] | |
-| A5 | Add request validation layer | [ ] | |
-| A6 | Replace direct superglobal access with immutable value objects | [ ] | |
-| A7 | Adopt component-based view layer | [ ] | |
-| A8 | Separate translation/i18n concerns | [ ] | |
-| A9 | Introduce event dispatcher / observer pattern | [ ] | |
-| A10 | Add structured logging | [ ] | |
-| A11 | Move config to typed config object | [ ] | |
-| A12 | Implement proper error handling strategy | [ ] | |
-| A13 | Add automated tests and CI | [ ] | |
-| A14 | Consider adopting modern PHP framework | [ ] | |
-| A15 | Establish coding standards and static analysis | [ ] | |
+| 9 | Pagination & asset optimization | [ ] | Admin lists, caching headers, query profiling |
+| 10 | Code quality & testing foundation | [ ] | Unit tests, CI, PHPStan, PHPCS |
 
-**Phase 4 target:** Ongoing, based on team bandwidth.
-
----
-
-## Phase 5 – Performance Optimization
-
-| ID | Task | Status | Notes |
-|----|------|--------|-------|
-| P1 | Add missing database indexes | [ ] | |
-| P2 | Eliminate N+1 query patterns | [ ] | |
-| P3 | Implement query result caching | [ ] | |
-| P4 | Add pagination to list views | [ ] | |
-| P5 | Optimize static asset delivery | [ ] | |
-| P6 | Reduce per-request bootstrap overhead | [ ] | |
-| P7 | Avoid repeated database connections | [ ] | |
-| P8 | Add database query profiling (dev) | [ ] | |
-| P9 | Lazy-load navigation data | [ ] | |
-| P10 | Consolidate redundant queries | [ ] | |
-
-**Phase 5 target:** Before scaling beyond ~500 users.
+**Phase 4 target:** Before scaling beyond ~500 users.
 
 ---
 
@@ -128,4 +88,4 @@ Use this document to track progress on the security, architecture, and performan
 
 ---
 
-*Start this checklist immediately after the approval of the remediation plan. Update and commit after each completed task or at the end of each working session.*
+*Start this checklist immediately after the approval of the audit. Update and commit after each phase or at the end of each working session.*
