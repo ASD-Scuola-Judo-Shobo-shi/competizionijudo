@@ -40,10 +40,11 @@ final class AdminController extends Controller
                 if ($_SESSION[$attemptsKey] >= 5) {
                     $errors[] = __('admin.login.errors.too_many_attempts');
                 } elseif ($user === $adminUser && password_verify($pass, $adminHash)) {
-                    session_start();
-                    session_regenerate_id(true);
-                    $_SESSION['is_admin'] = true;
-                    $_SESSION[$attemptsKey] = 0;
+                        session_start();
+                        session_regenerate_id(true);
+                        $_SESSION['is_admin'] = true;
+                        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                        $_SESSION[$attemptsKey] = 0;
 
                     return $this->redirect('/admin_manage_events.php');
                 } else {
@@ -183,10 +184,22 @@ final class AdminController extends Controller
                         if ($_FILES['poster_file']['error'] !== UPLOAD_ERR_OK) {
                             throw new \Exception('Poster upload failed: ' . $this->uploadErrorMessage($_FILES['poster_file']['error']));
                         }
-                        $ext = strtolower(pathinfo($_FILES['poster_file']['name'], PATHINFO_EXTENSION));
-                        if (!in_array($ext, ['pdf','jpg','jpeg','png'], true)) {
-                            throw new \Exception('Invalid poster format');
+                        $finfo = new finfo();
+                        $mime = $finfo->file($_FILES['poster_file']['tmp_name']);
+                        $allowedMimes = [
+                            'application/pdf',
+                            'image/jpeg',
+                            'image/png',
+                        ];
+                        if (!in_array($mime, $allowedMimes, true)) {
+                            throw new \Exception('Invalid poster file type');
                         }
+                        $ext = match ($mime) {
+                            'application/pdf' => 'pdf',
+                            'image/jpeg' => 'jpg',
+                            'image/png' => 'png',
+                            default => throw new \Exception('Invalid poster format'),
+                        };
                         $safe = 'poster' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                         $target = $uploadDir . $safe;
                         if (!move_uploaded_file($_FILES['poster_file']['tmp_name'], $target)) {
@@ -199,10 +212,22 @@ final class AdminController extends Controller
                         if ($_FILES['info_file']['error'] !== UPLOAD_ERR_OK) {
                             throw new \Exception('Info file upload failed: ' . $this->uploadErrorMessage($_FILES['info_file']['error']));
                         }
-                        $ext = strtolower(pathinfo($_FILES['info_file']['name'], PATHINFO_EXTENSION));
-                        if (!in_array($ext, ['pdf','jpg','jpeg','png'], true)) {
-                            throw new \Exception('Invalid info format');
+                        $finfo = new finfo();
+                        $mime = $finfo->file($_FILES['info_file']['tmp_name']);
+                        $allowedMimes = [
+                            'application/pdf',
+                            'image/jpeg',
+                            'image/png',
+                        ];
+                        if (!in_array($mime, $allowedMimes, true)) {
+                            throw new \Exception('Invalid info file type');
                         }
+                        $ext = match ($mime) {
+                            'application/pdf' => 'pdf',
+                            'image/jpeg' => 'jpg',
+                            'image/png' => 'png',
+                            default => throw new \Exception('Invalid info format'),
+                        };
                         $safe = 'info_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                         $target = $uploadDir . $safe;
                         if (!move_uploaded_file($_FILES['info_file']['tmp_name'], $target)) {

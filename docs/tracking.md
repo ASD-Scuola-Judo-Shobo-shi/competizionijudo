@@ -29,8 +29,8 @@ Use this document to track progress on the security, architecture, and performan
 |----|------|--------|-------|
 | 1 | Lock down authentication & authorization | [x] | Done – secure sessions, rate-limit, token invalidation, entries restriction, edit guard |
 | 2 | CSRF protection on all forms | [x] | Helpers + validation + token regeneration |
-| 3 | Fix open redirect & add security headers | [ ] | Language controller + .htaccess |
-| 4 | Disable auto-migrations & harden file uploads | [ ] | Env check + MIME verification + uploads .htaccess |
+| 3 | Fix open redirect & add security headers | [x] | Language controller + .htaccess |
+| 4 | Disable auto-migrations & harden file uploads | [x] | Env check + MIME verification + uploads .htaccess |
 
 **Phase 1 target:** Before any new feature development.
 

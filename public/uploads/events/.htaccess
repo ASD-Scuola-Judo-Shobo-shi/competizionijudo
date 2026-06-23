@@ -2,3 +2,13 @@ Options -Indexes
 <FilesMatch "\.(php|php5|phtml)$">
 Deny from all
 </FilesMatch>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+<IfModule mod_mime.c>
+    AddType application/pdf .pdf
+    AddType image/jpeg .jpg .jpeg
+    AddType image/png .png
+</IfModule>

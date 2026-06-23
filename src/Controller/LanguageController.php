@@ -22,6 +22,13 @@ final class LanguageController
         Localization::setLocale($locale);
 
         $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+        $parsedReferer = parse_url($referer);
+        $parsedHost = parse_url((string) ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
+
+        if (($parsedReferer['host'] ?? '') !== $parsedHost && ($parsedReferer['host'] ?? '') !== '') {
+            $referer = '/';
+        }
+
         header('Location: ' . $referer);
         exit;
     }

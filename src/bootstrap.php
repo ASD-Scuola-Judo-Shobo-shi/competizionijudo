@@ -47,7 +47,8 @@ if (function_exists('env')) {
     $locale = $_SESSION['locale'] ?? env('APP_LOCALE', 'it');
     App\Localization::setLocale($locale);
 
-    if (in_array(strtolower((string) env('APP_AUTO_RUN_MIGRATIONS', 'false')), ['1', 'true', 'yes'], true)) {
+    $appEnv = strtolower((string) env('APP_ENV', 'production'));
+    if ($appEnv === 'local' || $appEnv === 'development') {
         $pdo = App\Model\Database::connection();
         (new App\Model\MigrationRunner($pdo))->run();
     }
