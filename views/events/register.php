@@ -45,6 +45,7 @@
                     <p><?= e(__('events.register_no_athletes')) ?></p>
                 <?php else : ?>
                     <form method="post">
+                        <?= csrf_field() ?>
                         <p><?= e(__('events.register_select')) ?></p>
                         <table>
                             <thead>

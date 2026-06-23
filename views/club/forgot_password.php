@@ -22,6 +22,7 @@
         <a class="btn green" href="/club_login.php"><?= e(__('buttons.back_to_login')) ?></a>
     <?php else : ?>
         <form method="post" class="form-card">
+            <?= csrf_field() ?>
             <label><?= e(__('club.forgot_password.email')) ?></label>
             <input type="email" name="email" required placeholder="<?= e(__('club.forgot_password.email')) ?>">
 

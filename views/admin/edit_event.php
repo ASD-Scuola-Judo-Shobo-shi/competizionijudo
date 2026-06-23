@@ -10,6 +10,7 @@
     <?php endif; ?>
 
     <form method="post" enctype="multipart/form-data">
+        <?= csrf_field() ?>
         <div class="row">
             <div>
                 <label><?= e(__('admin.edit.name')) ?></label>

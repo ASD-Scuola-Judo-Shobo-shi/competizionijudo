@@ -1,6 +1,7 @@
 <div class="card">
     <h3><?= e($edit ? __('club.area.edit_athlete') : __('club.area.add_athlete')) ?></h3>
     <form method="post" class="form-card">
+        <?= csrf_field() ?>
         <input type="hidden" name="athlete_id" value="<?= e($edit?->id ?? '') ?>">
 
         <label><?= e(__('club.area.last_name')) ?></label>

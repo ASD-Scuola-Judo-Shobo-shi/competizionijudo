@@ -57,6 +57,11 @@ final class Request
         return $this->query[$key] ?? $default;
     }
 
+    public function post(string $key, mixed $default = null): mixed
+    {
+        return $this->post[$key] ?? $default;
+    }
+
     public function server(string $key, mixed $default = null): mixed
     {
         return $this->server[$key] ?? $default;

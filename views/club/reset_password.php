@@ -17,6 +17,7 @@
 
     <?php if ($valid) : ?>
         <form method="post" class="form-card">
+            <?= csrf_field() ?>
             <input type="hidden" name="token" value="<?= e($token) ?>">
 
             <label><?= e(__('club.reset_password.password')) ?></label>

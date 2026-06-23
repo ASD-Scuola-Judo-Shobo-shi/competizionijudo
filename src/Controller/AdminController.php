@@ -17,6 +17,7 @@ final class AdminController extends Controller
         $errors = [];
 
         if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
             $user = (string) $request->input('user');
             $pass = (string) $request->input('pass');
 
@@ -157,6 +158,7 @@ final class AdminController extends Controller
         $error = '';
 
         if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
             $date = trim((string) ($_POST['date'] ?? ''));
             if ($date === '') {
                 $error = __('admin.add.errors.date_required');
@@ -302,6 +304,7 @@ final class AdminController extends Controller
         $error = '';
 
         if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
             try {
                 $data = [
                     'name' => trim((string) ($_POST['name'] ?? '')),

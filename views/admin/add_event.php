@@ -12,6 +12,7 @@ $isEdit = !empty($event);
     <?php endif; ?>
 
     <form method="post" class="form-card" enctype="multipart/form-data">
+        <?= csrf_field() ?>
         <input type="hidden" name="event_id" value="<?= e($event?->id ?? '') ?>">
 
         <label><?= e($isEdit ? __('admin.edit.name') : __('admin.add.name')) ?></label>

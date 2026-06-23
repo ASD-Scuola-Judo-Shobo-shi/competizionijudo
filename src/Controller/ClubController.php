@@ -18,6 +18,7 @@ final class ClubController extends Controller
         $success = null;
 
         if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
             $name = trim((string) $request->input('name'));
             $federalCode = trim((string) $request->input('federal_code'));
             $email = trim((string) $request->input('email'));
@@ -74,6 +75,7 @@ final class ClubController extends Controller
         $errors = [];
 
         if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
             $email = trim((string) $request->input('email'));
             $password = (string) $request->input('password');
 
@@ -142,6 +144,7 @@ final class ClubController extends Controller
         $devLink = null;
 
         if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
             $email = trim((string) $request->input('email'));
 
             if ($email === '') {
@@ -221,6 +224,7 @@ final class ClubController extends Controller
         }
 
         if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
             if (!$valid) {
                 $errors[] = __('club.reset_password.errors.invalid_token');
             } else {

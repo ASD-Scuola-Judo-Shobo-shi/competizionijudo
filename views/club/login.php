@@ -12,6 +12,7 @@
     <?php endif; ?>
 
     <form method="post" class="form-card">
+        <?= csrf_field() ?>
         <label><?= e(__('club.login.club_email')) ?></label>
         <input type="email" name="email" required placeholder="<?= e(__('club.login.club_email')) ?>">
 

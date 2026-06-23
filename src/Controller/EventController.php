@@ -92,6 +92,7 @@ final class EventController extends Controller
         }
 
         if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
             $athleteIds = $request->input('athletes', []);
             if (!is_array($athleteIds)) {
                 $athleteIds = [$athleteIds];

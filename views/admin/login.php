@@ -13,6 +13,7 @@
     <?php endif; ?>
 
     <form method="post">
+        <?= csrf_field() ?>
         <div>
             <label><?= e(__('admin.login.user')) ?></label>
             <input name="user" required>

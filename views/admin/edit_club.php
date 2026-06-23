@@ -7,6 +7,7 @@
     <?php endif; ?>
 
     <form method="post">
+        <?= csrf_field() ?>
         <div class="row">
             <div>
                 <label><?= e(__('admin.clubs.name')) ?></label>
