@@ -91,7 +91,9 @@ final class AdminController extends Controller
         $pagination = paginate($total, $page, 100);
 
         $stmt = $db->prepare('SELECT * FROM clubs ORDER BY name LIMIT ? OFFSET ?');
-        $stmt->execute([$pagination['per_page'], $pagination['offset']]);
+        $stmt->bindValue(1, $pagination['per_page'], \PDO::PARAM_INT);
+        $stmt->bindValue(2, $pagination['offset'], \PDO::PARAM_INT);
+        $stmt->execute();
         $clubs = array_map(fn(array $row) => Club::fromArray($row), $stmt->fetchAll() ?: []);
 
         return $this->view('admin/manage_clubs', [
@@ -120,7 +122,9 @@ final class AdminController extends Controller
         $pagination = paginate($total, $page, 100);
 
         $stmt = $db->prepare('SELECT * FROM events ORDER BY date DESC LIMIT ? OFFSET ?');
-        $stmt->execute([$pagination['per_page'], $pagination['offset']]);
+        $stmt->bindValue(1, $pagination['per_page'], \PDO::PARAM_INT);
+        $stmt->bindValue(2, $pagination['offset'], \PDO::PARAM_INT);
+        $stmt->execute();
         $rows = $stmt->fetchAll();
         $events = [];
         foreach ($rows as $r) {

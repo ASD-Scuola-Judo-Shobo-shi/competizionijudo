@@ -151,7 +151,7 @@ $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/ad
     <a href="/admin_manage_events.php" class="<?= in_array($current, $adminPaths, true) ? 'active' : '' ?>"><?= translate('nav.admin') ?></a>
 </nav>
 
-<?php if ($showSubmenu && $submenuItems) : ?>
+<?php if ($submenuItems) : ?>
 <div class="submenu-wrap" aria-label="<?= e(translate('a11y.submenu')) ?>">
         <div class="submenu" role="navigation">
         <?php foreach ($submenuItems as $item) : ?>

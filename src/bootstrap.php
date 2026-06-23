@@ -50,7 +50,7 @@ if (function_exists('env')) {
     App\Localization::setLocale($locale);
 
     $appEnv = strtolower((string) env('APP_ENV', 'production'));
-    if ($appEnv === 'local' || $appEnv === 'development') {
+    if (($appEnv === 'local' || $appEnv === 'development') && !defined('PHPUNIT_RUNNING')) {
         $pdo = App\Model\Database::connection();
         (new App\Model\MigrationRunner($pdo))->run();
     }
