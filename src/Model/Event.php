@@ -46,6 +46,13 @@ final class Event
     /** @return list<self> */
     public static function allPublished(?int $limit = null): array
     {
+        $cacheKey = 'events_all_published_' . ($limit ?? 'all');
+
+        $cached = \App\Core\Cache::get($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
         $sql = 'SELECT * FROM events WHERE published=1 AND closed=0 ORDER BY date';
         if ($limit !== null) {
             $sql .= ' LIMIT ' . (int) $limit;
@@ -54,7 +61,11 @@ final class Event
         $stmt = Database::connection()->query($sql);
         $rows = $stmt->fetchAll();
 
-        return array_map(fn(array $r) => self::fromArray($r), $rows ?: []);
+        $result = array_map(fn(array $r) => self::fromArray($r), $rows ?: []);
+
+        \App\Core\Cache::set($cacheKey, $result, 300);
+
+        return $result;
     }
 
     public static function findById(int $id): ?self
