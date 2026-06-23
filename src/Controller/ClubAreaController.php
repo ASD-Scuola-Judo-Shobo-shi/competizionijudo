@@ -78,13 +78,22 @@ final class ClubAreaController extends Controller
                 $edit = Athlete::findById((int) $request->query('edit'), $club->id);
             }
 
-            $athletes = Athlete::findByClub($club->id);
+            $stmt = $db->prepare('SELECT COUNT(*) FROM athletes WHERE club_id = ?');
+            $stmt->execute([$club->id]);
+            $total = (int) $stmt->fetchColumn();
+            $page = max(1, (int) ($request->query('page', '1')));
+            $pagination = paginate($total, $page, 50);
+
+            $stmt = $db->prepare('SELECT * FROM athletes WHERE club_id = ? ORDER BY last_name, first_name LIMIT ? OFFSET ?');
+            $stmt->execute([$club->id, $pagination['per_page'], $pagination['offset']]);
+            $athletes = array_map(fn(array $row) => Athlete::fromArray($row), $stmt->fetchAll() ?: []);
 
             return $this->view('club/area_add', [
                 'club' => $club,
                 'athletes' => $athletes,
                 'edit' => $edit,
                 'errors' => $errors,
+                'pagination' => $pagination,
             ]);
         }
 

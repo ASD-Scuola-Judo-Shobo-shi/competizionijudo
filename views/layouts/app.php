@@ -187,5 +187,7 @@ $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/ad
     </div>
 </footer>
 
+<?= \App\Model\Database::renderProfiler() ?>
+
 </body>
 </html>

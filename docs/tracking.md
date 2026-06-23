@@ -62,7 +62,7 @@ Use this document to track progress on the security, architecture, and performan
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| 9 | Pagination & asset optimization | [ ] | Admin lists, caching headers, query profiling |
+| 9 | Pagination & asset optimization | [x] | Admin lists (100/page), club athletes (50/page), caching headers, query profiling |
 | 10 | Code quality & testing foundation | [ ] | Unit tests, CI, PHPStan, PHPCS |
 
 **Phase 4 target:** Before scaling beyond ~500 users.

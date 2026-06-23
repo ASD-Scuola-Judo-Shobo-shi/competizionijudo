@@ -232,7 +232,7 @@
 </div>
 
 <div class="card">
-    <h3><?= e(__('club.area.athlete_archive')) ?></h3>
+    <h3><?= e(__('club.area.athlete_archive')) ?> <span class="count-badge"><?= e((string) ($pagination['total'] ?? 0)) ?></span></h3>
     <table class="table-full">
         <thead>
             <tr>
@@ -268,4 +268,5 @@
             <?php endif; ?>
         </tbody>
     </table>
+    <?= $pagination['links'] ?? '' ?>
 </div>

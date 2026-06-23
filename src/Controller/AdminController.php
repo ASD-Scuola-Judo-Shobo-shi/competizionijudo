@@ -86,10 +86,17 @@ final class AdminController extends Controller
             return $this->redirect('/admin_manage_clubs.php');
         }
 
-        $clubs = Club::all();
+        $total = (int) $db->query('SELECT COUNT(*) FROM clubs')->fetchColumn();
+        $page = max(1, (int) ($request->query('page', '1')));
+        $pagination = paginate($total, $page, 100);
+
+        $stmt = $db->prepare('SELECT * FROM clubs ORDER BY name LIMIT ? OFFSET ?');
+        $stmt->execute([$pagination['per_page'], $pagination['offset']]);
+        $clubs = array_map(fn(array $row) => Club::fromArray($row), $stmt->fetchAll() ?: []);
 
         return $this->view('admin/manage_clubs', [
             'clubs' => $clubs,
+            'pagination' => $pagination,
         ]);
     }
 
@@ -108,8 +115,14 @@ final class AdminController extends Controller
             return $this->redirect('/admin_manage_events.php');
         }
 
+        $total = (int) $db->query('SELECT COUNT(*) FROM events')->fetchColumn();
+        $page = max(1, (int) ($request->query('page', '1')));
+        $pagination = paginate($total, $page, 100);
+
+        $stmt = $db->prepare('SELECT * FROM events ORDER BY date DESC LIMIT ? OFFSET ?');
+        $stmt->execute([$pagination['per_page'], $pagination['offset']]);
+        $rows = $stmt->fetchAll();
         $events = [];
-        $rows = $db->query('SELECT * FROM events ORDER BY date DESC')->fetchAll();
         foreach ($rows as $r) {
             $events[] = Event::fromArray($r);
         }
@@ -131,6 +144,7 @@ final class AdminController extends Controller
         return $this->view('admin/manage_events', [
             'events' => $events,
             'entry_counts' => $counts,
+            'pagination' => $pagination,
         ]);
     }
 

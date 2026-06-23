@@ -349,4 +349,8 @@ return [
         'entries' => 'Event registrations',
         'entries_text' => 'Enter athletes in published events.',
     ],
+    'pagination' => [
+        'prev' => 'Prev',
+        'next' => 'Next',
+    ],
 ];

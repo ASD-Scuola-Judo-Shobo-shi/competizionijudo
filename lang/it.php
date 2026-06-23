@@ -348,4 +348,8 @@ return [
         'entries' => 'Iscrizioni gara',
         'entries_text' => 'Inserimento degli atleti negli eventi pubblicati.',
     ],
+    'pagination' => [
+        'prev' => 'Prec',
+        'next' => 'Succ',
+    ],
 ];

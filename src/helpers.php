@@ -159,3 +159,62 @@ function build_submenu(string $currentPath, bool $isAdmin, bool $isLoggedIn): ar
 
     return $submenuItems;
 }
+
+/**
+ * Build pagination metadata and links.
+ *
+ * @param int  $totalItems Total number of items
+ * @param int  $currentPage Current page (1-based)
+ * @param int  $perPage    Items per page
+ * @return array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string}
+ */
+function paginate(int $totalItems, int $currentPage, int $perPage = 50): array
+{
+    $lastPage = max(1, (int) ceil($totalItems / $perPage));
+    $page = max(1, min($currentPage, $lastPage));
+    $offset = ($page - 1) * $perPage;
+
+    $query = $_GET;
+    $links = '';
+    if ($lastPage > 1) {
+        $links .= '<nav class="pagination" role="navigation" aria-label="Pagination">';
+
+        // Prev
+        $prevDisabled = $page <= 1 ? ' disabled' : '';
+        $prevUrl = '#';
+        if ($page > 1) {
+            $query['page'] = $page - 1;
+            $prevUrl = '?' . http_build_query($query);
+        }
+        $links .= '<a class="pagination-link' . $prevDisabled . '" href="' . e($prevUrl) . '" aria-label="Previous page">&laquo; ' . translate('pagination.prev') . '</a>';
+
+        // Page numbers
+        $start = max(1, $page - 2);
+        $end = min($lastPage, $page + 2);
+        for ($i = $start; $i <= $end; $i++) {
+            $query['page'] = $i;
+            $active = $i === $page ? ' active' : '';
+            $links .= '<a class="pagination-link' . $active . '" href="?' . e(http_build_query($query)) . '">' . $i . '</a>';
+        }
+
+        // Next
+        $nextDisabled = $page >= $lastPage ? ' disabled' : '';
+        $nextUrl = '#';
+        if ($page < $lastPage) {
+            $query['page'] = $page + 1;
+            $nextUrl = '?' . http_build_query($query);
+        }
+        $links .= '<a class="pagination-link' . $nextDisabled . '" href="' . e($nextUrl) . '" aria-label="Next page">' . translate('pagination.next') . ' &raquo;</a>';
+
+        $links .= '</nav>';
+    }
+
+    return [
+        'page' => $page,
+        'per_page' => $perPage,
+        'total' => $totalItems,
+        'last_page' => $lastPage,
+        'offset' => $offset,
+        'links' => $links,
+    ];
+}

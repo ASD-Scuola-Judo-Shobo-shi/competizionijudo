@@ -1,6 +1,7 @@
 <?php /** @var list<\App\Model\Club> $clubs */ ?>
+<?php /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */ ?>
 <div class="card">
-    <h2><?= e(__('admin.clubs.title')) ?></h2>
+    <h2><?= e(__('admin.clubs.title')) ?> <span class="count-badge"><?= e((string) ($pagination['total'] ?? 0)) ?></span></h2>
         <table class="table-full">
         <thead>
             <tr>
@@ -31,4 +32,5 @@
             <?php endif; ?>
         </tbody>
     </table>
+    <?= $pagination['links'] ?? '' ?>
 </div>
