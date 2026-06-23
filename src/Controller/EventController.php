@@ -75,6 +75,7 @@ final class EventController extends Controller
                 'registered' => [],
                 'nextEvents' => [],
                 'upcomingEvents' => $upcomingEvents,
+                'warning' => null,
             ]);
         }
 
@@ -88,8 +89,11 @@ final class EventController extends Controller
                 'registered' => [],
                 'nextEvents' => [],
                 'upcomingEvents' => $upcomingEvents,
+                'warning' => null,
             ]);
         }
+
+        $warning = null;
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
@@ -101,7 +105,15 @@ final class EventController extends Controller
             foreach ($athleteIds as $athleteId) {
                 $athleteId = (int) $athleteId;
                 if ($athleteId > 0) {
-                    Entry::register($id, $clubId, $athleteId);
+                    try {
+                        Entry::register($id, $clubId, $athleteId);
+                    } catch (\RuntimeException $e) {
+                        if ($e->getMessage() === 'ALREADY_REGISTERED') {
+                            $warning = __('events.already_registered');
+                        } else {
+                            throw $e;
+                        }
+                    }
                 }
             }
 
@@ -118,6 +130,7 @@ final class EventController extends Controller
             'registered' => $registered,
             'nextEvents' => $nextEvents,
             'upcomingEvents' => [],
+            'warning' => $warning,
         ]);
     }
 
@@ -161,7 +174,7 @@ final class EventController extends Controller
             $birthDate = $row['birth_date'] ?? '';
             $eventDate = $row['data_gara'] ?? '';
             $birthYear = JudoCategory::extractBirthYear($birthDate);
-            $eventYear = $eventDate !== '' ? (int) substr($eventDate, 0, 4) : 2026;
+            $eventYear = $eventDate !== '' ? (int) substr($eventDate, 0, 4) : (int) date('Y');
             if ($birthYear !== null) {
                 $acResult = AgeClass::calculate($birthYear, $eventYear);
                 $category = $acResult['label'];

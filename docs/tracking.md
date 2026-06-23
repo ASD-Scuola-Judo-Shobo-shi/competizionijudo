@@ -40,8 +40,8 @@ Use this document to track progress on the security, architecture, and performan
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| 5 | Sanitize & validate all inputs | [ ] | Superglobal replacement, validators, hardcoded year, layout escaping |
-| 6 | Fix race condition in event registration | [ ] | Duplicate registration feedback |
+| 5 | Sanitize & validate all inputs | [x] | Superglobal replacement, validators, hardcoded year, layout escaping |
+| 6 | Fix race condition in event registration | [x] | Duplicate registration feedback |
 
 **Phase 2 target:** Before first external user trial.
 

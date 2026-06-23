@@ -84,8 +84,16 @@ final class Entry
 
     public static function register(int $eventId, int $clubId, int $athleteId): void
     {
-        $stmt = Database::connection()->prepare(
-            'INSERT IGNORE INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        $db = Database::connection();
+
+        $check = $db->prepare('SELECT id FROM entries WHERE event_id = ? AND club_id = ? AND athlete_id = ?');
+        $check->execute([$eventId, $clubId, $athleteId]);
+        if ($check->fetch()) {
+            throw new \RuntimeException('ALREADY_REGISTERED');
+        }
+
+        $stmt = $db->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
         );
         $stmt->execute([$eventId, $clubId, $athleteId]);
     }

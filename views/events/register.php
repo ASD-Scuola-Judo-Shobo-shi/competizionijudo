@@ -41,6 +41,9 @@
             </table>
 
             <div class="event-details-actions">
+                <?php if (!empty($warning)) : ?>
+                    <div class="notice"><?= e($warning) ?></div>
+                <?php endif; ?>
                 <?php if (empty($athletes)) : ?>
                     <p><?= e(__('events.register_no_athletes')) ?></p>
                 <?php else : ?>

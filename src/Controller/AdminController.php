@@ -160,12 +160,12 @@ final class AdminController extends Controller
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
-            $date = trim((string) ($_POST['date'] ?? ''));
+            $date = trim((string) $request->post('date'));
             if ($date === '') {
                 $error = __('admin.add.errors.date_required');
             }
 
-            $location = trim((string) ($_POST['location'] ?? ''));
+            $location = trim((string) $request->post('location'));
             if ($error === '' && $location === '') {
                 $error = __('admin.add.errors.location_required');
             }
@@ -236,20 +236,20 @@ final class AdminController extends Controller
                         $informativa = 'uploads/events/' . $safe;
                     }
 
-                    $published = isset($_POST['published']) ? 1 : 0;
-                    $closed = isset($_POST['closed']) ? 1 : 0;
+                    $published = $request->post('published') === '1' ? 1 : 0;
+                    $closed = $request->post('closed') === '1' ? 1 : 0;
 
                     if ($event) {
                         $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, poster_file=?, info_file=?, published=?, closed=? WHERE id=?";
                         $params = [
-                            trim($_POST['name'] ?? ''),
+                            trim((string) $request->post('name')),
                             $date,
                             $location,
-                            trim($_POST['organizer'] ?? ''),
-                            trim($_POST['registration_deadline'] ?? ''),
-                            trim($_POST['type'] ?? ''),
-                            trim($_POST['description'] ?? ''),
-                            trim($_POST['notes'] ?? ''),
+                            trim((string) $request->post('organizer')),
+                            trim((string) $request->post('registration_deadline')),
+                            trim((string) $request->post('type')),
+                            trim((string) $request->post('description')),
+                            trim((string) $request->post('notes')),
                             $locandina,
                             $informativa,
                             $published,
@@ -261,14 +261,14 @@ final class AdminController extends Controller
                         $db->prepare(
                             "INSERT INTO events (name, date, location, organizer, registration_deadline, type, description, notes, poster_file, info_file, published, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                         )->execute([
-                            trim($_POST['name'] ?? ''),
+                            trim((string) $request->post('name')),
                             $date,
                             $location,
-                            trim($_POST['organizer'] ?? ''),
-                            trim($_POST['registration_deadline'] ?? ''),
-                            trim($_POST['type'] ?? ''),
-                            trim($_POST['description'] ?? ''),
-                            trim($_POST['notes'] ?? ''),
+                            trim((string) $request->post('organizer')),
+                            trim((string) $request->post('registration_deadline')),
+                            trim((string) $request->post('type')),
+                            trim((string) $request->post('description')),
+                            trim((string) $request->post('notes')),
                             $locandina,
                             $informativa,
                             $published,
@@ -332,19 +332,19 @@ final class AdminController extends Controller
             validate_csrf((string) $request->post('csrf_token'));
             try {
                 $data = [
-                    'name' => trim((string) ($_POST['name'] ?? '')),
-                    'email' => trim((string) ($_POST['email'] ?? '')),
-                    'phone' => trim((string) ($_POST['phone'] ?? '')),
-                    'contact_first_name' => trim((string) ($_POST['contact_first_name'] ?? '')),
-                    'contact_last_name' => trim((string) ($_POST['contact_last_name'] ?? '')),
-                    'contact_phone' => trim((string) ($_POST['contact_phone'] ?? '')),
-                    'contact_email' => trim((string) ($_POST['contact_email'] ?? '')),
-                    'organization' => trim((string) ($_POST['organization'] ?? '')),
-                    'recovery_email' => trim((string) ($_POST['recovery_email'] ?? '')),
-                    'federal_code' => trim((string) ($_POST['federal_code'] ?? '')),
+                    'name' => trim((string) $request->post('name')),
+                    'email' => trim((string) $request->post('email')),
+                    'phone' => trim((string) $request->post('phone')),
+                    'contact_first_name' => trim((string) $request->post('contact_first_name')),
+                    'contact_last_name' => trim((string) $request->post('contact_last_name')),
+                    'contact_phone' => trim((string) $request->post('contact_phone')),
+                    'contact_email' => trim((string) $request->post('contact_email')),
+                    'organization' => trim((string) $request->post('organization')),
+                    'recovery_email' => trim((string) $request->post('recovery_email')),
+                    'federal_code' => trim((string) $request->post('federal_code')),
                 ];
 
-                $password = (string) ($_POST['password_hash'] ?? '');
+                $password = (string) $request->post('password_hash');
                 if ($password !== '') {
                     $data['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
                 }

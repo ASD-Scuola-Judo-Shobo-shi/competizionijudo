@@ -97,7 +97,7 @@
 
 <?php
 $current = (string)($currentPath ?? '/');
-$clubView = (string)($_GET['view'] ?? '');
+$clubView = htmlspecialchars((string) ($_GET['view'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $isLoggedIn = isset($_SESSION['club_id']);
 $clubEmail = null;
 if ($isLoggedIn) {

@@ -19,13 +19,13 @@ final class ClubController extends Controller
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
-            $name = trim((string) $request->input('name'));
-            $federalCode = trim((string) $request->input('federal_code'));
-            $email = trim((string) $request->input('email'));
-            $phone = trim((string) $request->input('phone'));
-            $contact = trim((string) $request->input('contact'));
-            $password = (string) $request->input('password');
-            $password2 = (string) $request->input('password2');
+            $name = trim((string) $request->post('name'));
+            $federalCode = trim((string) $request->post('federal_code'));
+            $email = trim((string) $request->post('email'));
+            $phone = trim((string) $request->post('phone'));
+            $contact = trim((string) $request->post('contact'));
+            $password = (string) $request->post('password');
+            $password2 = (string) $request->post('password2');
 
             if ($name === '') {
                 $errors[] = __('club.register.errors.club_name_required');
@@ -76,8 +76,8 @@ final class ClubController extends Controller
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
-            $email = trim((string) $request->input('email'));
-            $password = (string) $request->input('password');
+            $email = trim((string) $request->post('email'));
+            $password = (string) $request->post('password');
 
             if ($email === '' || $password === '') {
                 $errors[] = __('club.login.errors.credentials_required');
@@ -145,7 +145,7 @@ final class ClubController extends Controller
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
-            $email = trim((string) $request->input('email'));
+            $email = trim((string) $request->post('email'));
 
             if ($email === '') {
                 $errors[] = __('club.forgot_password.errors.email_required');
@@ -228,8 +228,8 @@ final class ClubController extends Controller
             if (!$valid) {
                 $errors[] = __('club.reset_password.errors.invalid_token');
             } else {
-                $password = (string) $request->input('password');
-                $password2 = (string) $request->input('password2');
+                $password = (string) $request->post('password');
+                $password2 = (string) $request->post('password2');
 
                 if ($password === '' || $password2 === '') {
                     $errors[] = __('club.reset_password.errors.password_required');
