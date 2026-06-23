@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Session;
 use App\Model\Athlete;
 use App\Model\Club;
 use App\Model\Entry;
@@ -17,8 +18,8 @@ final class ClubAreaController extends Controller
 {
     public function index(Request $request): Response
     {
-        session_start();
-        $clubId = $_SESSION['club_id'] ?? null;
+        Session::start();
+        $clubId = Session::get('club_id');
 
         if ($clubId === null) {
             return $this->redirect('/club_login.php');
@@ -26,7 +27,7 @@ final class ClubAreaController extends Controller
 
         $club = Club::findById((int) $clubId);
         if ($club === null) {
-            session_destroy();
+            Session::destroy();
             return $this->redirect('/club_login.php');
         }
 

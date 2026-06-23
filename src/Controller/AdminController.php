@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Session;
 use App\Model\Club;
 use App\Model\Event;
 
@@ -32,23 +33,24 @@ final class AdminController extends Controller
                 $attemptsKey = 'admin_login_attempts';
                 $lastAttemptKey = 'admin_login_last_attempt';
 
-                if (!isset($_SESSION[$attemptsKey]) || (time() - ($_SESSION[$lastAttemptKey] ?? 0)) > 300) {
-                    $_SESSION[$attemptsKey] = 0;
+                $attempts = Session::get($attemptsKey, 0);
+                $lastAttempt = Session::get($lastAttemptKey, 0);
+                if ($attempts === 0 || (time() - $lastAttempt) > 300) {
+                    Session::set($attemptsKey, 0);
                 }
-                $_SESSION[$lastAttemptKey] = time();
+                Session::set($lastAttemptKey, time());
 
-                if ($_SESSION[$attemptsKey] >= 5) {
+                if (Session::get($attemptsKey) >= 5) {
                     $errors[] = __('admin.login.errors.too_many_attempts');
                 } elseif ($user === $adminUser && password_verify($pass, $adminHash)) {
-                        session_start();
-                        session_regenerate_id(true);
-                        $_SESSION['is_admin'] = true;
-                        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-                        $_SESSION[$attemptsKey] = 0;
+                    Session::regenerate();
+                    Session::set('is_admin', true);
+                    Session::set('csrf_token', bin2hex(random_bytes(32)));
+                    Session::set($attemptsKey, 0);
 
                     return $this->redirect('/admin_manage_events.php');
                 } else {
-                    $_SESSION[$attemptsKey]++;
+                    Session::set($attemptsKey, Session::get($attemptsKey) + 1);
                     $errors[] = __('admin.login.errors.invalid_credentials');
                 }
             }
@@ -61,8 +63,8 @@ final class AdminController extends Controller
 
     public function dashboard(Request $request): Response
     {
-        session_start();
-        if (empty($_SESSION['is_admin'])) {
+        Session::start();
+        if (empty(Session::get('is_admin'))) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -71,8 +73,8 @@ final class AdminController extends Controller
 
     public function manageClubs(Request $request): Response
     {
-        session_start();
-        if (empty($_SESSION['is_admin'])) {
+        Session::start();
+        if (empty(Session::get('is_admin'))) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -93,8 +95,8 @@ final class AdminController extends Controller
 
     public function manageEvents(Request $request): Response
     {
-        session_start();
-        if (empty($_SESSION['is_admin'])) {
+        Session::start();
+        if (empty(Session::get('is_admin'))) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -134,8 +136,8 @@ final class AdminController extends Controller
 
     public function addEvent(Request $request): Response
     {
-        session_start();
-        if (empty($_SESSION['is_admin'])) {
+        Session::start();
+        if (empty(Session::get('is_admin'))) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -311,8 +313,8 @@ final class AdminController extends Controller
 
     public function editClub(Request $request): Response
     {
-        session_start();
-        if (empty($_SESSION['is_admin'])) {
+        Session::start();
+        if (empty(Session::get('is_admin'))) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -365,17 +367,15 @@ final class AdminController extends Controller
 
     public function logout(Request $request): Response
     {
-        session_start();
-        session_unset();
-        session_destroy();
+        Session::destroy();
 
         return $this->redirect('/admin_login.php');
     }
 
     public function editEvent(Request $request): Response
     {
-        session_start();
-        if (empty($_SESSION['is_admin'])) {
+        Session::start();
+        if (empty(Session::get('is_admin'))) {
             return $this->redirect('/admin_login.php');
         }
 

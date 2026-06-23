@@ -98,47 +98,21 @@
 <?php
 $current = (string)($currentPath ?? '/');
 $clubView = htmlspecialchars((string) ($_GET['view'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$isLoggedIn = isset($_SESSION['club_id']);
+$isLoggedIn = \App\Core\Session::has('club_id');
 $clubEmail = null;
 if ($isLoggedIn) {
-    $club = \App\Model\Club::findById((int) $_SESSION['club_id']);
+    $club = \App\Model\Club::findById((int) \App\Core\Session::get('club_id'));
     if ($club !== null) {
         $clubEmail = $club->email;
     }
 }
 
-// Determine which section is active
-$competitionPaths = ['/events.php', '/event_details.php', '/event_register.php', '/event_details.php'];
+$isAdmin = !empty(\App\Core\Session::get('is_admin'));
+$submenuItems = build_submenu($current, $isAdmin, $isLoggedIn);
+
+$competitionPaths = ['/events.php', '/event_details.php', '/event_register.php'];
 $clubPaths = ['/club_register.php', '/club_login.php', '/club_forgot_password.php', '/club_reset_password.php', '/club_area.php', '/clubs.php'];
 $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/admin_manage_events.php', '/admin_add_event.php', '/admin_edit_club.php', '/admin_edit_event.php', '/admin_logout.php'];
-
-$showSubmenu = in_array($current, $competitionPaths, true) || in_array($current, $clubPaths, true) || in_array($current, $adminPaths, true);
-
-$submenuItems = [];
-if (in_array($current, $competitionPaths, true)) {
-    $submenuItems = [
-        ['label' => translate('events.submenu.showcase'), 'url' => '/events.php', 'paths' => ['/events.php']],
-        ['label' => translate('events.submenu.details'), 'url' => '/event_details.php', 'paths' => ['/event_details.php']],
-        ['label' => translate('events.submenu.registration'), 'url' => '/event_register.php', 'paths' => ['/event_register.php']],
-    ];
-} elseif (in_array($current, $adminPaths, true)) {
-    if (!empty($_SESSION['is_admin'])) {
-        $submenuItems[] = ['label' => translate('admin.submenu.manage_clubs'), 'url' => '/admin_manage_clubs.php', 'paths' => ['/admin_manage_clubs.php', '/admin_edit_club.php']];
-        $submenuItems[] = ['label' => translate('admin.submenu.manage_events'), 'url' => '/admin_manage_events.php', 'paths' => ['/admin_manage_events.php']];
-        $submenuItems[] = ['label' => translate('admin.submenu.add_event'), 'url' => '/admin_add_event.php', 'paths' => ['/admin_add_event.php']];
-        $submenuItems[] = ['label' => translate('admin.submenu.logout'), 'url' => '/admin_logout.php', 'paths' => ['/admin_logout.php']];
-    } else {
-        $submenuItems[] = ['label' => translate('nav.login'), 'url' => '/admin_login.php', 'paths' => ['/admin_login.php']];
-    }
-} elseif (in_array($current, $clubPaths, true)) {
-    $submenuItems[] = ['label' => translate('club.list'), 'url' => '/clubs.php', 'paths' => ['/clubs.php']];
-    if (!$isLoggedIn) {
-        $submenuItems[] = ['label' => translate('nav.login'), 'url' => '/club_login.php', 'paths' => ['/club_login.php']];
-    } else {
-        $submenuItems[] = ['label' => translate('club.area.submenu.manage'), 'url' => '/club_area.php', 'paths' => ['/club_area.php'], 'query' => ['view' => ['', 'list']]];
-        $submenuItems[] = ['label' => translate('club.area.submenu.add'), 'url' => '/club_area.php?view=add', 'paths' => ['/club_area.php'], 'query' => ['view' => ['add']]];
-    }
-}
 ?>
 
 <header class="top-hero">

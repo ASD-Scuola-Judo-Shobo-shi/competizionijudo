@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Session;
 use App\Model\AgeClass;
 use App\Model\Athlete;
 use App\Model\Entry;
@@ -56,8 +57,8 @@ final class EventController extends Controller
 
     public function register(Request $request): Response
     {
-        session_start();
-        $clubId = isset($_SESSION['club_id']) ? (int) $_SESSION['club_id'] : null;
+        Session::start();
+        $clubId = Session::get('club_id');
 
         if ($clubId === null) {
             return $this->redirect('/club_login.php');
@@ -136,9 +137,9 @@ final class EventController extends Controller
 
     public function entries(Request $request): Response
     {
-        session_start();
-        $isAdmin = !empty($_SESSION['is_admin']);
-        $clubId = isset($_SESSION['club_id']) ? (int) $_SESSION['club_id'] : null;
+        Session::start();
+        $isAdmin = !empty(Session::get('is_admin'));
+        $clubId = Session::get('club_id');
 
         if (!$isAdmin && $clubId === null) {
             return $this->redirect('/club_login.php');

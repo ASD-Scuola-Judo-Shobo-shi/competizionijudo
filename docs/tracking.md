@@ -51,7 +51,7 @@ Use this document to track progress on the security, architecture, and performan
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| 7 | Centralize auth & navigation logic | [ ] | Session helper, submenu component, lazy club loading |
+| 7 | Centralize auth & navigation logic | [x] | Session helper, submenu component, lazy club loading |
 | 8 | Add basic caching & query optimization | [ ] | DB indexes, N+1 fixes, file cache, localization cache |
 
 **Phase 3 target:** Ongoing, based on team bandwidth.
