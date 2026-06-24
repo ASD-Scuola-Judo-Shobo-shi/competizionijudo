@@ -91,12 +91,15 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          # Enforces FTPS strictly. No unencrypted FTP allowed.
           protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.FTP_PORT || 21 }}
           local-dir: build/deploy/
-          server-dir: ${{ vars.FTP_PROD_DIR || '/prod/' }}
+          server-dir: ${{ vars.FTP_PROD_DIR || 'prod/' }}
           dangerous-clean-slate: false
           exclude: |
             **/.git*
+            legacy/**
 
   deploy-development:
     name: Deploy development
@@ -121,8 +124,10 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.FTP_PORT || 21 }}
           local-dir: build/deploy/
-          server-dir: ${{ vars.FTP_DEV_DIR || '/dev/' }}
+          server-dir: ${{ vars.FTP_DEV_DIR || 'dev/' }}
           dangerous-clean-slate: false
           exclude: |
             **/.git*
+            legacy/**
