@@ -193,6 +193,7 @@ final class ClubController extends Controller
 
     public function resetPassword(Request $request): Response
     {
+        $tokenHash = '';
         $errors = [];
         $token = '';
         $valid = false;

@@ -17,8 +17,8 @@ final class HelpersTest extends TestCase
 
     public function testEscapeHtml(): void
     {
-        self::assertSame('<script>alert(1)</script>', e('<script>alert(1)</script>'));
-        self::assertSame('&', e('&'));
+        self::assertSame('&lt;script&gt;alert(1)&lt;/script&gt;', e('<script>alert(1)</script>'));
+        self::assertSame('&amp;', e('&'));
         self::assertSame('', e(''));
     }
 

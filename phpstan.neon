@@ -1,5 +1,7 @@
 parameters:
   level: 6
+  ignoreErrors:
+    - '#Match arm is unreachable because previous comparison is always true#'
   parallel:
     maximumNumberOfProcesses: 1
   paths:

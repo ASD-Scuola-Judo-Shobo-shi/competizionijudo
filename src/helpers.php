@@ -111,12 +111,13 @@ function load_env(string $path): void
     }
 }
 
-/** @return list<array{label: string, url: string, paths: list<string>, query?: array<string, list<string>>}> */
+/** @return string */
 function get_current_path(): string
 {
     return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 }
 
+/** @return list<array{label: string, url: string, paths: list<string>, query?: array<string, list<string>>}> */
 function build_submenu(string $currentPath, bool $isAdmin, bool $isLoggedIn): array
 {
     $competitionPaths = ['/events.php', '/event_details.php', '/event_register.php', '/event_details.php'];

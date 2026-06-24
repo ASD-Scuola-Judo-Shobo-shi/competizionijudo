@@ -204,7 +204,7 @@ final class AdminController extends Controller
                         if ($_FILES['poster_file']['error'] !== UPLOAD_ERR_OK) {
                             throw new \Exception('Poster upload failed: ' . $this->uploadErrorMessage($_FILES['poster_file']['error']));
                         }
-                        $finfo = new finfo();
+                        $finfo = new \finfo();
                         $mime = $finfo->file($_FILES['poster_file']['tmp_name']);
                         $allowedMimes = [
                             'application/pdf',
@@ -232,7 +232,7 @@ final class AdminController extends Controller
                         if ($_FILES['info_file']['error'] !== UPLOAD_ERR_OK) {
                             throw new \Exception('Info file upload failed: ' . $this->uploadErrorMessage($_FILES['info_file']['error']));
                         }
-                        $finfo = new finfo();
+                        $finfo = new \finfo();
                         $mime = $finfo->file($_FILES['info_file']['tmp_name']);
                         $allowedMimes = [
                             'application/pdf',

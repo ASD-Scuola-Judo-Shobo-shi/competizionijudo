@@ -95,6 +95,7 @@ final class Club
         return self::fromArray(Database::connection()->query('SELECT * FROM clubs WHERE id = LAST_INSERT_ID()')->fetch());
     }
 
+    /** @param array<string, mixed> $data */
     public static function update(int $id, array $data): void
     {
         $parts = [];
