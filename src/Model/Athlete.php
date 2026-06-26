@@ -61,10 +61,13 @@ final class Athlete
     /**
      * Returns the event year extracted from the given date, or a default.
      */
-    public static function eventYearFromDate(?string $date = null, int $default = 2026): int
+    public static function eventYearFromDate(?string $date = null, int $default = 0): int
     {
         if ($date !== null && $date !== '' && preg_match('/^\d{4}/', $date, $m)) {
             return (int) $m[0];
+        }
+        if ($default === 0) {
+            $default = (int) date('Y');
         }
         return $default;
     }

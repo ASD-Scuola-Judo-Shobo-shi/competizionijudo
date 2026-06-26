@@ -50,7 +50,7 @@ final class JudoCategory
     }
 
     /** @return array{age_below: int|null, program: string, weight_category: string} */
-    public static function calculate(string $birth, string $gender, float $weight, int $eventYear = 2026): array
+    public static function calculate(string $birth, string $gender, float $weight, int $eventYear = 0): array
     {
         $year = self::extractBirthYear($birth);
         $gender = self::normalizeGender($gender);

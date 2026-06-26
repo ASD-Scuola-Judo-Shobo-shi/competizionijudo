@@ -77,8 +77,11 @@ final class AgeClass
      *
      * @return array{name: string, age_below: int|null, age_min: int, age_max: int|null, label: string}
      */
-    public static function calculate(int $birthYear, int $eventYear = 2026, string $locale = 'it'): array
+    public static function calculate(int $birthYear, int $eventYear = 0, string $locale = 'it'): array
     {
+        if ($eventYear === 0) {
+            $eventYear = (int) date('Y');
+        }
         $age = $eventYear - $birthYear;
 
         foreach (self::all($locale) as $ac) {

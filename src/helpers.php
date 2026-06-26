@@ -56,17 +56,13 @@ function __(string $key, array $replacements = []): string
 }
 
 /** @return array{age_below: int|null, program: string, weight_category: string} */
-function calculateJudoCategory(string $birth, string $gender, float $weight, int $eventYear = 2026): array
+function calculateJudoCategory(string $birth, string $gender, float $weight, int $eventYear = 0): array
 {
     return App\Model\JudoCategory::calculate($birth, $gender, $weight, $eventYear);
 }
 
 function csrf_token(): string
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
@@ -120,7 +116,7 @@ function get_current_path(): string
 /** @return list<array{label: string, url: string, paths: list<string>, query?: array<string, list<string>>}> */
 function build_submenu(string $currentPath, bool $isAdmin, bool $isLoggedIn): array
 {
-    $competitionPaths = ['/events.php', '/event_details.php', '/event_register.php', '/event_details.php'];
+    $competitionPaths = ['/events.php', '/event_details.php', '/event_register.php'];
     $clubPaths = ['/club_register.php', '/club_login.php', '/club_forgot_password.php', '/club_reset_password.php', '/club_area.php', '/clubs.php'];
     $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/admin_manage_events.php', '/admin_add_event.php', '/admin_edit_club.php', '/admin_edit_event.php', '/admin_logout.php'];
 
@@ -155,6 +151,7 @@ function build_submenu(string $currentPath, bool $isAdmin, bool $isLoggedIn): ar
         } else {
             $submenuItems[] = ['label' => translate('club.area.submenu.manage'), 'url' => '/club_area.php', 'paths' => ['/club_area.php'], 'query' => ['view' => ['', 'list']]];
             $submenuItems[] = ['label' => translate('club.area.submenu.add'), 'url' => '/club_area.php?view=add', 'paths' => ['/club_area.php'], 'query' => ['view' => ['add']]];
+            $submenuItems[] = ['label' => translate('club.area.submenu.logout'), 'url' => '/club_logout.php', 'paths' => ['/club_logout.php']];
         }
     }
 
