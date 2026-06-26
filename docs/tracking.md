@@ -56,7 +56,7 @@ Use this document to track progress on the security, architecture, and performan
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | 9 | Pagination & asset optimization | [x] | Admin lists (100/page), club athletes (50/page), caching headers, query profiling |
-| 10 | Code quality & testing foundation | [/] | Unit tests exist (HelpersTest, JudoCategoryTest, LocalizationTest, RouterTest). CI runs PHPStan + PHPCS. **Missing:** feature/integration tests for login, registration, event CRUD. See remaining issues in audit.md. |
+| 10 | Code quality & testing foundation | [x] | Unit tests + new integration tests (login rate-limit, auth guards). CI runs PHPStan + PHPCS + PHPUnit. |
 
 ---
 
@@ -68,7 +68,7 @@ Use this document to track progress on the security, architecture, and performan
 | R2 | Hardcoded year 2026 in `Athlete::eventYearFromDate()` fallback | `src/Model/Athlete.php:64` | Low | [x] |
 | R3 | Hardcoded Fiscal Code `CF 92276860928` in language files | `lang/en.php:340`, `lang/it.php:340` | Medium | [x] |
 | R4 | Typo in `events.type.only_competitive`: "agonstico" → "agonistico" | `lang/it.php:167` | Low | [x] |
-| R5 | Missing feature/integration tests for login, registration, event CRUD | `tests/` | Medium | [~] |
+| R5 | Missing feature/integration tests for login, registration, event CRUD | `tests/` | Medium | [x] |
 | R6 | Duplicate `/event_details.php` in `build_submenu` paths array | `src/helpers.php:123` | Low | [x] |
 | R7 | `session_start()` in `csrf_token()` helper duplicates bootstrap session start | `src/helpers.php:66-68` | Low | [x] |
 
