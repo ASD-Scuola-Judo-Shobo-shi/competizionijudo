@@ -110,7 +110,7 @@ return [
             'submenu' => [
                 'manage' => 'Gestisci atleti',
                 'add' => 'Aggiungi atleta',
-                'logout' => '❌',
+                'logout' => 'Esci',
             ],
             'register_event' => 'Iscrivi atleti a una gara',
             'edit_athlete' => 'Modifica atleta',
@@ -164,7 +164,7 @@ return [
         'show' => 'Visualizza',
         'type' => [
             'only_precompetitive' => 'Solo pre-agonistico',
-            'only_competitive' => 'Solo agonstico',
+            'only_competitive' => 'Solo agonistico',
             'precompetitive_and_competitive' => 'Pre-agonistico e agonistico',
         ],
         'submenu' => [
@@ -337,7 +337,7 @@ return [
     ],
     'footer' => [
         'brand' => 'ASD Scuola Judo Sho\'bo\'shi VV.FF.',
-        'description' => 'via Bonorva 4 - 09044 Quartucciu (CA) - CF 92276860928',
+        'description' => 'via Bonorva 4 - 09044 Quartucciu (CA)',
         'credits' => 'FIJLKAM • CSEN • Judo',
     ],
     'home_info' => [

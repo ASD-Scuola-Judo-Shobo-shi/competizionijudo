@@ -110,7 +110,7 @@ return [
             'submenu' => [
                 'manage' => 'Manage athletes',
                 'add' => 'Add athlete',
-                'logout' => '❌',
+                'logout' => 'Logout',
             ],
             'register_event' => 'Register athletes for an event',
             'edit_athlete' => 'Edit athlete',
@@ -338,7 +338,7 @@ return [
     ],
     'footer' => [
         'brand' => 'ASD Scuola Judo Sho\'bo\'shi VV.FF.',
-        'description' => 'via Bonorva 4 - 09044 Quartucciu (CA) - CF 92276860928',
+        'description' => 'via Bonorva 4 - 09044 Quartucciu (CA)',
         'credits' => 'FIJLKAM • CSEN • Judo',
     ],
     'home_info' => [
