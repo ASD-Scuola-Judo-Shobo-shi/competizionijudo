@@ -8,103 +8,81 @@ Consolidated findings for the competizionijudo application. Tasks are grouped by
 
 - Work through phases sequentially (Phase 1 → Phase 4)
 - Each phase has a clear target and verification steps
-- Commit after completing each phase
+- All Phase 1-3 items are completed. Phase 4 is partially done.
 - Mark items as `[ ]` (pending), `[/]` (in progress), or `[x]` (done)
 
 ---
 
-## Phase 1 – Critical Security (Do First)
+## Phase 1 – Critical Security (Completed)
 
 **Target:** Eliminate immediate security risks before any feature work.
 
-### [ ] 1. Lock Down Authentication & Authorization
+### [x] 1. Lock Down Authentication & Authorization
 
 **Files:**
 - `src/Controller/AdminController.php`
 - `src/Controller/ClubController.php`
 - `src/Controller/EventController.php`
 - `src/bootstrap.php`
+- `src/Core/Session.php`
 
-**Consolidates:** Old items 4, 5, 6, 7, 15
-
-**Task:** Harden all auth flows and enforce proper access control.
-
-**Actions:**
-1. **Rate-limit login** – Track failed attempts in session; block after 5 failures for 5 minutes.
-2. **Secure sessions** – Set `HttpOnly`, `Secure` (when HTTPS), `UseOnlyCookies` in `bootstrap.php`. Regenerate ID after login. Remove duplicate `session_start()` calls.
-3. **Password reset hardening** – Invalidate previous tokens before issuing new ones. Clean up used tokens after reset. Fix variable scoping.
-4. **Restrict entries visibility** – Ensure non-admin clubs only see their own athletes' entries.
-5. **Edit event auth guard** – Verify admin authentication on edit routes, not just redirects.
-
-**Verification:** Test login throttling, session cookie flags, password reset single-use, and data isolation.
+**What was done:**
+1. **Rate-limit login** – Track failed attempts in session; block after 5 failures for 5 minutes (both admin and club).
+2. **Secure sessions** – `HttpOnly` and `Secure` (when HTTPS) cookie params set in `bootstrap.php`. Session ID regenerated after login. `Session` helper class centralizes session handling.
+3. **Password reset hardening** – Previous tokens invalidated (set `used=1`) before issuing new ones. Used tokens cleaned up after reset.
+4. **Restrict entries visibility** – Non-admin clubs filtered to own athletes only.
+5. **Edit event auth guard** – Admin auth verified on edit routes.
 
 ---
 
-### [ ] 2. CSRF Protection on All Forms
+### [x] 2. CSRF Protection on All Forms
 
 **Files:**
 - `src/helpers.php`
-- All controllers with POST handlers
-- All view templates with `<form method="post">`
+- `src/Controller/AdminController.php`
+- `src/Controller/ClubController.php`
+- `src/Controller/EventController.php`
+- View templates with `<form method="post">`
 
-**Consolidates:** Old item 2
-
-**Task:** Prevent cross-site request forgery on every state-changing request.
-
-**Actions:**
-1. Add `csrf_token()` and `csrf_field()` helpers to `src/helpers.php`.
-2. Validate token at the start of every POST handler.
-3. Insert `<?= csrf_field() ?>` in every form.
-4. Regenerate token on login/logout.
-
-**Verification:** Submit forms without token; all should be rejected.
+**What was done:**
+1. `csrf_token()`, `csrf_field()`, and `validate_csrf()` helpers added to `src/helpers.php`.
+2. Token validated at start of every POST handler.
+3. `<?= csrf_field() ?>` inserted in every form.
+4. Token regenerated on login/logout.
 
 ---
 
-### [ ] 3. Fix Open Redirect & Add Security Headers
+### [x] 3. Fix Open Redirect & Add Security Headers
 
 **Files:**
 - `src/Controller/LanguageController.php`
 - `public/.htaccess`
 
-**Consolidates:** Old items 3, 8
-
-**Task:** Block redirect-based phishing and apply standard security headers.
-
-**Actions:**
-1. In language controller, validate `redirect` param against same host only.
-2. Add `.htaccess` headers: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`. Add HSTS if HTTPS.
-
-**Verification:** Test `?redirect=https://evil.com` → stays on site. Inspect response headers.
+**What was done:**
+1. Language controller validates `redirect` param against allowed paths.
+2. `.htaccess` headers added: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Strict-Transport-Security`.
 
 ---
 
-### [ ] 4. Disable Auto-Migrations & Harden File Uploads
+### [x] 4. Disable Auto-Migrations & Harden File Uploads
 
 **Files:**
 - `src/bootstrap.php`
-- `.env.example`
 - `src/Controller/AdminController.php`
 - `public/uploads/events/.htaccess`
 
-**Consolidates:** Old items 1, 12
-
-**Task:** Remove production migration auto-run and secure file upload endpoints.
-
-**Actions:**
-1. Wrap migration runner in `env === 'local'` check in `bootstrap.php`. Remove env var from `.env.example`.
-2. Add server-side MIME verification (`finfo_file`) for uploads.
-3. Update uploads `.htaccess` to deny PHP execution and set safe MIME types.
-
-**Verification:** Confirm migrations don't run in production mode. Upload PHP renamed as PDF → rejected or plain text.
+**What was done:**
+1. Migration runner wrapped in `env === 'local' || env === 'development'` check in `bootstrap.php`.
+2. Server-side MIME verification (`finfo_file`) for uploads.
+3. Uploads `.htaccess` denies PHP execution.
 
 ---
 
-## Phase 2 – High Priority (Before External Testing)
+## Phase 2 – High Priority (Completed)
 
 **Target:** Clean input handling and eliminate common web vulnerabilities.
 
-### [ ] 5. Sanitize & Validate All Inputs
+### [x] 5. Sanitize & Validate All Inputs
 
 **Files:**
 - `src/Controller/AdminController.php`
@@ -113,143 +91,162 @@ Consolidated findings for the competizionijudo application. Tasks are grouped by
 - `src/Controller/EventController.php`
 - `views/layouts/app.php`
 
-**Consolidates:** Old items 9, 10, 14, 16
-
-**Task:** Replace raw superglobal access with validated, escaped data.
-
-**Actions:**
-1. Replace `$_POST`, `$_GET`, `$_SESSION` with `$request->input()` / `$request->query()` where possible.
-2. Add simple validators (`validate_email`, `validate_date`) and use them before DB ops.
-3. Fix hardcoded year: use `date('Y')` instead of `2026`.
-4. Escape `$_GET['view']` with `htmlspecialchars` in layout.
-
-**Verification:** Grep for superglobals in controllers. Submit malformed dates → errors shown. Hardcoded year works across year boundaries.
+**What was done:**
+1. `$_POST`, `$_GET` replaced with `$request->input()` / `$request->query()` where possible.
+2. Email validation via `FILTER_VALIDATE_EMAIL`.
+3. Hardcoded year partially addressed (see Remaining Issues).
+4. `$_GET['view']` escaped with `htmlspecialchars` in layout.
 
 ---
 
-### [ ] 6. Fix Race Condition in Event Registration
+### [x] 6. Fix Race Condition in Event Registration
 
 **Files:**
 - `src/Model/Entry.php`
 - `src/Controller/EventController.php`
 
-**Consolidates:** Old item 11
-
-**Task:** Provide clear feedback when duplicate registration is attempted.
-
-**Actions:**
-1. Change `INSERT IGNORE` to check `rowCount()` or pre-check with SELECT.
-2. Show warning message to user on duplicate attempt.
-
-**Verification:** Register same athlete twice → second attempt shows warning.
+**What was done:**
+1. Pre-check with SELECT before INSERT.
+2. `ALREADY_REGISTERED` exception shows warning to user on duplicate attempt.
 
 ---
 
-## Phase 3 – Architecture Improvements (Ongoing)
+## Phase 3 – Architecture Improvements (Completed)
 
 **Target:** Reduce duplication, improve maintainability, and prepare for growth.
 
-### [ ] 7. Centralize Auth & Navigation Logic
+### [x] 7. Centralize Auth & Navigation Logic
 
 **Files:**
 - `src/bootstrap.php`
-- `src/Controller/*`
+- `src/Core/Session.php`
+- `src/helpers.php` (`build_submenu()`)
 - `views/layouts/app.php`
 
-**Consolidates:** Old items A1, A2, A4, A7, P9
-
-**Task:** Remove repeated auth checks and lazy-load navigation data.
-
-**Actions:**
-1. Create session helper class (`src/Core/Session.php`) – start session once, provide `get`/`set`/`regenerate`.
-2. Extract submenu building into a reusable component/helper. Cache static submenu items.
-3. Only load club data in layout when session exists.
-
-**Verification:** No duplicate `session_start()`. Public pages skip club DB queries.
+**What was done:**
+1. `Session` helper class created (`src/Core/Session.php`) – provides `get`/`set`/`regenerate`/`destroy`.
+2. `build_submenu()` helper extracts submenu building logic with static/dynamic items.
+3. Club data only loaded in layout when session exists (lazy loading).
 
 ---
 
-### [ ] 8. Add Basic Caching & Query Optimization
+### [x] 8. Add Basic Caching & Query Optimization
 
 **Files:**
 - `src/Model/Club.php`
 - `src/Model/Event.php`
-- `src/Model/AgeClass.php`
-- `migrations/20260619_000000_create_baseline_schema.sql`
-- `views/layouts/app.php`
+- `src/Core/Cache.php`
+- `migrations/20260623_000001_add_performance_indexes.sql`
 
-**Consolidates:** Old items P1, P2, P3, P6, P10
-
-**Task:** Reduce database load and eliminate N+1 queries.
-
-**Actions:**
-1. Add indexes: `athletes(club_id)`, `entries(event_id, club_id)`, `events(date)`, `events(published, closed, date)`.
-2. Batch-calculate categories in `EventController::entries()` instead of per-row.
-3. Cache `Club::all()` and `Event::allPublished()` with file cache (5–60 min TTL).
-4. Cache localization arrays per request.
-
-**Verification:** `EXPLAIN` shows index usage. DB query count drops on list pages.
+**What was done:**
+1. Performance indexes added: `athletes(club_id)`, `entries(event_id, club_id)`, `events(date)`, `events(published, closed, date)`.
+2. Category calculation in `EventController::entries()` uses batch approach (per-row grouping).
+3. `Club::all()` and `Event::allPublished()` cached with file cache (300s TTL).
+4. Localization arrays cached per request via static property in `Localization`.
 
 ---
 
-## Phase 4 – Polish & Future-Proofing
+## Phase 4 – Polish & Future-Proofing (In Progress)
 
 **Target:** Prepare for scaling beyond a few hundred users.
 
-### [ ] 9. Pagination & Asset Optimization
+### [x] 9. Pagination & Asset Optimization
 
 **Files:**
 - `src/Controller/AdminController.php`
-- `src/Controller/ClubController.php`
 - `src/Controller/ClubAreaController.php`
+- `src/helpers.php` (`paginate()` function)
 - `public/.htaccess`
-- `public/assets/css/app.css`
 
-**Consolidates:** Old items P4, P5, P8
-
-**Task:** Keep memory usage constant and improve repeat-visit speed.
-
-**Actions:**
-1. Add pagination (50–100 items/page) to admin club/event lists and athlete lists.
-2. Add `.htaccess` caching headers for CSS, JS, images, SVGs (1 month).
-3. Enable query profiling in dev (`APP_DEBUG=true`) to catch slow queries.
-
-**Verification:** Insert 1000 records → page still loads fast. Browser dev tools show `Cache-Control` headers.
+**What was done:**
+1. Pagination added: admin club/event lists (100/page), club athletes (50/page).
+2. `.htaccess` caching headers for CSS, JS, images, SVGs (1 month, `immutable`).
+3. Query profiling enabled in dev via `APP_DEBUG=true`.
 
 ---
 
-### [ ] 10. Code Quality & Testing Foundation
+### [/] 10. Code Quality & Testing Foundation
 
 **Files:**
 - `tests/`
-- `.github/workflows/` (or GitLab CI)
+- `.github/workflows/ci.yml`
 - `phpstan.neon`, `phpcs.xml`
+- `composer.json`
 
-**Consolidates:** Old items A13, A15, A12
+**What was done:**
+1. Unit tests exist for: `helpers.php`, `JudoCategory::calculate()`, `Localization`, `Router`.
+2. CI runs on push/PR to `main`/`dev` branches with two jobs: quality checks + deploy artifact smoke test.
+3. PHPStan level 5 and PHP_CodeSniffer (PSR-12) run in CI.
+4. `composer check` runs metadata, syntax, cs, static analysis, tests, and security audit.
 
-**Task:** Prevent regressions and establish coding standards.
+**What's missing (see Remaining Issues below):**
+- Feature/integration tests for login, registration, event CRUD.
+- Coverage for edge cases in existing test classes.
 
-**Actions:**
-1. Write unit tests for `helpers.php`, `JudoCategory::calculate()`, `Localization`.
-2. Add feature tests for login, registration, event CRUD.
-3. Run PHPStan level 5+ and PHP_CodeSniffer (PSR-12) in CI on every PR.
+---
 
-**Verification:** `vendor/bin/phpunit` passes. CI builds green.
+## Remaining Issues (Post-Audit Findings)
+
+These issues were discovered during the re-audit and are not fully captured in the original implementation tracking.
+
+| ID | Issue | Severity | File(s) | Description |
+|----|-------|----------|---------|-------------|
+| R1 | Hardcoded year 2026 in category calculation | Low | `src/helpers.php:59` | `calculateJudoCategory()` defaults to `2026` when no event year provided |
+| R2 | Hardcoded year 2026 in athlete age calculation | Low | `src/Model/Athlete.php:64` | `eventYearFromDate()` falls back to `2026` |
+| R3 | Hardcoded Fiscal Code in language files | Medium | `lang/en.php:340`, `lang/it.php:340` | `CF 92276860928` exposed in footer translation – should use dynamic data or config |
+| R4 | Typo in Italian translation | Low | `lang/it.php:167` | `"Solo agonstico"` should be `"Solo agonistico"` |
+| R5 | Missing integration tests | Medium | `tests/` | No feature tests for login, registration, event CRUD flows |
+| R6 | Duplicate path in submenu builder | Low | `src/helpers.php:123` | `/event_details.php` appears twice in `$competitionPaths` |
+| R7 | Duplicate session_start in csrf_token() | Low | `src/helpers.php:66-68` | `csrf_token()` calls `session_start()` but bootstrap already started the session |
 
 ---
 
 ## Out of Scope (Deferred)
 
-- **A3 Repository pattern** – Low ROI for current team size. Revisit if models grow complex.
-- **A5/A6 Validation layer / Immutable value objects** – Simple validators (item 5) are sufficient for now.
-- **A8 i18n overhaul** – Current PHP array approach works; switch to gettext/JSON only if adding new languages.
-- **A9 Event dispatcher** – No urgent decoupling needs; revisit when side effects multiply.
-- **A10 Structured logging** – Add when scaling to multi-server or needing audit trails.
-- **A11 Typed config object** – Current array config is acceptable for small apps.
-- **A12 Custom error handling** – Current generic handler is adequate; enhance when API is added.
-- **A14 Adopt modern framework** – High migration cost; only consider if rewriting major features.
-- **P7 Connection pooling** – Not needed for standard PHP; revisit only with long-running workers.
+- **Repository pattern** – Low ROI for current team size. Revisit if models grow complex.
+- **Validation layer / Immutable value objects** – Simple validators (item 5) are sufficient for now.
+- **i18n overhaul** – Current PHP array approach works; switch to gettext/JSON only if adding new languages.
+- **Event dispatcher** – No urgent decoupling needs; revisit when side effects multiply.
+- **Structured logging** – Add when scaling to multi-server or needing audit trails.
+- **Typed config object** – Current array config is acceptable for small apps.
+- **Custom error handling** – Current generic handler is adequate; enhance when API is added.
+- **Adopt modern framework** – High migration cost; only consider if rewriting major features.
+- **Connection pooling** – Not needed for standard PHP; revisit only with long-running workers.
 
 ---
 
-*Generated: 2025-06-23*
+## Codebase Overview Post-Audit
+
+### Architecture
+- Framework-free MVC using custom minimal framework primitives (`src/Core/`).
+- PSR-4 autoloading via Composer.
+- Router dispatches to controller methods based on `routes/web.php`.
+- Views are plain PHP templates rendered by `View` class with layout support.
+- Models are data-centric DTOs with static factory/query methods.
+
+### Security Posture (Completed)
+- ✅ CSRF protection on all forms
+- ✅ Session cookie hardening (HttpOnly, Secure, SameSite)
+- ✅ Login rate-limiting (5 attempts / 5 min cooldown)
+- ✅ Session regeneration after login
+- ✅ Password reset token hardening (invalidate previous, single-use)
+- ✅ Open redirect protection
+- ✅ Security headers (HSTS, X-Content-Type-Options, X-Frame-Options, etc.)
+- ✅ File upload MIME validation
+- ✅ Auto-migrations disabled in production
+- ✅ Prepared statements throughout (no raw SQL injection)
+- ⚠️ Remaining: hardcoded fiscal code in lang files (R3)
+
+### Test Coverage
+- 4 test files: `HelpersTest`, `JudoCategoryTest`, `LocalizationTest`, `RouterTest`
+- Tests cover: HTML escaping, env/config helpers, CSRF token generation, pagination, Judo category calculation, localization, route dispatching
+- **Missing:** Integration tests for login, registration, event CRUD, athlete management
+
+### CI/CD
+- GitHub Actions CI: quality checks (PHP 8.2 + 8.4 matrix) + deploy artifact smoke test
+- GitHub Actions Deploy: FTP deployment to production (`main` → `prod/`) and development (`dev` → `dev/`)
+- Git hooks for pre-commit (syntax check) and pre-push (full CI)
+
+---
+
+*Generated: 2026-06-26 | Last audit: 2026-06-26*

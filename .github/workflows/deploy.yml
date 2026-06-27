@@ -61,12 +61,28 @@ jobs:
             echo 'APP_URL=https://dev.competizionijudo.it'
           } > build/deploy/.env
 
-      - name: Upload artifact
+      # Prepare the root htaccess inside a separate staging area for the artifact stage
+      - name: Stage root htaccess
+        run: |
+          mkdir -p build/root-htaccess
+          if [ -f root.htaccess ]; then
+            cp root.htaccess build/root-htaccess/.htaccess
+          fi
+
+      - name: Upload application artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-${{ github.ref_name }}
           path: build/deploy
           if-no-files-found: error
+          retention-days: 3
+
+      - name: Upload root htaccess artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: root-htaccess-${{ github.ref_name }}
+          path: build/root-htaccess
+          if-no-files-found: warn
           retention-days: 3
 
   deploy-production:
@@ -79,19 +95,25 @@ jobs:
       url: https://www.competizionijudo.it
 
     steps:
-      - name: Download artifact
+      - name: Download application artifact
         uses: actions/download-artifact@v4
         with:
           name: app-main
           path: build/deploy
 
+      - name: Download root htaccess artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: root-htaccess-main
+          path: build/root-htaccess
+
+      # STEP A: Upload the application files to the /prod/ directory
       - name: Upload to production FTP directory
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          # Enforces FTPS strictly. No unencrypted FTP allowed.
           protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
           port: ${{ vars.FTP_PORT || 21 }}
           local-dir: build/deploy/
@@ -100,6 +122,19 @@ jobs:
           exclude: |
             **/.git*
             legacy/**
+
+      # STEP B: Deploy the main routing rules directly to the Aruba root folder
+      - name: Upload Routing .htaccess to Host Root
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.FTP_PORT || 21 }}
+          local-dir: build/root-htaccess/
+          server-dir: ./
+          dangerous-clean-slate: false
 
   deploy-development:
     name: Deploy development
@@ -111,7 +146,7 @@ jobs:
       url: https://dev.competizionijudo.it
 
     steps:
-      - name: Download artifact
+      - name: Download application artifact
         uses: actions/download-artifact@v4
         with:
           name: app-dev
