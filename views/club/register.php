@@ -33,10 +33,13 @@
             <input name="contact">
 
             <label><?= e(__('club.register.password')) ?></label>
-            <input type="password" name="password" required>
+            <input type="password" name="password" minlength="<?= \App\Security\PasswordPolicy::MINIMUM_LENGTH ?>" required>
+            <small><?= e(__('errors.password_too_short', [
+                'minimum' => (string) \App\Security\PasswordPolicy::MINIMUM_LENGTH,
+            ])) ?></small>
 
             <label><?= e(__('club.register.confirm_password')) ?></label>
-            <input type="password" name="password2" required>
+            <input type="password" name="password2" minlength="<?= \App\Security\PasswordPolicy::MINIMUM_LENGTH ?>" required>
 
             <button class="btn green" type="submit"><?= e(__('club.register.register_button')) ?></button>
             <a class="btn" href="/club_login.php"><?= e(__('nav.club_login')) ?></a>

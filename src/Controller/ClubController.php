@@ -13,23 +13,29 @@ use App\Model\Club;
 use App\Model\Database;
 use App\Security\AuthenticationThrottle;
 use App\Security\DatabaseAuthenticationThrottle;
+use App\Security\PasswordPolicy;
 use App\Service\DatabasePasswordResetTokenIssuer;
+use App\Service\DatabasePasswordResetRepository;
 use App\Service\PasswordResetTokenIssuer;
+use App\Service\PasswordResetRepository;
 
 final class ClubController extends Controller
 {
     private readonly PasswordResetTokenIssuer $passwordResetTokens;
     private ?AuthenticationThrottle $authenticationThrottle;
+    private ?PasswordResetRepository $passwordResetRepository;
 
     public function __construct(
         View $view,
         Request $request,
         ?PasswordResetTokenIssuer $passwordResetTokens = null,
-        ?AuthenticationThrottle $authenticationThrottle = null
+        ?AuthenticationThrottle $authenticationThrottle = null,
+        ?PasswordResetRepository $passwordResetRepository = null
     ) {
         parent::__construct($view, $request);
         $this->passwordResetTokens = $passwordResetTokens ?? new DatabasePasswordResetTokenIssuer();
         $this->authenticationThrottle = $authenticationThrottle;
+        $this->passwordResetRepository = $passwordResetRepository;
     }
 
     public function register(Request $request): Response
@@ -55,6 +61,8 @@ final class ClubController extends Controller
                 $errors[] = __('club.register.errors.password_required');
             } elseif ($password !== $password2) {
                 $errors[] = __('club.register.errors.password_mismatch');
+            } elseif (!PasswordPolicy::accepts($password)) {
+                $errors[] = $this->passwordPolicyError();
             }
 
             if ($errors === []) {
@@ -219,39 +227,24 @@ final class ClubController extends Controller
 
     public function resetPassword(Request $request): Response
     {
-        $tokenHash = '';
         $errors = [];
         $token = '';
         $valid = false;
+        $email = '';
 
         if ($request->method() === 'GET') {
             $token = (string) $request->query('token', '');
         } elseif ($request->method() === 'POST') {
             $token = (string) $request->input('token', '');
+            validate_csrf((string) $request->post('csrf_token'));
         }
 
         if ($token !== '') {
-            $tokenHash = hash('sha256', $token);
-            $stmt = Database::connection()->prepare(
-                'SELECT * FROM password_reset_tokens WHERE token_hash = ? AND used = 0'
-            );
-            $stmt->execute([$tokenHash]);
-            $row = $stmt->fetch();
-
-            if ($row) {
-                $expiresAt = new \DateTime($row['expires_at'], new \DateTimeZone('UTC'));
-                $now = new \DateTime('now', new \DateTimeZone('UTC'));
-
-                if ($expiresAt > $now) {
-                    $valid = true;
-                    $club = Club::findById($row['club_id']);
-                    $email = $club !== null ? (string) $club->email : '';
-                }
-            }
+            $email = $this->passwordResetRepository()->findValidEmail(hash('sha256', $token)) ?? '';
+            $valid = $email !== '';
         }
 
         if ($request->method() === 'POST') {
-            validate_csrf((string) $request->post('csrf_token'));
             if (!$valid) {
                 $errors[] = __('club.reset_password.errors.invalid_token');
             } else {
@@ -262,30 +255,21 @@ final class ClubController extends Controller
                     $errors[] = __('club.reset_password.errors.password_required');
                 } elseif ($password !== $password2) {
                     $errors[] = __('club.reset_password.errors.password_mismatch');
+                } elseif (!PasswordPolicy::accepts($password)) {
+                    $errors[] = $this->passwordPolicyError();
                 } else {
                     try {
-                        $stmt = Database::connection()->prepare(
-                            'SELECT club_id FROM password_reset_tokens WHERE token_hash = ? AND used = 0'
-                        );
-                        $stmt->execute([$tokenHash]);
-                        $tokenRow = $stmt->fetch();
-
-                        if ($tokenRow) {
-                            $clubId = (int) $tokenRow['club_id'];
-                            $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-
-                            $stmt = Database::connection()->prepare(
-                                'UPDATE clubs SET password_hash = ? WHERE id = ?'
-                            );
-                            $stmt->execute([$passwordHash, $clubId]);
-
-                            $stmt = Database::connection()->prepare(
-                                'UPDATE password_reset_tokens SET used = 1 WHERE token_hash = ?'
-                            );
-                            $stmt->execute([$tokenHash]);
-
+                        if (
+                            $this->passwordResetRepository()->consume(
+                                hash('sha256', $token),
+                                password_hash($password, PASSWORD_DEFAULT)
+                            )
+                        ) {
                             return $this->redirect('/club_login.php');
                         }
+
+                        $valid = false;
+                        $errors[] = __('club.reset_password.errors.invalid_token');
                     } catch (\Throwable $exception) {
                         $errors[] = str_replace('{message}', $exception->getMessage(), __('club.reset_password.errors.reset_failed'));
                     }
@@ -301,7 +285,19 @@ final class ClubController extends Controller
             'errors' => $errors,
             'token' => $token,
             'valid' => $valid,
-            'email' => $email ?? '',
+            'email' => $email,
+        ]);
+    }
+
+    private function passwordResetRepository(): PasswordResetRepository
+    {
+        return $this->passwordResetRepository ??= new DatabasePasswordResetRepository(Database::connection());
+    }
+
+    private function passwordPolicyError(): string
+    {
+        return __('errors.password_too_short', [
+            'minimum' => (string) PasswordPolicy::MINIMUM_LENGTH,
         ]);
     }
 }

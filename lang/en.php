@@ -155,6 +155,7 @@ return [
         'page_not_found' => 'Page not found',
         'server_error' => 'Server error',
         'invalid_csrf' => 'The form expired or is invalid. Please reload the page and try again.',
+        'password_too_short' => 'The password must contain at least {minimum} characters.',
     ],
     'buttons' => [
         'back_to_login' => 'Go to club login',

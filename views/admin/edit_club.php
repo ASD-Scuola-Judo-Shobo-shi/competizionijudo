@@ -60,8 +60,10 @@
             </div>
             <div>
                 <label><?= e(__('admin.clubs.password')) ?></label>
-                <input type="password" name="password_hash" placeholder="..." autocomplete="new-password">
-                <small>Compilare solo per modificare la password</small>
+                <input type="password" name="password_hash" placeholder="..." autocomplete="new-password" minlength="<?= \App\Security\PasswordPolicy::MINIMUM_LENGTH ?>">
+                <small><?= e(__('errors.password_too_short', [
+                    'minimum' => (string) \App\Security\PasswordPolicy::MINIMUM_LENGTH,
+                ])) ?></small>
             </div>
         </div>
 

@@ -155,6 +155,7 @@ return [
         'page_not_found' => 'Pagina non trovata',
         'server_error' => 'Errore del server',
         'invalid_csrf' => 'Il modulo è scaduto o non è valido. Ricaricare la pagina e riprovare.',
+        'password_too_short' => 'La password deve contenere almeno {minimum} caratteri.',
     ],
     'buttons' => [
         'back_to_login' => 'Vai al login società',

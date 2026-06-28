@@ -21,10 +21,13 @@
             <input type="hidden" name="token" value="<?= e($token) ?>">
 
             <label><?= e(__('club.reset_password.password')) ?></label>
-            <input type="password" name="password" required>
+            <input type="password" name="password" minlength="<?= \App\Security\PasswordPolicy::MINIMUM_LENGTH ?>" required>
+            <small><?= e(__('errors.password_too_short', [
+                'minimum' => (string) \App\Security\PasswordPolicy::MINIMUM_LENGTH,
+            ])) ?></small>
 
             <label><?= e(__('club.reset_password.confirm_password')) ?></label>
-            <input type="password" name="password2" required>
+            <input type="password" name="password2" minlength="<?= \App\Security\PasswordPolicy::MINIMUM_LENGTH ?>" required>
 
             <button class="btn green" type="submit"><?= e(__('club.reset_password.submit')) ?></button>
             <a class="btn" href="/club_login.php"><?= e(__('buttons.back_to_login')) ?></a>

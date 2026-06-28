@@ -14,18 +14,24 @@ use App\Model\Database;
 use App\Model\Event;
 use App\Security\AuthenticationThrottle;
 use App\Security\DatabaseAuthenticationThrottle;
+use App\Security\PasswordPolicy;
+use App\Service\DatabasePasswordResetRepository;
+use App\Service\PasswordResetRepository;
 
 final class AdminController extends Controller
 {
     private ?AuthenticationThrottle $authenticationThrottle;
+    private ?PasswordResetRepository $passwordResetRepository;
 
     public function __construct(
         View $view,
         Request $request,
-        ?AuthenticationThrottle $authenticationThrottle = null
+        ?AuthenticationThrottle $authenticationThrottle = null,
+        ?PasswordResetRepository $passwordResetRepository = null
     ) {
         parent::__construct($view, $request);
         $this->authenticationThrottle = $authenticationThrottle;
+        $this->passwordResetRepository = $passwordResetRepository;
     }
 
     public function login(Request $request): Response
@@ -403,13 +409,21 @@ final class AdminController extends Controller
                 ];
 
                 $password = (string) $request->post('password_hash');
-                if ($password !== '') {
-                    $data['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+                if ($password !== '' && !PasswordPolicy::accepts($password)) {
+                    $error = __('errors.password_too_short', [
+                        'minimum' => (string) PasswordPolicy::MINIMUM_LENGTH,
+                    ]);
+                } else {
+                    Club::update($id, $data);
+                    if ($password !== '') {
+                        $this->passwordResetRepository()->replacePassword(
+                            $id,
+                            password_hash($password, PASSWORD_DEFAULT)
+                        );
+                    }
+
+                    return $this->redirect('/admin_manage_clubs.php');
                 }
-
-                Club::update($id, $data);
-
-                return $this->redirect('/admin_manage_clubs.php');
             } catch (\Throwable $e) {
                 $error = $e->getMessage();
             }
@@ -419,6 +433,11 @@ final class AdminController extends Controller
             'club' => $club,
             'error' => $error,
         ]);
+    }
+
+    private function passwordResetRepository(): PasswordResetRepository
+    {
+        return $this->passwordResetRepository ??= new DatabasePasswordResetRepository(Database::connection());
     }
 
     public function logout(Request $request): Response
