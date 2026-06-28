@@ -8,11 +8,26 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
+use App\Core\View;
 use App\Model\Club;
+use App\Model\Database;
 use App\Model\Event;
+use App\Security\AuthenticationThrottle;
+use App\Security\DatabaseAuthenticationThrottle;
 
 final class AdminController extends Controller
 {
+    private ?AuthenticationThrottle $authenticationThrottle;
+
+    public function __construct(
+        View $view,
+        Request $request,
+        ?AuthenticationThrottle $authenticationThrottle = null
+    ) {
+        parent::__construct($view, $request);
+        $this->authenticationThrottle = $authenticationThrottle;
+    }
+
     public function login(Request $request): Response
     {
         $errors = [];
@@ -30,27 +45,20 @@ final class AdminController extends Controller
             } elseif ($adminUser === null || $adminHash === null) {
                 $errors[] = __('admin.login.errors.not_configured');
             } else {
-                $attemptsKey = 'admin_login_attempts';
-                $lastAttemptKey = 'admin_login_last_attempt';
+                $networkSignal = $this->networkSignal($request);
+                $throttle = $this->authenticationThrottle();
 
-                $attempts = Session::get($attemptsKey, 0);
-                $lastAttempt = Session::get($lastAttemptKey, 0);
-                if ($attempts === 0 || (time() - $lastAttempt) > 300) {
-                    Session::set($attemptsKey, 0);
-                }
-                Session::set($lastAttemptKey, time());
-
-                if (Session::get($attemptsKey) >= 5) {
+                if ($throttle->isBlocked('admin-login', $user, $networkSignal)) {
                     $errors[] = __('admin.login.errors.too_many_attempts');
                 } elseif ($user === $adminUser && password_verify($pass, $adminHash)) {
+                    $throttle->clear('admin-login', $user, $networkSignal);
                     Session::regenerate();
                     Session::set('is_admin', true);
                     Session::set('csrf_token', bin2hex(random_bytes(32)));
-                    Session::set($attemptsKey, 0);
 
                     return $this->redirect('/admin_manage_events.php');
                 } else {
-                    Session::set($attemptsKey, Session::get($attemptsKey) + 1);
+                    $throttle->recordAttempt('admin-login', $user, $networkSignal);
                     $errors[] = __('admin.login.errors.invalid_credentials');
                 }
             }
@@ -59,6 +67,16 @@ final class AdminController extends Controller
         return $this->view('admin/login', [
             'errors' => $errors,
         ]);
+    }
+
+    private function authenticationThrottle(): AuthenticationThrottle
+    {
+        return $this->authenticationThrottle ??= new DatabaseAuthenticationThrottle(Database::connection());
+    }
+
+    private function networkSignal(Request $request): string
+    {
+        return trim((string) $request->server('REMOTE_ADDR', 'unknown')) ?: 'unknown';
     }
 
     public function dashboard(Request $request): Response

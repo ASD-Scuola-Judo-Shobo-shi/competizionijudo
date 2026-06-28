@@ -36,8 +36,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C06 | [x] | `fix(security): enforce athlete ownership on registration` | S-02, S-08 | `5fa7722` | Focused PDO fixture: 5 tests/42 assertions; one constrained write per attempt; full code checks pass with 46 tests/423 assertions; dependency audit not verified |
 | C07 | [x] | `fix(security): protect athlete mutations with CSRF` | S-03 | `50d922e` | Controller/application tests: 5 tests/26 assertions; full code checks pass with 51 tests/449 assertions; dependency audit not verified |
 | C08 | [x] | `fix(security): move delete actions to CSRF protected posts` | S-03 | `330d664` | Delete-action tests: 6 tests/51 assertions; no destructive GET patterns remain; full code checks pass with 57 tests/500 assertions; dependency audit not verified |
-| C09 | [x] | `fix(security): require post for logout` | S-09 | This commit | Logout tests: 5 tests/30 assertions; full code checks pass with 62 tests/530 assertions; dependency audit not verified |
-| C10 | [ ] | `feat(security): persist authentication throttles` | S-04 |  |  |
+| C09 | [x] | `fix(security): require post for logout` | S-09 | `ec9b6e1` | Logout tests: 5 tests/30 assertions; full code checks pass with 62 tests/530 assertions; dependency audit not verified |
+| C10 | [x] | `feat(security): persist authentication throttles` | S-04 | This commit | Focused throttle/migration tests: 15/59; MySQL 8.4 clean and pre-C10 upgrade/repeat checks pass with legacy-compatible SQL mode; full code checks pass with 68 tests/560 assertions; dependency audit not verified |
 | C11 | [ ] | `fix(auth): consume reset tokens atomically` | S-06, S-08 |  |  |
 | C12 | [ ] | `fix(validation): enforce account and event invariants` | S-06 |  | Preflight duplicate club emails before unique index |
 | C13 | [ ] | `fix(events): enforce publication and registration lifecycle` | S-05, F-01 |  |  |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C10 persistent authentication/reset throttling |
-| Files intentionally in scope | None until C10 begins |
-| Last targeted test | Logout routes/controllers/session cleanup: 5 tests/30 assertions |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (62 tests/530 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Read C10 acceptance criteria and design the bounded persistent throttle migration/component |
+| Objective | Start C11 atomic reset-token consumption and minimum password policy |
+| Files intentionally in scope | None until C11 begins |
+| Last targeted test | C10 throttle, controller, and migration-runner coverage: 15 tests/59 assertions; MySQL 8.4 clean and upgrade/repeat schema checks passed |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (68 tests/560 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Read C11 acceptance criteria and trace registration, admin club edit, and password reset writes |
 
 ## Blockers and decisions
 
@@ -85,6 +85,7 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | D04 | C25 | Product/privacy | Open | Confirm whether exports are required and, if so, approved formats/fields/access |
 | D05 | C32 | Product/data owner | Open | Decide whether closed/past entry data is snapshotted or reflects later athlete edits |
 | D06 | C34 | Privacy owner | Open | Define upload and athlete-data retention policy |
+| D07 | C16, C17 | Code | Open | MySQL 8.4 default strict mode rejects zero-date comparisons in the historical legacy-copy migration; C10 schema checks used a legacy-compatible session mode, and the schema-aware migration work must remove that requirement without rewriting history |
 
 Open decisions do not block earlier independent commits. Do not guess when a decision changes user-visible behavior, data retention, credentials, or external delivery.
 
@@ -104,6 +105,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-28 | C07 | Enforced CSRF before athlete mutation parsing/database access and replaced helper exit with a rendered 419 response | Controller/application tests 5/26; randomized/full suite 51/449; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C08 |
 | 2026-06-28 | C08 | Replaced club, event, and athlete delete links/GET branches with authenticated CSRF-protected POST actions | Delete-action tests 6/51; no destructive GET patterns; randomized/full suite 57/500; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C09 |
 | 2026-06-28 | C09 | Converted admin/club logout to CSRF-protected POST forms and cleared destroyed session identifiers/cookies | Logout tests 5/30; randomized/full suite 62/530; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C10 |
+| 2026-06-28 | C10 | Added database-backed hashed authentication/reset throttles with bounded expiry cleanup and made DDL migrations tolerate MySQL implicit commits | Focused tests 15/59; MySQL 8.4 clean plus pre-C10 upgrade/repeat checks pass in legacy-compatible mode; full code checks 68/560; dependency audit not verified | C11 |
 
 ## Milestones
 

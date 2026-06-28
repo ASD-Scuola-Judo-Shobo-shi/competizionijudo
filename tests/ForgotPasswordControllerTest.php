@@ -10,8 +10,10 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
 use App\Localization;
+use App\Security\AuthenticationThrottle;
 use App\Service\PasswordResetTokenIssuer;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\FakeAuthenticationThrottle;
 use Tests\Support\FakePasswordResetTokenIssuer;
 
 final class ForgotPasswordControllerTest extends TestCase
@@ -121,6 +123,22 @@ final class ForgotPasswordControllerTest extends TestCase
         }
     }
 
+    public function testBlockedResetRequestKeepsGenericResponseAndDoesNotIssueToken(): void
+    {
+        $this->setResetEnvironment('local', true, true);
+        $issuer = new FakePasswordResetTokenIssuer(hash('sha256', 'blocked-fixture'));
+        $throttle = new FakeAuthenticationThrottle(1);
+        $throttle->recordAttempt('password-reset', 'known@example.test', '192.0.2.40');
+
+        $response = $this->submit('known@example.test', $issuer, $throttle);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(e(__('club.forgot_password.success_message')), $response->content());
+        self::assertStringNotContainsString('token=', $response->content());
+        self::assertSame([], $issuer->requestedEmails);
+        self::assertCount(1, $throttle->recorded);
+    }
+
     private function setResetEnvironment(string $environment, bool $debug, bool $testResetLinks): void
     {
         $_ENV['APP_ENV'] = $environment;
@@ -129,13 +147,21 @@ final class ForgotPasswordControllerTest extends TestCase
         $_ENV['APP_URL'] = 'http://localhost';
     }
 
-    private function submit(string $email, PasswordResetTokenIssuer $issuer): Response
-    {
+    private function submit(
+        string $email,
+        PasswordResetTokenIssuer $issuer,
+        ?AuthenticationThrottle $throttle = null
+    ): Response {
         $request = new Request('POST', '/club_forgot_password.php', [], [
             'csrf_token' => csrf_token(),
             'email' => $email,
-        ]);
-        $controller = new ClubController($this->view, $request, $issuer);
+        ], ['REMOTE_ADDR' => '192.0.2.40']);
+        $controller = new ClubController(
+            $this->view,
+            $request,
+            $issuer,
+            $throttle ?? new FakeAuthenticationThrottle()
+        );
 
         return $controller->forgotPassword($request);
     }

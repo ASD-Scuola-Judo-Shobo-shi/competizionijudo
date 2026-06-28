@@ -76,7 +76,9 @@ final class MigrationRunner
 
             $stmt = $this->pdo->prepare('INSERT INTO schema_migrations (version, description) VALUES (?, ?)');
             $stmt->execute([$version, $this->migrationDescription($sql)]);
-            $this->pdo->commit();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
         } catch (\Throwable $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();

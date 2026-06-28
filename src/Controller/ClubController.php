@@ -11,20 +11,25 @@ use App\Core\Session;
 use App\Core\View;
 use App\Model\Club;
 use App\Model\Database;
+use App\Security\AuthenticationThrottle;
+use App\Security\DatabaseAuthenticationThrottle;
 use App\Service\DatabasePasswordResetTokenIssuer;
 use App\Service\PasswordResetTokenIssuer;
 
 final class ClubController extends Controller
 {
     private readonly PasswordResetTokenIssuer $passwordResetTokens;
+    private ?AuthenticationThrottle $authenticationThrottle;
 
     public function __construct(
         View $view,
         Request $request,
-        ?PasswordResetTokenIssuer $passwordResetTokens = null
+        ?PasswordResetTokenIssuer $passwordResetTokens = null,
+        ?AuthenticationThrottle $authenticationThrottle = null
     ) {
         parent::__construct($view, $request);
         $this->passwordResetTokens = $passwordResetTokens ?? new DatabasePasswordResetTokenIssuer();
+        $this->authenticationThrottle = $authenticationThrottle;
     }
 
     public function register(Request $request): Response
@@ -98,28 +103,21 @@ final class ClubController extends Controller
                 $errors[] = __('club.login.errors.credentials_required');
             } else {
                 try {
-                    $attemptsKey = 'club_login_attempts';
-                    $lastAttemptKey = 'club_login_last_attempt';
+                    $networkSignal = $this->networkSignal($request);
+                    $throttle = $this->authenticationThrottle();
 
-                    $attempts = Session::get($attemptsKey, 0);
-                    $lastAttempt = Session::get($lastAttemptKey, 0);
-                    if ($attempts === 0 || (time() - $lastAttempt) > 300) {
-                        Session::set($attemptsKey, 0);
-                    }
-                    Session::set($lastAttemptKey, time());
-
-                    if (Session::get($attemptsKey) >= 5) {
+                    if ($throttle->isBlocked('club-login', $email, $networkSignal)) {
                         $errors[] = __('club.login.errors.too_many_attempts');
                     } else {
                         $club = Club::findByEmail($email);
 
                         if ($club === null || !password_verify($password, $club->password_hash)) {
-                            Session::set($attemptsKey, Session::get($attemptsKey) + 1);
+                            $throttle->recordAttempt('club-login', $email, $networkSignal);
                             $errors[] = __('club.login.errors.invalid_credentials');
                         } else {
+                            $throttle->clear('club-login', $email, $networkSignal);
                             Session::regenerate();
                             Session::set('club_id', $club->id);
-                            Session::set($attemptsKey, 0);
 
                             return $this->redirect('/club_area.php?view=list');
                         }
@@ -166,20 +164,28 @@ final class ClubController extends Controller
                 $errors[] = __('club.forgot_password.errors.email_required');
             } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $errors[] = __('club.forgot_password.errors.valid_email_required');
-            } elseif (!$this->canExposeResetLink()) {
-                $success = __('club.forgot_password.unavailable_message');
             } else {
                 try {
-                    $rawToken = $this->passwordResetTokens->issueForEmail($email);
-                    $success = __('club.forgot_password.success_message');
-                    if ($rawToken !== null) {
-                        $resetUrl = sprintf(
-                            '%s/club_reset_password.php?token=%s',
-                            rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
-                            $rawToken
-                        );
+                    $networkSignal = $this->networkSignal($request);
+                    $throttle = $this->authenticationThrottle();
+                    $canExposeResetLink = $this->canExposeResetLink();
+                    $success = $canExposeResetLink
+                        ? __('club.forgot_password.success_message')
+                        : __('club.forgot_password.unavailable_message');
 
-                        $devLink = $resetUrl;
+                    if (!$throttle->isBlocked('password-reset', $email, $networkSignal)) {
+                        $throttle->recordAttempt('password-reset', $email, $networkSignal);
+
+                        if ($canExposeResetLink) {
+                            $rawToken = $this->passwordResetTokens->issueForEmail($email);
+                            if ($rawToken !== null) {
+                                $devLink = sprintf(
+                                    '%s/club_reset_password.php?token=%s',
+                                    rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
+                                    $rawToken
+                                );
+                            }
+                        }
                     }
                 } catch (\Throwable $exception) {
                     $errors[] = str_replace('{message}', $exception->getMessage(), __('club.forgot_password.errors.request_failed'));
@@ -192,6 +198,16 @@ final class ClubController extends Controller
             'success' => $success,
             'dev_link' => $devLink,
         ]);
+    }
+
+    private function authenticationThrottle(): AuthenticationThrottle
+    {
+        return $this->authenticationThrottle ??= new DatabaseAuthenticationThrottle(Database::connection());
+    }
+
+    private function networkSignal(Request $request): string
+    {
+        return trim((string) $request->server('REMOTE_ADDR', 'unknown')) ?: 'unknown';
     }
 
     private function canExposeResetLink(): bool
