@@ -112,7 +112,7 @@ function get_current_path(): string
     return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 }
 
-/** @return list<array{label: string, url: string, paths: list<string>, query?: array<string, list<string>>}> */
+/** @return list<array{label: string, url: string, paths: list<string>, method?: 'post', query?: array<string, list<string>>}> */
 function build_submenu(string $currentPath, bool $isAdmin, bool $isLoggedIn): array
 {
     $competitionPaths = ['/events.php', '/event_details.php', '/event_register.php'];
@@ -139,7 +139,7 @@ function build_submenu(string $currentPath, bool $isAdmin, bool $isLoggedIn): ar
             $submenuItems[] = ['label' => translate('admin.submenu.manage_clubs'), 'url' => '/admin_manage_clubs.php', 'paths' => ['/admin_manage_clubs.php', '/admin_edit_club.php']];
             $submenuItems[] = ['label' => translate('admin.submenu.manage_events'), 'url' => '/admin_manage_events.php', 'paths' => ['/admin_manage_events.php']];
             $submenuItems[] = ['label' => translate('admin.submenu.add_event'), 'url' => '/admin_add_event.php', 'paths' => ['/admin_add_event.php']];
-            $submenuItems[] = ['label' => translate('admin.submenu.logout'), 'url' => '/admin_logout.php', 'paths' => ['/admin_logout.php']];
+            $submenuItems[] = ['label' => translate('admin.submenu.logout'), 'url' => '/admin_logout.php', 'paths' => ['/admin_logout.php'], 'method' => 'post'];
         } else {
             $submenuItems[] = ['label' => translate('nav.login'), 'url' => '/admin_login.php', 'paths' => ['/admin_login.php']];
         }
@@ -150,7 +150,7 @@ function build_submenu(string $currentPath, bool $isAdmin, bool $isLoggedIn): ar
         } else {
             $submenuItems[] = ['label' => translate('club.area.submenu.manage'), 'url' => '/club_area.php', 'paths' => ['/club_area.php'], 'query' => ['view' => ['', 'list']]];
             $submenuItems[] = ['label' => translate('club.area.submenu.add'), 'url' => '/club_area.php?view=add', 'paths' => ['/club_area.php'], 'query' => ['view' => ['add']]];
-            $submenuItems[] = ['label' => translate('club.area.submenu.logout'), 'url' => '/club_logout.php', 'paths' => ['/club_logout.php']];
+            $submenuItems[] = ['label' => translate('club.area.submenu.logout'), 'url' => '/club_logout.php', 'paths' => ['/club_logout.php'], 'method' => 'post'];
         }
     }
 

@@ -35,8 +35,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C05 | [!] | `feat(auth): deliver password reset links by email` | S-01, A-08 |  | D01: no verified production mail transport or sender requirements; production recovery remains disabled |
 | C06 | [x] | `fix(security): enforce athlete ownership on registration` | S-02, S-08 | `5fa7722` | Focused PDO fixture: 5 tests/42 assertions; one constrained write per attempt; full code checks pass with 46 tests/423 assertions; dependency audit not verified |
 | C07 | [x] | `fix(security): protect athlete mutations with CSRF` | S-03 | `50d922e` | Controller/application tests: 5 tests/26 assertions; full code checks pass with 51 tests/449 assertions; dependency audit not verified |
-| C08 | [x] | `fix(security): move delete actions to CSRF protected posts` | S-03 | This commit | Delete-action tests: 6 tests/51 assertions; no destructive GET patterns remain; full code checks pass with 57 tests/500 assertions; dependency audit not verified |
-| C09 | [ ] | `fix(security): require post for logout` | S-09 |  |  |
+| C08 | [x] | `fix(security): move delete actions to CSRF protected posts` | S-03 | `330d664` | Delete-action tests: 6 tests/51 assertions; no destructive GET patterns remain; full code checks pass with 57 tests/500 assertions; dependency audit not verified |
+| C09 | [x] | `fix(security): require post for logout` | S-09 | This commit | Logout tests: 5 tests/30 assertions; full code checks pass with 62 tests/530 assertions; dependency audit not verified |
 | C10 | [ ] | `feat(security): persist authentication throttles` | S-04 |  |  |
 | C11 | [ ] | `fix(auth): consume reset tokens atomically` | S-06, S-08 |  |  |
 | C12 | [ ] | `fix(validation): enforce account and event invariants` | S-06 |  | Preflight duplicate club emails before unique index |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C09 conversion of logout to CSRF-protected POST actions |
-| Files intentionally in scope | None until C09 begins |
-| Last targeted test | Delete-action routes/controllers/templates: 6 tests/51 assertions |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (57 tests/500 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Read C09 acceptance criteria and inventory admin/club logout links and session cleanup |
+| Objective | Start C10 persistent authentication/reset throttling |
+| Files intentionally in scope | None until C10 begins |
+| Last targeted test | Logout routes/controllers/session cleanup: 5 tests/30 assertions |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (62 tests/530 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Read C10 acceptance criteria and design the bounded persistent throttle migration/component |
 
 ## Blockers and decisions
 
@@ -103,6 +103,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-28 | C06 | Replaced the precheck/unconstrained insert with one athlete-and-club-constrained write and explicit duplicate result | Focused PDO fixture 5/42; randomized/full suite 46/423; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C07 |
 | 2026-06-28 | C07 | Enforced CSRF before athlete mutation parsing/database access and replaced helper exit with a rendered 419 response | Controller/application tests 5/26; randomized/full suite 51/449; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C08 |
 | 2026-06-28 | C08 | Replaced club, event, and athlete delete links/GET branches with authenticated CSRF-protected POST actions | Delete-action tests 6/51; no destructive GET patterns; randomized/full suite 57/500; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C09 |
+| 2026-06-28 | C09 | Converted admin/club logout to CSRF-protected POST forms and cleared destroyed session identifiers/cookies | Logout tests 5/30; randomized/full suite 62/530; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C10 |
 
 ## Milestones
 

@@ -136,7 +136,13 @@ $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/ad
         </select>
     </form>
     <?php if ($isLoggedIn) : ?>
-        <div class="club-login-info"><span><?= e($clubEmail) ?></span> <a href="/club_logout.php"><?= translate('club.area.submenu.logout') ?></a></div>
+        <div class="club-login-info">
+            <span><?= e($clubEmail) ?></span>
+            <form method="post" action="/club_logout.php" class="logout-form">
+                <?= csrf_field() ?>
+                <button type="submit" class="logout-link"><?= translate('club.area.submenu.logout') ?></button>
+            </form>
+        </div>
     <?php else : ?>
         <div class="club-login-info">
             <a href="/club_login.php"><?= translate('nav.login') ?></a> | <a href="/club_register.php"><?= translate('nav.register') ?></a>
@@ -161,7 +167,14 @@ $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/ad
                 $active = in_array($clubView, $item['query']['view'], true);
             }
             ?>
-            <a href="<?= e($item['url']) ?>" class="submenu-item<?= $active ? ' submenu-item--active' : '' ?>"><?= e($item['label']) ?></a>
+            <?php if (($item['method'] ?? null) === 'post') : ?>
+                <form method="post" action="<?= e($item['url']) ?>" class="logout-form">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="submenu-item<?= $active ? ' submenu-item--active' : '' ?>"><?= e($item['label']) ?></button>
+                </form>
+            <?php else : ?>
+                <a href="<?= e($item['url']) ?>" class="submenu-item<?= $active ? ' submenu-item--active' : '' ?>"><?= e($item['label']) ?></a>
+            <?php endif; ?>
         <?php endforeach; ?>
     </div>
 </div>

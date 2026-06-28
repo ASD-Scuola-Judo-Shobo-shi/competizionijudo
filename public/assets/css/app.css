@@ -65,6 +65,24 @@ body{
     opacity:0.625;
 }
 
+.logout-form{
+    display:inline-flex;
+    margin:0;
+}
+
+.logout-link{
+    padding:0;
+    border:0;
+    background:transparent;
+    color:#0a3775;
+    font:inherit;
+    cursor:pointer;
+}
+
+.logout-link:hover{
+    opacity:0.625;
+}
+
 .left-logos{
     display:flex;
     align-items:center;
@@ -740,6 +758,15 @@ textarea{
     transition: background .15s ease;
 }
 
+button.submenu-item{
+    border-top:0;
+    border-right:0;
+    border-bottom:0;
+    font-family:inherit;
+    font-size:inherit;
+    cursor:pointer;
+}
+
 .submenu-item:first-child{border-left:0}
 .submenu-item:hover{background:#0a63d8}
 .submenu-item--active{background:#0a63d8;cursor:default}
@@ -926,4 +953,3 @@ textarea{
 .hidden {
     display: none !important;
 }
-

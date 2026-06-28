@@ -47,9 +47,30 @@ final class Session
 
     public static function destroy(): void
     {
+        $sessionName = session_name();
+        $cookieParameters = session_get_cookie_params();
+
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_unset();
             session_destroy();
         }
+
+        $_SESSION = [];
+        if (ini_get('session.use_cookies') === '1') {
+            if (!headers_sent()) {
+                setcookie($sessionName, '', [
+                    'expires' => time() - 42000,
+                    'path' => $cookieParameters['path'],
+                    'domain' => $cookieParameters['domain'],
+                    'secure' => $cookieParameters['secure'],
+                    'httponly' => $cookieParameters['httponly'],
+                    'samesite' => $cookieParameters['samesite'],
+                ]);
+            }
+
+            unset($_COOKIE[$sessionName]);
+        }
+
+        session_id('');
     }
 }

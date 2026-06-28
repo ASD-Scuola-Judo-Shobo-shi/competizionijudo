@@ -405,6 +405,7 @@ final class AdminController extends Controller
 
     public function logout(Request $request): Response
     {
+        validate_csrf((string) $request->post('csrf_token'));
         Session::destroy();
 
         return $this->redirect('/admin_login.php');

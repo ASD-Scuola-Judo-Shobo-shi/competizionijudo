@@ -29,7 +29,7 @@ return static function (App\Core\Router $router): void {
 
     $router->get('/clubs.php', [ClubController::class, 'list']);
 
-    $router->get('/club_logout.php', [ClubController::class, 'logout']);
+    $router->post('/club_logout.php', [ClubController::class, 'logout']);
 
     $router->get('/club_area.php', [ClubAreaController::class, 'index']);
     $router->post('/club_area.php', [ClubAreaController::class, 'index']);
@@ -56,7 +56,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/admin_edit_event.php', [\App\Controller\AdminController::class, 'editEvent']);
     $router->post('/admin_edit_event.php', [\App\Controller\AdminController::class, 'editEvent']);
 
-    $router->get('/admin_logout.php', [\App\Controller\AdminController::class, 'logout']);
+    $router->post('/admin_logout.php', [\App\Controller\AdminController::class, 'logout']);
 
     $router->get('/language/switch', [App\Controller\LanguageController::class, 'switch']);
 };
