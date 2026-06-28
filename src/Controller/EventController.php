@@ -11,6 +11,7 @@ use App\Core\Session;
 use App\Model\AgeClass;
 use App\Model\Athlete;
 use App\Model\Entry;
+use App\Model\EntryRegistrationResult;
 use App\Model\Event;
 use App\Model\JudoCategory;
 
@@ -106,14 +107,9 @@ final class EventController extends Controller
             foreach ($athleteIds as $athleteId) {
                 $athleteId = (int) $athleteId;
                 if ($athleteId > 0) {
-                    try {
-                        Entry::register($id, $clubId, $athleteId);
-                    } catch (\RuntimeException $e) {
-                        if ($e->getMessage() === 'ALREADY_REGISTERED') {
-                            $warning = __('events.already_registered');
-                        } else {
-                            throw $e;
-                        }
+                    $result = Entry::register($id, $clubId, $athleteId);
+                    if ($result === EntryRegistrationResult::AlreadyRegistered) {
+                        $warning = __('events.already_registered');
                     }
                 }
             }

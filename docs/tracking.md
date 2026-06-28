@@ -31,9 +31,9 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C01 | [x] | `test: isolate PHP session storage` | Q-02 | `0484b1f` | `composer test`: 32 tests/94 assertions; repeat and randomized runs pass without warnings |
 | C02 | [x] | `fix(domain): simplify belt and gender presentation` | Q-01, P-02, A-07 | `1fcddb1` | One exhaustive belt definition; locale cache/state preserved; 36 tests/356 assertions |
 | C03 | [x] | `fix(view): remove editor artifacts from event form` | Q-04 | `03f4085` | Render test confirms artifact-free output and balanced forms; 37 tests/360 assertions |
-| C04 | [x] | `fix(security): stop exposing password reset tokens` | S-01 | This commit | 4 controller tests/21 assertions; full code checks pass with 41 tests/381 assertions; dependency audit not verified |
-| C05 | [ ] | `feat(auth): deliver password reset links by email` | S-01, A-08 |  | Mail transport decision required before start |
-| C06 | [ ] | `fix(security): enforce athlete ownership on registration` | S-02, S-08 |  | Requires DB-backed test harness or a focused repository fixture |
+| C04 | [x] | `fix(security): stop exposing password reset tokens` | S-01 | `1c97401` | 4 controller tests/21 assertions; full code checks pass with 41 tests/381 assertions; dependency audit not verified |
+| C05 | [!] | `feat(auth): deliver password reset links by email` | S-01, A-08 |  | D01: no verified production mail transport or sender requirements; production recovery remains disabled |
+| C06 | [x] | `fix(security): enforce athlete ownership on registration` | S-02, S-08 | This commit | Focused PDO fixture: 5 tests/42 assertions; one constrained write per attempt; full code checks pass with 46 tests/423 assertions; dependency audit not verified |
 | C07 | [ ] | `fix(security): protect athlete mutations with CSRF` | S-03 |  |  |
 | C08 | [ ] | `fix(security): move delete actions to CSRF protected posts` | S-03 |  |  |
 | C09 | [ ] | `fix(security): require post for logout` | S-09 |  |  |
@@ -69,17 +69,17 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Resolve D01 before starting C05 reset-link email delivery |
-| Files intentionally in scope | None until C05 begins |
-| Last targeted test | Forgot-password controller tests: 4 tests/21 assertions |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (41 tests/381 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Confirm the production mail transport for C05; if unavailable, record C05 blocked before selecting the next eligible commit |
+| Objective | Start C07 athlete-mutation CSRF enforcement |
+| Files intentionally in scope | None until C07 begins |
+| Last targeted test | Entry registration repository fixture: 5 tests/42 assertions; exactly one ownership-constrained statement per attempt |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (46 tests/423 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Read C07 acceptance criteria and trace athlete add/edit CSRF handling |
 
 ## Blockers and decisions
 
 | ID | Affects | Owner | Status | Decision/blocker |
 |---|---|---|---|---|
-| D01 | C05 | Product/operations | Open | Confirm the mail transport supported by production hosting; keep recovery disabled until verified |
+| D01 | C05 | Product/operations | Blocking | Confirm the actual production transport (SMTP/API/host sendmail), authentication/TLS requirements, and approved sender identity; the repository and generic FTP-hosting docs do not establish these facts |
 | D02 | C20 | Operations | Open | Confirm where production DB/admin secrets are provisioned and who owns `.env` |
 | D03 | C23 | Operations | Open | Define stable health URL and rollback procedure for FTP hosting |
 | D04 | C25 | Product/privacy | Open | Confirm whether exports are required and, if so, approved formats/fields/access |
@@ -99,6 +99,8 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-28 | C02 | Consolidated belt/gender presentation and cached translations per locale without global locale mutation | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (36 tests/356 assertions); dependency audit not verified | C03 |
 | 2026-06-28 | C03 | Removed literal editor artifacts and added event-form render regression coverage | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (37 tests/360 assertions); dependency audit not verified | C04 |
 | 2026-06-28 | C04 | Disabled production reset issuance/disclosure and gated local test links behind three explicit flags | Controller tests 4/21; full code checks pass with 41 tests/381 assertions; dependency audit not verified | C05 pending D01 |
+| 2026-06-28 | C05 | Blocked: no verified production mail transport or sender configuration is available | Repository/config/deployment scan only; no code or tests changed | C06; resume C05 when D01 is resolved |
+| 2026-06-28 | C06 | Replaced the precheck/unconstrained insert with one athlete-and-club-constrained write and explicit duplicate result | Focused PDO fixture 5/42; randomized/full suite 46/423; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C07 |
 
 ## Milestones
 
