@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\HttpException;
 use App\Localization;
 
 function base_path(string $path = ''): string
@@ -78,9 +79,7 @@ function csrf_field(): string
 function validate_csrf(?string $token): void
 {
     if (empty($token) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], (string) $token)) {
-        http_response_code(419);
-        echo 'Invalid CSRF token';
-        exit;
+        throw new HttpException(419, __('errors.invalid_csrf'));
     }
 }
 

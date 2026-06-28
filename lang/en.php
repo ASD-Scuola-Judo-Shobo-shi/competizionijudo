@@ -154,6 +154,7 @@ return [
     'errors' => [
         'page_not_found' => 'Page not found',
         'server_error' => 'Server error',
+        'invalid_csrf' => 'The form expired or is invalid. Please reload the page and try again.',
     ],
     'buttons' => [
         'back_to_login' => 'Go to club login',

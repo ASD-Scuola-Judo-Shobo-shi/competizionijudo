@@ -25,6 +25,10 @@ final class ClubAreaController extends Controller
             return $this->redirect('/club_login.php');
         }
 
+        if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
+        }
+
         $club = Club::findById((int) $clubId);
         if ($club === null) {
             Session::destroy();
