@@ -28,8 +28,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 
 | ID | Status | Planned commit | Audit IDs | Commit hash | Verification/notes |
 |---|---|---|---|---|---|
-| C01 | [x] | `test: isolate PHP session storage` | Q-02 | This commit | `composer test`: 32 tests/94 assertions; repeat and randomized runs pass without warnings |
-| C02 | [ ] | `fix(domain): simplify belt and gender presentation` | Q-01, P-02, A-07 |  |  |
+| C01 | [x] | `test: isolate PHP session storage` | Q-02 | `0484b1f` | `composer test`: 32 tests/94 assertions; repeat and randomized runs pass without warnings |
+| C02 | [x] | `fix(domain): simplify belt and gender presentation` | Q-01, P-02, A-07 | This commit | One exhaustive belt definition; locale cache/state preserved; 36 tests/356 assertions |
 | C03 | [ ] | `fix(view): remove editor artifacts from event form` | Q-04 |  |  |
 | C04 | [ ] | `fix(security): stop exposing password reset tokens` | S-01 |  |  |
 | C05 | [ ] | `feat(auth): deliver password reset links by email` | S-01, A-08 |  | Mail transport decision required before start |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start with C02 |
-| Files intentionally in scope | To be recorded when C02 begins |
-| Last targeted test | `composer test`: passed twice; randomized PHPUnit run passed (32 tests, 94 assertions) |
-| Last full check | `composer check`: metadata, syntax, and PHPCS pass; blocked at the pre-existing C02 PHPStan finding in `Belt.php:207`; dependency audit not verified |
-| Next action | Read C02 acceptance criteria and simplify belt/gender presentation |
+| Objective | Start with C03 |
+| Files intentionally in scope | To be recorded when C03 begins |
+| Last targeted test | Presentation/localization tests: 10 tests/271 assertions; randomized full suite: 36 tests/356 assertions |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass; dependency audit not verified because external Packagist access was unavailable/rejected |
+| Next action | Read C03 acceptance criteria and remove event-form editor artifacts with render coverage |
 
 ## Blockers and decisions
 
@@ -96,6 +96,7 @@ Add one concise row at the end of every working session, including sessions that
 |---|---|---|---|---|
 | 2026-06-28 | Audit | Created current audit, ordered roadmap, tracker, and continuation prompt | Static trace; command results recorded in Baseline | C01 |
 | 2026-06-28 | C01 | Completed isolated PHPUnit session storage and reset regression coverage | `composer test` repeated and randomized: 32 tests/94 assertions; PHPCS passed; full gate retains known C02 PHPStan failure; audit not verified | C02 |
+| 2026-06-28 | C02 | Consolidated belt/gender presentation and cached translations per locale without global locale mutation | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (36 tests/356 assertions); dependency audit not verified | C03 |
 
 ## Milestones
 

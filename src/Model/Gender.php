@@ -14,14 +14,9 @@ enum Gender: string
     /**
      * Returns the localized label for the gender.
      */
-    public function label(string $locale = 'it'): string
+    public function label(?string $locale = null): string
     {
-        $currentLocale = Localization::getLocale();
-        Localization::setLocale($locale);
-        $translated = Localization::trans("gender.{$this->value}");
-        Localization::setLocale($currentLocale);
-
-        return $translated;
+        return Localization::transFor($locale ?? Localization::getLocale(), "gender.{$this->value}");
     }
 
     /**
@@ -38,7 +33,7 @@ enum Gender: string
     /**
      * Returns icon + label combined, e.g. "♂ Maschio" or "♀ Female".
      */
-    public function iconLabel(string $locale = 'it'): string
+    public function iconLabel(?string $locale = null): string
     {
         return $this->icon() . ' ' . $this->label($locale);
     }
@@ -65,7 +60,7 @@ enum Gender: string
      * Returns all cases as select options.
      * @return array<string, string> value => label
      */
-    public static function options(string $locale = 'it'): array
+    public static function options(?string $locale = null): array
     {
         $options = [];
         foreach (self::cases() as $case) {

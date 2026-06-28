@@ -33,7 +33,7 @@ final class Athlete
     /**
      * Returns the localized belt label.
      */
-    public function beltLabel(string $locale = 'it'): string
+    public function beltLabel(?string $locale = null): string
     {
         $enum = $this->beltEnum();
 
@@ -51,7 +51,7 @@ final class Athlete
     /**
      * Returns the localized gender label.
      */
-    public function genderLabel(string $locale = 'it'): string
+    public function genderLabel(?string $locale = null): string
     {
         $enum = $this->genderEnum();
 
@@ -61,7 +61,7 @@ final class Athlete
     /**
      * Returns the localized gender label with a UTF-8 icon, e.g. "♂ Maschio".
      */
-    public function genderIconLabel(string $locale = 'it'): string
+    public function genderIconLabel(?string $locale = null): string
     {
         $enum = $this->genderEnum();
 

@@ -49,6 +49,13 @@ final class LocalizationTest extends TestCase
         Localization::setLocale('it');
     }
 
+    public function testTransForDoesNotChangeActiveLocale(): void
+    {
+        self::assertSame('Home', Localization::transFor('en', 'nav.home'));
+        self::assertSame('it', Localization::getLocale());
+        self::assertSame('Home', Localization::transFor('en', 'nav.home'));
+    }
+
     public function testTransWithNestedKey(): void
     {
         $result = Localization::trans('admin.login.title');

@@ -7,12 +7,13 @@ namespace App;
 final class Localization
 {
     private static string $locale = 'it';
+
+    /** @var array<string, array<string, mixed>> */
     private static array $messages = [];
 
     public static function setLocale(string $locale): void
     {
         self::$locale = $locale;
-        self::$messages = [];
     }
 
     public static function getLocale(): string
@@ -20,13 +21,23 @@ final class Localization
         return self::$locale;
     }
 
+    /** @param array<string, string> $replacements */
     public static function trans(string $key, array $replacements = []): string
     {
-        if (self::$messages === []) {
-            self::loadMessages();
+        return self::transFor(self::$locale, $key, $replacements);
+    }
+
+    /** @param array<string, string> $replacements */
+    public static function transFor(string $locale, string $key, array $replacements = []): string
+    {
+        if (!array_key_exists($locale, self::$messages)) {
+            self::$messages[$locale] = self::loadMessages($locale);
         }
 
-        $value = self::getValue(self::$messages, $key) ?? $key;
+        $value = self::getValue(self::$messages[$locale], $key);
+        if (!is_string($value)) {
+            return $key;
+        }
 
         foreach ($replacements as $search => $replace) {
             $value = str_replace('{' . $search . '}', (string) $replace, $value);
@@ -35,17 +46,24 @@ final class Localization
         return $value;
     }
 
-    private static function loadMessages(): void
+    /** @return array<string, mixed> */
+    private static function loadMessages(string $locale): array
     {
-        $path = dirname(__DIR__) . '/lang/' . self::$locale . '.php';
+        $path = dirname(__DIR__) . '/lang/' . $locale . '.php';
 
         if (!is_file($path)) {
             throw new \RuntimeException(sprintf('Locale file not found: %s', $path));
         }
 
-        self::$messages = require $path;
+        $messages = require $path;
+        if (!is_array($messages)) {
+            throw new \RuntimeException(sprintf('Locale file must return an array: %s', $path));
+        }
+
+        return $messages;
     }
 
+    /** @param array<string, mixed> $data */
     private static function getValue(array $data, string $key): mixed
     {
         $segments = explode('.', $key);
