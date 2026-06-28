@@ -28,7 +28,7 @@ final class Entry
     }
 
     /** @return list<array<string, mixed>> */
-    public static function findByEvent(int $eventId, int $clubId = 0): array
+    public static function findByEvent(int $eventId, ?int $clubId): array
     {
         $sql = 'SELECT en.id AS entry_id, c.id AS club_id, c.name AS club_name, c.federal_code AS federal_code, a.last_name AS last_name, a.first_name AS first_name, a.weight_kg AS weight_kg, a.weight_category AS weight_category, a.belt AS belt, a.membership_number AS membership_number, a.date_of_birth AS birth_date, e.name AS nome_evento, e.date AS data_gara
             FROM entries en
@@ -38,7 +38,7 @@ final class Entry
             WHERE en.event_id = ?';
 
         $params = [$eventId];
-        if ($clubId > 0) {
+        if ($clubId !== null) {
             $sql .= ' AND c.id = ?';
             $params[] = $clubId;
         }
@@ -52,16 +52,23 @@ final class Entry
     }
 
     /** @return list<array<string, mixed>> */
-    public static function findClubsByEvent(int $eventId): array
+    public static function findClubsByEvent(int $eventId, ?int $clubId): array
     {
-        $stmt = Database::connection()->prepare(
-            'SELECT DISTINCT c.id, c.name AS club_name, c.federal_code AS federal_code
-             FROM entries en
-             JOIN clubs c ON c.id = en.club_id
-             WHERE en.event_id = ?
-               ORDER BY c.name'
-        );
-        $stmt->execute([$eventId]);
+        $sql = 'SELECT DISTINCT c.id, c.name AS club_name, c.federal_code AS federal_code
+                FROM entries en
+                JOIN clubs c ON c.id = en.club_id
+                WHERE en.event_id = ?';
+        $params = [$eventId];
+
+        if ($clubId !== null) {
+            $sql .= ' AND c.id = ?';
+            $params[] = $clubId;
+        }
+
+        $sql .= ' ORDER BY c.name';
+
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
 
         return $stmt->fetchAll() ?: [];
     }
@@ -82,11 +89,15 @@ final class Entry
         return $stmt->fetchAll() ?: [];
     }
 
-    public static function register(int $eventId, int $clubId, int $athleteId): EntryRegistrationResult
-    {
+    public static function register(
+        int $eventId,
+        int $clubId,
+        int $athleteId,
+        string $registrationDate
+    ): EntryRegistrationResult {
         $repository = new EntryRegistrationRepository(Database::connection());
 
-        return $repository->register($eventId, $clubId, $athleteId);
+        return $repository->register($eventId, $clubId, $athleteId, $registrationDate);
     }
 
     /** @return list<int> */

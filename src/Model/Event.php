@@ -77,6 +77,31 @@ final class Event
         return $row ? self::fromArray($row) : null;
     }
 
+    public static function findPublishedById(int $id): ?self
+    {
+        $stmt = Database::connection()->prepare('SELECT * FROM events WHERE id = ? AND published = 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+
+        return $row ? self::fromArray($row) : null;
+    }
+
+    public static function findRegistrationEligibleById(int $id, string $onDate): ?self
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM events
+             WHERE id = ?
+               AND published = 1
+               AND closed = 0
+               AND date >= ?
+               AND (registration_deadline IS NULL OR registration_deadline >= ?)'
+        );
+        $stmt->execute([$id, $onDate, $onDate]);
+        $row = $stmt->fetch();
+
+        return $row ? self::fromArray($row) : null;
+    }
+
     public static function remove(int $id): void
     {
         $statement = Database::connection()->prepare('DELETE FROM events WHERE id = ?');

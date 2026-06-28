@@ -39,8 +39,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C09 | [x] | `fix(security): require post for logout` | S-09 | `ec9b6e1` | Logout tests: 5 tests/30 assertions; full code checks pass with 62 tests/530 assertions; dependency audit not verified |
 | C10 | [x] | `feat(security): persist authentication throttles` | S-04 | `846ff83` | Focused throttle/migration tests: 15/59; MySQL 8.4 clean and pre-C10 upgrade/repeat checks pass with legacy-compatible SQL mode; full code checks pass with 68 tests/560 assertions; dependency audit not verified |
 | C11 | [x] | `fix(auth): consume reset tokens atomically` | S-06, S-08 | `fe972bb` | Focused reset/policy tests: 17/99; locking, conditional claim, reuse/expiry/race-loss, rollback, and all-token invalidation covered; full code checks pass with 80 tests/633 assertions; dependency audit not verified |
-| C12 | [x] | `fix(validation): enforce account and event invariants` | S-06 | This commit | Focused validation/no-write tests: 10/58; MySQL 8.4 legacy-compatible clean/upgrade/repeat, duplicate preflight, normalization, and unique rejection pass; full code checks pass with 90 tests/691 assertions; dependency audit not verified |
-| C13 | [ ] | `fix(events): enforce publication and registration lifecycle` | S-05, F-01 |  |  |
+| C12 | [x] | `fix(validation): enforce account and event invariants` | S-06 | `8fe0bc5` | Focused validation/no-write tests: 10/58; MySQL 8.4 legacy-compatible clean/upgrade/repeat, duplicate preflight, normalization, and unique rejection pass; full code checks pass with 90 tests/691 assertions; dependency audit not verified |
+| C13 | [x] | `fix(events): enforce publication and registration lifecycle` | S-05, F-01 | This commit | Focused lifecycle/access tests: 14/98; MySQL 8.4 boundary checks pass and scoped entry lookup uses the unique index; full code checks pass with 99 tests/747 assertions; dependency audit not verified |
 | C14 | [ ] | `fix(observability): log failures without exposing internals` | S-07 |  |  |
 | C15 | [ ] | `fix(database): add athlete weight category column` | R-02 |  |  |
 | C16 | [ ] | `test(database): verify clean and legacy migrations` | R-02, A-05, Q-03 |  | Requires MySQL in CI/local test environment |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C13 event visibility, registration lifecycle, and entry-detail authorization enforcement |
-| Files intentionally in scope | None until C13 begins |
-| Last targeted test | C12 focused validation and no-write controller coverage: 10 tests/58 assertions; MySQL clean/upgrade/duplicate checks pass |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (90 tests/691 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Read C13 acceptance criteria and trace public event lookup, registration lifecycle, and club entry scoping |
+| Objective | Start C14 safe error logging without exposing internal failure details |
+| Files intentionally in scope | None until C14 begins |
+| Last targeted test | C13 lifecycle/access coverage: 14 tests/98 assertions; MySQL 8.4 lifecycle writes pass and `EXPLAIN` uses primary/unique indexes |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (99 tests/747 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Read C14 acceptance criteria and trace exception handling, user-facing errors, and logging configuration |
 
 ## Blockers and decisions
 
@@ -108,6 +108,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-28 | C10 | Added database-backed hashed authentication/reset throttles with bounded expiry cleanup and made DDL migrations tolerate MySQL implicit commits | Focused tests 15/59; MySQL 8.4 clean plus pre-C10 upgrade/repeat checks pass in legacy-compatible mode; full code checks 68/560; dependency audit not verified | C11 |
 | 2026-06-28 | C11 | Added transactional one-time reset consumption, invalidated all reset tokens on password changes, and enforced a shared 12-character minimum | Focused tests 17/99; randomized/full suite 80/633; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C12 |
 | 2026-06-28 | C12 | Added explicit club/athlete/event/upload validation, safe mutation errors, normalized email writes, and preflighted unique normalized-email enforcement | Focused tests 10/58; MySQL legacy-compatible clean/upgrade/repeat and duplicate checks pass; full code checks 90/691; dependency audit not verified | C13 |
+| 2026-06-28 | C13 | Enforced published public lookup, event-date/deadline lifecycle at read and atomic write boundaries, and session-club entry scoping | Focused tests 14/98; MySQL 8.4 boundary checks and `EXPLAIN` pass; full code checks 99/747; dependency audit not verified | C14 |
 
 ## Milestones
 

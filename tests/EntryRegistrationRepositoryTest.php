@@ -18,7 +18,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
     {
         $repository = $this->repositoryReturningRowCount(1, 301);
 
-        $result = $repository->register(101, 201, 301);
+        $result = $repository->register(101, 201, 301, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::Registered, $result);
     }
@@ -27,7 +27,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
     {
         $repository = $this->repositoryReturningRowCount(0, 302);
 
-        $result = $repository->register(101, 201, 302);
+        $result = $repository->register(101, 201, 302, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
     }
@@ -36,7 +36,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
     {
         $repository = $this->repositoryReturningRowCount(0, 999);
 
-        $result = $repository->register(101, 201, 999);
+        $result = $repository->register(101, 201, 999, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
     }
@@ -53,7 +53,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
         $statement->expects(self::never())->method('rowCount');
         $repository = new EntryRegistrationRepository($this->databasePreparing($statement));
 
-        $result = $repository->register(101, 201, 301);
+        $result = $repository->register(101, 201, 301, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AlreadyRegistered, $result);
     }
@@ -89,6 +89,8 @@ final class EntryRegistrationRepositoryTest extends TestCase
             'entry_club_id' => 201,
             'athlete_id' => $athleteId,
             'athlete_club_id' => 201,
+            'event_date' => '2026-06-28',
+            'deadline_date' => '2026-06-28',
         ];
     }
 
@@ -105,8 +107,19 @@ final class EntryRegistrationRepositoryTest extends TestCase
                     $normalized
                 );
                 self::assertStringContainsString('FROM athletes AS athlete', $normalized);
+                self::assertStringContainsString(
+                    'JOIN events AS event_record ON event_record.id = :event_id',
+                    $normalized
+                );
                 self::assertStringContainsString('athlete.id = :athlete_id', $normalized);
                 self::assertStringContainsString('athlete.club_id = :athlete_club_id', $normalized);
+                self::assertStringContainsString('event_record.published = 1', $normalized);
+                self::assertStringContainsString('event_record.closed = 0', $normalized);
+                self::assertStringContainsString('event_record.date >= :event_date', $normalized);
+                self::assertStringContainsString(
+                    'event_record.registration_deadline >= :deadline_date',
+                    $normalized
+                );
 
                 return true;
             }))

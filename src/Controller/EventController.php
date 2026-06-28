@@ -33,7 +33,7 @@ final class EventController extends Controller
         $id = (int) ($request->input('id') ?? $request->query('id') ?? $request->query('event') ?? 0);
 
         if ($id > 0) {
-            $event = Event::findById($id);
+            $event = Event::findPublishedById($id);
             if ($event === null) {
                 return $this->redirect('/events.php');
             }
@@ -61,12 +61,14 @@ final class EventController extends Controller
         Session::start();
         $clubId = Session::get('club_id');
 
-        if ($clubId === null) {
+        if (!is_numeric($clubId) || (int) $clubId <= 0) {
             return $this->redirect('/club_login.php');
         }
+        $clubId = (int) $clubId;
 
         $id = (int) ($request->input('id') ?? $request->query('id'));
         $limit = max(1, (int) config('app.events_upcoming_limit'));
+        $registrationDate = date('Y-m-d');
 
         if ($id <= 0) {
             $upcomingEvents = Event::allPublished($limit);
@@ -81,8 +83,8 @@ final class EventController extends Controller
             ]);
         }
 
-        $event = Event::findById($id);
-        if ($event === null || !$event->published || $event->closed) {
+        $event = Event::findRegistrationEligibleById($id, $registrationDate);
+        if ($event === null) {
             $upcomingEvents = Event::allPublished($limit);
 
             return $this->view('events/register', [
@@ -107,7 +109,7 @@ final class EventController extends Controller
             foreach ($athleteIds as $athleteId) {
                 $athleteId = (int) $athleteId;
                 if ($athleteId > 0) {
-                    $result = Entry::register($id, $clubId, $athleteId);
+                    $result = Entry::register($id, $clubId, $athleteId, $registrationDate);
                     if ($result === EntryRegistrationResult::AlreadyRegistered) {
                         $warning = __('events.already_registered');
                     }
@@ -137,7 +139,7 @@ final class EventController extends Controller
         $isAdmin = !empty(Session::get('is_admin'));
         $clubId = Session::get('club_id');
 
-        if (!$isAdmin && $clubId === null) {
+        if (!$isAdmin && (!is_numeric($clubId) || (int) $clubId <= 0)) {
             return $this->redirect('/club_login.php');
         }
 
@@ -151,12 +153,13 @@ final class EventController extends Controller
             return $this->redirect('/events.php');
         }
 
-        $clubFilter = (int) ($request->query('club') ?? 0);
-        if (!$isAdmin && $clubFilter !== 0) {
-            $clubFilter = (int) $clubId;
-        }
-        $clubs = Entry::findClubsByEvent($eventId);
-        $rows = Entry::findByEvent($eventId, $clubFilter);
+        $requestedClubId = (int) ($request->query('club') ?? 0);
+        $clubFilter = $isAdmin ? $requestedClubId : (int) $clubId;
+        $entryClubId = $isAdmin
+            ? ($clubFilter > 0 ? $clubFilter : null)
+            : (int) $clubId;
+        $clubs = Entry::findClubsByEvent($eventId, $isAdmin ? null : $entryClubId);
+        $rows = Entry::findByEvent($eventId, $entryClubId);
 
         $selectedClub = null;
         foreach ($clubs as $club) {
