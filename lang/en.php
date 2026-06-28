@@ -81,11 +81,11 @@ return [
             'email' => 'Club email',
             'submit' => 'Send reset link',
             'success_message' => 'If the email exists, a password reset link has been sent.',
+            'unavailable_message' => 'Password recovery is currently unavailable. Contact the administrator.',
             'dev_link_label' => 'Reset link (development)',
             'errors' => [
                 'email_required' => 'Please enter your email.',
                 'valid_email_required' => 'Please enter a valid email address.',
-                'email_not_found' => 'Email not found.',
                 'request_failed' => 'Request failed: {message}',
             ],
         ],

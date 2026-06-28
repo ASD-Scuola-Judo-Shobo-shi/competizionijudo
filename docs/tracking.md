@@ -30,8 +30,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 |---|---|---|---|---|---|
 | C01 | [x] | `test: isolate PHP session storage` | Q-02 | `0484b1f` | `composer test`: 32 tests/94 assertions; repeat and randomized runs pass without warnings |
 | C02 | [x] | `fix(domain): simplify belt and gender presentation` | Q-01, P-02, A-07 | `1fcddb1` | One exhaustive belt definition; locale cache/state preserved; 36 tests/356 assertions |
-| C03 | [x] | `fix(view): remove editor artifacts from event form` | Q-04 | This commit | Render test confirms artifact-free output and balanced forms; 37 tests/360 assertions |
-| C04 | [ ] | `fix(security): stop exposing password reset tokens` | S-01 |  |  |
+| C03 | [x] | `fix(view): remove editor artifacts from event form` | Q-04 | `03f4085` | Render test confirms artifact-free output and balanced forms; 37 tests/360 assertions |
+| C04 | [x] | `fix(security): stop exposing password reset tokens` | S-01 | This commit | 4 controller tests/21 assertions; full code checks pass with 41 tests/381 assertions; dependency audit not verified |
 | C05 | [ ] | `feat(auth): deliver password reset links by email` | S-01, A-08 |  | Mail transport decision required before start |
 | C06 | [ ] | `fix(security): enforce athlete ownership on registration` | S-02, S-08 |  | Requires DB-backed test harness or a focused repository fixture |
 | C07 | [ ] | `fix(security): protect athlete mutations with CSRF` | S-03 |  |  |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start with C04 |
-| Files intentionally in scope | To be recorded when C04 begins |
-| Last targeted test | Event-form render test: 1 test/4 assertions; randomized full suite: 37 tests/360 assertions |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass; dependency audit not verified because external Packagist access was unavailable/rejected |
-| Next action | Read C04 acceptance criteria and stop password-reset token disclosure/enumeration |
+| Objective | Resolve D01 before starting C05 reset-link email delivery |
+| Files intentionally in scope | None until C05 begins |
+| Last targeted test | Forgot-password controller tests: 4 tests/21 assertions |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (41 tests/381 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Confirm the production mail transport for C05; if unavailable, record C05 blocked before selecting the next eligible commit |
 
 ## Blockers and decisions
 
@@ -98,6 +98,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-28 | C01 | Completed isolated PHPUnit session storage and reset regression coverage | `composer test` repeated and randomized: 32 tests/94 assertions; PHPCS passed; full gate retains known C02 PHPStan failure; audit not verified | C02 |
 | 2026-06-28 | C02 | Consolidated belt/gender presentation and cached translations per locale without global locale mutation | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (36 tests/356 assertions); dependency audit not verified | C03 |
 | 2026-06-28 | C03 | Removed literal editor artifacts and added event-form render regression coverage | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (37 tests/360 assertions); dependency audit not verified | C04 |
+| 2026-06-28 | C04 | Disabled production reset issuance/disclosure and gated local test links behind three explicit flags | Controller tests 4/21; full code checks pass with 41 tests/381 assertions; dependency audit not verified | C05 pending D01 |
 
 ## Milestones
 

@@ -81,11 +81,11 @@ return [
             'email' => 'Email',
             'submit' => 'Invia link di reset',
             'success_message' => 'Se l\'email esiste, è stato inviato un link per il reset della password.',
+            'unavailable_message' => 'Il recupero password non è al momento disponibile. Contattare l\'amministratore.',
             'dev_link_label' => 'Link di reset (sviluppo)',
             'errors' => [
                 'email_required' => 'Inserire l\'email.',
                 'valid_email_required' => 'Inserire una email valida.',
-                'email_not_found' => 'Email non trovata.',
                 'request_failed' => 'Errore nella richiesta: {message}',
             ],
         ],

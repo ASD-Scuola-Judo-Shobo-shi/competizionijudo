@@ -8,11 +8,25 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
+use App\Core\View;
 use App\Model\Club;
 use App\Model\Database;
+use App\Service\DatabasePasswordResetTokenIssuer;
+use App\Service\PasswordResetTokenIssuer;
 
 final class ClubController extends Controller
 {
+    private readonly PasswordResetTokenIssuer $passwordResetTokens;
+
+    public function __construct(
+        View $view,
+        Request $request,
+        ?PasswordResetTokenIssuer $passwordResetTokens = null
+    ) {
+        parent::__construct($view, $request);
+        $this->passwordResetTokens = $passwordResetTokens ?? new DatabasePasswordResetTokenIssuer();
+    }
+
     public function register(Request $request): Response
     {
         $errors = [];
@@ -151,32 +165,20 @@ final class ClubController extends Controller
                 $errors[] = __('club.forgot_password.errors.email_required');
             } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $errors[] = __('club.forgot_password.errors.valid_email_required');
+            } elseif (!$this->canExposeResetLink()) {
+                $success = __('club.forgot_password.unavailable_message');
             } else {
                 try {
-                    $club = Club::findByEmail($email);
-
-                    if ($club !== null) {
-                        $rawToken = bin2hex(random_bytes(32));
-                        $tokenHash = hash('sha256', $rawToken);
-                        $expiresAt = (new \DateTime('now', new \DateTimeZone('UTC')))->modify('+1 hour')->format('Y-m-d H:i:s');
-
-                        $db = Database::connection();
-                        $db->prepare('UPDATE password_reset_tokens SET used = 1 WHERE club_id = ? AND used = 0')->execute([$club->id]);
-
-                        $db->prepare(
-                            'INSERT INTO password_reset_tokens (club_id, token_hash, expires_at) VALUES (?, ?, ?)'
-                        )->execute([$club->id, $tokenHash, $expiresAt]);
-
+                    $rawToken = $this->passwordResetTokens->issueForEmail($email);
+                    $success = __('club.forgot_password.success_message');
+                    if ($rawToken !== null) {
                         $resetUrl = sprintf(
                             '%s/club_reset_password.php?token=%s',
                             rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
                             $rawToken
                         );
 
-                        $success = __('club.forgot_password.success_message');
                         $devLink = $resetUrl;
-                    } else {
-                        $errors[] = __('club.forgot_password.errors.email_not_found');
                     }
                 } catch (\Throwable $exception) {
                     $errors[] = str_replace('{message}', $exception->getMessage(), __('club.forgot_password.errors.request_failed'));
@@ -189,6 +191,13 @@ final class ClubController extends Controller
             'success' => $success,
             'dev_link' => $devLink,
         ]);
+    }
+
+    private function canExposeResetLink(): bool
+    {
+        return strtolower((string) env('APP_ENV', 'production')) === 'local'
+            && filter_var(env('APP_DEBUG', false), FILTER_VALIDATE_BOOL) === true
+            && filter_var(env('APP_TEST_RESET_LINKS', false), FILTER_VALIDATE_BOOL) === true;
     }
 
     public function resetPassword(Request $request): Response
