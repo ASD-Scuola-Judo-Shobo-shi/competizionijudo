@@ -34,6 +34,7 @@ use App\Model\Entry;
                     <th><?= e(__('club.area.birth')) ?></th>
                     <th><?= e(__('club.area.age_class')) ?></th>
                     <th><?= e(__('club.area.weight')) ?></th>
+                    <th><?= e(__('club.area.belt')) ?></th>
                     <th><?= e(__('club.area.weight_category')) ?></th>
                     <th><?= e(__('club.area.registrations')) ?></th>
                     <th><?= e(__('club.area.actions')) ?></th>
@@ -52,6 +53,11 @@ use App\Model\Entry;
                         <td><?= e($athlete->date_of_birth) ?></td>
                         <td><?= e($_ageClassLabel) ?></td>
                         <td><?= e((string) $athlete->weight_kg) ?></td>
+                        <td>
+                            <?php foreach ($athlete->beltEnum()?->components() ?? [['label' => $athlete->beltLabel(), 'color' => '#ccc', 'textColor' => '#000']] as $component) : ?>
+                                <span class="belt-badge" style="background-color: <?= e($component['color']) ?>; color: <?= e($component['textColor']) ?>"><?= e($component['label']) ?></span>
+                            <?php endforeach; ?>
+                        </td>
                         <td><?= e($athlete->weight_category) ?></td>
                         <td>
                             <?php

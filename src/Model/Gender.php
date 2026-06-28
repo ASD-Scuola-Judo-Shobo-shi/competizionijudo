@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Localization;
+
 enum Gender: string
 {
     case Male = 'M';
@@ -14,16 +16,31 @@ enum Gender: string
      */
     public function label(string $locale = 'it'): string
     {
-        return match ($locale) {
-            'en' => match ($this) {
-                self::Male => 'Male',
-                self::Female => 'Female',
-            },
-            default => match ($this) {
-                self::Male => 'Maschio',
-                self::Female => 'Femmina',
-            },
+        $currentLocale = Localization::getLocale();
+        Localization::setLocale($locale);
+        $translated = Localization::trans("gender.{$this->value}");
+        Localization::setLocale($currentLocale);
+
+        return $translated;
+    }
+
+    /**
+     * Returns a UTF-8 icon for the gender.
+     */
+    public function icon(): string
+    {
+        return match ($this) {
+            self::Male => "\u{2642}",
+            self::Female => "\u{2640}",
         };
+    }
+
+    /**
+     * Returns icon + label combined, e.g. "♂ Maschio" or "♀ Female".
+     */
+    public function iconLabel(string $locale = 'it'): string
+    {
+        return $this->icon() . ' ' . $this->label($locale);
     }
 
     /**

@@ -59,6 +59,16 @@ final class Athlete
     }
 
     /**
+     * Returns the localized gender label with a UTF-8 icon, e.g. "♂ Maschio".
+     */
+    public function genderIconLabel(string $locale = 'it'): string
+    {
+        $enum = $this->genderEnum();
+
+        return $enum?->iconLabel($locale) ?? $this->gender;
+    }
+
+    /**
      * Returns the event year extracted from the given date, or a default.
      */
     public static function eventYearFromDate(?string $date = null, int $default = 0): int

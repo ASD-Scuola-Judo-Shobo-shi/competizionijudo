@@ -13,8 +13,8 @@
         <label><?= e(__('club.area.gender')) ?></label>
         <select name="gender">
             <option value="">—</option>
-            <?php foreach (App\Model\Gender::options() as $value => $label) : ?>
-                <option value="<?= e($value) ?>" <?= ($edit?->gender ?? '') === $value ? 'selected' : '' ?>><?= e($label) ?></option>
+            <?php foreach (App\Model\Gender::cases() as $genderEnum) : ?>
+                <option value="<?= e($genderEnum->value) ?>" <?= ($edit?->gender ?? '') === $genderEnum->value ? 'selected' : '' ?>><?= $genderEnum->iconLabel(App\Localization::getLocale()) ?></option>
             <?php endforeach; ?>
         </select>
         <label><?= e(__('club.area.birth_date')) ?></label>
@@ -35,8 +35,8 @@
         <label><?= e(__('club.area.belt')) ?></label>
         <select name="belt">
             <option value="">—</option>
-            <?php foreach (App\Model\Belt::options() as $value => $label) : ?>
-                <option value="<?= e($value) ?>" <?= ($edit?->belt ?? '') === $value ? 'selected' : '' ?>><?= e($label) ?></option>
+            <?php foreach (App\Model\Belt::cases() as $beltEnum) : ?>
+                <option value="<?= e($beltEnum->value) ?>" <?= ($edit?->belt ?? '') === $beltEnum->value ? 'selected' : '' ?>><?= $beltEnum->circleLabel(App\Localization::getLocale()) ?></option>
             <?php endforeach; ?>
         </select>
 
@@ -184,6 +184,7 @@
             if (dobInput) dobInput.addEventListener('change', updateWeightDisplay);
             updateWeightDisplay();
         }
+
     })();
     </script>
     <style>
@@ -228,6 +229,14 @@
         background: #d4edda;
         color: #155724;
     }
+    .belt-badge {
+        display: inline-block;
+        padding: 0.2em 0.6em;
+        font-size: 0.85em;
+        font-weight: 600;
+        border-radius: 4px;
+        white-space: nowrap;
+    }
     </style>
 </div>
 
@@ -241,6 +250,7 @@
                 <th><?= e(__('club.area.birth')) ?></th>
                 <th><?= e(__('club.area.age_class')) ?></th>
                 <th><?= e(__('club.area.weight')) ?></th>
+                <th><?= e(__('club.area.belt')) ?></th>
                 <th><?= e(__('club.area.weight_category')) ?></th>
                 <th><?= e(__('club.area.actions')) ?></th>
             </tr>
@@ -248,16 +258,21 @@
         <tbody>
             <?php if (empty($athletes)) : ?>
                 <tr>
-                    <td colspan="7"><?= e(__('club.area.no_athletes')) ?></td>
+                    <td colspan="8"><?= e(__('club.area.no_athletes')) ?></td>
                 </tr>
             <?php else : ?>
                 <?php foreach ($athletes as $athlete) : ?>
                     <tr>
                         <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>
-                        <td><?= e($athlete->genderLabel()) ?></td>
+                        <td><?= $athlete->genderIconLabel(App\Localization::getLocale()) ?></td>
                         <td><?= e($athlete->date_of_birth) ?></td>
                         <td><?= e($athlete->ageClassLabel()) ?></td>
                         <td><?= e((string) $athlete->weight_kg) ?></td>
+                        <td>
+                            <?php foreach ($athlete->beltEnum()?->components() ?? [['label' => $athlete->beltLabel(App\Localization::getLocale()), 'color' => '#ccc', 'textColor' => '#000']] as $component) : ?>
+                                <span class="belt-badge" style="background-color: <?= e($component['color']) ?>; color: <?= e($component['textColor']) ?>"><?= e($component['label']) ?></span>
+                            <?php endforeach; ?>
+                        </td>
                         <td><?= e($athlete->weight_category) ?></td>
                         <td>
                             <a class="btn btn-sm" href="/club_area.php?view=add&edit=<?= e((string) $athlete->id) ?>"><?= e(__('club.area.edit')) ?></a>

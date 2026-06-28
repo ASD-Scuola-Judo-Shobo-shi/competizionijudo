@@ -35,6 +35,10 @@ return [
         'headline' => 'A compact PHP MVC application',
         'description' => 'The project is intentionally small while preserving the boundaries a production PHP app expects.',
     ],
+    'gender' => [
+        'M' => 'Male',
+        'F' => 'Female',
+    ],
     'club' => [
         'register' => [
             'title' => 'Club registration',
@@ -348,6 +352,21 @@ return [
         'athletes_text' => 'Athlete archive and useful data for registrations.',
         'entries' => 'Event registrations',
         'entries_text' => 'Enter athletes in published events.',
+    ],
+    'belt' => [
+        'white' => 'White',
+        'white_yellow' => 'White / Yellow',
+        'yellow' => 'Yellow',
+        'yellow_orange' => 'Yellow / Orange',
+        'orange' => 'Orange',
+        'orange_green' => 'Orange / Green',
+        'green' => 'Green',
+        'green_blue' => 'Green / Blue',
+        'blue' => 'Blue',
+        'brown' => 'Brown',
+        'black' => 'Black',
+        'red_white' => 'Red / White',
+        'red' => 'Red',
     ],
     'pagination' => [
         'prev' => 'Prev',

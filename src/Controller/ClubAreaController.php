@@ -84,8 +84,10 @@ final class ClubAreaController extends Controller
             $page = max(1, (int) ($request->query('page', '1')));
             $pagination = paginate($total, $page, 50);
 
-            $stmt = $db->prepare('SELECT * FROM athletes WHERE club_id = ? ORDER BY last_name, first_name LIMIT ? OFFSET ?');
-            $stmt->execute([$club->id, $pagination['per_page'], $pagination['offset']]);
+            $perPage = (int) $pagination['per_page'];
+            $offset = (int) $pagination['offset'];
+            $stmt = $db->prepare("SELECT * FROM athletes WHERE club_id = ? ORDER BY last_name, first_name LIMIT $perPage OFFSET $offset");
+            $stmt->execute([$club->id]);
             $athletes = array_map(fn(array $row) => Athlete::fromArray($row), $stmt->fetchAll() ?: []);
 
             return $this->view('club/area_add', [

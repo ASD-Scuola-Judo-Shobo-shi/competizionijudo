@@ -35,6 +35,10 @@ return [
         'headline' => 'Una compatta applicazione PHP MVC',
         'description' => 'Il progetto è intenzionalmente piccolo mantenendo i confini attesi da un\'app PHP di produzione.',
     ],
+    'gender' => [
+        'M' => 'Maschio',
+        'F' => 'Femmina',
+    ],
     'club' => [
         'register' => [
             'title' => 'Registrazione società',
@@ -347,6 +351,21 @@ return [
         'athletes_text' => 'Archivio atleti e dati utili per le iscrizioni.',
         'entries' => 'Iscrizioni gara',
         'entries_text' => 'Inserimento degli atleti negli eventi pubblicati.',
+    ],
+    'belt' => [
+        'white' => 'Bianca',
+        'white_yellow' => 'Bianca / Gialla',
+        'yellow' => 'Gialla',
+        'yellow_orange' => 'Gialla / Arancio',
+        'orange' => 'Arancio',
+        'orange_green' => 'Arancio / Verde',
+        'green' => 'Verde',
+        'green_blue' => 'Verde / Blu',
+        'blue' => 'Blu',
+        'brown' => 'Marrone',
+        'black' => 'Nera',
+        'red_white' => 'Rossa / Bianca',
+        'red' => 'Rossa',
     ],
     'pagination' => [
         'prev' => 'Prec',
