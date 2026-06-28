@@ -69,6 +69,3 @@ $isEdit = !empty($event);
         <button class="btn green" type="submit"><?= e($isEdit ? __('admin.edit.save') : __('admin.add.save')) ?></button>
     </form>
 </div>
-</parameter>
-</parameter>
-</write_to_file>
