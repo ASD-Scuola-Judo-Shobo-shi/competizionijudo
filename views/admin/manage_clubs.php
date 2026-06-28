@@ -23,7 +23,11 @@
                     <td><?= e($club->contact_first_name . ' ' . $club->contact_last_name) ?></td>
                     <td>
                         <a class="btn btn-sm green" href="/admin_edit_club.php?id=<?= (int) $club->id ?>"><?= e(__('admin.clubs.edit')) ?></a>
-                        <a class="btn btn-sm red" href="/admin_manage_clubs.php?delete=<?= (int) $club->id ?>" onclick="return confirm('<?= e(__('admin.clubs.confirm_delete')) ?>')"><?= e(__('admin.clubs.delete')) ?></a>
+                        <form method="post" action="/admin_delete_club.php" style="display:inline" onsubmit="return confirm('<?= e(__('admin.clubs.confirm_delete')) ?>')">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="club_id" value="<?= (int) $club->id ?>">
+                            <button class="btn btn-sm red" type="submit"><?= e(__('admin.clubs.delete')) ?></button>
+                        </form>
                     </td>
                 </tr>
             <?php endforeach; ?>

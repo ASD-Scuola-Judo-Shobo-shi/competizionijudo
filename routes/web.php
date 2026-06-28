@@ -33,6 +33,7 @@ return static function (App\Core\Router $router): void {
 
     $router->get('/club_area.php', [ClubAreaController::class, 'index']);
     $router->post('/club_area.php', [ClubAreaController::class, 'index']);
+    $router->post('/club_delete_athlete.php', [ClubAreaController::class, 'deleteAthlete']);
 
     // Events managed by MVC
     $router->get('/events.php', [EventController::class, 'index']);
@@ -45,9 +46,11 @@ return static function (App\Core\Router $router): void {
     $router->post('/admin_login.php', [\App\Controller\AdminController::class, 'login']);
     $router->get('/admin.php', [\App\Controller\AdminController::class, 'dashboard']);
     $router->get('/admin_manage_clubs.php', [\App\Controller\AdminController::class, 'manageClubs']);
+    $router->post('/admin_delete_club.php', [\App\Controller\AdminController::class, 'deleteClub']);
     $router->get('/admin_add_event.php', [\App\Controller\AdminController::class, 'addEvent']);
     $router->post('/admin_add_event.php', [\App\Controller\AdminController::class, 'addEvent']);
     $router->get('/admin_manage_events.php', [\App\Controller\AdminController::class, 'manageEvents']);
+    $router->post('/admin_delete_event.php', [\App\Controller\AdminController::class, 'deleteEvent']);
     $router->get('/admin_edit_club.php', [\App\Controller\AdminController::class, 'editClub']);
     $router->post('/admin_edit_club.php', [\App\Controller\AdminController::class, 'editClub']);
     $router->get('/admin_edit_event.php', [\App\Controller\AdminController::class, 'editEvent']);

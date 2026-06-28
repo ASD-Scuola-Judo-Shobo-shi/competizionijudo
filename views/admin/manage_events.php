@@ -36,7 +36,11 @@
                     </td>
                     <td>
                         <a class="btn btn-sm green" href="/admin_add_event.php?event_id=<?= (int) $event->id ?>"><?= e(__('admin.events.edit')) ?></a>
-                        <a class="btn btn-sm red" href="/admin_manage_events.php?delete=<?= (int) $event->id ?>" onclick="return confirm('<?= e(__('admin.events.confirm_delete')) ?>')"><?= e(__('admin.events.delete')) ?></a>
+                        <form method="post" action="/admin_delete_event.php" style="display:inline" onsubmit="return confirm('<?= e(__('admin.events.confirm_delete')) ?>')">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="event_id" value="<?= (int) $event->id ?>">
+                            <button class="btn btn-sm red" type="submit"><?= e(__('admin.events.delete')) ?></button>
+                        </form>
                     </td>
                 </tr>
             <?php endforeach; ?>

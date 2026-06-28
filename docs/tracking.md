@@ -34,8 +34,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C04 | [x] | `fix(security): stop exposing password reset tokens` | S-01 | `1c97401` | 4 controller tests/21 assertions; full code checks pass with 41 tests/381 assertions; dependency audit not verified |
 | C05 | [!] | `feat(auth): deliver password reset links by email` | S-01, A-08 |  | D01: no verified production mail transport or sender requirements; production recovery remains disabled |
 | C06 | [x] | `fix(security): enforce athlete ownership on registration` | S-02, S-08 | `5fa7722` | Focused PDO fixture: 5 tests/42 assertions; one constrained write per attempt; full code checks pass with 46 tests/423 assertions; dependency audit not verified |
-| C07 | [x] | `fix(security): protect athlete mutations with CSRF` | S-03 | This commit | Controller/application tests: 5 tests/26 assertions; full code checks pass with 51 tests/449 assertions; dependency audit not verified |
-| C08 | [ ] | `fix(security): move delete actions to CSRF protected posts` | S-03 |  |  |
+| C07 | [x] | `fix(security): protect athlete mutations with CSRF` | S-03 | `50d922e` | Controller/application tests: 5 tests/26 assertions; full code checks pass with 51 tests/449 assertions; dependency audit not verified |
+| C08 | [x] | `fix(security): move delete actions to CSRF protected posts` | S-03 | This commit | Delete-action tests: 6 tests/51 assertions; no destructive GET patterns remain; full code checks pass with 57 tests/500 assertions; dependency audit not verified |
 | C09 | [ ] | `fix(security): require post for logout` | S-09 |  |  |
 | C10 | [ ] | `feat(security): persist authentication throttles` | S-04 |  |  |
 | C11 | [ ] | `fix(auth): consume reset tokens atomically` | S-06, S-08 |  |  |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C08 conversion of destructive GET actions to CSRF-protected POST actions |
-| Files intentionally in scope | None until C08 begins |
-| Last targeted test | Club-area CSRF controller/application tests: 5 tests/26 assertions |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (51 tests/449 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Read C08 acceptance criteria and inventory every destructive GET flow |
+| Objective | Start C09 conversion of logout to CSRF-protected POST actions |
+| Files intentionally in scope | None until C09 begins |
+| Last targeted test | Delete-action routes/controllers/templates: 6 tests/51 assertions |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (57 tests/500 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Read C09 acceptance criteria and inventory admin/club logout links and session cleanup |
 
 ## Blockers and decisions
 
@@ -102,6 +102,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-28 | C05 | Blocked: no verified production mail transport or sender configuration is available | Repository/config/deployment scan only; no code or tests changed | C06; resume C05 when D01 is resolved |
 | 2026-06-28 | C06 | Replaced the precheck/unconstrained insert with one athlete-and-club-constrained write and explicit duplicate result | Focused PDO fixture 5/42; randomized/full suite 46/423; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C07 |
 | 2026-06-28 | C07 | Enforced CSRF before athlete mutation parsing/database access and replaced helper exit with a rendered 419 response | Controller/application tests 5/26; randomized/full suite 51/449; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C08 |
+| 2026-06-28 | C08 | Replaced club, event, and athlete delete links/GET branches with authenticated CSRF-protected POST actions | Delete-action tests 6/51; no destructive GET patterns; randomized/full suite 57/500; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C09 |
 
 ## Milestones
 

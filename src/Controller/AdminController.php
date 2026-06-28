@@ -80,12 +80,6 @@ final class AdminController extends Controller
 
         $db = \App\Model\Database::connection();
 
-        $delete = (int) ($request->query('delete') ?? 0);
-        if ($delete > 0) {
-            $db->prepare('DELETE FROM clubs WHERE id = ?')->execute([$delete]);
-            return $this->redirect('/admin_manage_clubs.php');
-        }
-
         $total = (int) $db->query('SELECT COUNT(*) FROM clubs')->fetchColumn();
         $page = max(1, (int) ($request->query('page', '1')));
         $pagination = paginate($total, $page, 100);
@@ -102,6 +96,22 @@ final class AdminController extends Controller
         ]);
     }
 
+    public function deleteClub(Request $request): Response
+    {
+        Session::start();
+        if (empty(Session::get('is_admin'))) {
+            return $this->redirect('/admin_login.php');
+        }
+
+        validate_csrf((string) $request->post('csrf_token'));
+        $clubId = (int) $request->post('club_id');
+        if ($clubId > 0) {
+            Club::remove($clubId);
+        }
+
+        return $this->redirect('/admin_manage_clubs.php');
+    }
+
     public function manageEvents(Request $request): Response
     {
         Session::start();
@@ -110,12 +120,6 @@ final class AdminController extends Controller
         }
 
         $db = \App\Model\Database::connection();
-
-        $delete = (int) ($request->query('delete') ?? 0);
-        if ($delete > 0) {
-            $db->prepare('DELETE FROM events WHERE id = ?')->execute([$delete]);
-            return $this->redirect('/admin_manage_events.php');
-        }
 
         $total = (int) $db->query('SELECT COUNT(*) FROM events')->fetchColumn();
         $page = max(1, (int) ($request->query('page', '1')));
@@ -150,6 +154,22 @@ final class AdminController extends Controller
             'entry_counts' => $counts,
             'pagination' => $pagination,
         ]);
+    }
+
+    public function deleteEvent(Request $request): Response
+    {
+        Session::start();
+        if (empty(Session::get('is_admin'))) {
+            return $this->redirect('/admin_login.php');
+        }
+
+        validate_csrf((string) $request->post('csrf_token'));
+        $eventId = (int) $request->post('event_id');
+        if ($eventId > 0) {
+            Event::remove($eventId);
+        }
+
+        return $this->redirect('/admin_manage_events.php');
     }
 
     public function addEvent(Request $request): Response

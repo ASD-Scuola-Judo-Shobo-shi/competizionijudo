@@ -77,6 +77,12 @@ final class Event
         return $row ? self::fromArray($row) : null;
     }
 
+    public static function remove(int $id): void
+    {
+        $statement = Database::connection()->prepare('DELETE FROM events WHERE id = ?');
+        $statement->execute([$id]);
+    }
+
     /** @return list<self> */
     public static function nextPublished(int $excludeId, ?int $limit = null): array
     {

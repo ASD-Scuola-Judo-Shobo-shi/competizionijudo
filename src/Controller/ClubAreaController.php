@@ -39,12 +39,6 @@ final class ClubAreaController extends Controller
 
         $view = (string) ($request->query('view') ?? 'list');
 
-        $delete = (int) ($request->query('delete') ?? 0);
-        if ($delete > 0) {
-            $db->prepare('DELETE FROM athletes WHERE id = ? AND club_id = ?')->execute([$delete, $club->id]);
-            return $this->redirect('/club_area.php?view=add');
-        }
-
         if ($view === 'add') {
             $errors = [];
             $edit = null;
@@ -132,5 +126,22 @@ final class ClubAreaController extends Controller
             'competitions' => $competitions,
             'eventFilter' => $eventFilter,
         ]);
+    }
+
+    public function deleteAthlete(Request $request): Response
+    {
+        Session::start();
+        $clubId = Session::get('club_id');
+        if ($clubId === null) {
+            return $this->redirect('/club_login.php');
+        }
+
+        validate_csrf((string) $request->post('csrf_token'));
+        $athleteId = (int) $request->post('athlete_id');
+        if ($athleteId > 0) {
+            Athlete::remove($athleteId, (int) $clubId);
+        }
+
+        return $this->redirect('/club_area.php?view=add');
     }
 }

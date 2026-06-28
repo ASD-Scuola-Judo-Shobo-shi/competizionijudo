@@ -196,4 +196,12 @@ final class Athlete
             $this->club_id,
         ]);
     }
+
+    public static function remove(int $id, int $clubId): void
+    {
+        $statement = Database::connection()->prepare(
+            'DELETE FROM athletes WHERE id = ? AND club_id = ?'
+        );
+        $statement->execute([$id, $clubId]);
+    }
 }
