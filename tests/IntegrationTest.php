@@ -16,19 +16,24 @@ final class IntegrationTest extends TestCase
 
     protected function setUp(): void
     {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_unset();
-            session_destroy();
-        }
-        Session::start();
+        $this->startCleanSession();
         $this->view = new View(dirname(__DIR__) . '/views');
     }
 
     protected function tearDown(): void
     {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            Session::destroy();
-        }
+        $this->destroySession();
+    }
+
+    public function testLoginAttemptStateDoesNotLeakAcrossSessionResets(): void
+    {
+        Session::set('admin_login_attempts', 5);
+        Session::set('club_login_attempts', 4);
+
+        $this->startCleanSession();
+
+        self::assertSame(0, Session::get('admin_login_attempts', 0));
+        self::assertSame(0, Session::get('club_login_attempts', 0));
     }
 
     public function testAdminLoginShowsErrorOnInvalidCredentials(): void
@@ -86,5 +91,21 @@ final class IntegrationTest extends TestCase
 
         $response = $controller->manageEvents($request);
         self::assertSame(302, $response->status());
+    }
+
+    private function startCleanSession(): void
+    {
+        $this->destroySession();
+        Session::start();
+    }
+
+    private function destroySession(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            Session::destroy();
+        }
+
+        $_SESSION = [];
+        session_id('');
     }
 }
