@@ -18,6 +18,8 @@ use App\Service\DatabasePasswordResetTokenIssuer;
 use App\Service\DatabasePasswordResetRepository;
 use App\Service\PasswordResetTokenIssuer;
 use App\Service\PasswordResetRepository;
+use App\Validation\ClubInputValidator;
+use PDOException;
 
 final class ClubController extends Controller
 {
@@ -47,17 +49,17 @@ final class ClubController extends Controller
             validate_csrf((string) $request->post('csrf_token'));
             $name = trim((string) $request->post('name'));
             $federalCode = trim((string) $request->post('federal_code'));
-            $email = trim((string) $request->post('email'));
+            $email = Club::normalizeEmail((string) $request->post('email'));
             $phone = trim((string) $request->post('phone'));
             $contact = trim((string) $request->post('contact'));
             $password = (string) $request->post('password');
             $password2 = (string) $request->post('password2');
 
-            if ($name === '') {
-                $errors[] = __('club.register.errors.club_name_required');
-            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errors[] = __('club.register.errors.valid_email_required');
-            } elseif ($password === '') {
+            foreach (ClubInputValidator::registrationErrors($name, $federalCode, $email) as $key) {
+                $errors[] = __($key);
+            }
+
+            if ($password === '') {
                 $errors[] = __('club.register.errors.password_required');
             } elseif ($password !== $password2) {
                 $errors[] = __('club.register.errors.password_mismatch');
@@ -87,7 +89,9 @@ final class ClubController extends Controller
                         $success = __('club.register.success_message');
                     }
                 } catch (\Throwable $exception) {
-                    $errors[] = str_replace('{message}', $exception->getMessage(), __('club.register.errors.registration_failed'));
+                    $errors[] = $exception instanceof PDOException && (string) $exception->getCode() === '23000'
+                        ? __('errors.account_conflict')
+                        : __('errors.save_failed');
                 }
             }
         }
@@ -104,7 +108,7 @@ final class ClubController extends Controller
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
-            $email = trim((string) $request->post('email'));
+            $email = Club::normalizeEmail((string) $request->post('email'));
             $password = (string) $request->post('password');
 
             if ($email === '' || $password === '') {
@@ -166,7 +170,7 @@ final class ClubController extends Controller
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
-            $email = trim((string) $request->post('email'));
+            $email = Club::normalizeEmail((string) $request->post('email'));
 
             if ($email === '') {
                 $errors[] = __('club.forgot_password.errors.email_required');

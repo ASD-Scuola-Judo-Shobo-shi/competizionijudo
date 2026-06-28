@@ -13,6 +13,7 @@ $isEdit = !empty($event);
 
     <form method="post" class="form-card" enctype="multipart/form-data">
         <?= csrf_field() ?>
+        <input type="hidden" name="MAX_FILE_SIZE" value="<?= \App\Validation\EventInputValidator::MAX_UPLOAD_BYTES ?>">
         <input type="hidden" name="event_id" value="<?= e($event?->id ?? '') ?>">
 
         <label><?= e($isEdit ? __('admin.edit.name') : __('admin.add.name')) ?></label>

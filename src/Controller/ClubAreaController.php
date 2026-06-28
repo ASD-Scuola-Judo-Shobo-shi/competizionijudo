@@ -11,6 +11,7 @@ use App\Core\Session;
 use App\Model\Athlete;
 use App\Model\Club;
 use App\Model\Entry;
+use App\Validation\AthleteInputValidator;
 
 use function calculateJudoCategory;
 
@@ -44,32 +45,59 @@ final class ClubAreaController extends Controller
             $edit = null;
 
             if ($request->method() === 'POST') {
+                $weightInput = trim((string) $request->input('weight_kg'));
                 $data = [
                     'club_id' => $club->id,
                     'last_name' => trim((string) $request->input('last_name')),
                     'first_name' => trim((string) $request->input('first_name')),
                     'gender' => trim((string) $request->input('gender')),
                     'date_of_birth' => trim((string) $request->input('date_of_birth')),
-                    'weight_kg' => (float) str_replace(',', '.', (string) $request->input('weight_kg')),
+                    'weight_kg' => (float) str_replace(',', '.', $weightInput),
                     'belt' => trim((string) $request->input('belt')),
                     'membership_number' => trim((string) $request->input('membership_number')),
                     'notes' => trim((string) $request->input('notes')),
                 ];
-
-                $category = calculateJudoCategory($data['date_of_birth'], $data['gender'], $data['weight_kg']);
-                $data['program'] = $category['program'];
-                $data['weight_category'] = $category['weight_category'];
-
-                if ((string) $request->input('athlete_id') !== '') {
-                    $edit = Athlete::findById((int) $request->input('athlete_id'), $club->id);
-                    if ($edit !== null) {
-                        $edit->update($data);
-                    }
-                } else {
-                    Athlete::add($data);
+                foreach (
+                    AthleteInputValidator::errors(
+                        $data['last_name'],
+                        $data['first_name'],
+                        $data['gender'],
+                        $data['date_of_birth'],
+                        $weightInput,
+                        $data['belt']
+                    ) as $key
+                ) {
+                    $errors[] = __($key);
                 }
 
-                return $this->redirect('/club_area.php?view=add');
+                if ($errors === []) {
+                    $category = calculateJudoCategory(
+                        $data['date_of_birth'],
+                        $data['gender'],
+                        $data['weight_kg']
+                    );
+                    $data['program'] = $category['program'];
+                    $data['weight_category'] = $category['weight_category'];
+
+                    try {
+                        if ((string) $request->input('athlete_id') !== '') {
+                            $edit = Athlete::findById((int) $request->input('athlete_id'), $club->id);
+                            if ($edit !== null) {
+                                $edit->update($data);
+                            }
+                        } else {
+                            Athlete::add($data);
+                        }
+                    } catch (\Throwable) {
+                        $errors[] = __('errors.save_failed');
+                    }
+
+                    if ($errors === []) {
+                        return $this->redirect('/club_area.php?view=add');
+                    }
+                } elseif ((string) $request->input('athlete_id') !== '') {
+                    $edit = Athlete::findById((int) $request->input('athlete_id'), $club->id);
+                }
             }
 
             if ($request->query('edit') !== null) {

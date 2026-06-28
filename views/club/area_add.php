@@ -1,5 +1,14 @@
 <div class="card">
     <h3><?= e($edit ? __('club.area.edit_athlete') : __('club.area.add_athlete')) ?></h3>
+    <?php if (!empty($errors)) : ?>
+        <div class="notice">
+            <ul>
+                <?php foreach ($errors as $error) : ?>
+                    <li><?= e($error) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
     <form method="post" class="form-card">
         <?= csrf_field() ?>
         <input type="hidden" name="athlete_id" value="<?= e($edit?->id ?? '') ?>">
@@ -11,7 +20,7 @@
         <input name="first_name" required value="<?= e($edit?->first_name ?? '') ?>">
 
         <label><?= e(__('club.area.gender')) ?></label>
-        <select name="gender">
+        <select name="gender" required>
             <option value="">—</option>
             <?php foreach (App\Model\Gender::cases() as $genderEnum) : ?>
                 <option value="<?= e($genderEnum->value) ?>" <?= ($edit?->gender ?? '') === $genderEnum->value ? 'selected' : '' ?>><?= $genderEnum->iconLabel(App\Localization::getLocale()) ?></option>
@@ -26,14 +35,14 @@
         <label><?= e(__('club.area.weight_kg')) ?></label>
         <div style="display:flex;align-items:center;gap:0.5rem;">
             <div class="weight-slider-group" style="flex:1;min-width:0;">
-                <input type="number" name="weight_kg" min="0" max="200" step="0.1" required value="<?= e($edit?->weight_kg ?? '') ?>" class="weight-input" style="width:100px;flex-shrink:0;">
+                <input type="number" name="weight_kg" min="0.1" max="200" step="0.1" required value="<?= e($edit?->weight_kg ?? '') ?>" class="weight-input" style="width:100px;flex-shrink:0;">
                 <input type="range" min="0" max="200" step="0.1" value="<?= e($edit?->weight_kg ?? '') ?>" class="weight-slider" style="flex:1;min-width:0;">
             </div>
             <span id="weight_category_display" class="weight-category-badge" style="flex:0 0 20%;text-align:center;">—</span>
         </div>
 
         <label><?= e(__('club.area.belt')) ?></label>
-        <select name="belt">
+        <select name="belt" required>
             <option value="">—</option>
             <?php foreach (App\Model\Belt::cases() as $beltEnum) : ?>
                 <option value="<?= e($beltEnum->value) ?>" <?= ($edit?->belt ?? '') === $beltEnum->value ? 'selected' : '' ?>><?= $beltEnum->circleLabel(App\Localization::getLocale()) ?></option>

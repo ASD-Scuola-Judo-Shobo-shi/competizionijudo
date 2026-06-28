@@ -17,6 +17,10 @@ use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
 use App\Service\DatabasePasswordResetRepository;
 use App\Service\PasswordResetRepository;
+use App\Validation\ClubInputValidator;
+use App\Validation\EventInputValidator;
+use PDOException;
+use RuntimeException;
 
 final class AdminController extends Controller
 {
@@ -224,100 +228,72 @@ final class AdminController extends Controller
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
-            $date = trim((string) $request->post('date'));
-            if ($date === '') {
-                $error = __('admin.add.errors.date_required');
-            }
-
-            $location = trim((string) $request->post('location'));
-            if ($error === '' && $location === '') {
-                $error = __('admin.add.errors.location_required');
+            /**
+             * @var array{
+             *     name: string,
+             *     date: string,
+             *     location: string,
+             *     organizer: string,
+             *     registration_deadline: string,
+             *     type: string,
+             *     description: string,
+             *     notes: string,
+             *     published: int,
+             *     closed: int
+             * } $data
+             */
+            $data = [
+                'name' => trim((string) $request->post('name')),
+                'date' => trim((string) $request->post('date')),
+                'location' => trim((string) $request->post('location')),
+                'organizer' => trim((string) $request->post('organizer')),
+                'registration_deadline' => trim((string) $request->post('registration_deadline')),
+                'type' => trim((string) $request->post('type')),
+                'description' => trim((string) $request->post('description')),
+                'notes' => trim((string) $request->post('notes')),
+                'published' => $request->post('published') === '1' ? 1 : 0,
+                'closed' => $request->post('closed') === '1' ? 1 : 0,
+            ];
+            $uploads = $this->eventUploads();
+            $validationErrors = EventInputValidator::errors(
+                $data['name'],
+                $data['date'],
+                $data['location'],
+                $data['registration_deadline'],
+                $data['type'],
+                $uploads
+            );
+            if ($validationErrors !== []) {
+                $error = __($validationErrors[0]);
             }
 
             if ($error === '') {
                 try {
-                    $uploadDir = base_path('public/uploads/events/');
-                    if (!is_dir($uploadDir)) {
-                        mkdir($uploadDir, 0755, true);
-                    }
-
                     $locandina = $event?->poster_file ?? null;
                     $informativa = $event?->info_file ?? null;
 
-                    if (!empty($_FILES['poster_file']) && $_FILES['poster_file']['error'] !== UPLOAD_ERR_NO_FILE) {
-                        if ($_FILES['poster_file']['error'] !== UPLOAD_ERR_OK) {
-                            throw new \Exception('Poster upload failed: ' . $this->uploadErrorMessage($_FILES['poster_file']['error']));
-                        }
-                        $finfo = new \finfo();
-                        $mime = $finfo->file($_FILES['poster_file']['tmp_name']);
-                        $allowedMimes = [
-                            'application/pdf',
-                            'image/jpeg',
-                            'image/png',
-                        ];
-                        if (!in_array($mime, $allowedMimes, true)) {
-                            throw new \Exception('Invalid poster file type');
-                        }
-                        $ext = match ($mime) {
-                            'application/pdf' => 'pdf',
-                            'image/jpeg' => 'jpg',
-                            'image/png' => 'png',
-                            default => throw new \Exception('Invalid poster format'),
-                        };
-                        $safe = 'poster' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                        $target = $uploadDir . $safe;
-                        if (!move_uploaded_file($_FILES['poster_file']['tmp_name'], $target)) {
-                            throw new \Exception('Unable to save poster');
-                        }
-                        $locandina = 'uploads/events/' . $safe;
+                    if (isset($uploads['poster_file'])) {
+                        $locandina = $this->storeEventUpload($uploads['poster_file'], 'poster_');
                     }
-
-                    if (!empty($_FILES['info_file']) && $_FILES['info_file']['error'] !== UPLOAD_ERR_NO_FILE) {
-                        if ($_FILES['info_file']['error'] !== UPLOAD_ERR_OK) {
-                            throw new \Exception('Info file upload failed: ' . $this->uploadErrorMessage($_FILES['info_file']['error']));
-                        }
-                        $finfo = new \finfo();
-                        $mime = $finfo->file($_FILES['info_file']['tmp_name']);
-                        $allowedMimes = [
-                            'application/pdf',
-                            'image/jpeg',
-                            'image/png',
-                        ];
-                        if (!in_array($mime, $allowedMimes, true)) {
-                            throw new \Exception('Invalid info file type');
-                        }
-                        $ext = match ($mime) {
-                            'application/pdf' => 'pdf',
-                            'image/jpeg' => 'jpg',
-                            'image/png' => 'png',
-                            default => throw new \Exception('Invalid info format'),
-                        };
-                        $safe = 'info_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                        $target = $uploadDir . $safe;
-                        if (!move_uploaded_file($_FILES['info_file']['tmp_name'], $target)) {
-                            throw new \Exception('Unable to save info file');
-                        }
-                        $informativa = 'uploads/events/' . $safe;
+                    if (isset($uploads['info_file'])) {
+                        $informativa = $this->storeEventUpload($uploads['info_file'], 'info_');
                     }
-
-                    $published = $request->post('published') === '1' ? 1 : 0;
-                    $closed = $request->post('closed') === '1' ? 1 : 0;
 
                     if ($event) {
                         $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, poster_file=?, info_file=?, published=?, closed=? WHERE id=?";
                         $params = [
-                            trim((string) $request->post('name')),
-                            $date,
-                            $location,
-                            trim((string) $request->post('organizer')),
-                            trim((string) $request->post('registration_deadline')),
-                            trim((string) $request->post('type')),
-                            trim((string) $request->post('description')),
-                            trim((string) $request->post('notes')),
+                            $data['name'],
+                            $data['date'],
+                            $data['location'],
+                            $data['organizer'],
+                            $data['registration_deadline'] ?: null,
+                            $data['type'],
+                            $data['description'],
+                            $data['notes'],
                             $locandina,
                             $informativa,
-                            $published,
-                            $closed,
+                            $data['published'],
+                            $data['closed'],
                             $eventId,
                         ];
                         $db->prepare($sql)->execute($params);
@@ -325,24 +301,24 @@ final class AdminController extends Controller
                         $db->prepare(
                             "INSERT INTO events (name, date, location, organizer, registration_deadline, type, description, notes, poster_file, info_file, published, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                         )->execute([
-                            trim((string) $request->post('name')),
-                            $date,
-                            $location,
-                            trim((string) $request->post('organizer')),
-                            trim((string) $request->post('registration_deadline')),
-                            trim((string) $request->post('type')),
-                            trim((string) $request->post('description')),
-                            trim((string) $request->post('notes')),
+                            $data['name'],
+                            $data['date'],
+                            $data['location'],
+                            $data['organizer'],
+                            $data['registration_deadline'] ?: null,
+                            $data['type'],
+                            $data['description'],
+                            $data['notes'],
                             $locandina,
                             $informativa,
-                            $published,
-                            $closed,
+                            $data['published'],
+                            $data['closed'],
                         ]);
                     }
 
                     return $this->redirect('/admin_manage_events.php');
-                } catch (\Throwable $e) {
-                    $error = $e->getMessage();
+                } catch (\Throwable) {
+                    $error = __('errors.save_failed');
                 }
             }
 
@@ -360,17 +336,42 @@ final class AdminController extends Controller
         ]);
     }
 
-    private function uploadErrorMessage(int $errorCode): string
+    /** @return array<string, array<string, mixed>> */
+    private function eventUploads(): array
     {
-        return match ($errorCode) {
-            UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize limit',
-            UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE limit',
-            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
-            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary upload directory',
-            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
-            UPLOAD_ERR_EXTENSION => 'File upload stopped by extension',
-            default => 'Unknown upload error (code: ' . $errorCode . ')',
-        };
+        $uploads = [];
+        foreach (['poster_file', 'info_file'] as $field) {
+            if (
+                isset($_FILES[$field])
+                && is_array($_FILES[$field])
+                && (int) ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE
+            ) {
+                $uploads[$field] = $_FILES[$field];
+            }
+        }
+
+        return $uploads;
+    }
+
+    /** @param array<string, mixed> $upload */
+    private function storeEventUpload(array $upload, string $prefix): string
+    {
+        $extension = EventInputValidator::extension($upload);
+        if ($extension === null) {
+            throw new RuntimeException('Validated event upload has no supported extension.');
+        }
+
+        $uploadDir = base_path('public/uploads/events/');
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+            throw new RuntimeException('Unable to create event upload directory.');
+        }
+
+        $filename = $prefix . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        if (!move_uploaded_file((string) $upload['tmp_name'], $uploadDir . $filename)) {
+            throw new RuntimeException('Unable to store event upload.');
+        }
+
+        return 'uploads/events/' . $filename;
     }
 
     public function editClub(Request $request): Response
@@ -397,7 +398,7 @@ final class AdminController extends Controller
             try {
                 $data = [
                     'name' => trim((string) $request->post('name')),
-                    'email' => trim((string) $request->post('email')),
+                    'email' => Club::normalizeEmail((string) $request->post('email')),
                     'phone' => trim((string) $request->post('phone')),
                     'contact_first_name' => trim((string) $request->post('contact_first_name')),
                     'contact_last_name' => trim((string) $request->post('contact_last_name')),
@@ -409,7 +410,16 @@ final class AdminController extends Controller
                 ];
 
                 $password = (string) $request->post('password_hash');
-                if ($password !== '' && !PasswordPolicy::accepts($password)) {
+                $validationErrors = ClubInputValidator::errors(
+                    $data['name'],
+                    $data['federal_code'],
+                    $data['email'],
+                    $data['contact_email'],
+                    $data['recovery_email']
+                );
+                if ($validationErrors !== []) {
+                    $error = __($validationErrors[0]);
+                } elseif ($password !== '' && !PasswordPolicy::accepts($password)) {
                     $error = __('errors.password_too_short', [
                         'minimum' => (string) PasswordPolicy::MINIMUM_LENGTH,
                     ]);
@@ -424,8 +434,10 @@ final class AdminController extends Controller
 
                     return $this->redirect('/admin_manage_clubs.php');
                 }
-            } catch (\Throwable $e) {
-                $error = $e->getMessage();
+            } catch (\Throwable $exception) {
+                $error = $exception instanceof PDOException && (string) $exception->getCode() === '23000'
+                    ? __('errors.account_conflict')
+                    : __('errors.save_failed');
             }
         }
 

@@ -44,7 +44,7 @@ final class Club
     public static function findByEmail(string $email): ?self
     {
         $stmt = Database::connection()->prepare('SELECT * FROM clubs WHERE email = ?');
-        $stmt->execute([$email]);
+        $stmt->execute([self::normalizeEmail($email)]);
         $row = $stmt->fetch();
 
         return $row ? self::fromArray($row) : null;
@@ -81,7 +81,7 @@ final class Club
         $stmt->execute([
             $data['federal_code'] ?? '',
             $data['name'] ?? '',
-            $data['email'] ?? '',
+            self::normalizeEmail((string) ($data['email'] ?? '')),
             $data['phone'] ?? '',
             $data['contact_first_name'] ?? '',
             $data['contact_last_name'] ?? '-',
@@ -105,7 +105,9 @@ final class Club
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $parts[] = "$field = ?";
-                $params[] = $data[$field];
+                $params[] = $field === 'email'
+                    ? self::normalizeEmail((string) $data[$field])
+                    : $data[$field];
             }
         }
 
@@ -116,6 +118,11 @@ final class Club
         $params[] = $id;
         $sql = 'UPDATE clubs SET ' . implode(', ', $parts) . ' WHERE id = ?';
         Database::connection()->prepare($sql)->execute($params);
+    }
+
+    public static function normalizeEmail(string $email): string
+    {
+        return mb_strtolower(trim($email));
     }
 
     public static function remove(int $id): void

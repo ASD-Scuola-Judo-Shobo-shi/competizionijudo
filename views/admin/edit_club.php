@@ -15,11 +15,11 @@
             </div>
             <div>
                 <label><?= e(__('admin.clubs.email')) ?></label>
-                <input name="email" value="<?= e($club->email) ?>">
+                <input type="email" name="email" value="<?= e($club->email) ?>" required>
             </div>
             <div>
                 <label><?= e(__('admin.clubs.federal_code')) ?></label>
-                <input name="federal_code" value="<?= e($club->federal_code) ?>">
+                <input name="federal_code" value="<?= e($club->federal_code) ?>" required>
             </div>
         </div>
 
@@ -45,7 +45,7 @@
             </div>
             <div>
                 <label><?= e(__('admin.clubs.contact_email')) ?></label>
-                <input name="contact_email" value="<?= e($club->contact_email ?? '') ?>">
+                <input type="email" name="contact_email" value="<?= e($club->contact_email ?? '') ?>">
             </div>
             <div>
                 <label><?= e(__('admin.clubs.organization')) ?></label>
@@ -56,7 +56,7 @@
         <div class="row">
             <div>
                 <label><?= e(__('admin.clubs.recovery_email')) ?></label>
-                <input name="recovery_email" value="<?= e($club->recovery_email) ?>">
+                <input type="email" name="recovery_email" value="<?= e($club->recovery_email) ?>" required>
             </div>
             <div>
                 <label><?= e(__('admin.clubs.password')) ?></label>

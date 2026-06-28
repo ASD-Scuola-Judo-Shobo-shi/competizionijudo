@@ -21,7 +21,7 @@
             <input name="name" required>
 
             <label><?= e(__('club.register.federal_code')) ?></label>
-            <input name="federal_code">
+            <input name="federal_code" required>
 
             <label><?= e(__('club.register.club_email')) ?></label>
             <input type="email" name="email" required>
