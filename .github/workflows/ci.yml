@@ -105,3 +105,6 @@ jobs:
 
       - name: Verify deploy artifact
         run: bash scripts/verify-deploy-artifact.sh build/deploy
+
+      - name: Boot deploy artifact
+        run: bash scripts/test-deploy-artifact.sh build/deploy
