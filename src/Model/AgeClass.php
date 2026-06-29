@@ -6,6 +6,19 @@ namespace App\Model;
 
 final class AgeClass
 {
+    private const DEFINITIONS = [
+        ['key' => 'children_a', 'it' => 'Bambini A', 'en' => 'Children A', 'age_below' => 6, 'age_min' => 4, 'age_max' => 5],
+        ['key' => 'children_b', 'it' => 'Bambini B', 'en' => 'Children B', 'age_below' => 8, 'age_min' => 6, 'age_max' => 7],
+        ['key' => 'kids', 'it' => 'Fanciulli', 'en' => 'Kids', 'age_below' => 10, 'age_min' => 8, 'age_max' => 9],
+        ['key' => 'youth', 'it' => 'Ragazzi', 'en' => 'Youth', 'age_below' => 12, 'age_min' => 10, 'age_max' => 11],
+        ['key' => 'pre_cadets_a', 'it' => 'Esordienti A', 'en' => 'Pre-Cadets A', 'age_below' => 13, 'age_min' => 12, 'age_max' => 12],
+        ['key' => 'pre_cadets_b', 'it' => 'Esordienti B', 'en' => 'Pre-Cadets B', 'age_below' => 15, 'age_min' => 13, 'age_max' => 14],
+        ['key' => 'cadets', 'it' => 'Cadetti', 'en' => 'Cadets', 'age_below' => 18, 'age_min' => 15, 'age_max' => 17],
+        ['key' => 'juniors', 'it' => 'Juniores', 'en' => 'Juniors', 'age_below' => 21, 'age_min' => 18, 'age_max' => 20],
+        ['key' => 'seniors', 'it' => 'Seniores', 'en' => 'Seniors', 'age_below' => 36, 'age_min' => 21, 'age_max' => 35],
+        ['key' => 'masters', 'it' => 'Master', 'en' => 'Masters', 'age_below' => null, 'age_min' => 36, 'age_max' => null],
+    ];
+
     /**
      * @param string $name Name of the age class (e.g. "Bambini A")
      * @param int|null $ageBelow The age_below value stored in DB (nullable for Masters)
@@ -13,6 +26,7 @@ final class AgeClass
      * @param int|null $ageMax Maximum age (inclusive, null for Masters)
      */
     public function __construct(
+        public readonly string $key,
         public readonly string $name,
         public readonly ?int $ageBelow,
         public readonly int $ageMin,
@@ -26,35 +40,17 @@ final class AgeClass
      */
     public static function all(string $locale = 'it'): array
     {
-        $definitions = $locale === 'en'
-            ? [
-                ['name' => 'Children A',  'age_below' => 6,  'age_min' => 4,  'age_max' => 5],
-                ['name' => 'Children B',  'age_below' => 8,  'age_min' => 6,  'age_max' => 7],
-                ['name' => 'Kids',        'age_below' => 10, 'age_min' => 8,  'age_max' => 9],
-                ['name' => 'Youth',       'age_below' => 12, 'age_min' => 10, 'age_max' => 11],
-                ['name' => 'Pre-Cadets A', 'age_below' => 13, 'age_min' => 12, 'age_max' => 12],
-                ['name' => 'Pre-Cadets B', 'age_below' => 15, 'age_min' => 13, 'age_max' => 14],
-                ['name' => 'Cadets',      'age_below' => 18, 'age_min' => 15, 'age_max' => 17],
-                ['name' => 'Juniors',     'age_below' => 21, 'age_min' => 18, 'age_max' => 20],
-                ['name' => 'Seniors',     'age_below' => 36, 'age_min' => 21, 'age_max' => 35],
-                ['name' => 'Masters',     'age_below' => null, 'age_min' => 36, 'age_max' => null],
-            ]
-            : [
-                ['name' => 'Bambini A',   'age_below' => 6,  'age_min' => 4,  'age_max' => 5],
-                ['name' => 'Bambini B',   'age_below' => 8,  'age_min' => 6,  'age_max' => 7],
-                ['name' => 'Fanciulli',   'age_below' => 10, 'age_min' => 8,  'age_max' => 9],
-                ['name' => 'Ragazzi',     'age_below' => 12, 'age_min' => 10, 'age_max' => 11],
-                ['name' => 'Esordienti A', 'age_below' => 13, 'age_min' => 12, 'age_max' => 12],
-                ['name' => 'Esordienti B', 'age_below' => 15, 'age_min' => 13, 'age_max' => 14],
-                ['name' => 'Cadetti',     'age_below' => 18, 'age_min' => 15, 'age_max' => 17],
-                ['name' => 'Juniores',     'age_below' => 21, 'age_min' => 18, 'age_max' => 20],
-                ['name' => 'Seniores',    'age_below' => 36, 'age_min' => 21, 'age_max' => 35],
-                ['name' => 'Master',      'age_below' => null, 'age_min' => 36, 'age_max' => null],
-            ];
+        $locale = $locale === 'en' ? 'en' : 'it';
 
         return array_map(
-            fn(array $d): self => new self($d['name'], $d['age_below'], $d['age_min'], $d['age_max']),
-            $definitions
+            fn(array $definition): self => new self(
+                $definition['key'],
+                $definition[$locale],
+                $definition['age_below'],
+                $definition['age_min'],
+                $definition['age_max']
+            ),
+            self::DEFINITIONS
         );
     }
 
@@ -75,7 +71,7 @@ final class AgeClass
     /**
      * Calculates the age class for a given birth year and event year.
      *
-     * @return array{name: string, age_below: int|null, age_min: int, age_max: int|null, label: string}
+     * @return array{key: string, name: string, age_below: int|null, age_min: int, age_max: int|null, label: string}
      */
     public static function calculate(int $birthYear, int $eventYear = 0, string $locale = 'it'): array
     {
@@ -84,9 +80,14 @@ final class AgeClass
         }
         $age = $eventYear - $birthYear;
 
+        if ($age < 0) {
+            return self::outOfRange($locale);
+        }
+
         foreach (self::all($locale) as $ac) {
             if ($age >= $ac->ageMin && ($ac->ageMax === null || $age <= $ac->ageMax)) {
                 return [
+                    'key' => $ac->key,
                     'name' => $ac->name,
                     'age_below' => $ac->ageBelow,
                     'age_min' => $ac->ageMin,
@@ -101,6 +102,7 @@ final class AgeClass
         if ($all !== [] && $age < $all[0]->ageMin) {
             $youngest = $all[0];
             return [
+                'key' => $youngest->key,
                 'name' => $youngest->name,
                 'age_below' => $youngest->ageBelow,
                 'age_min' => $youngest->ageMin,
@@ -109,15 +111,7 @@ final class AgeClass
             ];
         }
 
-        $localeLabel = $locale === 'en' ? 'Out of range' : 'Fuori fascia';
-
-        return [
-            'name' => $localeLabel,
-            'age_below' => null,
-            'age_min' => 0,
-            'age_max' => null,
-            'label' => $localeLabel,
-        ];
+        return self::outOfRange($locale);
     }
 
     /**
@@ -173,12 +167,29 @@ final class AgeClass
         $defs = [];
         foreach (self::all($locale) as $ac) {
             $defs[] = [
+                'key' => $ac->key,
                 'name' => $ac->name,
                 'ageBelow' => $ac->ageBelow,
                 'ageMin' => $ac->ageMin,
                 'ageMax' => $ac->ageMax,
+                'label' => $ac->label($locale),
             ];
         }
-        return json_encode($defs, JSON_UNESCAPED_UNICODE);
+        return json_encode($defs, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    }
+
+    /** @return array{key: string, name: string, age_below: null, age_min: 0, age_max: null, label: string} */
+    private static function outOfRange(string $locale): array
+    {
+        $label = $locale === 'en' ? 'Out of range' : 'Fuori fascia';
+
+        return [
+            'key' => 'out_of_range',
+            'name' => $label,
+            'age_below' => null,
+            'age_min' => 0,
+            'age_max' => null,
+            'label' => $label,
+        ];
     }
 }

@@ -6,6 +6,37 @@ namespace App\Model;
 
 final class JudoCategory
 {
+    /** @var array<string, array<string, list<int>>> */
+    private const WEIGHT_LIMITS = [
+        'children_a' => ['*' => [16,18,20,22,24,26,28,30,33,36]],
+        'children_b' => ['*' => [18,20,22,24,26,28,30,33,36,40]],
+        'kids' => ['*' => [20,22,24,26,28,30,33,36,40,45,50]],
+        'youth' => ['*' => [26,28,30,33,36,40,45,50,55,60,66]],
+        'pre_cadets_a' => [
+            'M' => [36,40,45,50,55,60,66,73],
+            'F' => [36,40,44,48,52,57,63],
+        ],
+        'pre_cadets_b' => [
+            'M' => [38,42,46,50,55,60,66,73,81],
+            'F' => [40,44,48,52,57,63,70],
+        ],
+        'cadets' => [
+            'M' => [46,50,55,60,66,73,81,90],
+            'F' => [40,44,48,52,57,63,70],
+        ],
+        'juniors' => [
+            'M' => [60,66,73,81,90,100],
+            'F' => [48,52,57,63,70,78],
+        ],
+        'seniors' => [
+            'M' => [60,66,73,81,90,100],
+            'F' => [48,52,57,63,70,78],
+        ],
+    ];
+
+    /** @var array<string, string> */
+    private const WEIGHT_ALIASES = ['masters' => 'seniors'];
+
     public static function normalizeGender(string $gender): string
     {
         $s = mb_strtolower(trim($gender), 'UTF-8');
@@ -54,150 +85,96 @@ final class JudoCategory
     {
         $year = self::extractBirthYear($birth);
         $gender = self::normalizeGender($gender);
-        $weight = $weight;
+        $eventYear = $eventYear > 0 ? $eventYear : (int) date('Y');
 
-        if ($year === null) {
-            return [
-                'age_below' => null,
-                'program' => '',
-                'weight_category' => '',
-            ];
+        if ($year === null || $year > $eventYear) {
+            return self::emptyResult();
         }
 
         $ageClassResult = AgeClass::calculate($year, $eventYear);
-        $name = $ageClassResult['name'];
+        $classKey = $ageClassResult['key'];
         $ageBelow = $ageClassResult['age_below'];
 
-        if ($ageBelow === null && $name !== 'Master' && $name !== 'Masters') {
-            $program = '';
-        } elseif ($ageBelow !== null && $ageBelow <= 12) {
+        if ($classKey === 'out_of_range') {
+            return self::emptyResult();
+        }
+
+        if ($ageBelow !== null && $ageBelow <= 12) {
             $program = 'bambini';
         } else {
             $program = 'adulti';
         }
 
-        $categoria = self::weightCategory($name, $gender, $weight);
-
         return [
             'age_below' => $ageBelow,
             'program' => $program,
-            'weight_category' => $categoria,
+            'weight_category' => self::weightCategory($classKey, $gender, $weight),
         ];
     }
 
     public static function weightCategoryPublic(string $classe, string $gender, float $weight): string
     {
-        return self::weightCategory($classe, $gender, $weight);
-    }
-
-    private static function weightCategory(string $classe, string $gender, float $weight): string
-    {
-        // Map localized age class names to internal keys
-        $childMap = [
-            'Bambini A' => 'Bambini A',
-            'Bambini B' => 'Bambini B',
-            'Fanciulli' => 'Fanciulli',
-            'Ragazzi' => 'Ragazzi',
-            'Children A' => 'Bambini A',
-            'Children B' => 'Bambini B',
-            'Kids' => 'Fanciulli',
-            'Youth' => 'Ragazzi',
-        ];
-
-        $adultMap = [
-            'Esordienti A' => 'Esordienti A',
-            'Esordienti B' => 'Esordienti B',
-            'Cadetti' => 'Cadetti',
-            'Juniores' => 'Junior',
-            'Seniores' => 'Senior',
-            'Pre-Cadets A' => 'Esordienti A',
-            'Pre-Cadets B' => 'Esordienti B',
-            'Cadets' => 'Cadetti',
-            'Juniors' => 'Junior',
-            'Seniors' => 'Senior',
-        ];
-
-        $child = [
-            'Bambini A' => [16,18,20,22,24,26,28,30,33,36],
-            'Bambini B' => [18,20,22,24,26,28,30,33,36,40],
-            'Fanciulli' => [20,22,24,26,28,30,33,36,40,45,50],
-            'Ragazzi' => [26,28,30,33,36,40,45,50,55,60,66],
-        ];
-
-        $adult = [
-            'Esordienti A' => ['M' => [36,40,45,50,55,60,66,73], 'F' => [36,40,44,48,52,57,63]],
-            'Esordienti B' => ['M' => [38,42,46,50,55,60,66,73,81], 'F' => [40,44,48,52,57,63,70]],
-            'Cadetti' => ['M' => [46,50,55,60,66,73,81,90], 'F' => [40,44,48,52,57,63,70]],
-            'Junior' => ['M' => [60,66,73,81,90,100], 'F' => [48,52,57,63,70,78]],
-            'Senior' => ['M' => [60,66,73,81,90,100], 'F' => [48,52,57,63,70,78]],
-        ];
-
-        $childClass = $childMap[$classe] ?? null;
-        if ($childClass !== null) {
-            foreach ($child[$childClass] as $limit) {
-                if ($weight <= $limit) {
-                    return '-' . $limit . ' kg';
+        foreach (['it', 'en'] as $locale) {
+            foreach (AgeClass::all($locale) as $ageClass) {
+                if ($ageClass->name === $classe) {
+                    return self::weightCategory($ageClass->key, $gender, $weight);
                 }
             }
-            return '+' . end($child[$childClass]) . ' kg';
-        }
-
-        $adultClass = $adultMap[$classe] ?? (str_starts_with($classe, 'Master') || str_starts_with($classe, 'Masters') ? 'Senior' : null);
-
-        if ($adultClass !== null && isset($adult[$adultClass][$gender])) {
-            foreach ($adult[$adultClass][$gender] as $limit) {
-                if ($weight <= $limit) {
-                    return '-' . $limit . ' kg';
-                }
-            }
-            return '+' . end($adult[$adultClass][$gender]) . ' kg';
         }
 
         return '';
     }
 
-    /**
-     * Returns weight category definitions as JSON for client-side use.
-     */
+    private static function weightCategory(string $classKey, string $gender, float $weight): string
+    {
+        if ($weight <= 0) {
+            return '';
+        }
+
+        $classKey = self::WEIGHT_ALIASES[$classKey] ?? $classKey;
+        $definition = self::WEIGHT_LIMITS[$classKey] ?? null;
+        if ($definition === null) {
+            return '';
+        }
+
+        $limits = $definition['*'] ?? $definition[self::normalizeGender($gender)] ?? null;
+        if ($limits === null) {
+            return '';
+        }
+
+        foreach ($limits as $limit) {
+            if ($weight <= $limit) {
+                return '-' . $limit . ' kg';
+            }
+        }
+
+        return '+' . $limits[array_key_last($limits)] . ' kg';
+    }
+
+    /** @return array{limits: array<string, array<string, list<int>>>, aliases: array<string, string>} */
+    public static function weightCategoryDefinitions(): array
+    {
+        return [
+            'limits' => self::WEIGHT_LIMITS,
+            'aliases' => self::WEIGHT_ALIASES,
+        ];
+    }
+
     public static function weightCategoryDefinitionsJson(): string
     {
-        $data = [
-            'childMap' => [
-                'Bambini A' => 'Bambini A',
-                'Bambini B' => 'Bambini B',
-                'Fanciulli' => 'Fanciulli',
-                'Ragazzi' => 'Ragazzi',
-                'Children A' => 'Bambini A',
-                'Children B' => 'Bambini B',
-                'Kids' => 'Fanciulli',
-                'Youth' => 'Ragazzi',
-            ],
-            'adultMap' => [
-                'Esordienti A' => 'Esordienti A',
-                'Esordienti B' => 'Esordienti B',
-                'Cadetti' => 'Cadetti',
-                'Juniores' => 'Junior',
-                'Seniores' => 'Senior',
-                'Pre-Cadets A' => 'Esordienti A',
-                'Pre-Cadets B' => 'Esordienti B',
-                'Cadets' => 'Cadetti',
-                'Juniors' => 'Junior',
-                'Seniors' => 'Senior',
-            ],
-            'child' => [
-                'Bambini A' => [16,18,20,22,24,26,28,30,33,36],
-                'Bambini B' => [18,20,22,24,26,28,30,33,36,40],
-                'Fanciulli' => [20,22,24,26,28,30,33,36,40,45,50],
-                'Ragazzi' => [26,28,30,33,36,40,45,50,55,60,66],
-            ],
-            'adult' => [
-                'Esordienti A' => ['M' => [36,40,45,50,55,60,66,73], 'F' => [36,40,44,48,52,57,63]],
-                'Esordienti B' => ['M' => [38,42,46,50,55,60,66,73,81], 'F' => [40,44,48,52,57,63,70]],
-                'Cadetti' => ['M' => [46,50,55,60,66,73,81,90], 'F' => [40,44,48,52,57,63,70]],
-                'Junior' => ['M' => [60,66,73,81,90,100], 'F' => [48,52,57,63,70,78]],
-                'Senior' => ['M' => [60,66,73,81,90,100], 'F' => [48,52,57,63,70,78]],
-            ],
+        return json_encode(
+            self::weightCategoryDefinitions(),
+            JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+        );
+    }
+
+    /** @return array{age_below: null, program: '', weight_category: ''} */
+    private static function emptyResult(): array
+    {
+        return [
+            'age_below' => null,
+            'program' => '',
+            'weight_category' => '',
         ];
-        return json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 }

@@ -57,8 +57,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C27 | [x] | `perf(club): precompute athlete registration counts` | P-01, A-03 | `b9b1fb9` | Controller derives a filtered athlete-count map from its one entry load; template performs no model calls; exactly four prepares at both 1 and 75 athletes; full code checks 121/914; audit not verified |
 | C28 | [x] | `refactor(view): remove data access from templates` | A-03, A-07 | `733cdd5` | Prepared layout context owns session/club/config/profiler reads; navigation paths are defined once; templates retain only type annotations/pure formatting enums; club area now uses three constant prepares; full code checks 123/923; audit not verified |
 | C29 | [x] | `refactor(performance): remove stale file cache and dead profiler` | A-04, P-04 | `2a91944` | Event/club create-update-delete changes are immediately visible; cache/profiler code is absent; artifact forbids `var/cache` and boots both locales; full code checks 126/938; audit not verified |
-| C30 | [x] | `perf(lists): scope and paginate list queries` | P-03, F-01 | This commit | Upcoming lists enforce published/open/current-date lifecycle; public/club lists page at 50; aggregates are identifier-scoped; MySQL 8.4 plans use bounded index scans at representative scale; clean/legacy migrations and full checks pass 129/958 |
-| C31 | [ ] | `test(domain): define event year category invariants` | A-02, A-07 |  |  |
+| C30 | [x] | `perf(lists): scope and paginate list queries` | P-03, F-01 | `cbde972` | Upcoming lists enforce published/open/current-date lifecycle; public/club lists page at 50; aggregates are identifier-scoped; MySQL 8.4 plans use bounded index scans at representative scale; clean/legacy migrations and full checks pass 129/958 |
+| C31 | [x] | `test(domain): define event year category invariants` | A-02, A-07 | This commit | Stable age-class keys drive one PHP/JSON weight table; exhaustive locale, event-year, gender, threshold, master, invalid/future, and rendered-client parity checks pass; full checks 133/1462 |
 | C32 | [ ] | `refactor(domain): derive athlete category for event year` | A-02 |  | Historical snapshot decision required |
 | C33 | [ ] | `refactor(core): use the dispatched request consistently` | A-06 |  |  |
 | C34 | [ ] | `docs: align supported architecture and operations` | A-07, A-08, F-03, O-01 |  |  |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C31 event-year category invariant coverage |
-| Files intentionally in scope | None until C31 begins |
-| Last targeted test | C30 list/query suite passes (13 tests/84 assertions); MySQL 8.4 clean/legacy migration smoke and representative `EXPLAIN ANALYZE` checks pass |
-| Last full check | `composer check` passes, including dependency audit (129 tests/958 assertions) |
-| Next action | Read C31 in full, confirm current category behavior, then define event-year boundary invariants without changing production behavior |
+| Objective | Evaluate C32 against D05 and implement all event-context derivation that does not choose a historical snapshot policy |
+| Files intentionally in scope | None until C32 begins |
+| Last targeted test | C31 category and rendered-client tests pass (26 tests/588 assertions) |
+| Last full check | `composer check` passes, including dependency audit (133 tests/1462 assertions) |
+| Next action | Read C32 in full and trace every stored/displayed category path against the unresolved historical-data decision |
 
 ## Blockers and decisions
 
@@ -129,6 +129,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C29 | In progress: removed stale list serialization, dead profiling, and artifact cache storage; verification paused at the environment usage limit | Freshness/layout/query tests 9/51 and cache-free artifact build/manifest pass; artifact boot and full gate not yet rerun | Resume C29 verification; do not commit yet |
 | 2026-06-29 | C29 | Completed immediate list freshness and removed cache/profiler runtime and artifact storage after resuming verification | Focused tests 9/51; cache-free manifest and bilingual artifact boot pass; full code checks 126/938; dependency audit not verified | C30 |
 | 2026-06-29 | C30 | Added lifecycle-bounded upcoming events, 50-row club/athlete pagination, displayed-ID aggregates, and query-plan-backed list indexes | Focused tests 13/84; MySQL clean/legacy migrations pass; representative plans use indexed page/scope reads; full `composer check` passes 129/958 including audit | C31 |
+| 2026-06-29 | C31 | Replaced localized/duplicated category tables with stable shared definitions and exhaustive server/generated-client event-year boundaries | Focused domain/render tests 26/588; full `composer check` passes 133/1462 including audit | C32; evaluate D05 before changing historical behavior |
 
 ## Milestones
 

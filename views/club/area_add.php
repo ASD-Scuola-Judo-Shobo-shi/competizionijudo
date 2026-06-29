@@ -92,6 +92,7 @@
             const year = parseInt(birthDate.substring(0, 4), 10);
             if (isNaN(year)) return null;
             const age = eventYear - year;
+            if (age < 0) return null;
             for (const ac of ageClasses) {
                 if (age >= ac.ageMin && (ac.ageMax === null || age <= ac.ageMax)) {
                     return ac;
@@ -106,10 +107,7 @@
         function updateAgeDisplay() {
             const ac = computeAgeClass(dobInput.value);
             if (ac) {
-                const range = ac.ageMin === ac.ageMax || ac.ageMax === null
-                    ? (ac.ageMin >= 36 ? ac.ageMin + '+' : String(ac.ageMin))
-                    : ac.ageMin + '-' + ac.ageMax + ' anni';
-                ageDisplay.textContent = ac.name + ' ' + range;
+                ageDisplay.textContent = ac.label;
                 ageDisplay.className = 'age-class-badge has-value';
             } else {
                 ageDisplay.textContent = '—';
@@ -133,46 +131,19 @@
             const weight = parseFloat(weightStr);
             if (isNaN(weight) || weight <= 0) return null;
             const dob = dobInput ? dobInput.value : '';
-            if (!dob) return null;
-            const birthYear = parseInt(dob.substring(0, 4), 10);
-            if (isNaN(birthYear)) return null;
-            const age = eventYear - birthYear;
-
-            let className = null;
-            for (const ac of ageClasses) {
-                if (age >= ac.ageMin && (ac.ageMax === null || age <= ac.ageMax)) {
-                    className = ac.name;
-                    break;
-                }
-            }
-            if (!className) {
-                if (ageClasses.length > 0 && age < ageClasses[0].ageMin) {
-                    className = ageClasses[0].name;
-                }
-            }
-            if (!className) return null;
+            const ageClass = computeAgeClass(dob);
+            if (!ageClass) return null;
 
             const gender = genderVal.toUpperCase();
-            const childClassKey = weightDefs.childMap[className] ?? null;
-            if (childClassKey !== null && weightDefs.child[childClassKey]) {
-                const limits = weightDefs.child[childClassKey];
-                for (const limit of limits) {
-                    if (weight <= limit) return '-' + limit + ' kg';
-                }
-                return '+' + limits[limits.length - 1] + ' kg';
+            const classKey = weightDefs.aliases[ageClass.key] ?? ageClass.key;
+            const definition = weightDefs.limits[classKey] ?? null;
+            if (!definition) return null;
+            const limits = definition['*'] ?? definition[gender] ?? null;
+            if (!limits) return null;
+            for (const limit of limits) {
+                if (weight <= limit) return '-' + limit + ' kg';
             }
-
-            const adultMapVal = weightDefs.adultMap[className] ??
-                (className.startsWith('Master') || className.startsWith('Masters') ? 'Senior' : null);
-            if (adultMapVal !== null && weightDefs.adult[adultMapVal] && weightDefs.adult[adultMapVal][gender]) {
-                const limits = weightDefs.adult[adultMapVal][gender];
-                for (const limit of limits) {
-                    if (weight <= limit) return '-' + limit + ' kg';
-                }
-                return '+' + limits[limits.length - 1] + ' kg';
-            }
-
-            return null;
+            return '+' + limits[limits.length - 1] + ' kg';
         }
 
         function updateWeightDisplay() {

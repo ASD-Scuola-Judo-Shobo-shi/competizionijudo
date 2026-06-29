@@ -6,7 +6,9 @@ namespace Tests;
 
 use App\Core\View;
 use App\Localization;
+use App\Model\AgeClass;
 use App\Model\Event;
+use App\Model\JudoCategory;
 use App\Presentation\Navigation;
 use PHPUnit\Framework\TestCase;
 
@@ -70,6 +72,30 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('>Details</a>', $authorized);
         self::assertStringContainsString('>Entries</a>', $authorized);
         self::assertStringNotContainsString('/event_entries.php?event=101', $anonymous);
+    }
+
+    public function testAthletePreviewEmbedsSharedCategoryDefinitions(): void
+    {
+        Localization::setLocale('en');
+        $_GET = [];
+        $view = new View(dirname(__DIR__) . '/views');
+
+        $html = $view->render('club/area_add', array_merge([
+            'edit' => null,
+            'errors' => [],
+            'athletes' => [],
+            'pagination' => paginate(0, 1, 50),
+        ], $this->layoutData('/club_area.php')));
+
+        self::assertStringContainsString('const ageClasses = ' . AgeClass::definitionsJson('en'), $html);
+        self::assertStringContainsString(
+            'const weightDefs = ' . JudoCategory::weightCategoryDefinitionsJson(),
+            $html
+        );
+        self::assertStringContainsString('ageDisplay.textContent = ac.label;', $html);
+        self::assertStringContainsString('weightDefs.limits[classKey]', $html);
+        self::assertStringNotContainsString('childMap', $html);
+        self::assertStringNotContainsString('adultMap', $html);
     }
 
     /** @return array<string, mixed> */
