@@ -37,13 +37,8 @@ jobs:
       - name: Build deploy directory
         run: bash scripts/build-deploy.sh
 
-      # Prepare the root htaccess inside a separate staging area for the artifact stage
       - name: Stage root htaccess
-        run: |
-          mkdir -p build/root-htaccess
-          if [ -f root.htaccess ]; then
-            cp root.htaccess build/root-htaccess/.htaccess
-          fi
+        run: bash scripts/stage-root-router.sh build/root-htaccess
 
       - name: Upload application artifact
         uses: actions/upload-artifact@v4
@@ -51,6 +46,7 @@ jobs:
           name: app-${{ github.ref_name }}
           path: build/deploy
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 3
 
       - name: Upload root htaccess artifact
@@ -58,7 +54,8 @@ jobs:
         with:
           name: root-htaccess-${{ github.ref_name }}
           path: build/root-htaccess
-          if-no-files-found: warn
+          if-no-files-found: error
+          include-hidden-files: true
           retention-days: 3
 
   deploy-production:
@@ -82,6 +79,14 @@ jobs:
         with:
           name: root-htaccess-main
           path: build/root-htaccess
+
+      - name: Verify root htaccess artifact
+        run: |
+          test -s build/root-htaccess/.htaccess
+          cd build/root-htaccess
+          sha256sum --check --strict htaccess.sha256
+          rm htaccess.sha256
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 1
 
       # STEP A: Upload the application files to the /prod/ directory
       - name: Upload to production FTP directory
