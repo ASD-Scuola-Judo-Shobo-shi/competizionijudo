@@ -81,7 +81,6 @@ final class ViewRenderTest extends TestCase
             'isLoggedIn' => false,
             'isAdmin' => false,
             'clubEmail' => null,
-            'profilerHtml' => '',
         ], Navigation::context($currentPath, '', false, false));
     }
 }

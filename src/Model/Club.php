@@ -134,18 +134,9 @@ final class Club
     /** @return list<self> */
     public static function all(): array
     {
-        $cached = \App\Core\Cache::get('clubs_all');
-        if ($cached !== null) {
-            return $cached;
-        }
-
         $stmt = Database::connection()->query('SELECT * FROM clubs ORDER BY name');
         $rows = $stmt->fetchAll();
 
-        $result = array_map(fn(array $row) => self::fromArray($row), $rows ?: []);
-
-        \App\Core\Cache::set('clubs_all', $result, 300);
-
-        return $result;
+        return array_map(fn(array $row) => self::fromArray($row), $rows ?: []);
     }
 }

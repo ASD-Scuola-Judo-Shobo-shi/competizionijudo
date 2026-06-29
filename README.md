@@ -43,7 +43,7 @@ views/             PHP templates and layouts
 tests/             PHPUnit unit tests
 migrations/        SQL migration files
 lang/              Translation files (en.php, it.php)
-var/               Runtime cache and logs
+var/               Runtime logs
 scripts/           Build, migration, and git hook scripts
 docs/              Audit, deployment, and tracking documentation
 .github/workflows/ CI and deployment workflows

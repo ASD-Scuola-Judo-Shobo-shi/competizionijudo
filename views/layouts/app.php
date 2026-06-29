@@ -180,7 +180,5 @@
     </div>
 </footer>
 
-<?= $profilerHtml ?>
-
 </body>
 </html>

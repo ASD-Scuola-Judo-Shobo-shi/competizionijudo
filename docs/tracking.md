@@ -55,8 +55,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C25 | [x] | `chore(routes): remove unsupported public stubs` | A-01, A-08 | `f50f241` | Five export and one public test 404 stubs/claims removed; exact inventory proves every remaining public PHP file has a front-controller, route-wrapper, or redirect role; full code checks 116/874; audit not verified |
 | C26 | [x] | `fix(events): persist registration feedback across redirects` | F-02, S-08 | `bb7fda2` | Event-scoped flash survives redirect once and reports added/duplicate/rejected/failed counts; per-item failures are safely logged while partial results remain explicit; full code checks 119/898; audit not verified |
 | C27 | [x] | `perf(club): precompute athlete registration counts` | P-01, A-03 | `b9b1fb9` | Controller derives a filtered athlete-count map from its one entry load; template performs no model calls; exactly four prepares at both 1 and 75 athletes; full code checks 121/914; audit not verified |
-| C28 | [x] | `refactor(view): remove data access from templates` | A-03, A-07 | This commit | Prepared layout context owns session/club/config/profiler reads; navigation paths are defined once; templates retain only type annotations/pure formatting enums; club area now uses three constant prepares; full code checks 123/923; audit not verified |
-| C29 | [ ] | `refactor(performance): remove stale file cache and dead profiler` | A-04, P-04 |  |  |
+| C28 | [x] | `refactor(view): remove data access from templates` | A-03, A-07 | `733cdd5` | Prepared layout context owns session/club/config/profiler reads; navigation paths are defined once; templates retain only type annotations/pure formatting enums; club area now uses three constant prepares; full code checks 123/923; audit not verified |
+| C29 | [x] | `refactor(performance): remove stale file cache and dead profiler` | A-04, P-04 | This commit | Event/club create-update-delete changes are immediately visible; cache/profiler code is absent; artifact forbids `var/cache` and boots both locales; full code checks 126/938; audit not verified |
 | C30 | [ ] | `perf(lists): scope and paginate list queries` | P-03, F-01 |  | Capture representative `EXPLAIN` evidence |
 | C31 | [ ] | `test(domain): define event year category invariants` | A-02, A-07 |  |  |
 | C32 | [ ] | `refactor(domain): derive athlete category for event year` | A-02 |  | Historical snapshot decision required |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C29 removal of stale serialized-object caching and unused database profiling |
-| Files intentionally in scope | None until C29 begins |
-| Last targeted test | Layout/data-access coverage passes (24 tests/163 assertions); only type/pure formatting model references remain; exact artifact boot passes; club area uses three prepares at 1/75 athletes |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (123 tests/923 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Inventory cache/profiler call sites and mutation invalidation gaps before removing C29 dead infrastructure |
+| Objective | Start C30 bounded event, club, and admin list queries |
+| Files intentionally in scope | None until C30 begins |
+| Last targeted test | C29 freshness/layout/query coverage passes (9 tests/51 assertions); cache-free artifact manifest and bilingual production boot pass |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (126 tests/938 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Trace C30 list/count queries, define the explicit upcoming-date rule, then capture representative `EXPLAIN` evidence |
 
 ## Blockers and decisions
 
@@ -126,6 +126,8 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C26 | Added event-scoped one-time flash feedback for added, duplicate, rejected, and failed batch registration outcomes with safe per-item failure logs | Focused feedback/session/repository tests 31/151; full code checks 119/898; dependency audit not verified | C27 |
 | 2026-06-29 | C27 | Replaced per-athlete entry reloads with one controller-built filtered registration-count map | Focused tests 13/93; exactly four prepares at 1 and 75 athletes; full code checks 121/914; dependency audit not verified | C28 |
 | 2026-06-29 | C28 | Prepared complete layout/authenticated-club context outside templates and centralized navigation route definitions | Focused view/navigation/query tests 24/163; exact artifact boot passes; club area reduced to three prepares at 1/75 athletes; full code checks 123/923; dependency audit not verified | C29 |
+| 2026-06-29 | C29 | In progress: removed stale list serialization, dead profiling, and artifact cache storage; verification paused at the environment usage limit | Freshness/layout/query tests 9/51 and cache-free artifact build/manifest pass; artifact boot and full gate not yet rerun | Resume C29 verification; do not commit yet |
+| 2026-06-29 | C29 | Completed immediate list freshness and removed cache/profiler runtime and artifact storage after resuming verification | Focused tests 9/51; cache-free manifest and bilingual artifact boot pass; full code checks 126/938; dependency audit not verified | C30 |
 
 ## Milestones
 

@@ -30,9 +30,6 @@ rsync -a --no-owner --no-group \
   --include="/scripts/run-migrations.php" \
   --exclude="/scripts/***" \
   --include="/var/" \
-  --include="/var/cache/" \
-  --include="/var/cache/.gitkeep" \
-  --exclude="/var/cache/***" \
   --include="/var/log/" \
   --include="/var/log/.gitkeep" \
   --exclude="/var/log/***" \
@@ -53,7 +50,6 @@ find "${BUILD_DIR}" -type d -exec chmod 755 {} +
 find "${BUILD_DIR}" -type f -exec chmod 644 {} +
 chmod 775 \
   "${BUILD_DIR}/public/uploads/events" \
-  "${BUILD_DIR}/var/cache" \
   "${BUILD_DIR}/var/log"
 
 bash "${ROOT_DIR}/scripts/verify-deploy-artifact.sh" "${BUILD_DIR}"

@@ -8,7 +8,6 @@ use App\Core\Request;
 use App\Core\Session;
 use App\Localization;
 use App\Model\Club;
-use App\Model\Database;
 
 final class LayoutContext
 {
@@ -35,7 +34,6 @@ final class LayoutContext
             'isLoggedIn' => $isLoggedIn,
             'isAdmin' => $isAdmin,
             'clubEmail' => $authenticatedClub?->email,
-            'profilerHtml' => Database::renderProfiler(),
         ], Navigation::context($currentPath, $clubView, $isAdmin, $isLoggedIn));
     }
 }

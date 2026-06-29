@@ -22,7 +22,6 @@ for path in \
   src/bootstrap.php \
   vendor/autoload.php \
   views/layouts/app.php \
-  var/cache/.gitkeep \
   var/log/.gitkeep; do
   if [[ ! -e "$ARTIFACT_DIR/$path" ]]; then
     echo "Missing required artifact path: $path" >&2
@@ -37,6 +36,7 @@ for path in \
   scripts/build-deploy.sh \
   scripts/test-migrations.php \
   scripts/verify-deploy-artifact.sh \
+  var/cache \
   vendor/bin/phpunit \
   vendor/bin/phpstan \
   vendor/bin/phpcs \
@@ -67,7 +67,6 @@ fi
 
 for directory in \
   "$ARTIFACT_DIR/public/uploads/events" \
-  "$ARTIFACT_DIR/var/cache" \
   "$ARTIFACT_DIR/var/log"; do
   if [[ ! -d "$directory" || ! -w "$directory" ]]; then
     echo "Writable runtime directory is unavailable: $directory" >&2

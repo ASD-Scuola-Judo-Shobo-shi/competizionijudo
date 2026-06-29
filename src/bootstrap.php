@@ -43,8 +43,6 @@ if (is_file($autoload)) {
 require __DIR__ . '/helpers.php';
 load_env(dirname(__DIR__) . '/.env');
 
-\App\Core\Cache::init(base_path('var/cache'));
-
 if (function_exists('env')) {
     $locale = $_SESSION['locale'] ?? env('APP_LOCALE', 'it');
     App\Localization::setLocale($locale);
