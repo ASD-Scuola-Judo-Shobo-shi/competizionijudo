@@ -2,6 +2,7 @@
 /** @var \App\Model\Event|null $event */
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var list<\App\Model\Event> $nextEvents */
+/** @var bool $canViewEntries */
 ?>
 <?php
 $eventsList = $event !== null ? $nextEvents : $upcomingEvents;
@@ -67,6 +68,9 @@ $eventsList = $event !== null ? $nextEvents : $upcomingEvents;
             </div>
             <?php endif; ?>
             <div class="event-details-actions">
+                <?php if ($canViewEntries) : ?>
+                    <a class="btn" href="/event_entries.php?event=<?= e($event->id) ?>"><?= e(__('events.entries')) ?></a>
+                <?php endif; ?>
                 <a class="btn green" href="/event_register.php?id=<?= e($event->id) ?>"><?= e(__('events.registration')) ?></a>
             </div>
         </div>

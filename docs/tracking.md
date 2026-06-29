@@ -49,9 +49,9 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C19 | [x] | `test(build): boot the deployment artifact` | R-01, Q-03 | `4ab82d8` | Exact production artifact manifest and public routes pass; `/about` boots with HTTP 200 and translated, non-debug output in Italian and English; full code checks 105/803; audit not verified |
 | C20 | [x] | `fix(deploy): preserve server environment configuration` | R-03, A-08 | `62f7745` | CI and FTP preserve server-owned `.env`; complete non-secret inventory/provisioning docs added; required production settings fail with redacted actionable logs; full code checks 108/809; audit not verified |
 | C21 | [x] | `fix(deploy): stage the repository root htaccess` | R-06 | `1dc0614` | Tracked root `.htaccess` stages byte-for-byte with SHA-256 verification; hidden artifacts are retained; missing/empty content stops build and production upload; full code checks 108/809; audit not verified |
-| C22 | [x] | `ci: gate deployment on quality checks` | R-04, R-08 | This commit | Migration, complete quality, and exact artifact gates precede upload; deploy jobs require successful branch-scoped builds; all actions use verified immutable SHAs; full code checks 111/843; audit not verified |
-| C23 | [ ] | `ci: verify deployment health` | R-08 |  | Requires stable health URL and rollback owner |
-| C24 | [ ] | `fix(routes): add authorized event entry details` | A-01, S-05 |  | Depends on C13 |
+| C22 | [x] | `ci: gate deployment on quality checks` | R-04, R-08 | `6ee4cc2` | Migration, complete quality, and exact artifact gates precede upload; deploy jobs require successful branch-scoped builds; all actions use verified immutable SHAs; full code checks 111/843; audit not verified |
+| C23 | [!] | `ci: verify deployment health` | R-08 |  | Blocked by D03: no approved health/build-revision contract, rollback owner/procedure, or stale-file retirement policy exists |
+| C24 | [x] | `fix(routes): add authorized event entry details` | A-01, S-05 | This commit | Canonical route and distinct authorized links/translations agree; real-router anonymous/club/admin tests preserve personal-data scoping; full code checks 113/852; audit not verified |
 | C25 | [ ] | `chore(routes): remove unsupported public stubs` | A-01, A-08 |  | Export reimplementation is a separate product decision |
 | C26 | [ ] | `fix(events): persist registration feedback across redirects` | F-02, S-08 |  |  |
 | C27 | [ ] | `perf(club): precompute athlete registration counts` | P-01, A-03 |  |  |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Evaluate C23 post-deployment health verification against operations decision D03 |
-| Files intentionally in scope | None until C23 begins |
-| Last targeted test | Workflow gate tests pass (3 tests/34 assertions); MySQL 8.4 clean/legacy migration gate and exact artifact staging/boot pass |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (111 tests/843 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Confirm whether C23 can proceed without guessing the stable health URL or FTP rollback owner/procedure |
+| Objective | Start C25 removal of unsupported public export, test, and compatibility stubs |
+| Files intentionally in scope | None until C25 begins |
+| Last targeted test | Canonical route/link and authorization coverage passes (30 tests/100 assertions); exact artifact route manifest/boot passes |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (113 tests/852 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Inventory unsupported public scripts, inbound links, and published feature claims before deleting C25 stubs |
 
 ## Blockers and decisions
 
@@ -120,6 +120,8 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C20 | Removed generated deployment environments, preserved server-owned secrets, documented first provisioning, and added redacted production startup validation | Configuration tests 3/6; secret-free artifact build and bilingual boot pass; full code checks 108/809; dependency audit not verified | C21 |
 | 2026-06-29 | C21 | Staged the tracked root router with hidden-file artifact transfer, checksum verification, and a non-empty pre-upload gate | Exact staging, byte comparison, and SHA-256 checks pass; full code checks 108/809; dependency audit not verified | C22 |
 | 2026-06-29 | C22 | Gated deployment artifacts on migration, full quality, and production boot checks; pinned every workflow action to a verified commit SHA | Workflow tests 3/34; MySQL 8.4 migration and exact artifact gates pass; full code checks 111/843; dependency audit not verified | C23 pending D03 review |
+| 2026-06-29 | C23 | Blocked: health URL/build revision, FTP rollback ownership/procedure, and stale-file retirement around `legacy/` are undefined | Repository/workflow/operations documentation inspection only; no implementation guessed | C24; resume C23 when D03 is resolved |
+| 2026-06-29 | C24 | Added the canonical authorized event-entry route, distinct details/entries links and labels, and real-router actor scoping coverage | Focused route/link tests 30/100; exact artifact route manifest/boot pass; full code checks 113/852; dependency audit not verified | C25 |
 
 ## Milestones
 

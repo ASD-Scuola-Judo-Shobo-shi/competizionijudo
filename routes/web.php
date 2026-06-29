@@ -38,6 +38,7 @@ return static function (App\Core\Router $router): void {
     // Events managed by MVC
     $router->get('/events.php', [EventController::class, 'index']);
     $router->get('/event_details.php', [EventController::class, 'show']);
+    $router->get('/event_entries.php', [EventController::class, 'entries']);
     $router->get('/event_register.php', [EventController::class, 'register']);
     $router->post('/event_register.php', [EventController::class, 'register']);
 

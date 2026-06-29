@@ -41,7 +41,7 @@
                     <td><strong><?= e($club['club_name'] ?? '') ?></strong></td>
                     <td><?= e($club['federal_code'] ?? '') ?></td>
                     <td>
-                        <a class="btn green" href="/event_details.php?event=<?= e($event->id) ?>&club=<?= e($club['id'] ?? '') ?>">
+                        <a class="btn green" href="/event_entries.php?event=<?= e($event->id) ?>&club=<?= e($club['id'] ?? '') ?>">
                             <?= e(__('events.entries_view_club')) ?>
                         </a>
                     </td>

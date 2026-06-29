@@ -24,6 +24,7 @@ final class EventController extends Controller
 
         return $this->view('events/index', [
             'events' => $events,
+            'canViewEntries' => $this->canViewEntries(),
         ]);
     }
 
@@ -44,6 +45,7 @@ final class EventController extends Controller
                 'event' => $event,
                 'nextEvents' => $nextEvents,
                 'upcomingEvents' => [],
+                'canViewEntries' => $this->canViewEntries(),
             ]);
         }
 
@@ -53,6 +55,7 @@ final class EventController extends Controller
             'event' => null,
             'nextEvents' => [],
             'upcomingEvents' => $upcomingEvents,
+            'canViewEntries' => $this->canViewEntries(),
         ]);
     }
 
@@ -202,5 +205,10 @@ final class EventController extends Controller
             'clubFilter' => $clubFilter,
             'isAdmin' => $isAdmin,
         ]);
+    }
+
+    private function canViewEntries(): bool
+    {
+        return !empty(Session::get('is_admin')) || Session::has('club_id');
     }
 }

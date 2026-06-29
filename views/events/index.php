@@ -1,5 +1,6 @@
 <?php
 /** @var array $events */
+/** @var bool $canViewEntries */
 ?>
 <div class="card">
     <?php if (!$events) : ?>
@@ -58,11 +59,13 @@
                     <?php if ($ev->info_file) : ?>
                         <a class="btn orange" href="/<?= e($ev->info_file) ?>" target="_blank" download><?= e(__('events.download_info')) ?></a>
                     <?php endif; ?>
-                    <a class="btn" href="/event_details.php?event=<?= e($ev->id) ?>"><?= e(__('events.entries')) ?></a>
+                    <a class="btn" href="/event_details.php?event=<?= e($ev->id) ?>"><?= e(__('events.details')) ?></a>
+                    <?php if ($canViewEntries) : ?>
+                        <a class="btn" href="/event_entries.php?event=<?= e($ev->id) ?>"><?= e(__('events.entries')) ?></a>
+                    <?php endif; ?>
                     <a class="btn green" href="/event_register.php?id=<?= e($ev->id) ?>"><?= e(__('events.registration')) ?></a>
                 </div>
             </div>
         </div>
     <?php endforeach; ?>
 </div>
-

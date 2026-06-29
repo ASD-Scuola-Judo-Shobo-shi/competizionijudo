@@ -110,7 +110,7 @@ if ($isLoggedIn) {
 $isAdmin = !empty(\App\Core\Session::get('is_admin'));
 $submenuItems = build_submenu($current, $isAdmin, $isLoggedIn);
 
-$competitionPaths = ['/events.php', '/event_details.php', '/event_register.php'];
+$competitionPaths = ['/events.php', '/event_details.php', '/event_entries.php', '/event_register.php'];
 $clubPaths = ['/club_register.php', '/club_login.php', '/club_forgot_password.php', '/club_reset_password.php', '/club_area.php', '/clubs.php'];
 $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/admin_manage_events.php', '/admin_add_event.php', '/admin_edit_club.php', '/admin_edit_event.php', '/admin_logout.php'];
 ?>

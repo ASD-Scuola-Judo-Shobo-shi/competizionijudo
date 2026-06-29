@@ -29,6 +29,7 @@ for route in \
   /clubs.php \
   /events.php \
   /event_details.php \
+  /event_entries.php \
   /event_register.php \
   /language/switch; do
   if ! grep -Fq "\$router->get('${route}'" "$ARTIFACT_DIR/routes/web.php"; then

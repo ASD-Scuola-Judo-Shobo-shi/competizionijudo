@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Controller\EventController;
+use App\Core\Application;
 use App\Core\Request;
+use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
 use App\Localization;
@@ -118,9 +120,8 @@ final class EventLifecycleTest extends TestCase
     {
         $this->seedEntriesForTwoClubs();
         Session::set('club_id', 201);
-        $request = new Request('GET', '/event_entries.php', $query);
 
-        $response = (new EventController($this->view, $request))->entries($request);
+        $response = $this->dispatchEntries($query);
 
         self::assertSame(200, $response->status());
         self::assertStringContainsString('OwnFamily', $response->content());
@@ -131,16 +132,25 @@ final class EventLifecycleTest extends TestCase
     {
         $this->seedEntriesForTwoClubs();
         Session::set('is_admin', true);
-        $request = new Request('GET', '/event_entries.php', [
+        $response = $this->dispatchEntries([
             'event' => '101',
             'club' => '202',
         ]);
 
-        $response = (new EventController($this->view, $request))->entries($request);
-
         self::assertSame(200, $response->status());
         self::assertStringContainsString('ForeignFamily', $response->content());
         self::assertStringNotContainsString('OwnFamily', $response->content());
+    }
+
+    public function testAnonymousCanonicalEntryRouteRedirectsWithoutPersonalData(): void
+    {
+        $this->seedEntriesForTwoClubs();
+
+        $response = $this->dispatchEntries(['event' => '101', 'club' => '202']);
+
+        self::assertSame(302, $response->status());
+        self::assertStringNotContainsString('OwnFamily', $response->content());
+        self::assertStringNotContainsString('ForeignFamily', $response->content());
     }
 
     private function createSchemaAndActors(): void
@@ -320,6 +330,15 @@ final class EventLifecycleTest extends TestCase
     private function entryCount(): int
     {
         return (int) $this->database->query('SELECT COUNT(*) FROM entries')->fetchColumn();
+    }
+
+    /** @param array<string, string> $query */
+    private function dispatchEntries(array $query): Response
+    {
+        $application = new Application(dirname(__DIR__));
+        (require dirname(__DIR__) . '/routes/web.php')($application->router());
+
+        return $application->handle(new Request('GET', '/event_entries.php', $query));
     }
 
     private function startCleanSession(): void
