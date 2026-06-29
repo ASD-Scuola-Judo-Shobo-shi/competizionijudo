@@ -16,32 +16,57 @@ jobs:
     name: Build artifact
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      MIGRATION_TEST_DATABASE_PREFIX: competizionijudo_test_deploy
+      MIGRATION_TEST_HOST: 127.0.0.1
+      MIGRATION_TEST_PORT: 3306
+      MIGRATION_TEST_USER: root
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: "8.2"
-          extensions: dom, simplexml
+          extensions: dom, simplexml, pdo_mysql
           coverage: none
           tools: composer:v2
 
-      - name: Validate Composer metadata
-        run: composer validate --strict --no-check-lock
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
 
-      - name: Install production dependencies
-        run: composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+      - name: Run clean and legacy migration smoke tests
+        run: composer test:migrations
+
+      - name: Run full quality suite
+        run: composer check
 
       - name: Build deploy directory
         run: bash scripts/build-deploy.sh
+
+      - name: Boot deploy artifact
+        run: bash scripts/test-deploy-artifact.sh build/deploy
 
       - name: Stage root htaccess
         run: bash scripts/stage-root-router.sh build/root-htaccess
 
       - name: Upload application artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: app-${{ github.ref_name }}
           path: build/deploy
@@ -50,7 +75,7 @@ jobs:
           retention-days: 3
 
       - name: Upload root htaccess artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: root-htaccess-${{ github.ref_name }}
           path: build/root-htaccess
@@ -61,7 +86,7 @@ jobs:
   deploy-production:
     name: Deploy production
     needs: build
-    if: github.ref_name == 'main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -69,13 +94,13 @@ jobs:
 
     steps:
       - name: Download application artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: app-main
           path: build/deploy
 
       - name: Download root htaccess artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: root-htaccess-main
           path: build/root-htaccess
@@ -90,7 +115,7 @@ jobs:
 
       # STEP A: Upload the application files to the /prod/ directory
       - name: Upload to production FTP directory
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@8e83cea8672e3fbcbb9fdafff34debf6ae4c5f65 # v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
@@ -107,7 +132,7 @@ jobs:
 
       # STEP B: Deploy the main routing rules directly to the Aruba root folder
       - name: Upload Routing .htaccess to Host Root
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@8e83cea8672e3fbcbb9fdafff34debf6ae4c5f65 # v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
@@ -121,7 +146,7 @@ jobs:
   deploy-development:
     name: Deploy development
     needs: build
-    if: github.ref_name == 'dev'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: development
@@ -129,13 +154,13 @@ jobs:
 
     steps:
       - name: Download application artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: app-dev
           path: build/deploy
 
       - name: Upload to development FTP directory
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@8e83cea8672e3fbcbb9fdafff34debf6ae4c5f65 # v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
