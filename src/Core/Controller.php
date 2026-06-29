@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Model\Club;
+use App\Presentation\LayoutContext;
 use Throwable;
 
 abstract class Controller
@@ -21,7 +23,8 @@ abstract class Controller
     /** @param array<string, mixed> $data */
     protected function view(string $template, array $data = [], int $status = 200): Response
     {
-        $data['currentPath'] = $this->request->path();
+        $candidateClub = ($data['club'] ?? null) instanceof Club ? $data['club'] : null;
+        $data = array_merge($data, LayoutContext::build($this->request, $candidateClub));
 
         return new Response($this->view->render($template, $data), $status);
     }

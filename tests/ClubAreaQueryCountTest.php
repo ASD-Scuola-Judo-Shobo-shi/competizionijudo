@@ -71,11 +71,11 @@ final class ClubAreaQueryCountTest extends TestCase
             }
         }
 
-        $clubStatement = $this->statementReturning($this->clubRow(), 2);
+        $clubStatement = $this->statementReturning($this->clubRow(), 1);
         $entryStatement = $this->statementReturningAll($entries);
         $athleteStatement = $this->statementReturningAll($athletes);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(4))
+        $database->expects(self::exactly(3))
             ->method('prepare')
             ->willReturnCallback(
                 static function (string $sql) use (

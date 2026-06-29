@@ -7,6 +7,7 @@ namespace Tests;
 use App\Core\View;
 use App\Localization;
 use App\Model\Event;
+use App\Presentation\Navigation;
 use PHPUnit\Framework\TestCase;
 
 final class ViewRenderTest extends TestCase
@@ -17,12 +18,12 @@ final class ViewRenderTest extends TestCase
         $_GET = [];
 
         $view = new View(dirname(__DIR__) . '/views');
-        $html = $view->render('admin/add_event', [
+        $html = $view->render('admin/add_event', array_merge([
             'currentPath' => '/admin_add_event.php',
             'event' => null,
             'error' => '',
             'locations' => [],
-        ]);
+        ], $this->layoutData('/admin_add_event.php')));
 
         self::assertStringNotContainsString('</parameter>', $html);
         self::assertStringNotContainsString('</write_to_file>', $html);
@@ -55,21 +56,32 @@ final class ViewRenderTest extends TestCase
         );
         $view = new View(dirname(__DIR__) . '/views');
 
-        $authorized = $view->render('events/index', [
-            'currentPath' => '/events.php',
+        $authorized = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => true,
-        ]);
-        $anonymous = $view->render('events/index', [
-            'currentPath' => '/events.php',
+        ], $this->layoutData('/events.php')));
+        $anonymous = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => false,
-        ]);
+        ], $this->layoutData('/events.php')));
 
         self::assertStringContainsString('/event_details.php?event=101', $authorized);
         self::assertStringContainsString('/event_entries.php?event=101', $authorized);
         self::assertStringContainsString('>Details</a>', $authorized);
         self::assertStringContainsString('>Entries</a>', $authorized);
         self::assertStringNotContainsString('/event_entries.php?event=101', $anonymous);
+    }
+
+    /** @return array<string, mixed> */
+    private function layoutData(string $currentPath): array
+    {
+        return array_merge([
+            'appName' => 'Competizioni Judo',
+            'locale' => Localization::getLocale(),
+            'isLoggedIn' => false,
+            'isAdmin' => false,
+            'clubEmail' => null,
+            'profilerHtml' => '',
+        ], Navigation::context($currentPath, '', false, false));
     }
 }

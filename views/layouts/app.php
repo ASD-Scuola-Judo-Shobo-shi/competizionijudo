@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= e(($title ?? 'Portale Gare Judo') . ' | ' . config('app.name')) ?></title>
+    <title><?= e(($title ?? 'Portale Gare Judo') . ' | ' . $appName) ?></title>
 
     <link rel="stylesheet" href="/assets/css/app.css">
 
@@ -95,26 +95,6 @@
     <button type="button" onclick="acceptCookies()"><?= translate('cookies.accept') ?></button>
 </div>
 
-<?php
-$current = (string)($currentPath ?? '/');
-$clubView = htmlspecialchars((string) ($_GET['view'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$isLoggedIn = \App\Core\Session::has('club_id');
-$clubEmail = null;
-if ($isLoggedIn) {
-    $club = \App\Model\Club::findById((int) \App\Core\Session::get('club_id'));
-    if ($club !== null) {
-        $clubEmail = $club->email;
-    }
-}
-
-$isAdmin = !empty(\App\Core\Session::get('is_admin'));
-$submenuItems = build_submenu($current, $isAdmin, $isLoggedIn);
-
-$competitionPaths = ['/events.php', '/event_details.php', '/event_entries.php', '/event_register.php'];
-$clubPaths = ['/club_register.php', '/club_login.php', '/club_forgot_password.php', '/club_reset_password.php', '/club_area.php', '/clubs.php'];
-$adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/admin_manage_events.php', '/admin_add_event.php', '/admin_edit_club.php', '/admin_edit_event.php', '/admin_logout.php'];
-?>
-
 <header class="top-hero">
     <div class="left-logos">
         <a href="https://www.csen.it/" target="_blank" rel="noopener noreferrer" class="club-link" title="CSEN">
@@ -131,8 +111,8 @@ $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/ad
 <form class="lang-switch" action="/language/switch" method="get" aria-label="<?= e(translate('a11y.language_selector')) ?>">
     <label for="locale-select" class="sr-only"><?= e(translate('a11y.language_selector')) ?></label>
     <select id="locale-select" name="locale" onchange="this.form.submit()">
-            <option value="it" <?= \App\Localization::getLocale() === 'it' ? 'selected' : '' ?>>🇮🇹 Italiano</option>
-            <option value="en" <?= \App\Localization::getLocale() === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+            <option value="it" <?= $locale === 'it' ? 'selected' : '' ?>>🇮🇹 Italiano</option>
+            <option value="en" <?= $locale === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
         </select>
     </form>
     <?php if ($isLoggedIn) : ?>
@@ -151,10 +131,10 @@ $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/ad
 </header>
 
 <nav class="main-nav" aria-label="<?= e(translate('a11y.main_navigation')) ?>">
-    <a href="/" class="<?= in_array($current, ['/', '/index.php'], true) ? 'active' : '' ?>"><?= translate('nav.home') ?></a>
-    <a href="/events.php" class="<?= in_array($current, $competitionPaths, true) ? 'active' : '' ?>"><?= translate('nav.competitions') ?></a>
-    <a href="<?= $isLoggedIn ? '/club_area.php' : '/club_login.php' ?>" class="<?= in_array($current, $clubPaths, true) ? 'active' : '' ?>"><?= translate('nav.clubs') ?></a>
-    <a href="/admin_manage_events.php" class="<?= in_array($current, $adminPaths, true) ? 'active' : '' ?>"><?= translate('nav.admin') ?></a>
+    <a href="/" class="<?= $homeActive ? 'active' : '' ?>"><?= translate('nav.home') ?></a>
+    <a href="/events.php" class="<?= $competitionsActive ? 'active' : '' ?>"><?= translate('nav.competitions') ?></a>
+    <a href="<?= e($clubUrl) ?>" class="<?= $clubsActive ? 'active' : '' ?>"><?= translate('nav.clubs') ?></a>
+    <a href="/admin_manage_events.php" class="<?= $adminActive ? 'active' : '' ?>"><?= translate('nav.admin') ?></a>
 </nav>
 
 <?php if ($submenuItems) : ?>
@@ -162,7 +142,7 @@ $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/ad
         <div class="submenu" role="navigation">
         <?php foreach ($submenuItems as $item) : ?>
             <?php
-            $active = in_array($current, $item['paths'], true);
+            $active = in_array($currentPath, $item['paths'], true);
             if ($active && !empty($item['query']['view'])) {
                 $active = in_array($clubView, $item['query']['view'], true);
             }
@@ -200,7 +180,7 @@ $adminPaths = ['/admin_login.php', '/admin.php', '/admin_manage_clubs.php', '/ad
     </div>
 </footer>
 
-<?= \App\Model\Database::renderProfiler() ?>
+<?= $profilerHtml ?>
 
 </body>
 </html>

@@ -76,22 +76,19 @@ final class InputValidationControllerTest extends TestCase
     public function testInvalidAthletePostPerformsOnlyRequiredReadQueries(): void
     {
         $club = $this->statementFetching($this->clubRow(31), [31]);
-        $layoutClub = $this->statementFetching($this->clubRow(31), [31]);
         $count = $this->createMock(PDOStatement::class);
         $count->expects(self::once())->method('execute')->with([31])->willReturn(true);
         $count->method('fetchColumn')->willReturn(0);
         $list = $this->createMock(PDOStatement::class);
         $list->expects(self::once())->method('execute')->with([31])->willReturn(true);
         $list->method('fetchAll')->willReturn([]);
-        $clubStatements = [$club, $layoutClub];
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(4))
+        $database->expects(self::exactly(3))
             ->method('prepare')
             ->willReturnCallback(
-                static function (string $sql) use (&$clubStatements, $count, $list): PDOStatement {
+                static function (string $sql) use ($club, $count, $list): PDOStatement {
                     if (str_starts_with($sql, 'SELECT * FROM clubs')) {
-                        return array_shift($clubStatements)
-                            ?? throw new RuntimeException('Unexpected extra club lookup.');
+                        return $club;
                     }
 
                     return match (true) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Presentation\LayoutContext;
 use Throwable;
 
 final class Application
@@ -35,11 +36,13 @@ final class Application
                 return $this->serverError($request);
             }
 
-            return new Response(
-                $this->view->render('errors/' . $exception->statusCode(), [
+            $data = array_merge([
                     'title' => $exception->getMessage(),
                     'message' => $exception->getMessage(),
-                ]),
+                ], LayoutContext::build($request));
+
+            return new Response(
+                $this->view->render('errors/' . $exception->statusCode(), $data),
                 $exception->statusCode()
             );
         } catch (Throwable $exception) {
