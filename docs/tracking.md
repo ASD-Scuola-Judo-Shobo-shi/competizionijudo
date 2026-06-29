@@ -43,8 +43,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C13 | [x] | `fix(events): enforce publication and registration lifecycle` | S-05, F-01 | `dbc7dc7` | Focused lifecycle/access tests: 14/98; MySQL 8.4 boundary checks pass and scoped entry lookup uses the unique index; full code checks pass with 99 tests/747 assertions; dependency audit not verified |
 | C14 | [x] | `fix(observability): log failures without exposing internals` | S-07 | `f880815` | Focused logging/redaction tests: 20/111; full code checks pass with 102 tests/785 assertions; dependency audit not verified |
 | C15 | [x] | `fix(database): add athlete weight category column` | R-02 | `dd550e9` | Focused migration tests: 3/14; MySQL 8.4 clean, legacy backfill, and repeat checks pass; full code checks pass with 104 tests/797 assertions; dependency audit not verified |
-| C16 | [x] | `test(database): verify clean and legacy migrations` | R-02, A-05, Q-03 | This commit | MySQL 8.4 smoke command passes twice; each run verifies clean/legacy paths twice plus tables, columns, unique keys, foreign keys, and backfill; full code checks 104/797; audit not verified |
-| C17 | [ ] | `fix(database): fail closed on migration errors` | A-05 |  | Depends on C16 |
+| C16 | [x] | `test(database): verify clean and legacy migrations` | R-02, A-05, Q-03 | `0caa249` | MySQL 8.4 smoke command passes twice; each run verifies clean/legacy paths twice plus tables, columns, unique keys, foreign keys, and backfill; full code checks 104/797; audit not verified |
+| C17 | [x] | `fix(database): fail closed on migration errors` | A-05 | This commit | Focused runner tests 4/20; C16 clean/legacy/repeat smoke passes under default strict MySQL 8.4 with SQL-mode restoration; full code checks 105/803; audit not verified |
 | C18 | [ ] | `fix(build): package all runtime assets` | R-01, R-05, R-07 |  |  |
 | C19 | [ ] | `test(build): boot the deployment artifact` | R-01, Q-03 |  | Depends on C18 |
 | C20 | [ ] | `fix(deploy): preserve server environment configuration` | R-03, A-08 |  | Confirm host provisioning procedure |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C17 fail-closed, schema-aware migration execution |
-| Files intentionally in scope | None until C17 begins |
+| Objective | Start C18 complete, portable runtime artifact packaging |
+| Files intentionally in scope | None until C18 begins |
 | Last targeted test | C15 migration coverage: 3 tests/14 assertions; MySQL 8.4 clean, legacy backfill, athlete write/entry read, and repeat checks pass |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (104 tests/797 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Read C17 acceptance criteria and replace broad migration-error suppression without breaking C16 |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (105 tests/803 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Read C18 acceptance criteria and inspect artifact includes, excludes, permissions, and runtime directories |
 
 ## Blockers and decisions
 
@@ -85,7 +85,7 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | D04 | C25 | Product/privacy | Open | Confirm whether exports are required and, if so, approved formats/fields/access |
 | D05 | C32 | Product/data owner | Open | Decide whether closed/past entry data is snapshotted or reflects later athlete edits |
 | D06 | C34 | Privacy owner | Open | Define upload and athlete-data retention policy |
-| D07 | C16, C17 | Code | Open | MySQL 8.4 default strict mode rejects zero-date comparisons in the historical legacy-copy migration; C10 schema checks used a legacy-compatible session mode, and the schema-aware migration work must remove that requirement without rewriting history |
+| D07 | C16, C17 | Code | Resolved | C17 scopes legacy compatibility to applicable known copy statements, restores session mode, and C16 passes under default strict MySQL 8.4 |
 | D08 | C14 | User/worktree | Resolved | The concurrent `phpcs.xml` conflict was resolved outside the C14 diff on 2026-06-29 |
 
 Open decisions do not block earlier independent commits. Do not guess when a decision changes user-visible behavior, data retention, credentials, or external delivery.
@@ -114,6 +114,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C14 | Completed request-correlated redacting file logs and generic localized controller/application failure handling after D08 resolution | Focused tests 20/111; full code checks 102/785; dependency audit not verified | C15 |
 | 2026-06-29 | C15 | Added a schema-aware forward migration for `athletes.weight_category` with conditional legacy backfill and repeat-safe no-op SQL | Focused tests 3/14; MySQL 8.4 clean/legacy/repeat plus athlete write/entry read pass; full code checks 104/797; dependency audit not verified | C16 |
 | 2026-06-29 | C16 | Added guarded MySQL clean/legacy migration smoke automation, representative legacy data, relational contract assertions, and CI service coverage | Exact smoke command passed twice with both paths run twice; focused PHPUnit 3/14; full code checks 104/797; dependency audit not verified | C17 |
+| 2026-06-29 | C17 | Removed broad unknown-column suppression, added explicit legacy statement applicability, safe versioned failures, and scoped/restored zero-date compatibility | Focused runner tests 4/20; C16 passes under default strict MySQL 8.4; full code checks 105/803; dependency audit not verified | C18 |
 
 ## Milestones
 

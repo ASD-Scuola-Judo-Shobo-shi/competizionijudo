@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Model\MigrationException;
 use App\Model\MigrationRunner;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
@@ -45,13 +46,11 @@ try {
     }
 
     $clean = databaseConnection($host, $port, $databaseNames['clean'], $user, $password, $options);
-    configureLegacyCompatibleDates($clean);
     runMigrationsTwice($clean);
     assertSchemaContract($clean);
     assertCleanWritesAndReads($clean);
 
     $legacy = databaseConnection($host, $port, $databaseNames['legacy'], $user, $password, $options);
-    configureLegacyCompatibleDates($legacy);
     executeSqlFile($legacy, dirname(__DIR__) . '/tests/Fixtures/legacy_schema.sql');
     runMigrationsTwice($legacy);
     assertSchemaContract($legacy);
@@ -59,7 +58,10 @@ try {
 
     echo "Migration smoke checks passed for clean and legacy schemas.\n";
 } catch (Throwable $exception) {
-    fwrite(STDERR, 'Migration smoke check failed: ' . $exception::class . "\n");
+    $message = $exception instanceof MigrationException
+        ? $exception->getMessage()
+        : 'Migration smoke check failed before a version could be applied.';
+    fwrite(STDERR, $message . "\n");
     exit(1);
 } finally {
     foreach ($databaseNames as $databaseName) {
@@ -105,20 +107,6 @@ function quoteIdentifier(string $identifier): string
     return chr(96) . $identifier . chr(96);
 }
 
-function configureLegacyCompatibleDates(PDO $database): void
-{
-    $sqlMode = (string) $database->query('SELECT @@SESSION.sql_mode')->fetchColumn();
-    $modes = array_values(array_filter(
-        explode(',', $sqlMode),
-        static fn(string $mode): bool => !in_array(
-            $mode,
-            ['NO_ZERO_DATE', 'NO_ZERO_IN_DATE'],
-            true
-        )
-    ));
-    $database->exec('SET SESSION sql_mode = ' . $database->quote(implode(',', $modes)));
-}
-
 function executeSqlFile(PDO $database, string $path): void
 {
     $sql = file_get_contents($path);
@@ -138,9 +126,15 @@ function executeSqlFile(PDO $database, string $path): void
 
 function runMigrationsTwice(PDO $database): void
 {
+    $initialSqlMode = (string) $database->query('SELECT @@SESSION.sql_mode')->fetchColumn();
     $runner = new MigrationRunner($database);
     $runner->run();
     assertMigrationCount($database);
+    assertSameValue(
+        $initialSqlMode,
+        (string) $database->query('SELECT @@SESSION.sql_mode')->fetchColumn(),
+        'Migration runner did not restore the session SQL mode.'
+    );
     $runner->run();
     assertMigrationCount($database);
 }
