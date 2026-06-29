@@ -44,6 +44,7 @@
     "serve": "php -S 0.0.0.0:8080 -t public public/index.php",
     "syntax": "find config public routes src tests views -name '*.php' -print0 | xargs -0 -n1 php -l",
     "migrate": "php scripts/run-migrations.php",
+    "test:migrations": "php scripts/test-migrations.php",
     "test": "phpunit"
   },
   "config": {

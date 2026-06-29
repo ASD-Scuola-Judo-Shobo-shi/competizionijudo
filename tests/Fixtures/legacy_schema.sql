@@ -1,0 +1,180 @@
+CREATE TABLE clubs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    federal_code VARCHAR(50) NOT NULL DEFAULT '',
+    name VARCHAR(255) NOT NULL DEFAULT '',
+    email VARCHAR(255) NOT NULL DEFAULT '',
+    phone VARCHAR(80) NOT NULL DEFAULT '',
+    contact_first_name VARCHAR(120) NOT NULL DEFAULT '',
+    contact_last_name VARCHAR(120) NOT NULL DEFAULT '',
+    contact_phone VARCHAR(80) NOT NULL DEFAULT '',
+    contact_email VARCHAR(255) NULL,
+    organization VARCHAR(50) NOT NULL DEFAULT '',
+    recovery_email VARCHAR(255) NOT NULL DEFAULT '',
+    password_hash VARCHAR(255) NOT NULL,
+    codice_federale VARCHAR(50) NULL,
+    nome_societa VARCHAR(255) NULL,
+    email_societa VARCHAR(255) NULL,
+    telefono_societa VARCHAR(80) NULL,
+    nome_referente VARCHAR(120) NULL,
+    cognome_referente VARCHAR(120) NULL,
+    telefono_referente VARCHAR(80) NULL,
+    email_referente VARCHAR(255) NULL,
+    ente VARCHAR(50) NULL,
+    email_recupero VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_federal_code (federal_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL DEFAULT '',
+    date DATE NULL,
+    location VARCHAR(255) NULL,
+    organizer VARCHAR(255) NULL,
+    registration_deadline DATE NULL,
+    type VARCHAR(64) NULL,
+    description TEXT NULL,
+    notes TEXT NULL,
+    poster_file VARCHAR(255) NULL,
+    info_file VARCHAR(255) NULL,
+    published TINYINT(1) DEFAULT 0,
+    closed TINYINT(1) DEFAULT 0,
+    nome_evento VARCHAR(255) NULL,
+    data_gara VARCHAR(20) NULL,
+    luogo VARCHAR(255) NULL,
+    organizzatore VARCHAR(255) NULL,
+    scadenza_iscrizioni VARCHAR(20) NULL,
+    tipo_evento VARCHAR(64) NULL,
+    descrizione TEXT NULL,
+    note TEXT NULL,
+    pubblicato TINYINT(1) DEFAULT 0,
+    chiuso TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE athletes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    club_id INT NOT NULL,
+    last_name VARCHAR(120) NOT NULL DEFAULT '',
+    first_name VARCHAR(120) NOT NULL DEFAULT '',
+    gender VARCHAR(1) NULL,
+    date_of_birth DATE NULL,
+    weight_kg DECIMAL(6,2) NULL,
+    belt VARCHAR(40) NULL,
+    age_class VARCHAR(80) NULL,
+    program VARCHAR(20) NOT NULL DEFAULT '',
+    membership_number VARCHAR(80) NULL,
+    notes TEXT NULL,
+    cognome VARCHAR(120) NULL,
+    nome VARCHAR(120) NULL,
+    sesso VARCHAR(1) NULL,
+    nascita VARCHAR(20) NULL,
+    actual_weight_kg DECIMAL(6,2) NULL,
+    peso_reale_kg DECIMAL(6,2) NULL,
+    cintura VARCHAR(40) NULL,
+    classe_eta VARCHAR(80) NULL,
+    programma VARCHAR(20) NULL,
+    categoria_peso VARCHAR(50) NULL,
+    numero_tessera VARCHAR(80) NULL,
+    note TEXT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_legacy_athletes_club FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE entries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    event_id INT NOT NULL,
+    club_id INT NOT NULL,
+    athlete_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_entry (event_id, club_id, athlete_id),
+    CONSTRAINT fk_legacy_entries_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    CONSTRAINT fk_legacy_entries_club FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE,
+    CONSTRAINT fk_legacy_entries_athlete FOREIGN KEY (athlete_id) REFERENCES athletes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO clubs (
+    id,
+    password_hash,
+    codice_federale,
+    nome_societa,
+    email_societa,
+    telefono_societa,
+    nome_referente,
+    cognome_referente,
+    telefono_referente,
+    email_referente,
+    ente,
+    email_recupero
+) VALUES (
+    1,
+    'synthetic-hash',
+    'SYN-LEGACY-1',
+    'Synthetic Legacy Club',
+    'LEGACY@EXAMPLE.TEST',
+    '',
+    'Synthetic',
+    'Contact',
+    '',
+    'contact@example.test',
+    'TEST',
+    'recovery@example.test'
+);
+
+INSERT INTO events (
+    id,
+    nome_evento,
+    data_gara,
+    luogo,
+    organizzatore,
+    scadenza_iscrizioni,
+    tipo_evento,
+    descrizione,
+    note,
+    pubblicato,
+    chiuso
+) VALUES (
+    1,
+    'Synthetic Legacy Event',
+    '2026-07-01',
+    'Synthetic Venue',
+    'Synthetic Organizer',
+    '2026-06-30',
+    'only_competitive',
+    'Synthetic description',
+    '',
+    1,
+    0
+);
+
+INSERT INTO athletes (
+    id,
+    club_id,
+    cognome,
+    nome,
+    sesso,
+    nascita,
+    actual_weight_kg,
+    cintura,
+    classe_eta,
+    programma,
+    categoria_peso,
+    numero_tessera,
+    note
+) VALUES (
+    1,
+    1,
+    'Synthetic',
+    'Athlete',
+    'M',
+    '2010-01-01',
+    50,
+    'white',
+    'Synthetic class',
+    'competitive',
+    '-50 kg',
+    'SYN-LEGACY-ATHLETE',
+    ''
+);
+
+INSERT INTO entries (event_id, club_id, athlete_id) VALUES (1, 1, 1);

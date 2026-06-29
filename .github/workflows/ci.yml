@@ -20,6 +20,25 @@ jobs:
     name: Quality checks
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      MIGRATION_TEST_DATABASE_PREFIX: competizionijudo_test_ci
+      MIGRATION_TEST_HOST: 127.0.0.1
+      MIGRATION_TEST_PORT: 3306
+      MIGRATION_TEST_USER: root
+
     strategy:
       fail-fast: false
       matrix:
@@ -35,7 +54,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: dom, simplexml
+          extensions: dom, simplexml, pdo_mysql
           coverage: none
           tools: composer:v2
 
@@ -53,6 +72,9 @@ jobs:
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run clean and legacy migration smoke tests
+        run: composer test:migrations
 
       - name: Run quality suite
         run: composer check
