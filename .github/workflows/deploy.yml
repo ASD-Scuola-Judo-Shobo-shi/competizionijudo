@@ -37,30 +37,6 @@ jobs:
       - name: Build deploy directory
         run: bash scripts/build-deploy.sh
 
-      - name: Add production environment
-        if: github.ref_name == 'main'
-        env:
-          DEPLOY_APP_NAME: ${{ vars.APP_NAME || 'Competizioni Judo' }}
-        run: |
-          {
-            echo 'APP_ENV=production'
-            echo 'APP_DEBUG=false'
-            printf 'APP_NAME="%s"\n' "$DEPLOY_APP_NAME"
-            echo 'APP_URL=https://www.competizionijudo.it'
-          } > build/deploy/.env
-
-      - name: Add development environment
-        if: github.ref_name == 'dev'
-        env:
-          DEPLOY_APP_NAME: ${{ vars.APP_NAME || 'Competizioni Judo' }}
-        run: |
-          {
-            echo 'APP_ENV=development'
-            echo 'APP_DEBUG=true'
-            printf 'APP_NAME="%s"\n' "$DEPLOY_APP_NAME"
-            echo 'APP_URL=https://dev.competizionijudo.it'
-          } > build/deploy/.env
-
       # Prepare the root htaccess inside a separate staging area for the artifact stage
       - name: Stage root htaccess
         run: |
@@ -121,6 +97,7 @@ jobs:
           dangerous-clean-slate: false
           exclude: |
             **/.git*
+            **/.env
             legacy/**
 
       # STEP B: Deploy the main routing rules directly to the Aruba root folder
@@ -165,4 +142,5 @@ jobs:
           dangerous-clean-slate: false
           exclude: |
             **/.git*
+            **/.env
             legacy/**

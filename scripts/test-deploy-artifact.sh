@@ -48,6 +48,10 @@ boot_and_request() {
   (
     cd "$ARTIFACT_DIR"
     APP_ENV=production APP_DEBUG=false APP_LOCALE="$locale" \
+      APP_URL='https://smoke.example.test' \
+      DB_HOST=127.0.0.1 DB_NAME=synthetic_smoke DB_USER=synthetic_smoke \
+      DB_PASS=synthetic-smoke-password ADMIN_USER=synthetic-admin \
+      ADMIN_PASS_HASH=synthetic-smoke-password-hash \
       php -d display_errors=0 -S "127.0.0.1:${port}" -t public public/index.php
   ) >"$log_file" 2>&1 &
   local server_pid=$!

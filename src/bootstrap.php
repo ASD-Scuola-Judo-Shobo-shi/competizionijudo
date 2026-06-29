@@ -50,6 +50,10 @@ if (function_exists('env')) {
     App\Localization::setLocale($locale);
 
     $appEnv = strtolower((string) env('APP_ENV', 'production'));
+    if ($appEnv === 'production' && !defined('PHPUNIT_RUNNING')) {
+        App\Core\ProductionConfiguration::assertReady(App\Core\FileLogger::application());
+    }
+
     if (($appEnv === 'local' || $appEnv === 'development') && !defined('PHPUNIT_RUNNING')) {
         $pdo = App\Model\Database::connection();
         (new App\Model\MigrationRunner($pdo))->run();
