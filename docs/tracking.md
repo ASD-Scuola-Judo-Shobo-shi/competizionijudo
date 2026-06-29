@@ -44,8 +44,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C14 | [x] | `fix(observability): log failures without exposing internals` | S-07 | `f880815` | Focused logging/redaction tests: 20/111; full code checks pass with 102 tests/785 assertions; dependency audit not verified |
 | C15 | [x] | `fix(database): add athlete weight category column` | R-02 | `dd550e9` | Focused migration tests: 3/14; MySQL 8.4 clean, legacy backfill, and repeat checks pass; full code checks pass with 104 tests/797 assertions; dependency audit not verified |
 | C16 | [x] | `test(database): verify clean and legacy migrations` | R-02, A-05, Q-03 | `0caa249` | MySQL 8.4 smoke command passes twice; each run verifies clean/legacy paths twice plus tables, columns, unique keys, foreign keys, and backfill; full code checks 104/797; audit not verified |
-| C17 | [x] | `fix(database): fail closed on migration errors` | A-05 | This commit | Focused runner tests 4/20; C16 clean/legacy/repeat smoke passes under default strict MySQL 8.4 with SQL-mode restoration; full code checks 105/803; audit not verified |
-| C18 | [ ] | `fix(build): package all runtime assets` | R-01, R-05, R-07 |  |  |
+| C17 | [x] | `fix(database): fail closed on migration errors` | A-05 | `7b7fa12` | Focused runner tests 4/20; C16 clean/legacy/repeat smoke passes under default strict MySQL 8.4 with SQL-mode restoration; full code checks 105/803; audit not verified |
+| C18 | [x] | `fix(build): package all runtime assets` | R-01, R-05, R-07 | This commit | Exact 1.2 MB production-only artifact builds and manifest passes with runtime/migration/localization assets, empty writable dirs, and forbidden payload exclusions; full code checks 105/803; audit not verified |
 | C19 | [ ] | `test(build): boot the deployment artifact` | R-01, Q-03 |  | Depends on C18 |
 | C20 | [ ] | `fix(deploy): preserve server environment configuration` | R-03, A-08 |  | Confirm host provisioning procedure |
 | C21 | [ ] | `fix(deploy): stage the repository root htaccess` | R-06 |  |  |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C18 complete, portable runtime artifact packaging |
-| Files intentionally in scope | None until C18 begins |
+| Objective | Start C19 boot verification of the exact deployment artifact |
+| Files intentionally in scope | None until C19 begins |
 | Last targeted test | C15 migration coverage: 3 tests/14 assertions; MySQL 8.4 clean, legacy backfill, athlete write/entry read, and repeat checks pass |
 | Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (105 tests/803 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Read C18 acceptance criteria and inspect artifact includes, excludes, permissions, and runtime directories |
+| Next action | Read C19 acceptance criteria and design production-mode bilingual artifact boot/route checks |
 
 ## Blockers and decisions
 
@@ -115,6 +115,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C15 | Added a schema-aware forward migration for `athletes.weight_category` with conditional legacy backfill and repeat-safe no-op SQL | Focused tests 3/14; MySQL 8.4 clean/legacy/repeat plus athlete write/entry read pass; full code checks 104/797; dependency audit not verified | C16 |
 | 2026-06-29 | C16 | Added guarded MySQL clean/legacy migration smoke automation, representative legacy data, relational contract assertions, and CI service coverage | Exact smoke command passed twice with both paths run twice; focused PHPUnit 3/14; full code checks 104/797; dependency audit not verified | C17 |
 | 2026-06-29 | C17 | Removed broad unknown-column suppression, added explicit legacy statement applicability, safe versioned failures, and scoped/restored zero-date compatibility | Focused runner tests 4/20; C16 passes under default strict MySQL 8.4; full code checks 105/803; dependency audit not verified | C18 |
+| 2026-06-29 | C18 | Made artifact assembly portable and production-only, included language/migration/runtime assets, preserved writable dirs, and enforced required/forbidden manifest checks | Exact 1.2 MB artifact build and independent manifest check pass; full code checks 105/803; dependency audit not verified | C19 |
 
 ## Milestones
 

@@ -104,15 +104,4 @@ jobs:
         run: bash scripts/build-deploy.sh
 
       - name: Verify deploy artifact
-        run: |
-          test -f build/deploy/.htaccess
-          test -f build/deploy/public/index.php
-          test -f build/deploy/views/layouts/app.php
-          
-          # Ensure local build environment doesn't accidentally pack these up
-          test ! -e build/deploy/tests
-          test ! -e build/deploy/docs
-          
-          # Confirms the local build directory stays clean of a 'legacy' folder 
-          # so it doesn't collide with or overwrite the server's independent /legacy/ folder.
-          test ! -e build/deploy/legacy
+        run: bash scripts/verify-deploy-artifact.sh build/deploy
