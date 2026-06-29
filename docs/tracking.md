@@ -56,8 +56,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C26 | [x] | `fix(events): persist registration feedback across redirects` | F-02, S-08 | `bb7fda2` | Event-scoped flash survives redirect once and reports added/duplicate/rejected/failed counts; per-item failures are safely logged while partial results remain explicit; full code checks 119/898; audit not verified |
 | C27 | [x] | `perf(club): precompute athlete registration counts` | P-01, A-03 | `b9b1fb9` | Controller derives a filtered athlete-count map from its one entry load; template performs no model calls; exactly four prepares at both 1 and 75 athletes; full code checks 121/914; audit not verified |
 | C28 | [x] | `refactor(view): remove data access from templates` | A-03, A-07 | `733cdd5` | Prepared layout context owns session/club/config/profiler reads; navigation paths are defined once; templates retain only type annotations/pure formatting enums; club area now uses three constant prepares; full code checks 123/923; audit not verified |
-| C29 | [x] | `refactor(performance): remove stale file cache and dead profiler` | A-04, P-04 | This commit | Event/club create-update-delete changes are immediately visible; cache/profiler code is absent; artifact forbids `var/cache` and boots both locales; full code checks 126/938; audit not verified |
-| C30 | [ ] | `perf(lists): scope and paginate list queries` | P-03, F-01 |  | Capture representative `EXPLAIN` evidence |
+| C29 | [x] | `refactor(performance): remove stale file cache and dead profiler` | A-04, P-04 | `2a91944` | Event/club create-update-delete changes are immediately visible; cache/profiler code is absent; artifact forbids `var/cache` and boots both locales; full code checks 126/938; audit not verified |
+| C30 | [x] | `perf(lists): scope and paginate list queries` | P-03, F-01 | This commit | Upcoming lists enforce published/open/current-date lifecycle; public/club lists page at 50; aggregates are identifier-scoped; MySQL 8.4 plans use bounded index scans at representative scale; clean/legacy migrations and full checks pass 129/958 |
 | C31 | [ ] | `test(domain): define event year category invariants` | A-02, A-07 |  |  |
 | C32 | [ ] | `refactor(domain): derive athlete category for event year` | A-02 |  | Historical snapshot decision required |
 | C33 | [ ] | `refactor(core): use the dispatched request consistently` | A-06 |  |  |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C30 bounded event, club, and admin list queries |
-| Files intentionally in scope | None until C30 begins |
-| Last targeted test | C29 freshness/layout/query coverage passes (9 tests/51 assertions); cache-free artifact manifest and bilingual production boot pass |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (126 tests/938 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Trace C30 list/count queries, define the explicit upcoming-date rule, then capture representative `EXPLAIN` evidence |
+| Objective | Start C31 event-year category invariant coverage |
+| Files intentionally in scope | None until C31 begins |
+| Last targeted test | C30 list/query suite passes (13 tests/84 assertions); MySQL 8.4 clean/legacy migration smoke and representative `EXPLAIN ANALYZE` checks pass |
+| Last full check | `composer check` passes, including dependency audit (129 tests/958 assertions) |
+| Next action | Read C31 in full, confirm current category behavior, then define event-year boundary invariants without changing production behavior |
 
 ## Blockers and decisions
 
@@ -128,6 +128,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C28 | Prepared complete layout/authenticated-club context outside templates and centralized navigation route definitions | Focused view/navigation/query tests 24/163; exact artifact boot passes; club area reduced to three prepares at 1/75 athletes; full code checks 123/923; dependency audit not verified | C29 |
 | 2026-06-29 | C29 | In progress: removed stale list serialization, dead profiling, and artifact cache storage; verification paused at the environment usage limit | Freshness/layout/query tests 9/51 and cache-free artifact build/manifest pass; artifact boot and full gate not yet rerun | Resume C29 verification; do not commit yet |
 | 2026-06-29 | C29 | Completed immediate list freshness and removed cache/profiler runtime and artifact storage after resuming verification | Focused tests 9/51; cache-free manifest and bilingual artifact boot pass; full code checks 126/938; dependency audit not verified | C30 |
+| 2026-06-29 | C30 | Added lifecycle-bounded upcoming events, 50-row club/athlete pagination, displayed-ID aggregates, and query-plan-backed list indexes | Focused tests 13/84; MySQL clean/legacy migrations pass; representative plans use indexed page/scope reads; full `composer check` passes 129/958 including audit | C31 |
 
 ## Milestones
 
@@ -137,7 +138,7 @@ Add one concise row at the end of every working session, including sessions that
 | M1 Active security closed | C04-C14 | [ ] | Critical/high security regression tests pass |
 | M2 Releasable artifact | C15-C23 | [ ] | Clean schema and tested artifact can deploy only after quality success |
 | M3 Route truth restored | C24-C26 | [ ] | Supported routes/features match UI and README direction |
-| M4 Simpler bounded runtime | C27-C30 | [ ] | No view queries, stale cache, dead profiler, or unbounded primary lists |
+| M4 Simpler bounded runtime | C27-C30 | [x] | No view queries, stale cache, dead profiler, or unbounded primary lists |
 | M5 Domain/core correctness | C31-C35 | [ ] | Event-year behavior and critical workflows are tested end-to-end |
 
 ## Completion protocol

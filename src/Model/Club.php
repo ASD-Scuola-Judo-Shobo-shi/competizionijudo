@@ -131,10 +131,20 @@ final class Club
         $stmt->execute([$id]);
     }
 
-    /** @return list<self> */
-    public static function all(): array
+    public static function count(): int
     {
-        $stmt = Database::connection()->query('SELECT * FROM clubs ORDER BY name');
+        return (int) Database::connection()->query('SELECT COUNT(*) FROM clubs')->fetchColumn();
+    }
+
+    /** @return list<self> */
+    public static function page(int $limit, int $offset): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM clubs ORDER BY name ASC, id ASC LIMIT ? OFFSET ?'
+        );
+        $stmt->bindValue(1, max(1, $limit), \PDO::PARAM_INT);
+        $stmt->bindValue(2, max(0, $offset), \PDO::PARAM_INT);
+        $stmt->execute();
         $rows = $stmt->fetchAll();
 
         return array_map(fn(array $row) => self::fromArray($row), $rows ?: []);

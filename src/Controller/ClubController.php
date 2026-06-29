@@ -151,10 +151,13 @@ final class ClubController extends Controller
 
     public function list(Request $request): Response
     {
-        $clubs = Club::all();
+        $page = max(1, (int) $request->query('page', '1'));
+        $pagination = paginate(Club::count(), $page, 50);
+        $clubs = Club::page($pagination['per_page'], $pagination['offset']);
 
         return $this->view('club/list', [
             'clubs' => $clubs,
+            'pagination' => $pagination,
         ]);
     }
 

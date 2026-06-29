@@ -182,6 +182,15 @@ function assertSchemaContract(PDO $database): void
         'unique_entry',
         'event_id,club_id,athlete_id'
     );
+    assertIndex($database, 'clubs', 'idx_clubs_name_id', 'name,id');
+    assertIndex(
+        $database,
+        'athletes',
+        'idx_athletes_club_name_id',
+        'club_id,last_name,first_name,id'
+    );
+    assertIndex($database, 'entries', 'idx_entries_club_event', 'club_id,event_id');
+    assertIndexMissing($database, 'athletes', 'idx_athletes_club_id');
 
     $expectedForeignKeys = [
         'athletes.club_id=clubs.id',
@@ -254,6 +263,32 @@ function assertUniqueIndex(
 
     assertSameValue(0, (int) $row['NON_UNIQUE'], 'Index is not unique: ' . $index);
     assertSameValue($columns, (string) $row['columns_list'], 'Unexpected columns for index: ' . $index);
+}
+
+function assertIndex(PDO $database, string $table, string $index, string $columns): void
+{
+    $statement = $database->prepare(
+        'SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS columns_list '
+        . 'FROM information_schema.STATISTICS '
+        . 'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?'
+    );
+    $statement->execute([$table, $index]);
+    $actualColumns = $statement->fetchColumn();
+    if (!is_string($actualColumns)) {
+        throw new RuntimeException('Missing required index: ' . $index);
+    }
+
+    assertSameValue($columns, $actualColumns, 'Unexpected columns for index: ' . $index);
+}
+
+function assertIndexMissing(PDO $database, string $table, string $index): void
+{
+    $statement = $database->prepare(
+        'SELECT COUNT(*) FROM information_schema.STATISTICS '
+        . 'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?'
+    );
+    $statement->execute([$table, $index]);
+    assertSameValue(0, (int) $statement->fetchColumn(), 'Redundant index remains: ' . $index);
 }
 
 function assertCleanWritesAndReads(PDO $database): void

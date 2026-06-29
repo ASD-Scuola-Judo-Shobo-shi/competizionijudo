@@ -36,8 +36,6 @@ final class ClubAreaController extends Controller
             return $this->redirect('/club_login.php');
         }
 
-        $db = \App\Model\Database::connection();
-
         $view = (string) ($request->query('view') ?? 'list');
 
         if ($view === 'add') {
@@ -105,17 +103,13 @@ final class ClubAreaController extends Controller
                 $edit = Athlete::findById((int) $request->query('edit'), $club->id);
             }
 
-            $stmt = $db->prepare('SELECT COUNT(*) FROM athletes WHERE club_id = ?');
-            $stmt->execute([$club->id]);
-            $total = (int) $stmt->fetchColumn();
             $page = max(1, (int) ($request->query('page', '1')));
-            $pagination = paginate($total, $page, 50);
-
-            $perPage = (int) $pagination['per_page'];
-            $offset = (int) $pagination['offset'];
-            $stmt = $db->prepare("SELECT * FROM athletes WHERE club_id = ? ORDER BY last_name, first_name LIMIT $perPage OFFSET $offset");
-            $stmt->execute([$club->id]);
-            $athletes = array_map(fn(array $row) => Athlete::fromArray($row), $stmt->fetchAll() ?: []);
+            $pagination = paginate(Athlete::countByClub($club->id), $page, 50);
+            $athletes = Athlete::pageByClub(
+                $club->id,
+                $pagination['per_page'],
+                $pagination['offset']
+            );
 
             return $this->view('club/area_add', [
                 'club' => $club,
@@ -126,43 +120,29 @@ final class ClubAreaController extends Controller
             ]);
         }
 
-        $allEntries = Entry::findByClub($club->id);
-        $athletes = Athlete::findByClub($club->id);
-
+        $page = max(1, (int) ($request->query('page', '1')));
+        $pagination = paginate(Athlete::countByClub($club->id), $page, 50);
+        $athletes = Athlete::pageByClub(
+            $club->id,
+            $pagination['per_page'],
+            $pagination['offset']
+        );
         $eventFilter = (int) ($request->query('event') ?? 0);
-
-        $rows = $allEntries;
-        if ($eventFilter > 0) {
-            $rows = array_filter($rows, fn($r) => (int) ($r['event_id'] ?? 0) === $eventFilter);
-        }
-
-        $registrationCounts = [];
-        foreach ($rows as $entry) {
-            $athleteId = (int) ($entry['athlete_id'] ?? 0);
-            if ($athleteId > 0) {
-                $registrationCounts[$athleteId] = ($registrationCounts[$athleteId] ?? 0) + 1;
-            }
-        }
-
-        $competitions = [];
-        foreach ($allEntries as $e) {
-            $eid = (int) ($e['event_id'] ?? 0);
-            if (!isset($competitions[$eid])) {
-                $competitions[$eid] = [
-                    'id' => $eid,
-                    'name' => (string) ($e['nome_evento'] ?? ''),
-                    'date' => (string) ($e['data_gara'] ?? ''),
-                ];
-            }
-        }
+        $athleteIds = array_map(static fn(Athlete $athlete): int => $athlete->id, $athletes);
+        $registrationCounts = Entry::registrationCountsByAthletes(
+            $club->id,
+            $athleteIds,
+            $eventFilter > 0 ? $eventFilter : null
+        );
+        $competitions = Entry::competitionsByClub($club->id, 100);
 
         return $this->view('club/area_list', [
             'club' => $club,
             'athletes' => $athletes,
-            'entries' => $rows,
             'registrationCounts' => $registrationCounts,
             'competitions' => $competitions,
             'eventFilter' => $eventFilter,
+            'pagination' => $pagination,
         ]);
     }
 

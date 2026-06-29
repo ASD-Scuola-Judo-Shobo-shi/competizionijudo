@@ -1,3 +1,4 @@
+<?php /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */ ?>
 <div class="card">
     <h3><?= e(__('club.list')) ?></h3>
     <?php if (empty($clubs)) : ?>
@@ -15,7 +16,7 @@
             <tbody>
                 <?php foreach ($clubs as $i => $club) : ?>
                     <tr>
-                        <td><?= $i + 1 ?></td>
+                        <td><?= $pagination['offset'] + $i + 1 ?></td>
                         <td><?= e($club->name) ?></td>
                         <td><?= e($club->federal_code) ?></td>
                         <td><?= e($club->contact_first_name . ' ' . $club->contact_last_name) ?></td>
@@ -24,4 +25,5 @@
             </tbody>
         </table>
     <?php endif; ?>
+    <?= $pagination['links'] ?>
 </div>

@@ -73,20 +73,100 @@ final class Entry
         return $stmt->fetchAll() ?: [];
     }
 
-    /** @return list<array<string, mixed>> */
-    public static function findByClub(int $clubId): array
+    /** @return list<array{id: int, name: string, date: string}> */
+    public static function competitionsByClub(int $clubId, int $limit): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT en.*, e.name AS nome_evento, e.date AS data_gara, a.last_name AS last_name, a.first_name AS first_name, a.date_of_birth AS birth_date, a.weight_kg AS weight_kg, a.weight_category AS weight_category
+            'SELECT DISTINCT e.id, e.name, e.date
              FROM entries en
              JOIN events e ON e.id = en.event_id
-             JOIN athletes a ON a.id = en.athlete_id
              WHERE en.club_id = ?
-             ORDER BY e.date DESC'
+             ORDER BY e.date DESC, e.id DESC
+             LIMIT ?'
         );
-        $stmt->execute([$clubId]);
+        $stmt->bindValue(1, $clubId, \PDO::PARAM_INT);
+        $stmt->bindValue(2, max(1, $limit), \PDO::PARAM_INT);
+        $stmt->execute();
 
-        return $stmt->fetchAll() ?: [];
+        return array_map(
+            static fn(array $row): array => [
+                'id' => (int) $row['id'],
+                'name' => (string) $row['name'],
+                'date' => (string) $row['date'],
+            ],
+            $stmt->fetchAll() ?: []
+        );
+    }
+
+    /**
+     * @param list<int> $athleteIds
+     * @return array<int, int>
+     */
+    public static function registrationCountsByAthletes(
+        int $clubId,
+        array $athleteIds,
+        ?int $eventId = null
+    ): array {
+        $athleteIds = array_values(array_unique(array_filter(
+            array_map('intval', $athleteIds),
+            static fn(int $id): bool => $id > 0
+        )));
+        if ($athleteIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($athleteIds), '?'));
+        $sql = 'SELECT athlete_id, COUNT(*) AS registrations
+                FROM entries
+                WHERE club_id = ? AND athlete_id IN (' . $placeholders . ')';
+        $parameters = [$clubId, ...$athleteIds];
+        if ($eventId !== null && $eventId > 0) {
+            $sql .= ' AND event_id = ?';
+            $parameters[] = $eventId;
+        }
+        $sql .= ' GROUP BY athlete_id';
+
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($parameters);
+        $counts = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $counts[(int) $row['athlete_id']] = (int) $row['registrations'];
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param list<int> $eventIds
+     * @return array<int, array{clubs: int, athletes: int}>
+     */
+    public static function countsByEventIds(array $eventIds): array
+    {
+        $eventIds = array_values(array_unique(array_filter(
+            array_map('intval', $eventIds),
+            static fn(int $id): bool => $id > 0
+        )));
+        if ($eventIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($eventIds), '?'));
+        $stmt = Database::connection()->prepare(
+            'SELECT event_id, COUNT(DISTINCT club_id) AS clubs, COUNT(athlete_id) AS athletes
+             FROM entries
+             WHERE event_id IN (' . $placeholders . ')
+             GROUP BY event_id'
+        );
+        $stmt->execute($eventIds);
+        $counts = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $counts[(int) $row['event_id']] = [
+                'clubs' => (int) $row['clubs'],
+                'athletes' => (int) $row['athletes'],
+            ];
+        }
+
+        return $counts;
     }
 
     public static function register(

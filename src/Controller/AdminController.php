@@ -165,19 +165,8 @@ final class AdminController extends Controller
             $events[] = Event::fromArray($r);
         }
 
-        $countsStmt = $db->prepare(
-            'SELECT en.event_id, COUNT(DISTINCT en.club_id) AS clubs, COUNT(en.athlete_id) AS athletes
-             FROM entries en
-             GROUP BY en.event_id'
-        );
-        $countsStmt->execute();
-        $counts = [];
-        foreach ($countsStmt->fetchAll() as $row) {
-            $counts[(int) $row['event_id']] = [
-                'clubs' => (int) $row['clubs'],
-                'athletes' => (int) $row['athletes'],
-            ];
-        }
+        $eventIds = array_map(static fn(Event $event): int => $event->id, $events);
+        $counts = \App\Model\Entry::countsByEventIds($eventIds);
 
         return $this->view('admin/manage_events', [
             'events' => $events,

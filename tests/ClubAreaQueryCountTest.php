@@ -72,25 +72,46 @@ final class ClubAreaQueryCountTest extends TestCase
         }
 
         $clubStatement = $this->statementReturning($this->clubRow(), 1);
-        $entryStatement = $this->statementReturningAll($entries);
-        $athleteStatement = $this->statementReturningAll($athletes);
+        $athleteCountStatement = $this->createMock(PDOStatement::class);
+        $athleteCountStatement->expects(self::once())->method('execute')->with([201])->willReturn(true);
+        $athleteCountStatement->expects(self::once())->method('fetchColumn')->willReturn($athleteCount);
+        $athleteStatement = $this->statementReturningAll(array_slice($athletes, 0, 50));
+        $registrationStatement = $this->statementReturningAll(array_map(
+            static fn(array $entry): array => [
+                'athlete_id' => $entry['athlete_id'],
+                'registrations' => 1,
+            ],
+            array_filter($entries, static fn(array $entry): bool => $entry['event_id'] === 101)
+        ));
+        $competitionStatement = $this->statementReturningAll([
+            ['id' => 102, 'name' => 'Other Event', 'date' => '2026-07-01'],
+            ['id' => 101, 'name' => 'Synthetic Event', 'date' => '2026-06-29'],
+        ]);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(3))
+        $database->expects(self::exactly(5))
             ->method('prepare')
             ->willReturnCallback(
                 static function (string $sql) use (
                     $clubStatement,
-                    $entryStatement,
-                    $athleteStatement
+                    $athleteCountStatement,
+                    $athleteStatement,
+                    $registrationStatement,
+                    $competitionStatement
                 ): PDOStatement {
                     if (str_starts_with($sql, 'SELECT * FROM clubs WHERE id')) {
                         return $clubStatement;
                     }
-                    if (str_starts_with($sql, 'SELECT en.*, e.name')) {
-                        return $entryStatement;
+                    if (str_starts_with($sql, 'SELECT COUNT(*) FROM athletes')) {
+                        return $athleteCountStatement;
                     }
-                    if (str_starts_with($sql, 'SELECT * FROM athletes WHERE club_id')) {
+                    if (str_starts_with($sql, 'SELECT * FROM athletes')) {
                         return $athleteStatement;
+                    }
+                    if (str_starts_with($sql, 'SELECT athlete_id')) {
+                        return $registrationStatement;
+                    }
+                    if (str_starts_with($sql, 'SELECT DISTINCT e.id')) {
+                        return $competitionStatement;
                     }
 
                     throw new RuntimeException('Unexpected query in club-area count fixture.');
@@ -114,6 +135,10 @@ final class ClubAreaQueryCountTest extends TestCase
             '/Synthetic1 Athlete1.*?<td>1<\/td>\s*<td>.*?edit=301/s',
             $response->content()
         );
+        if ($athleteCount > 50) {
+            self::assertStringNotContainsString('Synthetic51 Athlete51', $response->content());
+            self::assertStringContainsString('page=2', $response->content());
+        }
     }
 
     /** @return PDOStatement&MockObject */

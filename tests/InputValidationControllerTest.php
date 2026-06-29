@@ -80,7 +80,7 @@ final class InputValidationControllerTest extends TestCase
         $count->expects(self::once())->method('execute')->with([31])->willReturn(true);
         $count->method('fetchColumn')->willReturn(0);
         $list = $this->createMock(PDOStatement::class);
-        $list->expects(self::once())->method('execute')->with([31])->willReturn(true);
+        $list->expects(self::once())->method('execute')->with()->willReturn(true);
         $list->method('fetchAll')->willReturn([]);
         $database = $this->createMock(PDO::class);
         $database->expects(self::exactly(3))
@@ -93,7 +93,7 @@ final class InputValidationControllerTest extends TestCase
 
                     return match (true) {
                         str_starts_with($sql, 'SELECT COUNT(*) FROM athletes') => $count,
-                        str_starts_with($sql, 'SELECT * FROM athletes WHERE club_id') => $list,
+                        str_starts_with($sql, 'SELECT * FROM athletes') => $list,
                         default => throw new RuntimeException('Mutation query reached for invalid athlete input.'),
                     };
                 }

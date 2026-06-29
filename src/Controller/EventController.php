@@ -23,7 +23,7 @@ final class EventController extends Controller
     public function index(Request $request): Response
     {
         $limit = max(1, (int) config('app.events_upcoming_limit'));
-        $events = Event::allPublished($limit);
+        $events = Event::upcomingPublished(date('Y-m-d'), $limit);
 
         return $this->view('events/index', [
             'events' => $events,
@@ -42,7 +42,7 @@ final class EventController extends Controller
                 return $this->redirect('/events.php');
             }
 
-            $nextEvents = Event::nextPublished($id, $limit);
+            $nextEvents = Event::nextUpcomingPublished($id, date('Y-m-d'), $limit);
 
             return $this->view('events/show', [
                 'event' => $event,
@@ -52,7 +52,7 @@ final class EventController extends Controller
             ]);
         }
 
-        $upcomingEvents = Event::allPublished($limit);
+        $upcomingEvents = Event::upcomingPublished(date('Y-m-d'), $limit);
 
         return $this->view('events/show', [
             'event' => null,
@@ -77,7 +77,7 @@ final class EventController extends Controller
         $registrationDate = date('Y-m-d');
 
         if ($id <= 0) {
-            $upcomingEvents = Event::allPublished($limit);
+            $upcomingEvents = Event::upcomingPublished($registrationDate, $limit);
 
             return $this->view('events/register', [
                 'event' => null,
@@ -91,7 +91,7 @@ final class EventController extends Controller
 
         $event = Event::findRegistrationEligibleById($id, $registrationDate);
         if ($event === null) {
-            $upcomingEvents = Event::allPublished($limit);
+            $upcomingEvents = Event::upcomingPublished($registrationDate, $limit);
 
             return $this->view('events/register', [
                 'event' => null,
@@ -143,7 +143,7 @@ final class EventController extends Controller
 
         $athletes = Athlete::findByClub($clubId);
         $registered = Entry::findByClubEvent($id, $clubId);
-        $nextEvents = Event::nextPublished($id, $limit);
+        $nextEvents = Event::nextUpcomingPublished($id, $registrationDate, $limit);
         $registrationFeedback = $this->registrationFeedback($id);
 
         return $this->view('events/register', [

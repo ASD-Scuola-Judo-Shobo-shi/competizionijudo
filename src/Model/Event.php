@@ -44,14 +44,17 @@ final class Event
     }
 
     /** @return list<self> */
-    public static function allPublished(?int $limit = null): array
+    public static function upcomingPublished(string $onDate, int $limit): array
     {
-        $sql = 'SELECT * FROM events WHERE published=1 AND closed=0 ORDER BY date';
-        if ($limit !== null) {
-            $sql .= ' LIMIT ' . (int) $limit;
-        }
-
-        $stmt = Database::connection()->query($sql);
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM events
+             WHERE published = 1 AND closed = 0 AND date >= ?
+             ORDER BY date ASC, id ASC
+             LIMIT ?'
+        );
+        $stmt->bindValue(1, $onDate);
+        $stmt->bindValue(2, max(1, $limit), \PDO::PARAM_INT);
+        $stmt->execute();
         $rows = $stmt->fetchAll();
 
         return array_map(fn(array $r) => self::fromArray($r), $rows ?: []);
@@ -98,15 +101,21 @@ final class Event
     }
 
     /** @return list<self> */
-    public static function nextPublished(int $excludeId, ?int $limit = null): array
-    {
-        $sql = 'SELECT * FROM events WHERE published=1 AND closed=0 AND id != ? ORDER BY date ASC';
-        if ($limit !== null) {
-            $sql .= ' LIMIT ' . (int) $limit;
-        }
-
-        $stmt = Database::connection()->prepare($sql);
-        $stmt->execute([$excludeId]);
+    public static function nextUpcomingPublished(
+        int $excludeId,
+        string $onDate,
+        int $limit
+    ): array {
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM events
+             WHERE published = 1 AND closed = 0 AND date >= ? AND id != ?
+             ORDER BY date ASC, id ASC
+             LIMIT ?'
+        );
+        $stmt->bindValue(1, $onDate);
+        $stmt->bindValue(2, $excludeId, \PDO::PARAM_INT);
+        $stmt->bindValue(3, max(1, $limit), \PDO::PARAM_INT);
+        $stmt->execute();
         $rows = $stmt->fetchAll();
 
         return array_map(fn(array $r) => self::fromArray($r), $rows ?: []);

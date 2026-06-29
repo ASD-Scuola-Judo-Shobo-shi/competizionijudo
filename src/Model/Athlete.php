@@ -135,6 +135,32 @@ final class Athlete
         return array_map(fn(array $row) => self::fromArray($row), $rows ?: []);
     }
 
+    public static function countByClub(int $clubId): int
+    {
+        $stmt = Database::connection()->prepare('SELECT COUNT(*) FROM athletes WHERE club_id = ?');
+        $stmt->execute([$clubId]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** @return list<self> */
+    public static function pageByClub(int $clubId, int $limit, int $offset): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM athletes
+             WHERE club_id = ?
+             ORDER BY last_name ASC, first_name ASC, id ASC
+             LIMIT ? OFFSET ?'
+        );
+        $stmt->bindValue(1, $clubId, \PDO::PARAM_INT);
+        $stmt->bindValue(2, max(1, $limit), \PDO::PARAM_INT);
+        $stmt->bindValue(3, max(0, $offset), \PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+
+        return array_map(fn(array $row) => self::fromArray($row), $rows ?: []);
+    }
+
     public static function findById(int $id, int $clubId): ?self
     {
         $stmt = Database::connection()->prepare('SELECT * FROM athletes WHERE id = ? AND club_id = ?');

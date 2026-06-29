@@ -1,5 +1,6 @@
 <?php
 /** @var array<int, int> $registrationCounts */
+/** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */
 ?>
 <?php if (!empty($competitions)) : ?>
 <div class="card">
@@ -71,4 +72,5 @@
             </tbody>
         </table>
     <?php endif; ?>
+    <?= $pagination['links'] ?>
 </div>

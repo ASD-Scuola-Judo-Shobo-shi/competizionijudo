@@ -80,13 +80,16 @@ final class ListFreshnessTest extends TestCase
     /** @return list<string> */
     private function eventNames(): array
     {
-        return array_map(static fn(Event $event): string => $event->name, Event::allPublished());
+        return array_map(
+            static fn(Event $event): string => $event->name,
+            Event::upcomingPublished('2026-06-29', 100)
+        );
     }
 
     /** @return list<string> */
     private function clubNames(): array
     {
-        return array_map(static fn(Club $club): string => $club->name, Club::all());
+        return array_map(static fn(Club $club): string => $club->name, Club::page(100, 0));
     }
 
     private function insertEvent(int $id, string $name): void
