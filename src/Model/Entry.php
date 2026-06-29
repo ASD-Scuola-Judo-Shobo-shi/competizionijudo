@@ -30,7 +30,18 @@ final class Entry
     /** @return list<array<string, mixed>> */
     public static function findByEvent(int $eventId, ?int $clubId): array
     {
-        $sql = 'SELECT en.id AS entry_id, c.id AS club_id, c.name AS club_name, c.federal_code AS federal_code, a.last_name AS last_name, a.first_name AS first_name, a.weight_kg AS weight_kg, a.weight_category AS weight_category, a.belt AS belt, a.membership_number AS membership_number, a.date_of_birth AS birth_date, e.name AS nome_evento, e.date AS data_gara
+        $sql = 'SELECT en.id AS entry_id, c.id AS club_id,
+                c.name AS club_name, c.federal_code AS federal_code,
+                CASE WHEN e.closed = 1 THEN en.snapshot_last_name ELSE a.last_name END AS last_name,
+                CASE WHEN e.closed = 1 THEN en.snapshot_first_name ELSE a.first_name END AS first_name,
+                CASE WHEN e.closed = 1 THEN en.snapshot_gender ELSE a.gender END AS gender,
+                CASE WHEN e.closed = 1 THEN en.snapshot_weight_kg ELSE a.weight_kg END AS weight_kg,
+                CASE WHEN e.closed = 1 THEN en.snapshot_belt ELSE a.belt END AS belt,
+                CASE WHEN e.closed = 1 THEN en.snapshot_membership_number ELSE a.membership_number END AS membership_number,
+                CASE WHEN e.closed = 1 THEN en.snapshot_date_of_birth ELSE a.date_of_birth END AS birth_date,
+                CASE WHEN e.closed = 1 THEN en.snapshot_program ELSE \'\' END AS program,
+                CASE WHEN e.closed = 1 THEN en.snapshot_weight_category ELSE \'\' END AS weight_category,
+                e.name AS nome_evento, e.date AS data_gara, e.closed AS event_closed
             FROM entries en
             JOIN clubs c ON c.id = en.club_id
             JOIN athletes a ON a.id = en.athlete_id
@@ -43,12 +54,27 @@ final class Entry
             $params[] = $clubId;
         }
 
-        $sql .= ' ORDER BY c.name, a.last_name, a.first_name, a.id';
+        $sql .= ' ORDER BY club_name, last_name, first_name, a.id';
 
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
+        $rows = $stmt->fetchAll() ?: [];
+        foreach ($rows as &$row) {
+            if (empty($row['event_closed'])) {
+                $category = JudoCategory::calculate(
+                    (string) ($row['birth_date'] ?? ''),
+                    (string) ($row['gender'] ?? ''),
+                    (float) ($row['weight_kg'] ?? 0.0),
+                    Athlete::eventYearFromDate((string) ($row['data_gara'] ?? ''))
+                );
+                $row['program'] = $category['program'];
+                $row['weight_category'] = $category['weight_category'];
+            }
+            unset($row['event_closed']);
+        }
+        unset($row);
 
-        return $stmt->fetchAll() ?: [];
+        return $rows;
     }
 
     /** @return list<array<string, mixed>> */

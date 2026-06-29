@@ -6,6 +6,7 @@
 /** @var list<\App\Model\Event> $nextEvents */
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var array{added: int, already_registered: int, rejected: int, failed: int}|null $registrationFeedback */
+/** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */
 ?>
 
 <?php if ($event !== null) : ?>
@@ -82,7 +83,7 @@
                                         <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>
                                         <td><?= e($athlete->date_of_birth) ?></td>
                                         <td><?= e((string) $athlete->weight_kg) ?></td>
-                                        <td><?= e($athlete->weight_category) ?></td>
+                                        <td><?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

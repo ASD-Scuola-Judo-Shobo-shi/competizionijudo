@@ -1,6 +1,7 @@
 <?php
 /** @var array<int, int> $registrationCounts */
 /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */
+/** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */
 ?>
 <?php if (!empty($competitions)) : ?>
 <div class="card">
@@ -57,7 +58,7 @@
                                 <span class="belt-badge" style="background-color: <?= e($component['color']) ?>; color: <?= e($component['textColor']) ?>"><?= e($component['label']) ?></span>
                             <?php endforeach; ?>
                         </td>
-                        <td><?= e($athlete->weight_category) ?></td>
+                        <td><?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?></td>
                         <td><?= e((string) ($registrationCounts[$athlete->id] ?? 0)) ?></td>
                         <td>
                             <a class="btn btn-sm" href="/club_area.php?view=add&edit=<?= e((string) $athlete->id) ?>"><?= e(__('club.area.edit')) ?></a>

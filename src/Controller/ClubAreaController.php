@@ -13,8 +13,6 @@ use App\Model\Club;
 use App\Model\Entry;
 use App\Validation\AthleteInputValidator;
 
-use function calculateJudoCategory;
-
 final class ClubAreaController extends Controller
 {
     public function index(Request $request): Response
@@ -69,14 +67,6 @@ final class ClubAreaController extends Controller
                 }
 
                 if ($errors === []) {
-                    $category = calculateJudoCategory(
-                        $data['date_of_birth'],
-                        $data['gender'],
-                        $data['weight_kg']
-                    );
-                    $data['program'] = $category['program'];
-                    $data['weight_category'] = $category['weight_category'];
-
                     try {
                         if ((string) $request->input('athlete_id') !== '') {
                             $edit = Athlete::findById((int) $request->input('athlete_id'), $club->id);
@@ -117,6 +107,7 @@ final class ClubAreaController extends Controller
                 'edit' => $edit,
                 'errors' => $errors,
                 'pagination' => $pagination,
+                'athleteCategories' => $this->athleteCategories($athletes),
             ]);
         }
 
@@ -143,7 +134,22 @@ final class ClubAreaController extends Controller
             'competitions' => $competitions,
             'eventFilter' => $eventFilter,
             'pagination' => $pagination,
+            'athleteCategories' => $this->athleteCategories($athletes),
         ]);
+    }
+
+    /**
+     * @param list<Athlete> $athletes
+     * @return array<int, array{age_below: int|null, program: string, weight_category: string}>
+     */
+    private function athleteCategories(array $athletes): array
+    {
+        $categories = [];
+        foreach ($athletes as $athlete) {
+            $categories[$athlete->id] = $athlete->categoryForEventDate();
+        }
+
+        return $categories;
     }
 
     public function deleteAthlete(Request $request): Response

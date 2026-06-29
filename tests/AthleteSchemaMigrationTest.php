@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Model\JudoCategory;
 use PHPUnit\Framework\TestCase;
 
 final class AthleteSchemaMigrationTest extends TestCase
@@ -40,5 +41,35 @@ final class AthleteSchemaMigrationTest extends TestCase
 
         self::assertIsString($baseline);
         self::assertStringNotContainsString('weight_category VARCHAR', $baseline);
+    }
+
+    public function testClosedEntrySnapshotMigrationRemovesAthleteDerivedColumns(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260629_000003_snapshot_closed_event_entries.sql'
+        );
+
+        self::assertIsString($migration);
+        self::assertStringContainsString('snapshot_weight_category VARCHAR(50)', $migration);
+        self::assertStringContainsString('snapshot_at TIMESTAMP NULL', $migration);
+        self::assertStringContainsString('WHERE e.closed = 1', $migration);
+        self::assertStringContainsString('entry_snapshot_weight_limits', $migration);
+        self::assertStringContainsString('DROP COLUMN program', $migration);
+        self::assertStringContainsString('DROP COLUMN weight_category', $migration);
+
+        preg_match_all(
+            "/\\('([^']+)', '([^']+)', (\\d+)\\)/",
+            $migration,
+            $matches,
+            PREG_SET_ORDER
+        );
+        $migrationLimits = [];
+        foreach ($matches as $match) {
+            $migrationLimits[$match[1]][$match[2]][] = (int) $match[3];
+        }
+        self::assertSame(
+            JudoCategory::weightCategoryDefinitions()['limits'],
+            $migrationLimits
+        );
     }
 }

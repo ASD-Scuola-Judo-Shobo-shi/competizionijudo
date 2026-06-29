@@ -144,7 +144,7 @@ INSERT INTO events (
     'Synthetic description',
     '',
     1,
-    0
+    1
 );
 
 INSERT INTO athletes (

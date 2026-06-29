@@ -12,6 +12,7 @@ use App\Core\Session;
 use App\Core\View;
 use App\Model\Club;
 use App\Model\Database;
+use App\Model\EntrySnapshotService;
 use App\Model\Event;
 use App\Security\AuthenticationThrottle;
 use App\Security\DatabaseAuthenticationThrottle;
@@ -271,6 +272,7 @@ final class AdminController extends Controller
                     }
 
                     if ($event) {
+                        $db->beginTransaction();
                         $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, poster_file=?, info_file=?, published=?, closed=? WHERE id=?";
                         $params = [
                             $data['name'],
@@ -288,6 +290,10 @@ final class AdminController extends Controller
                             $eventId,
                         ];
                         $db->prepare($sql)->execute($params);
+                        if (!$event->closed && $data['closed'] === 1) {
+                            (new EntrySnapshotService($db))->consolidate($eventId, $data['date']);
+                        }
+                        $db->commit();
                     } else {
                         $db->prepare(
                             "INSERT INTO events (name, date, location, organizer, registration_deadline, type, description, notes, poster_file, info_file, published, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -309,6 +315,9 @@ final class AdminController extends Controller
 
                     return $this->redirect('/admin_manage_events.php');
                 } catch (\Throwable $exception) {
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
                     $this->reportFailure('admin.event_save_failed', $exception, $request);
                     $error = __('errors.save_failed');
                 }

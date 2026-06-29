@@ -261,6 +261,16 @@ final class EventLifecycleTest extends TestCase
                 event_id INTEGER NOT NULL,
                 club_id INTEGER NOT NULL,
                 athlete_id INTEGER NOT NULL,
+                snapshot_last_name TEXT,
+                snapshot_first_name TEXT,
+                snapshot_gender TEXT,
+                snapshot_date_of_birth TEXT,
+                snapshot_weight_kg REAL,
+                snapshot_belt TEXT,
+                snapshot_membership_number TEXT,
+                snapshot_program TEXT,
+                snapshot_weight_category TEXT,
+                snapshot_at TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (event_id, club_id, athlete_id)
             )'

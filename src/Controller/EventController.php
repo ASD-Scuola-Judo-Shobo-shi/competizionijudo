@@ -86,6 +86,7 @@ final class EventController extends Controller
                 'nextEvents' => [],
                 'upcomingEvents' => $upcomingEvents,
                 'registrationFeedback' => null,
+                'athleteCategories' => [],
             ]);
         }
 
@@ -100,6 +101,7 @@ final class EventController extends Controller
                 'nextEvents' => [],
                 'upcomingEvents' => $upcomingEvents,
                 'registrationFeedback' => null,
+                'athleteCategories' => [],
             ]);
         }
 
@@ -153,6 +155,7 @@ final class EventController extends Controller
             'nextEvents' => $nextEvents,
             'upcomingEvents' => [],
             'registrationFeedback' => $registrationFeedback,
+            'athleteCategories' => $this->athleteCategories($athletes, $event->date),
         ]);
     }
 
@@ -230,6 +233,20 @@ final class EventController extends Controller
     private function canViewEntries(): bool
     {
         return !empty(Session::get('is_admin')) || Session::has('club_id');
+    }
+
+    /**
+     * @param list<Athlete> $athletes
+     * @return array<int, array{age_below: int|null, program: string, weight_category: string}>
+     */
+    private function athleteCategories(array $athletes, string $eventDate): array
+    {
+        $categories = [];
+        foreach ($athletes as $athlete) {
+            $categories[$athlete->id] = $athlete->categoryForEventDate($eventDate);
+        }
+
+        return $categories;
     }
 
     /** @return array{added: int, already_registered: int, rejected: int, failed: int}|null */

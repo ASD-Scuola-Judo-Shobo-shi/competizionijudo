@@ -117,8 +117,8 @@ final class ClubAreaCsrfTest extends TestCase
             ->with(self::callback(static fn(array $values): bool =>
                 $values[0] === 'Synthetic'
                 && $values[1] === 'Athlete'
-                && $values[10] === 301
-                && $values[11] === 201))
+                && $values[8] === 301
+                && $values[9] === 201))
             ->willReturn(true);
 
         $database = $this->createMock(PDO::class);

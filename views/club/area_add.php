@@ -1,3 +1,4 @@
+<?php /** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */ ?>
 <div class="card">
     <h3><?= e($edit ? __('club.area.edit_athlete') : __('club.area.add_athlete')) ?></h3>
     <?php if (!empty($errors)) : ?>
@@ -253,7 +254,7 @@
                                 <span class="belt-badge" style="background-color: <?= e($component['color']) ?>; color: <?= e($component['textColor']) ?>"><?= e($component['label']) ?></span>
                             <?php endforeach; ?>
                         </td>
-                        <td><?= e($athlete->weight_category) ?></td>
+                        <td><?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?></td>
                         <td>
                             <a class="btn btn-sm" href="/club_area.php?view=add&edit=<?= e((string) $athlete->id) ?>"><?= e(__('club.area.edit')) ?></a>
                             <form method="post" action="/club_delete_athlete.php" style="display:inline" onsubmit="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')">

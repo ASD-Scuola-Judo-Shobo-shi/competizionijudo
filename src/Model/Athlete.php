@@ -15,8 +15,6 @@ final class Athlete
         public readonly string $date_of_birth,
         public readonly float $weight_kg,
         public readonly string $belt,
-        public readonly string $program,
-        public readonly string $weight_category,
         public readonly ?string $membership_number,
         public readonly ?string $notes
     ) {
@@ -103,7 +101,23 @@ final class Athlete
 
         $eventYear = self::eventYearFromDate($eventDate);
         $result = AgeClass::calculate($birthYear, $eventYear, $locale);
+
+        if ($result['key'] === 'out_of_range') {
+            return null;
+        }
+
         return AgeClass::findByAgeBelow($result['age_below'], $locale);
+    }
+
+    /** @return array{age_below: int|null, program: string, weight_category: string} */
+    public function categoryForEventDate(?string $eventDate = null): array
+    {
+        return JudoCategory::calculate(
+            $this->date_of_birth,
+            $this->gender,
+            $this->weight_kg,
+            self::eventYearFromDate($eventDate)
+        );
     }
 
     /** @param array<string, mixed> $data */
@@ -118,8 +132,6 @@ final class Athlete
             (string) ($data['date_of_birth'] ?? ''),
             (float) ($data['weight_kg'] ?? 0.0),
             (string) ($data['belt'] ?? ''),
-            (string) ($data['program'] ?? ''),
-            (string) ($data['weight_category'] ?? ''),
             $data['membership_number'] !== '' ? (string) $data['membership_number'] : null,
             $data['notes'] !== '' ? (string) $data['notes'] : null,
         );
@@ -177,8 +189,8 @@ final class Athlete
     public static function add(array $data): self
     {
         $stmt = Database::connection()->prepare(
-            'INSERT INTO athletes (club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt, program, weight_category, membership_number, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO athletes (club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt, membership_number, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
 
         $stmt->execute([
@@ -189,8 +201,6 @@ final class Athlete
             $data['date_of_birth'] ?? '',
             $data['weight_kg'] ?? 0.0,
             $data['belt'] ?? '',
-            $data['program'] ?? '',
-            $data['weight_category'] ?? '',
             $data['membership_number'] ?? null,
             $data['notes'] ?? null,
         ]);
@@ -204,7 +214,7 @@ final class Athlete
     public function update(array $data): void
     {
         $stmt = Database::connection()->prepare(
-            'UPDATE athletes SET last_name = ?, first_name = ?, gender = ?, date_of_birth = ?, weight_kg = ?, belt = ?, program = ?, weight_category = ?, membership_number = ?, notes = ? WHERE id = ? AND club_id = ?'
+            'UPDATE athletes SET last_name = ?, first_name = ?, gender = ?, date_of_birth = ?, weight_kg = ?, belt = ?, membership_number = ?, notes = ? WHERE id = ? AND club_id = ?'
         );
 
         $stmt->execute([
@@ -214,8 +224,6 @@ final class Athlete
             $data['date_of_birth'] ?? '',
             $data['weight_kg'] ?? 0.0,
             $data['belt'] ?? '',
-            $data['program'] ?? '',
-            $data['weight_category'] ?? '',
             $data['membership_number'] ?? null,
             $data['notes'] ?? null,
             $this->id,

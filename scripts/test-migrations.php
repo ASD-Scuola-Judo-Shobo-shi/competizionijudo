@@ -148,7 +148,7 @@ function assertMigrationCount(PDO $database): void
 
 function assertSchemaContract(PDO $database): void
 {
-    foreach ([
+    $requiredTables = [
         'schema_migrations',
         'clubs',
         'events',
@@ -156,7 +156,8 @@ function assertSchemaContract(PDO $database): void
         'entries',
         'password_reset_tokens',
         'authentication_throttles',
-    ] as $table) {
+    ];
+    foreach ($requiredTables as $table) {
         $statement = $database->prepare(
             'SELECT COUNT(*) FROM information_schema.TABLES '
             . 'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'
@@ -167,8 +168,24 @@ function assertSchemaContract(PDO $database): void
 
     assertColumn($database, 'clubs', 'normalized_email');
     assertColumn($database, 'events', 'location', 'NO');
-    assertColumn($database, 'athletes', 'weight_category', 'NO');
     assertColumn($database, 'entries', 'athlete_id');
+    $snapshotColumns = [
+        'snapshot_last_name',
+        'snapshot_first_name',
+        'snapshot_gender',
+        'snapshot_date_of_birth',
+        'snapshot_weight_kg',
+        'snapshot_belt',
+        'snapshot_membership_number',
+        'snapshot_program',
+        'snapshot_weight_category',
+        'snapshot_at',
+    ];
+    foreach ($snapshotColumns as $snapshotColumn) {
+        assertColumn($database, 'entries', $snapshotColumn, 'YES');
+    }
+    assertColumnMissing($database, 'athletes', 'program');
+    assertColumnMissing($database, 'athletes', 'weight_category');
 
     assertUniqueIndex(
         $database,
@@ -243,6 +260,16 @@ function assertColumn(
     }
 }
 
+function assertColumnMissing(PDO $database, string $table, string $column): void
+{
+    $statement = $database->prepare(
+        'SELECT COUNT(*) FROM information_schema.COLUMNS '
+        . 'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+    );
+    $statement->execute([$table, $column]);
+    assertSameValue(0, (int) $statement->fetchColumn(), sprintf('Unexpected column: %s.%s', $table, $column));
+}
+
 function assertUniqueIndex(
     PDO $database,
     string $table,
@@ -305,10 +332,10 @@ function assertCleanWritesAndReads(PDO $database): void
     $database->exec(
         "INSERT INTO athletes (
             id, club_id, last_name, first_name, gender, date_of_birth,
-            weight_kg, belt, program, weight_category
+            weight_kg, belt
         ) VALUES (
             201, 101, 'Synthetic', 'Athlete', 'M', '2010-01-01',
-            50, 'white', 'competitive', '-50 kg'
+            50, 'white'
         )"
     );
     $database->exec(
@@ -318,13 +345,13 @@ function assertCleanWritesAndReads(PDO $database): void
     $database->exec(
         'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (301, 101, 201)'
     );
-    $category = $database->query(
-        'SELECT athletes.weight_category FROM entries '
+    $weight = $database->query(
+        'SELECT athletes.weight_kg FROM entries '
         . 'INNER JOIN athletes ON athletes.id = entries.athlete_id '
         . 'WHERE entries.event_id = 301 AND entries.club_id = 101'
     )->fetchColumn();
 
-    assertSameValue('-50 kg', $category, 'Clean schema athlete write or entry read failed.');
+    assertSameValue('50.00', $weight, 'Clean schema athlete write or entry read failed.');
 }
 
 function assertLegacyBackfill(PDO $database): void
@@ -348,15 +375,28 @@ function assertLegacyBackfill(PDO $database): void
     assertSameValue('2026-07-01', $event['date'], 'Legacy event date was not copied.');
     assertSameValue('Synthetic Venue', $event['location'], 'Legacy location was not copied.');
 
-    $athlete = $database->query(
-        'SELECT last_name, first_name, weight_category FROM athletes WHERE id = 1'
-    )->fetch();
+    $athlete = $database->query('SELECT last_name, first_name FROM athletes WHERE id = 1')->fetch();
     if (!is_array($athlete)) {
         throw new RuntimeException('Legacy athlete fixture disappeared.');
     }
     assertSameValue('Synthetic', $athlete['last_name'], 'Legacy athlete surname was not copied.');
     assertSameValue('Athlete', $athlete['first_name'], 'Legacy athlete name was not copied.');
-    assertSameValue('-50 kg', $athlete['weight_category'], 'Legacy weight category was not backfilled.');
+
+    $snapshot = $database->query(
+        'SELECT snapshot_last_name, snapshot_date_of_birth, snapshot_weight_kg, '
+        . 'snapshot_program, snapshot_weight_category, snapshot_at FROM entries WHERE id = 1'
+    )->fetch();
+    if (!is_array($snapshot)) {
+        throw new RuntimeException('Legacy closed-entry snapshot was not backfilled.');
+    }
+    assertSameValue('Synthetic', $snapshot['snapshot_last_name'], 'Legacy snapshot name was not backfilled.');
+    assertSameValue('2010-01-01', $snapshot['snapshot_date_of_birth'], 'Legacy snapshot birth date was not backfilled.');
+    assertSameValue('50.00', $snapshot['snapshot_weight_kg'], 'Legacy snapshot weight was not backfilled.');
+    assertSameValue('adulti', $snapshot['snapshot_program'], 'Legacy snapshot program used the wrong event year.');
+    assertSameValue('-50 kg', $snapshot['snapshot_weight_category'], 'Legacy snapshot category used the wrong event year.');
+    if (!is_string($snapshot['snapshot_at']) || $snapshot['snapshot_at'] === '') {
+        throw new RuntimeException('Legacy snapshot timestamp was not backfilled.');
+    }
 }
 
 function assertSameValue(mixed $expected, mixed $actual, string $message): void
