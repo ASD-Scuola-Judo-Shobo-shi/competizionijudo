@@ -136,6 +136,14 @@ final class ClubAreaController extends Controller
             $rows = array_filter($rows, fn($r) => (int) ($r['event_id'] ?? 0) === $eventFilter);
         }
 
+        $registrationCounts = [];
+        foreach ($rows as $entry) {
+            $athleteId = (int) ($entry['athlete_id'] ?? 0);
+            if ($athleteId > 0) {
+                $registrationCounts[$athleteId] = ($registrationCounts[$athleteId] ?? 0) + 1;
+            }
+        }
+
         $competitions = [];
         foreach ($allEntries as $e) {
             $eid = (int) ($e['event_id'] ?? 0);
@@ -152,6 +160,7 @@ final class ClubAreaController extends Controller
             'club' => $club,
             'athletes' => $athletes,
             'entries' => $rows,
+            'registrationCounts' => $registrationCounts,
             'competitions' => $competitions,
             'eventFilter' => $eventFilter,
         ]);

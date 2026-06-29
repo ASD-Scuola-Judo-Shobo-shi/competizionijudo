@@ -1,7 +1,5 @@
 <?php
-
-use App\Model\Entry;
-
+/** @var array<int, int> $registrationCounts */
 ?>
 <?php if (!empty($competitions)) : ?>
 <div class="card">
@@ -59,16 +57,7 @@ use App\Model\Entry;
                             <?php endforeach; ?>
                         </td>
                         <td><?= e($athlete->weight_category) ?></td>
-                        <td>
-                            <?php
-                            $_regs = Entry::findByClub($club->id);
-                            $_athleteRegs = array_filter($_regs, fn($r) => (int) ($r['athlete_id'] ?? 0) === $athlete->id);
-                            if ($eventFilter > 0) {
-                                $_athleteRegs = array_filter($_athleteRegs, fn($r) => (int) ($r['event_id'] ?? 0) === $eventFilter);
-                            }
-                            echo e((string) count($_athleteRegs));
-                            ?>
-                        </td>
+                        <td><?= e((string) ($registrationCounts[$athlete->id] ?? 0)) ?></td>
                         <td>
                             <a class="btn btn-sm" href="/club_area.php?view=add&edit=<?= e((string) $athlete->id) ?>"><?= e(__('club.area.edit')) ?></a>
                             <form method="post" action="/club_delete_athlete.php" style="display:inline" onsubmit="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')">
