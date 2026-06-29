@@ -38,6 +38,14 @@ final class IntegrationTest extends TestCase
         self::assertSame(0, Session::get('club_login_attempts', 0));
     }
 
+    public function testFlashValueIsConsumedExactlyOnce(): void
+    {
+        Session::flash('synthetic-feedback', ['count' => 2]);
+
+        self::assertSame(['count' => 2], Session::pullFlash('synthetic-feedback'));
+        self::assertNull(Session::pullFlash('synthetic-feedback'));
+    }
+
     public function testAdminLoginShowsErrorOnInvalidCredentials(): void
     {
         $request = new Request('POST', '/admin_login.php', [], [

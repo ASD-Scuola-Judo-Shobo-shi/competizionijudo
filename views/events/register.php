@@ -5,6 +5,7 @@
 /** @var int[] $registered */
 /** @var list<\App\Model\Event> $nextEvents */
 /** @var list<\App\Model\Event> $upcomingEvents */
+/** @var array{added: int, already_registered: int, rejected: int, failed: int}|null $registrationFeedback */
 ?>
 
 <?php if ($event !== null) : ?>
@@ -41,8 +42,16 @@
             </table>
 
             <div class="event-details-actions">
-                <?php if (!empty($warning)) : ?>
-                    <div class="notice"><?= e($warning) ?></div>
+                <?php if ($registrationFeedback !== null) : ?>
+                    <div class="notice" id="registration-results" role="status">
+                        <strong><?= e(__('events.registration_feedback_title')) ?></strong>
+                        <ul>
+                            <li><?= e(__('events.registration_added', ['count' => (string) $registrationFeedback['added']])) ?></li>
+                            <li><?= e(__('events.registration_already', ['count' => (string) $registrationFeedback['already_registered']])) ?></li>
+                            <li><?= e(__('events.registration_rejected', ['count' => (string) $registrationFeedback['rejected']])) ?></li>
+                            <li><?= e(__('events.registration_failed', ['count' => (string) $registrationFeedback['failed']])) ?></li>
+                        </ul>
+                    </div>
                 <?php endif; ?>
                 <?php if (empty($athletes)) : ?>
                     <p><?= e(__('events.register_no_athletes')) ?></p>

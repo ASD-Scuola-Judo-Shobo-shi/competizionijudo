@@ -65,8 +65,13 @@ final class EntryRegistrationRepository
     {
         $errorInfo = $exception->errorInfo;
 
-        return is_array($errorInfo)
-            && ($errorInfo[0] ?? null) === '23000'
-            && (int) ($errorInfo[1] ?? 0) === 1062;
+        if (!is_array($errorInfo) || ($errorInfo[0] ?? null) !== '23000') {
+            return false;
+        }
+
+        $driverCode = (int) ($errorInfo[1] ?? 0);
+
+        return $driverCode === 1062
+            || ($driverCode === 19 && str_contains(strtolower((string) ($errorInfo[2] ?? '')), 'unique constraint'));
     }
 }

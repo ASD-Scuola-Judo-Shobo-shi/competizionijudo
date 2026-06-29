@@ -39,6 +39,31 @@ final class Session
         unset($_SESSION[$key]);
     }
 
+    public static function flash(string $key, mixed $value): void
+    {
+        self::start();
+        $_SESSION['_flash'][$key] = $value;
+    }
+
+    public static function pullFlash(string $key, mixed $default = null): mixed
+    {
+        self::start();
+        $flash = $_SESSION['_flash'] ?? [];
+        if (!is_array($flash)) {
+            unset($_SESSION['_flash']);
+
+            return $default;
+        }
+
+        $value = $flash[$key] ?? $default;
+        unset($_SESSION['_flash'][$key]);
+        if (empty($_SESSION['_flash'])) {
+            unset($_SESSION['_flash']);
+        }
+
+        return $value;
+    }
+
     public static function regenerate(): void
     {
         self::start();

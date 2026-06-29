@@ -6,6 +6,7 @@ namespace Tests;
 
 use App\Controller\EventController;
 use App\Core\Application;
+use App\Core\FileLogger;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
@@ -26,6 +27,7 @@ final class EventLifecycleTest extends TestCase
     private ?PDO $originalConnection;
     private PDO $database;
     private View $view;
+    private ?string $logPath = null;
 
     protected function setUp(): void
     {
@@ -48,6 +50,9 @@ final class EventLifecycleTest extends TestCase
     protected function tearDown(): void
     {
         $this->databaseConnection->setValue(null, $this->originalConnection);
+        if ($this->logPath !== null && is_file($this->logPath)) {
+            unlink($this->logPath);
+        }
         $this->destroySession();
     }
 
@@ -151,6 +156,52 @@ final class EventLifecycleTest extends TestCase
         self::assertSame(302, $response->status());
         self::assertStringNotContainsString('OwnFamily', $response->content());
         self::assertStringNotContainsString('ForeignFamily', $response->content());
+    }
+
+    public function testDuplicateRegistrationFeedbackSurvivesRedirectAndIsShownOnce(): void
+    {
+        $today = date('Y-m-d');
+        $eventDate = date('Y-m-d', strtotime('+1 day'));
+        $this->insertEvent(date: $eventDate, deadline: $today);
+        $this->database->exec(
+            "CREATE TRIGGER synthetic_entry_failure
+             BEFORE INSERT ON entries
+             WHEN NEW.athlete_id = 303
+             BEGIN SELECT RAISE(FAIL, 'Synthetic entry failure'); END"
+        );
+        Session::set('club_id', 201);
+        $this->logPath = sys_get_temp_dir() . '/competizionijudo-registration-'
+            . bin2hex(random_bytes(8)) . '.log';
+        $post = new Request(
+            'POST',
+            '/event_register.php?id=101',
+            ['id' => '101'],
+            [
+                'csrf_token' => csrf_token(),
+                'athletes' => ['301', '302', '301', '303', 'invalid'],
+            ]
+        );
+
+        $postResponse = (new EventController(
+            $this->view,
+            $post,
+            new FileLogger($this->logPath)
+        ))->register($post);
+        $get = new Request('GET', '/event_register.php?id=101', ['id' => '101']);
+        $firstGet = (new EventController($this->view, $get))->register($get);
+        $secondGet = (new EventController($this->view, $get))->register($get);
+
+        self::assertSame(302, $postResponse->status());
+        self::assertSame(200, $firstGet->status());
+        self::assertStringContainsString('Aggiunti: 1', $firstGet->content());
+        self::assertStringContainsString('Già iscritti: 1', $firstGet->content());
+        self::assertStringContainsString('Rifiutati: 2', $firstGet->content());
+        self::assertStringContainsString('Non riusciti: 1', $firstGet->content());
+        self::assertStringNotContainsString('registration-results', $secondGet->content());
+        self::assertStringContainsString(
+            '"event":"event.registration_failed"',
+            (string) file_get_contents($this->logPath)
+        );
     }
 
     private function createSchemaAndActors(): void
@@ -283,6 +334,20 @@ final class EventLifecycleTest extends TestCase
             'white',
             'competitive',
             'FOREIGN-MEMBER',
+            null,
+        ]);
+        $athlete->execute([
+            303,
+            201,
+            'FailureFamily',
+            'FailureGiven',
+            'M',
+            '2012-01-01',
+            40.0,
+            '-40',
+            'white',
+            'competitive',
+            'FAILURE-MEMBER',
             null,
         ]);
     }

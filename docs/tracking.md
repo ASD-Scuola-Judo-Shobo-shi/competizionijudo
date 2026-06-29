@@ -52,8 +52,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C22 | [x] | `ci: gate deployment on quality checks` | R-04, R-08 | `6ee4cc2` | Migration, complete quality, and exact artifact gates precede upload; deploy jobs require successful branch-scoped builds; all actions use verified immutable SHAs; full code checks 111/843; audit not verified |
 | C23 | [!] | `ci: verify deployment health` | R-08 |  | Blocked by D03: no approved health/build-revision contract, rollback owner/procedure, or stale-file retirement policy exists |
 | C24 | [x] | `fix(routes): add authorized event entry details` | A-01, S-05 | `3f8fa0a` | Canonical route and distinct authorized links/translations agree; real-router anonymous/club/admin tests preserve personal-data scoping; full code checks 113/852; audit not verified |
-| C25 | [x] | `chore(routes): remove unsupported public stubs` | A-01, A-08 | This commit | Five export and one public test 404 stubs/claims removed; exact inventory proves every remaining public PHP file has a front-controller, route-wrapper, or redirect role; full code checks 116/874; audit not verified |
-| C26 | [ ] | `fix(events): persist registration feedback across redirects` | F-02, S-08 |  |  |
+| C25 | [x] | `chore(routes): remove unsupported public stubs` | A-01, A-08 | `f50f241` | Five export and one public test 404 stubs/claims removed; exact inventory proves every remaining public PHP file has a front-controller, route-wrapper, or redirect role; full code checks 116/874; audit not verified |
+| C26 | [x] | `fix(events): persist registration feedback across redirects` | F-02, S-08 | This commit | Event-scoped flash survives redirect once and reports added/duplicate/rejected/failed counts; per-item failures are safely logged while partial results remain explicit; full code checks 119/898; audit not verified |
 | C27 | [ ] | `perf(club): precompute athlete registration counts` | P-01, A-03 |  |  |
 | C28 | [ ] | `refactor(view): remove data access from templates` | A-03, A-07 |  |  |
 | C29 | [ ] | `refactor(performance): remove stale file cache and dead profiler` | A-04, P-04 |  |  |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C26 preservation of batch registration results across POST/redirect/GET |
-| Files intentionally in scope | None until C26 begins |
-| Last targeted test | Public endpoint inventory passes (3 tests/22 assertions); production artifact rebuild excludes deleted stubs |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (116 tests/874 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Trace registration batch outcomes, redirect/session handling, and localized feedback rendering for C26 |
+| Objective | Start C27 elimination of the club-area athlete registration-count N+1 query |
+| Files intentionally in scope | None until C27 begins |
+| Last targeted test | Registration feedback/session/repository coverage passes (31 tests/151 assertions), including all four batch outcomes and one-time rendering |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (119 tests/898 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Trace club-area controller/view query flow and add a constant-query-count regression for C27 |
 
 ## Blockers and decisions
 
@@ -123,6 +123,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C23 | Blocked: health URL/build revision, FTP rollback ownership/procedure, and stale-file retirement around `legacy/` are undefined | Repository/workflow/operations documentation inspection only; no implementation guessed | C24; resume C23 when D03 is resolved |
 | 2026-06-29 | C24 | Added the canonical authorized event-entry route, distinct details/entries links and labels, and real-router actor scoping coverage | Focused route/link tests 30/100; exact artifact route manifest/boot pass; full code checks 113/852; dependency audit not verified | C25 |
 | 2026-06-29 | C25 | Removed unsupported export/category-test 404 stubs and claims, then enforced an exact intentional public-PHP inventory | Inventory tests 3/22; production artifact rebuild passes; full code checks 116/874; dependency audit not verified | C26 |
+| 2026-06-29 | C26 | Added event-scoped one-time flash feedback for added, duplicate, rejected, and failed batch registration outcomes with safe per-item failure logs | Focused feedback/session/repository tests 31/151; full code checks 119/898; dependency audit not verified | C27 |
 
 ## Milestones
 

@@ -58,6 +58,20 @@ final class EntryRegistrationRepositoryTest extends TestCase
         self::assertSame(EntryRegistrationResult::AlreadyRegistered, $result);
     }
 
+    public function testSqliteDuplicateConstraintViolationSupportsIntegrationFixtures(): void
+    {
+        $exception = new PDOException('Synthetic duplicate entry.');
+        $exception->errorInfo = ['23000', 19, 'UNIQUE constraint failed: entries.event_id'];
+        $statement = $this->createMock(PDOStatement::class);
+        $statement->method('execute')->willThrowException($exception);
+        $repository = new EntryRegistrationRepository($this->databasePreparing($statement));
+
+        self::assertSame(
+            EntryRegistrationResult::AlreadyRegistered,
+            $repository->register(101, 201, 301, '2026-06-28')
+        );
+    }
+
     public function testBaselineSchemaRetainsTheEntryUniqueConstraint(): void
     {
         $schema = file_get_contents(dirname(__DIR__) . '/migrations/20260619_000000_create_baseline_schema.sql');

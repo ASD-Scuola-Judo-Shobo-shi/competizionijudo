@@ -14,9 +14,12 @@ use App\Model\Entry;
 use App\Model\EntryRegistrationResult;
 use App\Model\Event;
 use App\Model\JudoCategory;
+use Throwable;
 
 final class EventController extends Controller
 {
+    private const REGISTRATION_FEEDBACK_PREFIX = 'event_registration_';
+
     public function index(Request $request): Response
     {
         $limit = max(1, (int) config('app.events_upcoming_limit'));
@@ -82,7 +85,7 @@ final class EventController extends Controller
                 'registered' => [],
                 'nextEvents' => [],
                 'upcomingEvents' => $upcomingEvents,
-                'warning' => null,
+                'registrationFeedback' => null,
             ]);
         }
 
@@ -96,11 +99,9 @@ final class EventController extends Controller
                 'registered' => [],
                 'nextEvents' => [],
                 'upcomingEvents' => $upcomingEvents,
-                'warning' => null,
+                'registrationFeedback' => null,
             ]);
         }
-
-        $warning = null;
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
@@ -108,16 +109,34 @@ final class EventController extends Controller
             if (!is_array($athleteIds)) {
                 $athleteIds = [$athleteIds];
             }
+            $feedback = [
+                'added' => 0,
+                'already_registered' => 0,
+                'rejected' => 0,
+                'failed' => 0,
+            ];
 
             foreach ($athleteIds as $athleteId) {
+                if (!is_numeric($athleteId) || (int) $athleteId <= 0) {
+                    $feedback['rejected']++;
+                    continue;
+                }
+
                 $athleteId = (int) $athleteId;
-                if ($athleteId > 0) {
+                try {
                     $result = Entry::register($id, $clubId, $athleteId, $registrationDate);
-                    if ($result === EntryRegistrationResult::AlreadyRegistered) {
-                        $warning = __('events.already_registered');
-                    }
+                    match ($result) {
+                        EntryRegistrationResult::Registered => $feedback['added']++,
+                        EntryRegistrationResult::AlreadyRegistered => $feedback['already_registered']++,
+                        EntryRegistrationResult::AthleteRejected => $feedback['rejected']++,
+                    };
+                } catch (Throwable $exception) {
+                    $feedback['failed']++;
+                    $this->reportFailure('event.registration_failed', $exception, $request);
                 }
             }
+
+            Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $id, $feedback);
 
             return $this->redirect('/event_register.php?id=' . $id);
         }
@@ -125,6 +144,7 @@ final class EventController extends Controller
         $athletes = Athlete::findByClub($clubId);
         $registered = Entry::findByClubEvent($id, $clubId);
         $nextEvents = Event::nextPublished($id, $limit);
+        $registrationFeedback = $this->registrationFeedback($id);
 
         return $this->view('events/register', [
             'event' => $event,
@@ -132,7 +152,7 @@ final class EventController extends Controller
             'registered' => $registered,
             'nextEvents' => $nextEvents,
             'upcomingEvents' => [],
-            'warning' => $warning,
+            'registrationFeedback' => $registrationFeedback,
         ]);
     }
 
@@ -210,5 +230,21 @@ final class EventController extends Controller
     private function canViewEntries(): bool
     {
         return !empty(Session::get('is_admin')) || Session::has('club_id');
+    }
+
+    /** @return array{added: int, already_registered: int, rejected: int, failed: int}|null */
+    private function registrationFeedback(int $eventId): ?array
+    {
+        $feedback = Session::pullFlash(self::REGISTRATION_FEEDBACK_PREFIX . $eventId);
+        if (!is_array($feedback)) {
+            return null;
+        }
+
+        return [
+            'added' => max(0, (int) ($feedback['added'] ?? 0)),
+            'already_registered' => max(0, (int) ($feedback['already_registered'] ?? 0)),
+            'rejected' => max(0, (int) ($feedback['rejected'] ?? 0)),
+            'failed' => max(0, (int) ($feedback['failed'] ?? 0)),
+        ];
     }
 }
