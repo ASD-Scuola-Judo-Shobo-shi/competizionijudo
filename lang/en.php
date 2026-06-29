@@ -295,7 +295,6 @@ return [
             'close' => 'Close',
             'reopen' => 'Reopen',
             'delete' => 'Delete',
-            'csv' => 'Export CSV',
             'confirm_delete' => 'Confirm delete this event?',
         ],
         'add' => [

@@ -10,7 +10,6 @@ A production-ready, framework-free MVC PHP application for managing judo competi
 - **Event Registration** – Clubs register athletes for events with duplicate detection
 - **Judo Category Calculation** – Automatic age class and weight category determination
 - **Bilingual UI** – Italian (default) and English with locale switching
-- **Exports** – CSV and Excel exports for competitive and youth categories
 - **Admin Dashboard** – Manage clubs, events, and view entries with pagination
 
 ## Requirements

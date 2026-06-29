@@ -51,8 +51,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C21 | [x] | `fix(deploy): stage the repository root htaccess` | R-06 | `1dc0614` | Tracked root `.htaccess` stages byte-for-byte with SHA-256 verification; hidden artifacts are retained; missing/empty content stops build and production upload; full code checks 108/809; audit not verified |
 | C22 | [x] | `ci: gate deployment on quality checks` | R-04, R-08 | `6ee4cc2` | Migration, complete quality, and exact artifact gates precede upload; deploy jobs require successful branch-scoped builds; all actions use verified immutable SHAs; full code checks 111/843; audit not verified |
 | C23 | [!] | `ci: verify deployment health` | R-08 |  | Blocked by D03: no approved health/build-revision contract, rollback owner/procedure, or stale-file retirement policy exists |
-| C24 | [x] | `fix(routes): add authorized event entry details` | A-01, S-05 | This commit | Canonical route and distinct authorized links/translations agree; real-router anonymous/club/admin tests preserve personal-data scoping; full code checks 113/852; audit not verified |
-| C25 | [ ] | `chore(routes): remove unsupported public stubs` | A-01, A-08 |  | Export reimplementation is a separate product decision |
+| C24 | [x] | `fix(routes): add authorized event entry details` | A-01, S-05 | `3f8fa0a` | Canonical route and distinct authorized links/translations agree; real-router anonymous/club/admin tests preserve personal-data scoping; full code checks 113/852; audit not verified |
+| C25 | [x] | `chore(routes): remove unsupported public stubs` | A-01, A-08 | This commit | Five export and one public test 404 stubs/claims removed; exact inventory proves every remaining public PHP file has a front-controller, route-wrapper, or redirect role; full code checks 116/874; audit not verified |
 | C26 | [ ] | `fix(events): persist registration feedback across redirects` | F-02, S-08 |  |  |
 | C27 | [ ] | `perf(club): precompute athlete registration counts` | P-01, A-03 |  |  |
 | C28 | [ ] | `refactor(view): remove data access from templates` | A-03, A-07 |  |  |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C25 removal of unsupported public export, test, and compatibility stubs |
-| Files intentionally in scope | None until C25 begins |
-| Last targeted test | Canonical route/link and authorization coverage passes (30 tests/100 assertions); exact artifact route manifest/boot passes |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (113 tests/852 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Inventory unsupported public scripts, inbound links, and published feature claims before deleting C25 stubs |
+| Objective | Start C26 preservation of batch registration results across POST/redirect/GET |
+| Files intentionally in scope | None until C26 begins |
+| Last targeted test | Public endpoint inventory passes (3 tests/22 assertions); production artifact rebuild excludes deleted stubs |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (116 tests/874 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Trace registration batch outcomes, redirect/session handling, and localized feedback rendering for C26 |
 
 ## Blockers and decisions
 
@@ -122,6 +122,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C22 | Gated deployment artifacts on migration, full quality, and production boot checks; pinned every workflow action to a verified commit SHA | Workflow tests 3/34; MySQL 8.4 migration and exact artifact gates pass; full code checks 111/843; dependency audit not verified | C23 pending D03 review |
 | 2026-06-29 | C23 | Blocked: health URL/build revision, FTP rollback ownership/procedure, and stale-file retirement around `legacy/` are undefined | Repository/workflow/operations documentation inspection only; no implementation guessed | C24; resume C23 when D03 is resolved |
 | 2026-06-29 | C24 | Added the canonical authorized event-entry route, distinct details/entries links and labels, and real-router actor scoping coverage | Focused route/link tests 30/100; exact artifact route manifest/boot pass; full code checks 113/852; dependency audit not verified | C25 |
+| 2026-06-29 | C25 | Removed unsupported export/category-test 404 stubs and claims, then enforced an exact intentional public-PHP inventory | Inventory tests 3/22; production artifact rebuild passes; full code checks 116/874; dependency audit not verified | C26 |
 
 ## Milestones
 
