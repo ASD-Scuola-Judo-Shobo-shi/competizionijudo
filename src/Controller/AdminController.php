@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Core\Controller;
+use App\Core\Logger;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
@@ -31,9 +32,10 @@ final class AdminController extends Controller
         View $view,
         Request $request,
         ?AuthenticationThrottle $authenticationThrottle = null,
-        ?PasswordResetRepository $passwordResetRepository = null
+        ?PasswordResetRepository $passwordResetRepository = null,
+        ?Logger $logger = null
     ) {
-        parent::__construct($view, $request);
+        parent::__construct($view, $request, $logger);
         $this->authenticationThrottle = $authenticationThrottle;
         $this->passwordResetRepository = $passwordResetRepository;
     }
@@ -317,7 +319,8 @@ final class AdminController extends Controller
                     }
 
                     return $this->redirect('/admin_manage_events.php');
-                } catch (\Throwable) {
+                } catch (\Throwable $exception) {
+                    $this->reportFailure('admin.event_save_failed', $exception, $request);
                     $error = __('errors.save_failed');
                 }
             }
@@ -435,6 +438,7 @@ final class AdminController extends Controller
                     return $this->redirect('/admin_manage_clubs.php');
                 }
             } catch (\Throwable $exception) {
+                $this->reportFailure('admin.club_save_failed', $exception, $request);
                 $error = $exception instanceof PDOException && (string) $exception->getCode() === '23000'
                     ? __('errors.account_conflict')
                     : __('errors.save_failed');

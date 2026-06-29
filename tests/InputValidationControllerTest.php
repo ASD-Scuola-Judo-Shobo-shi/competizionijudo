@@ -7,6 +7,7 @@ namespace Tests;
 use App\Controller\AdminController;
 use App\Controller\ClubAreaController;
 use App\Controller\ClubController;
+use App\Core\Logger;
 use App\Core\Request;
 use App\Core\Session;
 use App\Core\View;
@@ -206,7 +207,8 @@ final class InputValidationControllerTest extends TestCase
             $request,
             new FakePasswordResetTokenIssuer(null),
             new FakeAuthenticationThrottle(),
-            new FakePasswordResetRepository()
+            new FakePasswordResetRepository(),
+            $this->createStub(Logger::class)
         );
     }
 

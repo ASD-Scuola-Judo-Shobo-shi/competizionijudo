@@ -58,7 +58,7 @@ return [
                 'password_required' => 'Inserire una password.',
                 'password_mismatch' => 'Le password non coincidono.',
                 'club_exists' => 'Questa società è già registrata.',
-                'registration_failed' => 'Errore registrazione: {message}',
+                'registration_failed' => 'Impossibile completare la registrazione. Riprovare.',
             ],
         ],
         'login' => [
@@ -72,7 +72,7 @@ return [
             'errors' => [
                 'credentials_required' => 'Inserire email e password.',
                 'invalid_credentials' => 'Email o password non corrette.',
-                'login_failed' => 'Errore accesso: {message}',
+                'login_failed' => 'Impossibile completare l\'accesso. Riprovare.',
             ],
         ],
         'forgot_password' => [
@@ -86,7 +86,7 @@ return [
             'errors' => [
                 'email_required' => 'Inserire l\'email.',
                 'valid_email_required' => 'Inserire una email valida.',
-                'request_failed' => 'Errore nella richiesta: {message}',
+                'request_failed' => 'Impossibile completare la richiesta. Riprovare.',
             ],
         ],
         'reset_password' => [
@@ -100,7 +100,7 @@ return [
                 'invalid_token' => 'Link di reset non valido o scaduto.',
                 'password_required' => 'Inserire la password.',
                 'password_mismatch' => 'Le password non coincidono.',
-                'reset_failed' => 'Errore nel reset della password: {message}',
+                'reset_failed' => 'Impossibile reimpostare la password. Riprovare.',
             ],
         ],
         'list' => 'Elenco club',
@@ -154,6 +154,8 @@ return [
     'errors' => [
         'page_not_found' => 'Pagina non trovata',
         'server_error' => 'Errore del server',
+        'unexpected_failure' => 'Si è verificato un errore. Riprovare più tardi.',
+        'reference' => 'Riferimento: {id}',
         'invalid_csrf' => 'Il modulo è scaduto o non è valido. Ricaricare la pagina e riprovare.',
         'password_too_short' => 'La password deve contenere almeno {minimum} caratteri.',
         'account_conflict' => 'Email o codice federale già utilizzato.',

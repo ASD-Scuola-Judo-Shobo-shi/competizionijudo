@@ -6,6 +6,8 @@ namespace App\Core;
 
 final class Request
 {
+    private readonly string $correlationId;
+
     /**
      * @param array<string, mixed> $query
      * @param array<string, mixed> $post
@@ -16,8 +18,13 @@ final class Request
         private readonly string $uri,
         private readonly array $query = [],
         private readonly array $post = [],
-        private readonly array $server = []
+        private readonly array $server = [],
+        ?string $correlationId = null
     ) {
+        $this->correlationId = is_string($correlationId)
+            && preg_match('/\A[a-f0-9]{16,64}\z/i', $correlationId) === 1
+                ? strtolower($correlationId)
+                : bin2hex(random_bytes(16));
     }
 
     public static function fromGlobals(): self
@@ -41,6 +48,11 @@ final class Request
         $path = parse_url($this->uri, PHP_URL_PATH) ?: '/';
 
         return '/' . trim($path, '/');
+    }
+
+    public function correlationId(): string
+    {
+        return $this->correlationId;
     }
 
     public function input(string $key, mixed $default = null): mixed

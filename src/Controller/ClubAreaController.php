@@ -88,7 +88,8 @@ final class ClubAreaController extends Controller
                         } else {
                             Athlete::add($data);
                         }
-                    } catch (\Throwable) {
+                    } catch (\Throwable $exception) {
+                        $this->reportFailure('club.athlete_save_failed', $exception, $request);
                         $errors[] = __('errors.save_failed');
                     }
 

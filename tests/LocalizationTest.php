@@ -37,8 +37,8 @@ final class LocalizationTest extends TestCase
 
     public function testTransWithReplacements(): void
     {
-        $result = Localization::trans('club.register.errors.registration_failed', ['message' => 'DB error']);
-        self::assertStringContainsString('DB error', $result);
+        $result = Localization::trans('errors.password_too_short', ['minimum' => '12']);
+        self::assertStringContainsString('12', $result);
     }
 
     public function testTransReturnsEnglishWhenLocaleSet(): void

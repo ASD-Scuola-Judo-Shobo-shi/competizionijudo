@@ -58,7 +58,7 @@ return [
                 'password_required' => 'Please enter a password.',
                 'password_mismatch' => 'Passwords do not match.',
                 'club_exists' => 'This club is already registered.',
-                'registration_failed' => 'Registration error: {message}',
+                'registration_failed' => 'Unable to complete registration. Please try again.',
             ],
         ],
         'login' => [
@@ -72,7 +72,7 @@ return [
             'errors' => [
                 'credentials_required' => 'Please enter email and password.',
                 'invalid_credentials' => 'Email or password is incorrect.',
-                'login_failed' => 'Login error: {message}',
+                'login_failed' => 'Unable to complete login. Please try again.',
             ],
         ],
         'forgot_password' => [
@@ -86,7 +86,7 @@ return [
             'errors' => [
                 'email_required' => 'Please enter your email.',
                 'valid_email_required' => 'Please enter a valid email address.',
-                'request_failed' => 'Request failed: {message}',
+                'request_failed' => 'Unable to complete the request. Please try again.',
             ],
         ],
         'reset_password' => [
@@ -100,7 +100,7 @@ return [
                 'invalid_token' => 'Reset link is invalid or expired.',
                 'password_required' => 'Please enter a password.',
                 'password_mismatch' => 'Passwords do not match.',
-                'reset_failed' => 'Password reset failed: {message}',
+                'reset_failed' => 'Unable to reset the password. Please try again.',
             ],
         ],
         'list' => 'Clubs list',
@@ -154,6 +154,8 @@ return [
     'errors' => [
         'page_not_found' => 'Page not found',
         'server_error' => 'Server error',
+        'unexpected_failure' => 'Something went wrong. Please try again later.',
+        'reference' => 'Reference: {id}',
         'invalid_csrf' => 'The form expired or is invalid. Please reload the page and try again.',
         'password_too_short' => 'The password must contain at least {minimum} characters.',
         'account_conflict' => 'The email address or federal code is already in use.',

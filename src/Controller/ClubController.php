@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Core\Controller;
+use App\Core\Logger;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
@@ -32,9 +33,10 @@ final class ClubController extends Controller
         Request $request,
         ?PasswordResetTokenIssuer $passwordResetTokens = null,
         ?AuthenticationThrottle $authenticationThrottle = null,
-        ?PasswordResetRepository $passwordResetRepository = null
+        ?PasswordResetRepository $passwordResetRepository = null,
+        ?Logger $logger = null
     ) {
-        parent::__construct($view, $request);
+        parent::__construct($view, $request, $logger);
         $this->passwordResetTokens = $passwordResetTokens ?? new DatabasePasswordResetTokenIssuer();
         $this->authenticationThrottle = $authenticationThrottle;
         $this->passwordResetRepository = $passwordResetRepository;
@@ -89,6 +91,7 @@ final class ClubController extends Controller
                         $success = __('club.register.success_message');
                     }
                 } catch (\Throwable $exception) {
+                    $this->reportFailure('club.registration_failed', $exception, $request);
                     $errors[] = $exception instanceof PDOException && (string) $exception->getCode() === '23000'
                         ? __('errors.account_conflict')
                         : __('errors.save_failed');
@@ -135,7 +138,8 @@ final class ClubController extends Controller
                         }
                     }
                 } catch (\Throwable $exception) {
-                    $errors[] = str_replace('{message}', $exception->getMessage(), __('club.login.errors.login_failed'));
+                    $this->reportFailure('club.login_failed', $exception, $request);
+                    $errors[] = __('club.login.errors.login_failed');
                 }
             }
         }
@@ -200,7 +204,8 @@ final class ClubController extends Controller
                         }
                     }
                 } catch (\Throwable $exception) {
-                    $errors[] = str_replace('{message}', $exception->getMessage(), __('club.forgot_password.errors.request_failed'));
+                    $this->reportFailure('club.password_reset_request_failed', $exception, $request);
+                    $errors[] = __('club.forgot_password.errors.request_failed');
                 }
             }
         }
@@ -275,7 +280,8 @@ final class ClubController extends Controller
                         $valid = false;
                         $errors[] = __('club.reset_password.errors.invalid_token');
                     } catch (\Throwable $exception) {
-                        $errors[] = str_replace('{message}', $exception->getMessage(), __('club.reset_password.errors.reset_failed'));
+                        $this->reportFailure('club.password_reset_failed', $exception, $request);
+                        $errors[] = __('club.reset_password.errors.reset_failed');
                     }
                 }
             }

@@ -10,11 +10,13 @@ final class Application
 {
     private Router $router;
     private View $view;
+    private Logger $logger;
 
-    public function __construct(private readonly string $basePath)
+    public function __construct(private readonly string $basePath, ?Logger $logger = null)
     {
         $this->view = new View($basePath . '/views');
         $this->router = new Router($this->view, Request::fromGlobals());
+        $this->logger = $logger ?? FileLogger::application();
     }
 
     public function router(): Router
@@ -27,6 +29,12 @@ final class Application
         try {
             return $this->router->dispatch($request);
         } catch (HttpException $exception) {
+            if ($exception->statusCode() >= 500) {
+                $this->logFailure('application.http_failure', $exception, $request);
+
+                return $this->serverError($request);
+            }
+
             return new Response(
                 $this->view->render('errors/' . $exception->statusCode(), [
                     'title' => $exception->getMessage(),
@@ -35,22 +43,35 @@ final class Application
                 $exception->statusCode()
             );
         } catch (Throwable $exception) {
-            if (config('app.debug', false)) {
-                return new Response('<pre>' . e((string) $exception) . '</pre>', 500);
-            }
+            $this->logFailure('application.unhandled_failure', $exception, $request);
 
-            return new Response(
-                $this->view->render('errors/500', [
-                    'title' => 'Server error',
-                    'message' => 'Something went wrong.',
-                ]),
-                500
-            );
+            return $this->serverError($request);
         }
     }
 
     public function basePath(): string
     {
         return $this->basePath;
+    }
+
+    private function logFailure(string $event, Throwable $exception, Request $request): void
+    {
+        $this->logger->error($event, $exception, $request->correlationId(), [
+            'method' => $request->method(),
+            'path' => $request->path(),
+            'status' => 500,
+        ]);
+    }
+
+    private function serverError(Request $request): Response
+    {
+        return new Response(
+            $this->view->render('errors/500', [
+                'title' => __('errors.server_error'),
+                'message' => __('errors.unexpected_failure'),
+                'reference' => __('errors.reference', ['id' => $request->correlationId()]),
+            ], 'layouts/error'),
+            500
+        );
     }
 }

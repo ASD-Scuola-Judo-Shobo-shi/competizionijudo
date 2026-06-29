@@ -40,8 +40,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C10 | [x] | `feat(security): persist authentication throttles` | S-04 | `846ff83` | Focused throttle/migration tests: 15/59; MySQL 8.4 clean and pre-C10 upgrade/repeat checks pass with legacy-compatible SQL mode; full code checks pass with 68 tests/560 assertions; dependency audit not verified |
 | C11 | [x] | `fix(auth): consume reset tokens atomically` | S-06, S-08 | `fe972bb` | Focused reset/policy tests: 17/99; locking, conditional claim, reuse/expiry/race-loss, rollback, and all-token invalidation covered; full code checks pass with 80 tests/633 assertions; dependency audit not verified |
 | C12 | [x] | `fix(validation): enforce account and event invariants` | S-06 | `8fe0bc5` | Focused validation/no-write tests: 10/58; MySQL 8.4 legacy-compatible clean/upgrade/repeat, duplicate preflight, normalization, and unique rejection pass; full code checks pass with 90 tests/691 assertions; dependency audit not verified |
-| C13 | [x] | `fix(events): enforce publication and registration lifecycle` | S-05, F-01 | This commit | Focused lifecycle/access tests: 14/98; MySQL 8.4 boundary checks pass and scoped entry lookup uses the unique index; full code checks pass with 99 tests/747 assertions; dependency audit not verified |
-| C14 | [ ] | `fix(observability): log failures without exposing internals` | S-07 |  |  |
+| C13 | [x] | `fix(events): enforce publication and registration lifecycle` | S-05, F-01 | `dbc7dc7` | Focused lifecycle/access tests: 14/98; MySQL 8.4 boundary checks pass and scoped entry lookup uses the unique index; full code checks pass with 99 tests/747 assertions; dependency audit not verified |
+| C14 | [x] | `fix(observability): log failures without exposing internals` | S-07 | This commit | Focused logging/redaction tests: 20/111; full code checks pass with 102 tests/785 assertions; dependency audit not verified |
 | C15 | [ ] | `fix(database): add athlete weight category column` | R-02 |  |  |
 | C16 | [ ] | `test(database): verify clean and legacy migrations` | R-02, A-05, Q-03 |  | Requires MySQL in CI/local test environment |
 | C17 | [ ] | `fix(database): fail closed on migration errors` | A-05 |  | Depends on C16 |
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C14 safe error logging without exposing internal failure details |
-| Files intentionally in scope | None until C14 begins |
-| Last targeted test | C13 lifecycle/access coverage: 14 tests/98 assertions; MySQL 8.4 lifecycle writes pass and `EXPLAIN` uses primary/unique indexes |
-| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (99 tests/747 assertions); dependency audit not verified because Packagist DNS was unavailable |
-| Next action | Read C14 acceptance criteria and trace exception handling, user-facing errors, and logging configuration |
+| Objective | Start C15 forward migration for the missing athlete weight-category column |
+| Files intentionally in scope | None until C15 begins |
+| Last targeted test | C14 error logging, generic UI, context redaction, validation, localization, and CSRF tests: 20 tests/111 assertions |
+| Last full check | Metadata, syntax, PHPCS, PHPStan, and PHPUnit pass (102 tests/785 assertions); dependency audit not verified because Packagist DNS was unavailable |
+| Next action | Read C15 acceptance criteria and inspect clean/upgrade athlete schema paths |
 
 ## Blockers and decisions
 
@@ -86,6 +86,7 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | D05 | C32 | Product/data owner | Open | Decide whether closed/past entry data is snapshotted or reflects later athlete edits |
 | D06 | C34 | Privacy owner | Open | Define upload and athlete-data retention policy |
 | D07 | C16, C17 | Code | Open | MySQL 8.4 default strict mode rejects zero-date comparisons in the historical legacy-copy migration; C10 schema checks used a legacy-compatible session mode, and the schema-aware migration work must remove that requirement without rewriting history |
+| D08 | C14 | User/worktree | Resolved | The concurrent `phpcs.xml` conflict was resolved outside the C14 diff on 2026-06-29 |
 
 Open decisions do not block earlier independent commits. Do not guess when a decision changes user-visible behavior, data retention, credentials, or external delivery.
 
@@ -109,6 +110,8 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-28 | C11 | Added transactional one-time reset consumption, invalidated all reset tokens on password changes, and enforced a shared 12-character minimum | Focused tests 17/99; randomized/full suite 80/633; metadata, syntax, PHPCS, and PHPStan pass; dependency audit not verified | C12 |
 | 2026-06-28 | C12 | Added explicit club/athlete/event/upload validation, safe mutation errors, normalized email writes, and preflighted unique normalized-email enforcement | Focused tests 10/58; MySQL legacy-compatible clean/upgrade/repeat and duplicate checks pass; full code checks 90/691; dependency audit not verified | C13 |
 | 2026-06-28 | C13 | Enforced published public lookup, event-date/deadline lifecycle at read and atomic write boundaries, and session-club entry scoping | Focused tests 14/98; MySQL 8.4 boundary checks and `EXPLAIN` pass; full code checks 99/747; dependency audit not verified | C14 |
+| 2026-06-28 | C14 | Implemented correlated redacting JSON logs and generic localized controller/application failures; blocked before commit by concurrent `phpcs.xml` conflict | Focused tests 20/111; isolated metadata/syntax/PHPCS/PHPStan and full PHPUnit 102/785 pass; required `composer check` blocked before audit | Resolve D08, then finish C14 |
+| 2026-06-29 | C14 | Completed request-correlated redacting file logs and generic localized controller/application failure handling after D08 resolution | Focused tests 20/111; full code checks 102/785; dependency audit not verified | C15 |
 
 ## Milestones
 
