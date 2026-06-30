@@ -19,6 +19,7 @@ final class AdvertisedRoutesTest extends TestCase
             '/event_details.php' => 'get',
             '/event_entries.php' => 'get',
             '/privacy' => 'get',
+            '/health' => 'get',
             '/language/switch' => 'get',
             '/club_register.php' => 'get',
             '/club_login.php' => 'get',

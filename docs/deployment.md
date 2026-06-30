@@ -96,6 +96,39 @@ requests and breaches, confirm club authority for athletes and minors, sign the
 required processor agreements, and verify that transfers match
 `PRIVACY_DATA_TRANSFER_DETAILS`. The public notice is at `/privacy`.
 
+## Post-deployment health and rollback
+
+Every artifact contains a `REVISION` file generated from the complete Git commit
+SHA. `GET /health` performs a database `SELECT 1` and returns only `status` and
+that revision as non-cacheable JSON. Both production and development jobs call
+the endpoint after FTPS upload and fail unless HTTP 200 reports the exact SHA
+that was built. Override `PRODUCTION_HEALTH_URL` or `DEVELOPMENT_HEALTH_URL`
+only when the canonical host differs from the workflow defaults.
+
+The FTP action uses a separate state file in each environment. Normal sync
+removes code files that were present in the preceding artifact but are absent
+from the new one. `dangerous-clean-slate` remains disabled: server-owned `.env`,
+runtime uploads/logs that never enter the artifact state, and the independent
+`legacy/` directory are preserved. Do not delete either deployment state file
+manually, because doing so disables reliable stale-code retirement.
+
+Repository administrators own rollback execution. Record the last healthy SHA
+after each deployment. If health verification fails:
+
+1. Do not rerun the failed SHA and do not reverse database migrations.
+2. In GitHub Actions, run the **Deploy** workflow from the affected branch and
+   enter the last healthy complete SHA as `deployment_ref`.
+3. Confirm the rollback run passes build gates and `/health` reports that SHA.
+4. Inspect `var/log/application.log` and the failed workflow before attempting a
+   corrected release.
+
+Before the first release containing this health contract, download the current
+application directory and root `.htaccess` through FTPS/File Manager. That
+snapshot is the fallback for a pre-health revision, which cannot satisfy the new
+SHA check. If the optional Aruba hosting/database backup services are active,
+their control-panel restore is an additional fallback, not a substitute for the
+known-good application snapshot. A code rollback does not roll back MySQL data.
+
 The operational baseline should be reviewed against the official
 [GDPR text](https://eur-lex.europa.eu/eli/reg/2016/679/2016-05-04/eng), the
 [EDPB privacy-by-design guidance](https://www.edpb.europa.eu/topics/ai-and-technology/privacy-by-design-and-by-default_en),

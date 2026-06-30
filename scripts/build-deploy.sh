@@ -38,6 +38,16 @@ rsync -a --no-owner --no-group \
   --exclude="*" \
   "${ROOT_DIR}/" "${BUILD_DIR}/"
 
+BUILD_REVISION="${BUILD_REVISION:-}"
+if [[ -z "$BUILD_REVISION" ]]; then
+  BUILD_REVISION="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+fi
+if [[ ! "$BUILD_REVISION" =~ ^[a-fA-F0-9]{40}$ ]]; then
+  echo "BUILD_REVISION must be a complete Git commit SHA." >&2
+  exit 1
+fi
+printf '%s\n' "${BUILD_REVISION,,}" > "${BUILD_DIR}/REVISION"
+
 COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-${ROOT_DIR}/.cache/composer}" \
   composer install \
     --working-dir="${BUILD_DIR}" \

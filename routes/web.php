@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Controller\ClubAreaController;
 use App\Controller\ClubController;
 use App\Controller\HomeController;
+use App\Controller\HealthController;
 use App\Controller\EventController;
 use App\Core\Request;
 use App\Core\Response;
@@ -15,6 +16,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/index.php', [HomeController::class, 'index']);
     $router->get('/about', [HomeController::class, 'about']);
     $router->get('/privacy', [HomeController::class, 'privacy']);
+    $router->get('/health', [HealthController::class, 'show']);
 
     $router->get('/club_register.php', [ClubController::class, 'register']);
     $router->post('/club_register.php', [ClubController::class, 'register']);

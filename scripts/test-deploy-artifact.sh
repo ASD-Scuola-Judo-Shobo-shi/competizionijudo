@@ -23,6 +23,7 @@ for route in \
   /index.php \
   /about \
   /privacy \
+  /health \
   /club_register.php \
   /club_login.php \
   /club_forgot_password.php \

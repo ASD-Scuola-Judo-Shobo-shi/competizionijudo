@@ -9,6 +9,7 @@ fi
 
 for path in \
   .htaccess \
+  REVISION \
   composer.json \
   composer.lock \
   config/app.php \
@@ -30,6 +31,12 @@ for path in \
     exit 1
   fi
 done
+
+revision="$(tr -d '\r\n' < "$ARTIFACT_DIR/REVISION")"
+if [[ ! "$revision" =~ ^[a-f0-9]{40}$ ]]; then
+  echo "Artifact REVISION is not a complete lowercase Git commit SHA." >&2
+  exit 1
+fi
 
 for path in \
   .env \

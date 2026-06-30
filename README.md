@@ -11,6 +11,7 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 | --- | --- | --- |
 | Home, public events, event details and entries | `/`, `/events.php`, `/event_details.php`, `/event_entries.php` | Public |
 | Privacy notice and language switch | `/privacy`, `/language/switch` | Public |
+| Deployment health and build revision | `/health` | Public, minimal JSON |
 | Club registration and login | `/club_register.php`, `/club_login.php` | Public |
 | Password recovery by email | `/club_forgot_password.php`, `/club_reset_password.php` | Public |
 | Club athlete archive and event registration | `/club_area.php`, `/event_register.php` | Authenticated club |

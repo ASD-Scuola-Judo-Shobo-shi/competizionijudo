@@ -6,6 +6,11 @@ on:
       - main
       - dev
   workflow_dispatch:
+    inputs:
+      deployment_ref:
+        description: Full Git SHA to deploy or roll back to; blank uses the selected branch HEAD
+        required: false
+        type: string
 
 concurrency:
   group: deploy-${{ github.ref_name }}
@@ -15,6 +20,8 @@ jobs:
   build:
     name: Build artifact
     runs-on: ubuntu-latest
+    outputs:
+      revision: ${{ steps.revision.outputs.sha }}
 
     services:
       mysql:
@@ -39,7 +46,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          ref: ${{ inputs.deployment_ref || github.sha }}
           fetch-depth: 0
+
+      - name: Resolve deployment revision
+        id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
@@ -71,6 +83,8 @@ jobs:
         run: php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70
 
       - name: Build deploy directory
+        env:
+          BUILD_REVISION: ${{ steps.revision.outputs.sha }}
         run: bash scripts/build-deploy.sh
 
       - name: Boot deploy artifact
@@ -107,6 +121,11 @@ jobs:
       url: https://www.competizionijudo.it
 
     steps:
+      - name: Checkout deployment verifier
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.build.outputs.revision }}
+
       - name: Download application artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -138,9 +157,11 @@ jobs:
           port: ${{ vars.FTP_PORT || 21 }}
           local-dir: build/deploy/
           server-dir: ${{ vars.FTP_PROD_DIR || 'prod/' }}
+          state-name: .deploy-state-production.json
           dangerous-clean-slate: false
           exclude: |
             **/.git*
+            **/.git*/**
             **/.env
             legacy/**
 
@@ -157,6 +178,12 @@ jobs:
           server-dir: ./
           dangerous-clean-slate: false
 
+      - name: Verify production health and revision
+        run: >-
+          bash scripts/check-deployment-health.sh
+          "${{ vars.PRODUCTION_HEALTH_URL || 'https://www.competizionijudo.it/health' }}"
+          "${{ needs.build.outputs.revision }}"
+
   deploy-development:
     name: Deploy development
     needs: build
@@ -167,6 +194,11 @@ jobs:
       url: https://dev.competizionijudo.it
 
     steps:
+      - name: Checkout deployment verifier
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.build.outputs.revision }}
+
       - name: Download application artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -183,8 +215,16 @@ jobs:
           port: ${{ vars.FTP_PORT || 21 }}
           local-dir: build/deploy/
           server-dir: ${{ vars.FTP_DEV_DIR || 'dev/' }}
+          state-name: .deploy-state-development.json
           dangerous-clean-slate: false
           exclude: |
             **/.git*
+            **/.git*/**
             **/.env
             legacy/**
+
+      - name: Verify development health and revision
+        run: >-
+          bash scripts/check-deployment-health.sh
+          "${{ vars.DEVELOPMENT_HEALTH_URL || 'https://dev.competizionijudo.it/health' }}"
+          "${{ needs.build.outputs.revision }}"

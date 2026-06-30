@@ -56,6 +56,31 @@ final class DeploymentWorkflowTest extends TestCase
         }
     }
 
+    public function testDeploymentsEmbedAndVerifyTheExactSelectedRevision(): void
+    {
+        $workflow = $this->workflow('deploy.yml');
+
+        self::assertStringContainsString('deployment_ref:', $workflow);
+        self::assertStringContainsString('ref: ${{ inputs.deployment_ref || github.sha }}', $workflow);
+        self::assertStringContainsString('BUILD_REVISION: ${{ steps.revision.outputs.sha }}', $workflow);
+        self::assertSame(2, substr_count($workflow, 'bash scripts/check-deployment-health.sh'));
+        self::assertSame(4, substr_count($workflow, '${{ needs.build.outputs.revision }}'));
+        self::assertStringContainsString('https://www.competizionijudo.it/health', $workflow);
+        self::assertStringContainsString('https://dev.competizionijudo.it/health', $workflow);
+    }
+
+    public function testStatefulStaleFileRetirementPreservesServerOwnedPaths(): void
+    {
+        $workflow = $this->workflow('deploy.yml');
+
+        self::assertStringContainsString('state-name: .deploy-state-production.json', $workflow);
+        self::assertStringContainsString('state-name: .deploy-state-development.json', $workflow);
+        self::assertSame(3, substr_count($workflow, 'dangerous-clean-slate: false'));
+        self::assertStringNotContainsString('dangerous-clean-slate: true', $workflow);
+        self::assertSame(2, substr_count($workflow, '**/.env'));
+        self::assertSame(2, substr_count($workflow, 'legacy/**'));
+    }
+
     private function workflow(string $name): string
     {
         $contents = file_get_contents(dirname(__DIR__) . '/.github/workflows/' . $name);
