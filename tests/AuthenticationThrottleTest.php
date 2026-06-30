@@ -66,13 +66,16 @@ final class AuthenticationThrottleTest extends TestCase
     public function testMigrationStoresOnlyHashedThrottleKeysAndSupportsExpiryCleanup(): void
     {
         $migration = file_get_contents(
-            dirname(__DIR__) . '/migrations/20260628_000001_create_authentication_throttles.sql'
+            dirname(__DIR__) . '/migrations/20260630_000000_create_schema.sql'
         );
 
         self::assertIsString($migration);
-        self::assertStringContainsString('CREATE TABLE IF NOT EXISTS authentication_throttles', $migration);
+        self::assertStringContainsString('CREATE TABLE authentication_throttles', $migration);
         self::assertStringContainsString('throttle_key CHAR(64)', $migration);
         self::assertStringContainsString('idx_authentication_throttles_updated_at', $migration);
-        self::assertDoesNotMatchRegularExpression('/\b(email|ip|remote_addr)\b/i', $migration);
+        self::assertDoesNotMatchRegularExpression(
+            '/CREATE TABLE authentication_throttles \([^;]*\b(email|ip|remote_addr)\b/is',
+            $migration
+        );
     }
 }

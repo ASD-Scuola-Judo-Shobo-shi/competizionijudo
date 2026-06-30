@@ -75,7 +75,7 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      - name: Run clean and legacy migration smoke tests
+      - name: Run migration smoke tests
         run: composer test:migrations
 
       - name: Run quality suite

@@ -138,17 +138,14 @@ final class InputValidatorTest extends TestCase
         }
     }
 
-    public function testMigrationPreflightsHashedEmailsBeforeAddingUniqueNormalizedIndex(): void
+    public function testBaselineCreatesTheNormalizedEmailConstraint(): void
     {
         $migration = file_get_contents(
-            dirname(__DIR__) . '/migrations/20260628_000002_add_normalized_club_email_unique_index.sql'
+            dirname(__DIR__) . '/migrations/20260630_000000_create_schema.sql'
         );
 
         self::assertIsString($migration);
-        self::assertStringContainsString('SHA2(LOWER(TRIM(email)), 256)', $migration);
-        self::assertStringContainsString('UPDATE clubs SET email = LOWER(TRIM(email))', $migration);
         self::assertStringContainsString('GENERATED ALWAYS AS (LOWER(TRIM(email))) STORED', $migration);
-        self::assertStringContainsString('UNIQUE INDEX uniq_clubs_normalized_email', $migration);
-        self::assertStringNotContainsString('SELECT LOWER(TRIM(email)) FROM clubs', $migration);
+        self::assertStringContainsString('UNIQUE KEY uniq_clubs_normalized_email', $migration);
     }
 }

@@ -74,7 +74,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
 
     public function testBaselineSchemaRetainsTheEntryUniqueConstraint(): void
     {
-        $schema = file_get_contents(dirname(__DIR__) . '/migrations/20260619_000000_create_baseline_schema.sql');
+        $schema = file_get_contents(dirname(__DIR__) . '/migrations/20260630_000000_create_schema.sql');
 
         self::assertIsString($schema);
         self::assertStringContainsString(

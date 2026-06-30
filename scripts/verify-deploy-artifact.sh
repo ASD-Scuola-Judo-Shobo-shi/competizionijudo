@@ -16,7 +16,7 @@ for path in \
   config/privacy.php \
   lang/en.php \
   lang/it.php \
-  migrations/20260629_000001_add_athlete_weight_category.sql \
+  migrations/20260630_000000_create_schema.sql \
   public/index.php \
   public/uploads/events/.htaccess \
   routes/web.php \

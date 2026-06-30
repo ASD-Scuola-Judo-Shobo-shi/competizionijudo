@@ -39,7 +39,9 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 
 Local/development startup applies forward migrations automatically. Production
 operators must run `composer migrate` explicitly before directing traffic to a
-new release. Never edit an already-deployed migration.
+new release. The consolidated baseline supports empty databases and databases
+that recorded the complete pre-squash migration chain; an incomplete historical
+chain fails closed and requires operator review.
 
 ## Architecture
 

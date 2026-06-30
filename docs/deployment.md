@@ -28,6 +28,12 @@ hosting operator must:
 5. Run `php scripts/run-migrations.php` from the deployed application directory,
    then perform the documented deployment smoke check before enabling traffic.
 
+The consolidated schema baseline can initialize an empty database or adopt a
+database that has recorded every pre-squash migration. It deliberately rejects
+existing application tables without that complete history, as well as partial
+pre-squash histories. Back up the database and investigate its migration records
+instead of bypassing this guard.
+
 The deployment workflow does not create or update `.env`. Rotating credentials
 is therefore a server-side operation and does not require rebuilding the
 artifact. Operations must assign the named owner and secure provisioning channel

@@ -8,6 +8,19 @@ use App\Model\MigrationRunner;
 require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/src/helpers.php';
 
+const PRE_SQUASH_MIGRATIONS = [
+    '20260619_000000_create_baseline_schema.sql',
+    '20260619_000001_copy_italian_columns_to_english.sql',
+    '20260620_000001_create_password_reset_tokens.sql',
+    '20260622_000001_make_location_required.sql',
+    '20260623_000001_add_performance_indexes.sql',
+    '20260628_000001_create_authentication_throttles.sql',
+    '20260628_000002_add_normalized_club_email_unique_index.sql',
+    '20260629_000001_add_athlete_weight_category.sql',
+    '20260629_000002_add_list_query_indexes.sql',
+    '20260629_000003_snapshot_closed_event_entries.sql',
+];
+
 /**
  * This script creates and drops only databases under an explicit test prefix.
  * It never reads the application's normal DB_NAME setting.
@@ -24,7 +37,8 @@ $user = (string) (getenv('MIGRATION_TEST_USER') ?: 'root');
 $password = (string) (getenv('MIGRATION_TEST_PASSWORD') ?: '');
 $databaseNames = [
     'clean' => $prefix . '_clean',
-    'legacy' => $prefix . '_legacy',
+    'pre_squash' => $prefix . '_pre_squash',
+    'guarded' => $prefix . '_guarded',
 ];
 
 $options = [
@@ -50,13 +64,30 @@ try {
     assertSchemaContract($clean);
     assertCleanWritesAndReads($clean);
 
-    $legacy = databaseConnection($host, $port, $databaseNames['legacy'], $user, $password, $options);
-    executeSqlFile($legacy, dirname(__DIR__) . '/tests/Fixtures/legacy_schema.sql');
-    runMigrationsTwice($legacy);
-    assertSchemaContract($legacy);
-    assertLegacyBackfill($legacy);
+    $preSquash = databaseConnection(
+        $host,
+        $port,
+        $databaseNames['pre_squash'],
+        $user,
+        $password,
+        $options
+    );
+    preparePreSquashDatabase($preSquash);
+    runMigrationsTwice($preSquash);
+    assertSchemaContract($preSquash);
+    assertPreSquashDataPreserved($preSquash);
 
-    echo "Migration smoke checks passed for clean and legacy schemas.\n";
+    $guarded = databaseConnection(
+        $host,
+        $port,
+        $databaseNames['guarded'],
+        $user,
+        $password,
+        $options
+    );
+    assertExistingSchemaRejected($guarded);
+
+    echo "Migration smoke checks passed for clean, pre-squash, and guarded schemas.\n";
 } catch (Throwable $exception) {
     $message = $exception instanceof MigrationException
         ? $exception->getMessage()
@@ -122,6 +153,88 @@ function executeSqlFile(PDO $database, string $path): void
     foreach (array_filter(array_map('trim', $statements)) as $statement) {
         $database->exec($statement);
     }
+}
+
+function preparePreSquashDatabase(PDO $database): void
+{
+    executeSqlFile(
+        $database,
+        dirname(__DIR__) . '/migrations/20260630_000000_create_schema.sql'
+    );
+    $database->exec(
+        'CREATE TABLE schema_migrations ('
+        . 'id INT AUTO_INCREMENT PRIMARY KEY, '
+        . 'version VARCHAR(255) NOT NULL UNIQUE, '
+        . 'applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, '
+        . 'description VARCHAR(255) NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+    $record = $database->prepare(
+        'INSERT INTO schema_migrations (version, description) VALUES (?, ?)'
+    );
+    foreach (PRE_SQUASH_MIGRATIONS as $version) {
+        $record->execute([$version, 'Synthetic pre-squash migration record']);
+    }
+
+    $database->exec(
+        "INSERT INTO clubs (
+            id, federal_code, name, email, phone, contact_first_name, contact_last_name,
+            contact_phone, organization, recovery_email, password_hash
+        ) VALUES (
+            1, 'SYN-PRE-SQUASH-1', 'Synthetic Pre-squash Club',
+            'presquash@example.test', '', 'Synthetic', 'Contact', '', 'TEST',
+            'recovery@example.test', 'synthetic-hash'
+        )"
+    );
+    $database->exec(
+        "INSERT INTO athletes (
+            id, club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt
+        ) VALUES (
+            1, 1, 'Synthetic', 'Athlete', 'M', '2010-01-01', 50, 'white'
+        )"
+    );
+    $database->exec(
+        "INSERT INTO events (id, name, date, location, published, closed)
+         VALUES (1, 'Synthetic Pre-squash Event', '2026-07-01', 'Synthetic Venue', 1, 1)"
+    );
+    $database->exec(
+        "INSERT INTO entries (
+            id, event_id, club_id, athlete_id, snapshot_last_name,
+            snapshot_first_name, snapshot_gender, snapshot_date_of_birth,
+            snapshot_weight_kg, snapshot_belt, snapshot_program,
+            snapshot_weight_category, snapshot_at
+        ) VALUES (
+            1, 1, 1, 1, 'Synthetic', 'Athlete', 'M', '2010-01-01',
+            50, 'white', 'adulti', '-50 kg', '2026-06-30 12:00:00'
+        )"
+    );
+}
+
+function assertExistingSchemaRejected(PDO $database): void
+{
+    $database->exec('CREATE TABLE clubs (id INT AUTO_INCREMENT PRIMARY KEY) ENGINE=InnoDB');
+
+    try {
+        (new MigrationRunner($database))->run();
+        throw new RuntimeException('Existing untracked application schema was accepted.');
+    } catch (MigrationException $exception) {
+        assertSameValue(
+            '20260630_000000_create_schema.sql',
+            $exception->version(),
+            'Existing schema failed at the wrong migration.'
+        );
+    }
+
+    $recorded = (int) $database->query(
+        'SELECT COUNT(*) FROM schema_migrations'
+    )->fetchColumn();
+    assertSameValue(0, $recorded, 'Rejected baseline was recorded as applied.');
+
+    $created = (int) $database->query(
+        "SELECT COUNT(*) FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'events'"
+    )->fetchColumn();
+    assertSameValue(0, $created, 'Rejected baseline changed the application schema.');
 }
 
 function runMigrationsTwice(PDO $database): void
@@ -354,48 +467,48 @@ function assertCleanWritesAndReads(PDO $database): void
     assertSameValue('50.00', $weight, 'Clean schema athlete write or entry read failed.');
 }
 
-function assertLegacyBackfill(PDO $database): void
+function assertPreSquashDataPreserved(PDO $database): void
 {
     $club = $database->query(
         'SELECT federal_code, email FROM clubs WHERE id = 1'
     )->fetch();
     if (!is_array($club)) {
-        throw new RuntimeException('Legacy club fixture disappeared.');
+        throw new RuntimeException('Pre-squash club fixture disappeared.');
     }
-    assertSameValue('SYN-LEGACY-1', $club['federal_code'], 'Legacy federal code was not copied.');
-    assertSameValue('legacy@example.test', $club['email'], 'Legacy email was not copied and normalized.');
+    assertSameValue('SYN-PRE-SQUASH-1', $club['federal_code'], 'Pre-squash federal code changed.');
+    assertSameValue('presquash@example.test', $club['email'], 'Pre-squash email changed.');
 
     $event = $database->query(
         'SELECT name, date, location FROM events WHERE id = 1'
     )->fetch();
     if (!is_array($event)) {
-        throw new RuntimeException('Legacy event fixture disappeared.');
+        throw new RuntimeException('Pre-squash event fixture disappeared.');
     }
-    assertSameValue('Synthetic Legacy Event', $event['name'], 'Legacy event name was not copied.');
-    assertSameValue('2026-07-01', $event['date'], 'Legacy event date was not copied.');
-    assertSameValue('Synthetic Venue', $event['location'], 'Legacy location was not copied.');
+    assertSameValue('Synthetic Pre-squash Event', $event['name'], 'Pre-squash event name changed.');
+    assertSameValue('2026-07-01', $event['date'], 'Pre-squash event date changed.');
+    assertSameValue('Synthetic Venue', $event['location'], 'Pre-squash event location changed.');
 
     $athlete = $database->query('SELECT last_name, first_name FROM athletes WHERE id = 1')->fetch();
     if (!is_array($athlete)) {
-        throw new RuntimeException('Legacy athlete fixture disappeared.');
+        throw new RuntimeException('Pre-squash athlete fixture disappeared.');
     }
-    assertSameValue('Synthetic', $athlete['last_name'], 'Legacy athlete surname was not copied.');
-    assertSameValue('Athlete', $athlete['first_name'], 'Legacy athlete name was not copied.');
+    assertSameValue('Synthetic', $athlete['last_name'], 'Pre-squash athlete surname changed.');
+    assertSameValue('Athlete', $athlete['first_name'], 'Pre-squash athlete name changed.');
 
     $snapshot = $database->query(
         'SELECT snapshot_last_name, snapshot_date_of_birth, snapshot_weight_kg, '
         . 'snapshot_program, snapshot_weight_category, snapshot_at FROM entries WHERE id = 1'
     )->fetch();
     if (!is_array($snapshot)) {
-        throw new RuntimeException('Legacy closed-entry snapshot was not backfilled.');
+        throw new RuntimeException('Pre-squash closed-entry snapshot disappeared.');
     }
-    assertSameValue('Synthetic', $snapshot['snapshot_last_name'], 'Legacy snapshot name was not backfilled.');
-    assertSameValue('2010-01-01', $snapshot['snapshot_date_of_birth'], 'Legacy snapshot birth date was not backfilled.');
-    assertSameValue('50.00', $snapshot['snapshot_weight_kg'], 'Legacy snapshot weight was not backfilled.');
-    assertSameValue('adulti', $snapshot['snapshot_program'], 'Legacy snapshot program used the wrong event year.');
-    assertSameValue('-50 kg', $snapshot['snapshot_weight_category'], 'Legacy snapshot category used the wrong event year.');
+    assertSameValue('Synthetic', $snapshot['snapshot_last_name'], 'Pre-squash snapshot name changed.');
+    assertSameValue('2010-01-01', $snapshot['snapshot_date_of_birth'], 'Pre-squash snapshot birth date changed.');
+    assertSameValue('50.00', $snapshot['snapshot_weight_kg'], 'Pre-squash snapshot weight changed.');
+    assertSameValue('adulti', $snapshot['snapshot_program'], 'Pre-squash snapshot program changed.');
+    assertSameValue('-50 kg', $snapshot['snapshot_weight_category'], 'Pre-squash snapshot category changed.');
     if (!is_string($snapshot['snapshot_at']) || $snapshot['snapshot_at'] === '') {
-        throw new RuntimeException('Legacy snapshot timestamp was not backfilled.');
+        throw new RuntimeException('Pre-squash snapshot timestamp disappeared.');
     }
 }
 

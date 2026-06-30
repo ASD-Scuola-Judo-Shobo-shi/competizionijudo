@@ -20,8 +20,6 @@ final class MigrationRunnerTest extends TestCase
         $database = $this->createMock(PDO::class);
         $migrationQuery = $this->createMock(PDOStatement::class);
         $migrationQuery->method('fetchAll')->willReturn([]);
-        $schemaQuery = $this->createMock(PDOStatement::class);
-        $schemaQuery->method('fetchAll')->willReturn([]);
         $recordStatement = $this->createMock(PDOStatement::class);
         $recordStatement->method('execute')->willReturnCallback(
             static function (?array $parameters = null) use (&$recordedVersions): bool {
@@ -32,11 +30,7 @@ final class MigrationRunnerTest extends TestCase
         );
 
         $database->method('query')->willReturn($migrationQuery);
-        $database->method('prepare')->willReturnCallback(
-            static fn(string $sql): PDOStatement => str_contains($sql, 'information_schema.COLUMNS')
-                ? $schemaQuery
-                : $recordStatement
-        );
+        $database->method('prepare')->willReturn($recordStatement);
         $database->method('beginTransaction')->willReturnCallback(
             static function () use (&$transactionActive): bool {
                 $transactionActive = true;
@@ -72,10 +66,80 @@ final class MigrationRunnerTest extends TestCase
         (new MigrationRunner($database))->run();
 
         self::assertContains(
-            '20260628_000001_create_authentication_throttles.sql',
+            '20260630_000000_create_schema.sql',
             $recordedVersions
         );
         self::assertCount(count(glob(base_path('migrations/*.sql')) ?: []), $recordedVersions);
+    }
+
+    public function testCompleteHistoricalChainAdoptsTheConsolidatedBaseline(): void
+    {
+        $historicalVersions = [
+            '20260619_000000_create_baseline_schema.sql',
+            '20260619_000001_copy_italian_columns_to_english.sql',
+            '20260620_000001_create_password_reset_tokens.sql',
+            '20260622_000001_make_location_required.sql',
+            '20260623_000001_add_performance_indexes.sql',
+            '20260628_000001_create_authentication_throttles.sql',
+            '20260628_000002_add_normalized_club_email_unique_index.sql',
+            '20260629_000001_add_athlete_weight_category.sql',
+            '20260629_000002_add_list_query_indexes.sql',
+            '20260629_000003_snapshot_closed_event_entries.sql',
+        ];
+        $migrationQuery = $this->createMock(PDOStatement::class);
+        $migrationQuery->method('fetchAll')->willReturn($historicalVersions);
+        $recordedVersions = [];
+        $recordStatement = $this->createMock(PDOStatement::class);
+        $recordStatement->expects(self::once())
+            ->method('execute')
+            ->willReturnCallback(
+                static function (?array $parameters = null) use (&$recordedVersions): bool {
+                    $recordedVersions[] = (string) ($parameters[0] ?? '');
+
+                    return true;
+                }
+            );
+        $deleteStatement = $this->createMock(PDOStatement::class);
+        $deleteStatement->expects(self::once())
+            ->method('execute')
+            ->with($historicalVersions)
+            ->willReturn(true);
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::once())->method('query')->willReturn($migrationQuery);
+        $database->expects(self::exactly(2))
+            ->method('prepare')
+            ->willReturnOnConsecutiveCalls($recordStatement, $deleteStatement);
+        $database->expects(self::once())->method('exec');
+        $database->expects(self::once())->method('beginTransaction')->willReturn(true);
+        $database->expects(self::once())->method('commit')->willReturn(true);
+
+        (new MigrationRunner($database))->run();
+
+        self::assertSame(['20260630_000000_create_schema.sql'], $recordedVersions);
+    }
+
+    public function testIncompleteHistoricalChainFailsBeforeChangingTheSchema(): void
+    {
+        $migrationQuery = $this->createMock(PDOStatement::class);
+        $migrationQuery->method('fetchAll')->willReturn([
+            '20260619_000000_create_baseline_schema.sql',
+        ]);
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::once())->method('query')->willReturn($migrationQuery);
+        $database->expects(self::once())->method('exec');
+        $database->expects(self::never())->method('prepare');
+        $database->expects(self::never())->method('beginTransaction');
+
+        try {
+            (new MigrationRunner($database))->run();
+            self::fail('Expected incomplete pre-squash history to fail.');
+        } catch (MigrationException $exception) {
+            self::assertSame('20260630_000000_create_schema.sql', $exception->version());
+            self::assertSame(
+                'Migration failed: 20260630_000000_create_schema.sql',
+                $exception->getMessage()
+            );
+        }
     }
 
     public function testFailingStatementLeavesMigrationPendingAndReportsOnlyItsVersion(): void
