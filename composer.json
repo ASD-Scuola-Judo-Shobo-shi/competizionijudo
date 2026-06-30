@@ -32,15 +32,17 @@
       "@security:audit"
     ],
     "ci": [
+      "@test:migrations",
       "@check",
-      "bash scripts/build-deploy.sh"
+      "bash scripts/build-deploy.sh",
+      "bash scripts/test-deploy-artifact.sh build/deploy"
     ],
     "cs": "phpcs --standard=phpcs.xml",
     "cs:fix": "phpcbf --standard=phpcs.xml",
     "format": "@cs:fix",
     "lint": "@cs",
     "metadata": "composer validate --strict --no-check-lock",
-    "security:audit": "composer audit",
+    "security:audit": "composer audit --locked --abandoned=fail",
     "serve": "php -S 0.0.0.0:8080 -t public public/index.php",
     "syntax": "find config public routes scripts src tests views -name '*.php' -print0 | xargs -0 -n1 php -l",
     "migrate": "php scripts/run-migrations.php",

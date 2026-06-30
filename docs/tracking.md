@@ -61,19 +61,19 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C31 | [x] | `test(domain): define event year category invariants` | A-02, A-07 | `baed051` | Stable age-class keys drive one PHP/JSON weight table; exhaustive locale, event-year, gender, threshold, master, invalid/future, and rendered-client parity checks pass; full checks 133/1462 |
 | C32 | [x] | `refactor(domain): derive athlete category for event year` | A-02 | `fb53636` | Athlete rows retain only source facts; open views derive per event/current year; close transition atomically snapshots displayed facts/category; existing closed rows backfill best-effort; MySQL clean/legacy/runtime and full checks pass 136/1488 |
 | C33 | [x] | `refactor(core): use the dispatched request consistently` | A-06 | `ea8a841` | Callable/controller routes receive the identical dispatched request; language switching returns safe same-origin responses without globals/exit; rendered 405 responses include `Allow`; full checks pass 142/1507 |
-| C34 | [x] | `docs: align supported architecture and operations` | A-07, A-08, F-03, O-01 |  | Dead data/wrappers removed; environment-driven Article 13 notice, upload purge, one-year snapshot expiry, runtime ownership, truthful README, and route inventory verified; hash recorded at C35 startup |
-| C35 | [ ] | `test: cover critical application workflows` | Q-03, Q-04 |  | Final full-roadmap verification |
+| C34 | [x] | `docs: align supported architecture and operations` | A-07, A-08, F-03, O-01 | `9fbb358` | Dead data/wrappers removed; environment-driven Article 13 notice, upload purge, one-year snapshot expiry, runtime ownership, truthful README, and route inventory verified |
+| C35 | [x] | `test: cover critical application workflows` | Q-03, Q-04 |  | Routed SQLite workflow covers account reset/login, athlete/event CRUD, ownership, and entry privacy; CI enforces migrations, 70% changed-source coverage, locked audit, quality, artifact build, and boot; full checks 155/1601 |
 
 ## Current focus
 
 | Field | Value |
 |---|---|
-| Active commit ID | C35 (next) |
-| Objective | Raise the final regression gate across critical HTTP/database workflows and the production artifact |
-| Files intentionally in scope | To be selected from the full C35 roadmap section after confirming current critical-path coverage |
-| Last targeted test | C34 privacy/upload/retention/delete/route tests pass (19 tests/115 assertions); SQLite retention plan uses `idx_entries_event_club` |
-| Last full check | C34 `composer check` passes, including dependency audit (149 tests/1531 assertions); exact production artifact boots Italian/English privacy notices |
-| Next action | Commit C34, then mark C35 in progress and inventory the remaining critical workflow coverage before editing |
+| Active commit ID | None; C05 and C23 remain blocked on D01 and D03 |
+| Objective | Roadmap implementation complete pending the documented mail-transport and deployment-health decisions |
+| Files intentionally in scope | None |
+| Last targeted test | C35 focused workflow/coverage/policy tests pass (9 tests/90 assertions) |
+| Last full check | C35 `composer check` passes, including locked dependency audit (155 tests/1601 assertions); isolated MySQL 8.4 `composer ci` also passes migrations, artifact build, and bilingual boot |
+| Next action | Resolve D01 to implement C05 and D03 to implement C23; do not infer either production contract from repository code |
 
 ## Blockers and decisions
 
@@ -135,17 +135,19 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C33 | In progress: unified dispatched request identity, converted language switching to safe responses, and added rendered 405 handling; paused before full gate at environment usage limit | Focused tests 28/155 plus focused PHPCS/PHPStan pass; required `composer check` not run | Resume C33 verification; do not commit yet |
 | 2026-06-30 | C33 | Completed single-request dispatch, response-based safe language switching, and explicit method-not-allowed handling | Focused tests 28/155; full `composer check` passes 142/1507 including audit | C34 |
 | 2026-06-30 | C34 | Removed confirmed dead code, aligned supported operations, and implemented the approved configuration-driven privacy and retention controls | Focused tests 19/115 with indexed retention plan; exact artifact excludes uploads and boots configured privacy notices; full `composer check` passes 149/1531 including audit | C35 |
+| 2026-06-30 | C35 | In progress: added real routed/database critical-workflow coverage, template smoke requests, expanded PHPCS boundaries, locked audit policy, 70% changed-source coverage, and the complete CI command; paused at approval usage limit before container cleanup/final commit | Focused tests 9/90; isolated MySQL 8.4 `composer ci` passes clean/legacy migrations, 155 tests/1601 assertions, audit, artifact build, and bilingual boot | Resume C35 cleanup, diff review, tracking completion, and commit |
+| 2026-06-30 | C35 | Completed critical routed/database workflow coverage and final quality, coverage, audit, migration, and production-artifact gates | Final diff check passes; `composer check` passes 155/1601 including locked audit; prior isolated MySQL 8.4 `composer ci` passes migrations, artifact build, and bilingual boot | D01/C05 and D03/C23 remain externally blocked |
 
 ## Milestones
 
 | Milestone | Included commits | Status | Exit condition |
 |---|---|---|---|
-| M0 Trustworthy gate | C01-C03 | [ ] | Default local quality/test commands are green |
-| M1 Active security closed | C04-C14 | [ ] | Critical/high security regression tests pass |
-| M2 Releasable artifact | C15-C23 | [ ] | Clean schema and tested artifact can deploy only after quality success |
-| M3 Route truth restored | C24-C26 | [ ] | Supported routes/features match UI and README direction |
+| M0 Trustworthy gate | C01-C03 | [x] | Default local quality/test commands are green |
+| M1 Active security closed | C04-C14 | [!] | Critical/high security regression tests pass; C05 awaits the D01 production mail contract |
+| M2 Releasable artifact | C15-C23 | [!] | Schema/artifact gates pass; C23 awaits the D03 health and rollback contract |
+| M3 Route truth restored | C24-C26 | [x] | Supported routes/features match UI and README direction |
 | M4 Simpler bounded runtime | C27-C30 | [x] | No view queries, stale cache, dead profiler, or unbounded primary lists |
-| M5 Domain/core correctness | C31-C35 | [ ] | Event-year behavior and critical workflows are tested end-to-end |
+| M5 Domain/core correctness | C31-C35 | [x] | Event-year behavior and critical workflows are tested end-to-end |
 
 ## Completion protocol
 

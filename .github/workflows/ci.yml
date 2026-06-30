@@ -49,13 +49,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
 
       - name: Setup PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ matrix.php-version }}
           extensions: dom, simplexml, pdo_mysql
-          coverage: none
+          coverage: ${{ matrix.php-version == '8.4' && 'xdebug' || 'none' }}
           tools: composer:v2
 
       - name: Validate Composer metadata
@@ -78,6 +80,20 @@ jobs:
 
       - name: Run quality suite
         run: composer check
+
+      - name: Generate coverage for changed source
+        if: matrix.php-version == '8.4'
+        env:
+          XDEBUG_MODE: coverage
+        run: |
+          mkdir -p build
+          vendor/bin/phpunit --coverage-clover build/coverage.xml
+
+      - name: Enforce changed-code coverage
+        if: matrix.php-version == '8.4'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70
 
   deploy-artifact:
     name: Deployment artifact smoke test
