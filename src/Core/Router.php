@@ -11,7 +11,7 @@ final class Router
      */
     private array $routes = [];
 
-    public function __construct(private readonly View $view, private readonly Request $request)
+    public function __construct(private readonly View $view)
     {
     }
 
@@ -32,12 +32,24 @@ final class Router
         $handler = $this->routes[$request->method()][$request->path()] ?? null;
 
         if ($handler === null) {
+            $allowedMethods = $this->allowedMethods($request->path());
+            if ($allowedMethods !== []) {
+                throw new HttpException(
+                    405,
+                    __('errors.method_not_allowed'),
+                    [
+                        'Content-Type' => 'text/html; charset=UTF-8',
+                        'Allow' => implode(', ', $allowedMethods),
+                    ]
+                );
+            }
+
             throw new HttpException(404, 'Page not found');
         }
 
         if (is_array($handler)) {
             [$controller, $method] = $handler;
-            $handler = [new $controller($this->view, $this->request), $method];
+            $handler = [new $controller($this->view, $request), $method];
         }
 
         $response = $handler($request);
@@ -54,5 +66,19 @@ final class Router
     {
         $normalizedPath = '/' . trim($path, '/');
         $this->routes[strtoupper($method)][$normalizedPath] = $handler;
+    }
+
+    /** @return list<string> */
+    private function allowedMethods(string $path): array
+    {
+        $methods = [];
+        foreach ($this->routes as $method => $routes) {
+            if (isset($routes[$path])) {
+                $methods[] = $method;
+            }
+        }
+        sort($methods);
+
+        return $methods;
     }
 }

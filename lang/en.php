@@ -153,6 +153,7 @@ return [
     ],
     'errors' => [
         'page_not_found' => 'Page not found',
+        'method_not_allowed' => 'Method not allowed',
         'server_error' => 'Server error',
         'unexpected_failure' => 'Something went wrong. Please try again later.',
         'reference' => 'Reference: {id}',

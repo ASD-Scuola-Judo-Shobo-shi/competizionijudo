@@ -153,6 +153,7 @@ return [
     ],
     'errors' => [
         'page_not_found' => 'Pagina non trovata',
+        'method_not_allowed' => 'Metodo non consentito',
         'server_error' => 'Errore del server',
         'unexpected_failure' => 'Si è verificato un errore. Riprovare più tardi.',
         'reference' => 'Riferimento: {id}',

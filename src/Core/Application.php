@@ -16,7 +16,7 @@ final class Application
     public function __construct(private readonly string $basePath, ?Logger $logger = null)
     {
         $this->view = new View($basePath . '/views');
-        $this->router = new Router($this->view, Request::fromGlobals());
+        $this->router = new Router($this->view);
         $this->logger = $logger ?? FileLogger::application();
     }
 
@@ -43,7 +43,8 @@ final class Application
 
             return new Response(
                 $this->view->render('errors/' . $exception->statusCode(), $data),
-                $exception->statusCode()
+                $exception->statusCode(),
+                $exception->headers()
             );
         } catch (Throwable $exception) {
             $this->logFailure('application.unhandled_failure', $exception, $request);

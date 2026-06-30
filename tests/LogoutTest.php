@@ -32,7 +32,7 @@ final class LogoutTest extends TestCase
     {
         Session::set('club_id', 201);
         Session::set('is_admin', true);
-        $router = new Router($this->view, new Request('GET', '/'));
+        $router = new Router($this->view);
         (require dirname(__DIR__) . '/routes/web.php')($router);
 
         foreach (['/club_logout.php', '/admin_logout.php'] as $path) {
@@ -40,7 +40,8 @@ final class LogoutTest extends TestCase
                 $router->dispatch(new Request('GET', $path));
                 self::fail('A GET logout route was registered.');
             } catch (HttpException $exception) {
-                self::assertSame(404, $exception->statusCode());
+                self::assertSame(405, $exception->statusCode());
+                self::assertSame('POST', $exception->headers()['Allow']);
             }
 
             self::assertSame(201, Session::get('club_id'));

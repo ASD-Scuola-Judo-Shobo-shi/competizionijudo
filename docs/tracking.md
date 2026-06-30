@@ -59,8 +59,8 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C29 | [x] | `refactor(performance): remove stale file cache and dead profiler` | A-04, P-04 | `2a91944` | Event/club create-update-delete changes are immediately visible; cache/profiler code is absent; artifact forbids `var/cache` and boots both locales; full code checks 126/938; audit not verified |
 | C30 | [x] | `perf(lists): scope and paginate list queries` | P-03, F-01 | `cbde972` | Upcoming lists enforce published/open/current-date lifecycle; public/club lists page at 50; aggregates are identifier-scoped; MySQL 8.4 plans use bounded index scans at representative scale; clean/legacy migrations and full checks pass 129/958 |
 | C31 | [x] | `test(domain): define event year category invariants` | A-02, A-07 | `baed051` | Stable age-class keys drive one PHP/JSON weight table; exhaustive locale, event-year, gender, threshold, master, invalid/future, and rendered-client parity checks pass; full checks 133/1462 |
-| C32 | [x] | `refactor(domain): derive athlete category for event year` | A-02 | This commit | Athlete rows retain only source facts; open views derive per event/current year; close transition atomically snapshots displayed facts/category; existing closed rows backfill best-effort; MySQL clean/legacy/runtime and full checks pass 136/1488 |
-| C33 | [ ] | `refactor(core): use the dispatched request consistently` | A-06 |  |  |
+| C32 | [x] | `refactor(domain): derive athlete category for event year` | A-02 | `fb53636` | Athlete rows retain only source facts; open views derive per event/current year; close transition atomically snapshots displayed facts/category; existing closed rows backfill best-effort; MySQL clean/legacy/runtime and full checks pass 136/1488 |
+| C33 | [x] | `refactor(core): use the dispatched request consistently` | A-06 | This commit | Callable/controller routes receive the identical dispatched request; language switching returns safe same-origin responses without globals/exit; rendered 405 responses include `Allow`; full checks pass 142/1507 |
 | C34 | [ ] | `docs: align supported architecture and operations` | A-07, A-08, F-03, O-01 |  |  |
 | C35 | [ ] | `test: cover critical application workflows` | Q-03, Q-04 |  | Final full-roadmap verification |
 
@@ -69,11 +69,11 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | Field | Value |
 |---|---|
 | Active commit ID | None |
-| Objective | Start C33 dispatched-request routing consistency |
-| Files intentionally in scope | None until C33 begins |
-| Last targeted test | C32 domain/lifecycle/migration/view tests pass (43 tests/718 assertions); MySQL 8.4 clean/legacy/runtime checks pass |
-| Last full check | `composer check` passes, including dependency audit (136 tests/1488 assertions) |
-| Next action | Read C33 in full and trace request ownership across application dispatch and language switching |
+| Objective | Start C34 dead-code removal and supported architecture/operations documentation alignment |
+| Files intentionally in scope | None until C34 begins |
+| Last targeted test | C33 router/language/logout/delete/application tests pass (28 tests/155 assertions); focused PHPCS and PHPStan pass |
+| Last full check | C33 `composer check` passes, including dependency audit (142 tests/1507 assertions) |
+| Next action | Read C34 in full, confirm dead code and documentation drift, and identify whether D06 needs a direct product decision |
 
 ## Blockers and decisions
 
@@ -132,6 +132,8 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C31 | Replaced localized/duplicated category tables with stable shared definitions and exhaustive server/generated-client event-year boundaries | Focused domain/render tests 26/588; full `composer check` passes 133/1462 including audit | C32; evaluate D05 before changing historical behavior |
 | 2026-06-29 | C32 | Blocked: event entries reference mutable athlete facts, and no approved historical freeze/backfill policy selects dynamic derivation versus snapshots | Traced athlete writes, entry schema/query joins, registration display, and historical output; no behavior or migration was guessed | D05 decision; C33 remains independently eligible |
 | 2026-06-29 | C32 | Completed live event-year category derivation and atomic close-time snapshots under the approved D05 policy | Focused tests 43/718; MySQL clean/legacy migration and runtime immutability checks pass; full `composer check` passes 136/1488 including audit | C33 |
+| 2026-06-29 | C33 | In progress: unified dispatched request identity, converted language switching to safe responses, and added rendered 405 handling; paused before full gate at environment usage limit | Focused tests 28/155 plus focused PHPCS/PHPStan pass; required `composer check` not run | Resume C33 verification; do not commit yet |
+| 2026-06-30 | C33 | Completed single-request dispatch, response-based safe language switching, and explicit method-not-allowed handling | Focused tests 28/155; full `composer check` passes 142/1507 including audit | C34 |
 
 ## Milestones
 

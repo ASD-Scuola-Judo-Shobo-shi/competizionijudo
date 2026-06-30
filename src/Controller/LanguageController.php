@@ -4,32 +4,59 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Core\Controller;
+use App\Core\Request;
+use App\Core\Response;
+use App\Core\Session;
 use App\Localization;
 
-final class LanguageController
+final class LanguageController extends Controller
 {
-    public function switch(): void
+    public function switch(Request $request): Response
     {
-        $validLocales = ['it', 'en'];
-
-        $locale = strtolower((string) ($_GET['locale'] ?? 'it'));
-
-        if (!in_array($locale, $validLocales, true)) {
+        $locale = strtolower((string) $request->query('locale', 'it'));
+        if (!in_array($locale, ['it', 'en'], true)) {
             $locale = 'it';
         }
 
-        $_SESSION['locale'] = $locale;
+        Session::set('locale', $locale);
         Localization::setLocale($locale);
 
-        $referer = $_SERVER['HTTP_REFERER'] ?? '/';
-        $parsedReferer = parse_url($referer);
-        $parsedHost = parse_url((string) ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
+        return $this->redirect($this->safeReferer($request));
+    }
 
-        if (($parsedReferer['host'] ?? '') !== $parsedHost && ($parsedReferer['host'] ?? '') !== '') {
-            $referer = '/';
+    private function safeReferer(Request $request): string
+    {
+        $referer = trim((string) $request->server('HTTP_REFERER', ''));
+        if ($referer === '' || preg_match('/[\r\n]/', $referer) === 1) {
+            return '/';
         }
 
-        header('Location: ' . $referer);
-        exit;
+        $parts = parse_url($referer);
+        if (!is_array($parts)) {
+            return '/';
+        }
+
+        if (isset($parts['host'])) {
+            $requestHost = parse_url(
+                '//' . (string) $request->server('HTTP_HOST', ''),
+                PHP_URL_HOST
+            );
+            if (
+                !is_string($requestHost)
+                || strtolower($parts['host']) !== strtolower($requestHost)
+            ) {
+                return '/';
+            }
+        } elseif (!str_starts_with($referer, '/') || str_starts_with($referer, '//')) {
+            return '/';
+        }
+
+        $path = '/' . ltrim((string) ($parts['path'] ?? '/'), '/');
+        if (isset($parts['query']) && $parts['query'] !== '') {
+            $path .= '?' . $parts['query'];
+        }
+
+        return $path;
     }
 }

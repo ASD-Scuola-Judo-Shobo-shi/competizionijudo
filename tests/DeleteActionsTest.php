@@ -44,7 +44,7 @@ final class DeleteActionsTest extends TestCase
 
     public function testDeleteRoutesAcceptOnlyPostAndRequireAuthentication(): void
     {
-        $router = new Router($this->view, new Request('GET', '/'));
+        $router = new Router($this->view);
         (require dirname(__DIR__) . '/routes/web.php')($router);
         $paths = [
             '/admin_delete_club.php',
@@ -57,7 +57,8 @@ final class DeleteActionsTest extends TestCase
                 $router->dispatch(new Request('GET', $path));
                 self::fail('A destructive GET route was registered.');
             } catch (HttpException $exception) {
-                self::assertSame(404, $exception->statusCode());
+                self::assertSame(405, $exception->statusCode());
+                self::assertSame('POST', $exception->headers()['Allow']);
             }
 
             $response = $router->dispatch(new Request('POST', $path));
