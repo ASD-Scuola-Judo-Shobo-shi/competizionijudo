@@ -16,6 +16,16 @@ final class ProductionConfiguration
         'DB_PASS',
         'ADMIN_USER',
         'ADMIN_PASS_HASH',
+        'PRIVACY_CONTROLLER_NAME',
+        'PRIVACY_CONTROLLER_ADDRESS',
+        'PRIVACY_CONTACT_EMAIL',
+        'PRIVACY_ACCOUNT_LEGAL_BASIS',
+        'PRIVACY_ATHLETE_LEGAL_BASIS',
+        'PRIVACY_HOSTING_PROVIDER',
+        'PRIVACY_HOSTING_LOCATION',
+        'PRIVACY_DATA_TRANSFER_DETAILS',
+        'PRIVACY_LOG_RETENTION_DAYS',
+        'PRIVACY_BACKUP_RETENTION_DAYS',
     ];
 
     /** @param array<string, mixed>|null $configuration */
@@ -40,7 +50,7 @@ final class ProductionConfiguration
     private static function fromEnvironment(): array
     {
         $configuration = [];
-        foreach ([...self::REQUIRED_KEYS, 'APP_DEBUG'] as $key) {
+        foreach ([...self::REQUIRED_KEYS, 'APP_DEBUG', 'PRIVACY_DPO_EMAIL'] as $key) {
             $configuration[$key] = env($key);
         }
 
@@ -68,6 +78,20 @@ final class ProductionConfiguration
         $debug = $configuration['APP_DEBUG'] ?? false;
         if (filter_var($debug, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) !== false) {
             $issues[] = 'invalid.app_debug';
+        }
+
+        foreach (['PRIVACY_CONTACT_EMAIL', 'PRIVACY_DPO_EMAIL'] as $key) {
+            $email = trim((string) ($configuration[$key] ?? ''));
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                $issues[] = 'invalid.' . strtolower($key);
+            }
+        }
+
+        foreach (['PRIVACY_LOG_RETENTION_DAYS', 'PRIVACY_BACKUP_RETENTION_DAYS'] as $key) {
+            $days = filter_var($configuration[$key] ?? null, FILTER_VALIDATE_INT);
+            if ($days === false || $days < 1) {
+                $issues[] = 'invalid.' . strtolower($key);
+            }
         }
 
         return $issues;

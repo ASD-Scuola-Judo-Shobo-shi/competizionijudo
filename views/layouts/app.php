@@ -8,45 +8,6 @@
     <link rel="stylesheet" href="/assets/css/app.css">
 
     <style>
-        .cookie-banner {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #061b3a;
-            color: white;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
-            z-index: 1000;
-            font-family: Arial, sans-serif;
-            box-sizing: border-box;
-        }
-        .cookie-banner p {
-            margin: 0;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            padding-right: 20px;
-        }
-        .cookie-banner button {
-            background: #c80022;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            cursor: pointer;
-            font-weight: bold;
-            border-radius: 4px;
-            white-space: nowrap;
-            transition: background 0.2s;
-        }
-        .cookie-banner button:hover {
-            background: #a0001a;
-        }
-        .cookie-hidden {
-            display: none !important;
-        }
         .next-events-list {
             list-style: none;
             margin: 0;
@@ -72,28 +33,9 @@
         }
     </style>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const banner = document.getElementById('cookie-banner');
-            if (!localStorage.getItem('cookie-consent')) {
-                banner.classList.remove('cookie-hidden');
-            }
-        });
-
-        function acceptCookies() {
-            localStorage.setItem('cookie-consent', 'true');
-            document.getElementById('cookie-banner').classList.add('cookie-hidden');
-        }
-
-    </script>
 </head>
 <body>
 <a href="#main-content" class="skip-link"><?= e(translate('a11y.skip_to_content')) ?></a>
-
-<div id="cookie-banner" class="cookie-banner cookie-hidden" role="dialog" aria-labelledby="cookie-message" aria-modal="true">
-    <p id="cookie-message"><?= translate('cookies.message') ?></p>
-    <button type="button" onclick="acceptCookies()"><?= translate('cookies.accept') ?></button>
-</div>
 
 <header class="top-hero">
     <div class="left-logos">
@@ -166,8 +108,8 @@
 
 <footer class="site-footer" role="contentinfo">
     <div>
-        <strong><?= translate('footer.brand') ?></strong><br>
-        <?= translate('footer.description') ?>
+        <strong><?= e((string) ($privacyControllerName ?? '')) ?></strong><br>
+        <?= e((string) ($privacyControllerAddress ?? '')) ?>
     </div>
     <div class="footer-links">
         <a href="https://www.csen.it/" target="_blank" rel="noopener noreferrer">CSEN</a>
@@ -177,6 +119,8 @@
         <a href="https://www.ijf.org/" target="_blank" rel="noopener noreferrer">IJF</a>
         <span class="footer-sep">•</span>
         <a href="https://it.m.wikipedia.org/wiki/Judo_(sport)" target="_blank" rel="noopener noreferrer">Judo</a>
+        <span class="footer-sep">•</span>
+        <a href="/privacy"><?= e(__('privacy.footer_link')) ?></a>
     </div>
 </footer>
 

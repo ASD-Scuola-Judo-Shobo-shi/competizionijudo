@@ -55,17 +55,4 @@ enum Gender: string
 
         return null;
     }
-
-    /**
-     * Returns all cases as select options.
-     * @return array<string, string> value => label
-     */
-    public static function options(?string $locale = null): array
-    {
-        $options = [];
-        foreach (self::cases() as $case) {
-            $options[$case->value] = $case->label($locale);
-        }
-        return $options;
-    }
 }

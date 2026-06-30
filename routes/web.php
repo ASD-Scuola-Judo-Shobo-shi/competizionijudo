@@ -14,6 +14,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/', [HomeController::class, 'index']);
     $router->get('/index.php', [HomeController::class, 'index']);
     $router->get('/about', [HomeController::class, 'about']);
+    $router->get('/privacy', [HomeController::class, 'privacy']);
 
     $router->get('/club_register.php', [ClubController::class, 'register']);
     $router->post('/club_register.php', [ClubController::class, 'register']);

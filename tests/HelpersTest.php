@@ -121,14 +121,4 @@ final class HelpersTest extends TestCase
         self::assertIsString($result);
         self::assertNotEmpty($result);
     }
-
-    public function testCalculateJudoCategoryHelper(): void
-    {
-        // 10 year old male, 35kg
-        $result = calculateJudoCategory('2016-01-15', 'M', 35.0, 2026);
-        self::assertIsArray($result);
-        self::assertArrayHasKey('age_below', $result);
-        self::assertArrayHasKey('program', $result);
-        self::assertArrayHasKey('weight_category', $result);
-    }
 }

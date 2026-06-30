@@ -12,6 +12,7 @@ for path in \
   composer.json \
   composer.lock \
   config/app.php \
+  config/privacy.php \
   lang/en.php \
   lang/it.php \
   migrations/20260629_000001_add_athlete_weight_category.sql \
@@ -19,6 +20,7 @@ for path in \
   public/uploads/events/.htaccess \
   routes/web.php \
   scripts/run-migrations.php \
+  scripts/purge-expired-data.php \
   src/bootstrap.php \
   vendor/autoload.php \
   views/layouts/app.php \

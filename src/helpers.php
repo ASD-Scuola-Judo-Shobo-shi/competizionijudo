@@ -56,12 +56,6 @@ function __(string $key, array $replacements = []): string
     return translate($key, $replacements);
 }
 
-/** @return array{age_below: int|null, program: string, weight_category: string} */
-function calculateJudoCategory(string $birth, string $gender, float $weight, int $eventYear = 0): array
-{
-    return App\Model\JudoCategory::calculate($birth, $gender, $weight, $eventYear);
-}
-
 function csrf_token(): string
 {
     if (empty($_SESSION['csrf_token'])) {
@@ -104,18 +98,6 @@ function load_env(string $path): void
         $_SERVER[$key] = $value;
         putenv($key . '=' . $value);
     }
-}
-
-/** @return string */
-function get_current_path(): string
-{
-    return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-}
-
-/** @return list<array{label: string, url: string, paths: list<string>, method?: 'post', query?: array<string, list<string>>}> */
-function build_submenu(string $currentPath, bool $isAdmin, bool $isLoggedIn): array
-{
-    return App\Presentation\Navigation::submenu($currentPath, $isAdmin, $isLoggedIn);
 }
 
 /**

@@ -145,20 +145,6 @@ final class AgeClass
     }
 
     /**
-     * Returns all age class options for a select dropdown.
-     * @return array<string, string> age_below => label
-     */
-    public static function options(string $locale = 'it'): array
-    {
-        $options = [];
-        foreach (self::all($locale) as $ac) {
-            $key = $ac->ageBelow !== null ? (string) $ac->ageBelow : '';
-            $options[$key] = $ac->label($locale);
-        }
-        return $options;
-    }
-
-    /**
      * Returns age class definitions as JSON for client-side use.
      * Each entry: {name, ageBelow, ageMin, ageMax}
      */

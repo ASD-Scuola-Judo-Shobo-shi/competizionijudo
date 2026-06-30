@@ -31,13 +31,6 @@ final class JudoCategoryTest extends TestCase
         self::assertSame('X', JudoCategory::normalizeGender('X'));
     }
 
-    public function testNormalizeWeight(): void
-    {
-        self::assertSame(35.5, JudoCategory::normalizeWeight('35,5'));
-        self::assertSame(35.5, JudoCategory::normalizeWeight('35.5'));
-        self::assertSame(35.0, JudoCategory::normalizeWeight('  35  '));
-    }
-
     public function testExtractBirthYear(): void
     {
         // Plain year
@@ -166,18 +159,5 @@ final class JudoCategoryTest extends TestCase
     {
         self::assertSame('', JudoCategory::calculate('2000', 'X', 70.0, 2026)['weight_category']);
         self::assertSame('', JudoCategory::calculate('2000', 'M', 0.0, 2026)['weight_category']);
-    }
-
-    public function testLocalizedClassNamesResolveThroughStableKeys(): void
-    {
-        foreach (['it', 'en'] as $locale) {
-            foreach (AgeClass::all($locale) as $class) {
-                self::assertNotSame(
-                    '',
-                    JudoCategory::weightCategoryPublic($class->name, 'M', 1.0),
-                    $class->key
-                );
-            }
-        }
     }
 }

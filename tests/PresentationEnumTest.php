@@ -57,8 +57,6 @@ final class PresentationEnumTest extends TestCase
     public function testEveryBeltHasCompletePresentationInBothLocales(): void
     {
         foreach (self::BELT_LABELS as $locale => $expectedLabels) {
-            self::assertSame($expectedLabels, Belt::options($locale));
-
             foreach (Belt::cases() as $belt) {
                 self::assertSame($expectedLabels[$belt->value], $belt->label($locale));
                 self::assertSame($belt, Belt::tryFromValue($belt->value));
@@ -82,8 +80,6 @@ final class PresentationEnumTest extends TestCase
     public function testEveryGenderHasCompletePresentationInBothLocales(): void
     {
         foreach (self::GENDER_LABELS as $locale => $expectedLabels) {
-            self::assertSame($expectedLabels, Gender::options($locale));
-
             foreach (Gender::cases() as $gender) {
                 self::assertSame($expectedLabels[$gender->value], $gender->label($locale));
                 self::assertSame($gender, Gender::tryFromValue($gender->value));

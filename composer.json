@@ -1,6 +1,6 @@
 {
   "name": "competizionijudo/mvc-app",
-  "description": "A simple professional MVC PHP starter project.",
+  "description": "A small MVC application for judo competition registration and administration.",
   "type": "project",
   "license": "proprietary",
   "require": {
@@ -42,8 +42,9 @@
     "metadata": "composer validate --strict --no-check-lock",
     "security:audit": "composer audit",
     "serve": "php -S 0.0.0.0:8080 -t public public/index.php",
-    "syntax": "find config public routes src tests views -name '*.php' -print0 | xargs -0 -n1 php -l",
+    "syntax": "find config public routes scripts src tests views -name '*.php' -print0 | xargs -0 -n1 php -l",
     "migrate": "php scripts/run-migrations.php",
+    "privacy:purge": "php scripts/purge-expired-data.php",
     "test:migrations": "php scripts/test-migrations.php",
     "test": "phpunit"
   },

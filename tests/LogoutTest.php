@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Presentation\Navigation;
 use App\Controller\AdminController;
 use App\Controller\ClubController;
 use App\Core\HttpException;
@@ -110,8 +111,8 @@ final class LogoutTest extends TestCase
         self::assertStringContainsString('method="post" action="/club_logout.php"', $layout);
         self::assertStringNotContainsString('href="/club_logout.php"', $layout);
 
-        $adminLogout = $this->findLogoutItem(build_submenu('/admin_manage_events.php', true, false));
-        $clubLogout = $this->findLogoutItem(build_submenu('/club_area.php', false, true));
+        $adminLogout = $this->findLogoutItem(Navigation::submenu('/admin_manage_events.php', true, false));
+        $clubLogout = $this->findLogoutItem(Navigation::submenu('/club_area.php', false, true));
         self::assertSame('/admin_logout.php', $adminLogout['url']);
         self::assertSame('post', $adminLogout['method'] ?? null);
         self::assertSame('/club_logout.php', $clubLogout['url']);

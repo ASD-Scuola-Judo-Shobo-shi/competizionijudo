@@ -13,7 +13,8 @@ hosting operator must:
 1. Copy `.env.example` to `.env` through the hosting control panel or another
    approved encrypted administrative channel. Do not place it in a Git commit,
    workflow artifact, ticket, or chat message.
-2. Replace every blank required value. Use a dedicated least-privilege database
+2. Replace every blank required value, including the `PRIVACY_*` facts required
+   for the deployed privacy notice. Use a dedicated least-privilege database
    account and a password hash produced with PHP's `password_hash()` for
    `ADMIN_PASS_HASH`; never store the administrator's plaintext password.
 3. Set `APP_ENV=production`, `APP_DEBUG=false`, and the canonical HTTPS
@@ -33,9 +34,12 @@ for each hosting environment before its first deployment.
 ## Required application settings
 
 `.env.example` is the authoritative non-secret inventory. Production startup
-requires `APP_URL`, all four `DB_*` settings, `ADMIN_USER`, and
-`ADMIN_PASS_HASH`. It also rejects an enabled or malformed `APP_DEBUG` value.
-Optional settings retain the defaults shown in the example.
+requires `APP_URL`, all four `DB_*` settings, `ADMIN_USER`, `ADMIN_PASS_HASH`,
+and the non-optional `PRIVACY_*` settings. It validates privacy contact email
+and requires positive log and backup retention periods. `PRIVACY_DPO_EMAIL` and
+`PRIVACY_ADDITIONAL_PROCESSORS` are optional only when they do not apply. The
+controller must verify that all published facts and legal bases are accurate;
+application defaults cannot determine them.
 
 If required production configuration is missing, startup returns a server error
 without exposing values. The operator should inspect `var/log/application.log`;
@@ -45,3 +49,30 @@ while exception messages and configuration values remain redacted.
 The `MIGRATION_TEST_*` variables documented in `.env.example` belong only to the
 isolated local/CI migration smoke harness. Do not provision them in a deployed
 application environment.
+
+## Runtime data and privacy retention
+
+`public/uploads/events/`, `var/log/`, the database, and backups are runtime data
+owned by the server operator. Code artifacts contain only the upload directory's
+access-control file and must never overwrite or synchronize runtime upload
+contents. The application deletes event documents when they are replaced and
+when their event is deleted.
+
+Schedule `composer privacy:purge` at least daily. It deletes closed-event entry
+snapshots older than one year, enforcing a one-year maximum; monitor its exit status. Configure log rotation
+to delete application logs after `PRIVACY_LOG_RETENTION_DAYS`, and configure the
+backup system to delete backups after `PRIVACY_BACKUP_RETENTION_DAYS`. Those two
+host-level policies are not implemented by the PHP process. Test both restores
+and expiry, and document any processor that can access backups or logs.
+
+Before going live, the controller must also establish procedures for data-subject
+requests and breaches, confirm club authority for athletes and minors, sign the
+required processor agreements, and verify that transfers match
+`PRIVACY_DATA_TRANSFER_DETAILS`. The public notice is at `/privacy`.
+
+The operational baseline should be reviewed against the official
+[GDPR text](https://eur-lex.europa.eu/eli/reg/2016/679/2016-05-04/eng), the
+[EDPB privacy-by-design guidance](https://www.edpb.europa.eu/topics/ai-and-technology/privacy-by-design-and-by-default_en),
+and the [Italian authority's cookie guidance](https://www.garanteprivacy.it/web/guest/home/docweb/-/docweb-display/docweb/9677876).
+These application notes are not a substitute for the controller's legal and
+organizational assessment.

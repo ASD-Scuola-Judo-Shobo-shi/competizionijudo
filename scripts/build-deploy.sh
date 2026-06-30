@@ -28,6 +28,7 @@ rsync -a --no-owner --no-group \
   --include="/migrations/***" \
   --include="/scripts/" \
   --include="/scripts/run-migrations.php" \
+  --include="/scripts/purge-expired-data.php" \
   --exclude="/scripts/***" \
   --include="/var/" \
   --include="/var/log/" \

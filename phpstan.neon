@@ -6,6 +6,7 @@ parameters:
     - src/Core
     - src/Controller
     - src/Model
+    - src/Service
     - src/Validation
     - src/helpers.php
     - public

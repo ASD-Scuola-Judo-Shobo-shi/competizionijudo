@@ -60,20 +60,20 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C30 | [x] | `perf(lists): scope and paginate list queries` | P-03, F-01 | `cbde972` | Upcoming lists enforce published/open/current-date lifecycle; public/club lists page at 50; aggregates are identifier-scoped; MySQL 8.4 plans use bounded index scans at representative scale; clean/legacy migrations and full checks pass 129/958 |
 | C31 | [x] | `test(domain): define event year category invariants` | A-02, A-07 | `baed051` | Stable age-class keys drive one PHP/JSON weight table; exhaustive locale, event-year, gender, threshold, master, invalid/future, and rendered-client parity checks pass; full checks 133/1462 |
 | C32 | [x] | `refactor(domain): derive athlete category for event year` | A-02 | `fb53636` | Athlete rows retain only source facts; open views derive per event/current year; close transition atomically snapshots displayed facts/category; existing closed rows backfill best-effort; MySQL clean/legacy/runtime and full checks pass 136/1488 |
-| C33 | [x] | `refactor(core): use the dispatched request consistently` | A-06 | This commit | Callable/controller routes receive the identical dispatched request; language switching returns safe same-origin responses without globals/exit; rendered 405 responses include `Allow`; full checks pass 142/1507 |
-| C34 | [ ] | `docs: align supported architecture and operations` | A-07, A-08, F-03, O-01 |  |  |
+| C33 | [x] | `refactor(core): use the dispatched request consistently` | A-06 | `ea8a841` | Callable/controller routes receive the identical dispatched request; language switching returns safe same-origin responses without globals/exit; rendered 405 responses include `Allow`; full checks pass 142/1507 |
+| C34 | [x] | `docs: align supported architecture and operations` | A-07, A-08, F-03, O-01 |  | Dead data/wrappers removed; environment-driven Article 13 notice, upload purge, one-year snapshot expiry, runtime ownership, truthful README, and route inventory verified; hash recorded at C35 startup |
 | C35 | [ ] | `test: cover critical application workflows` | Q-03, Q-04 |  | Final full-roadmap verification |
 
 ## Current focus
 
 | Field | Value |
 |---|---|
-| Active commit ID | None |
-| Objective | Start C34 dead-code removal and supported architecture/operations documentation alignment |
-| Files intentionally in scope | None until C34 begins |
-| Last targeted test | C33 router/language/logout/delete/application tests pass (28 tests/155 assertions); focused PHPCS and PHPStan pass |
-| Last full check | C33 `composer check` passes, including dependency audit (142 tests/1507 assertions) |
-| Next action | Read C34 in full, confirm dead code and documentation drift, and identify whether D06 needs a direct product decision |
+| Active commit ID | C35 (next) |
+| Objective | Raise the final regression gate across critical HTTP/database workflows and the production artifact |
+| Files intentionally in scope | To be selected from the full C35 roadmap section after confirming current critical-path coverage |
+| Last targeted test | C34 privacy/upload/retention/delete/route tests pass (19 tests/115 assertions); SQLite retention plan uses `idx_entries_event_club` |
+| Last full check | C34 `composer check` passes, including dependency audit (149 tests/1531 assertions); exact production artifact boots Italian/English privacy notices |
+| Next action | Commit C34, then mark C35 in progress and inventory the remaining critical workflow coverage before editing |
 
 ## Blockers and decisions
 
@@ -84,7 +84,7 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | D03 | C23 | Operations | Open | Define stable health URL and rollback procedure for FTP hosting |
 | D04 | C25 | Product/privacy | Open | Confirm whether exports are required and, if so, approved formats/fields/access |
 | D05 | C32 | User/product | Resolved | Open events use live athlete facts and calculate weight category at consumption; closing atomically snapshots displayed athlete facts plus event-year program/category; closed output uses snapshots; existing closed rows backfill best-effort from current facts |
-| D06 | C34 | Privacy owner | Open | Define upload and athlete-data retention policy |
+| D06 | C34 | User/privacy | Resolved | Purge uploads when replaced or their event is deleted; warn before club deletion to export live athlete records; retain closed-event snapshots for one year; source controller/legal-basis/processor notice fields from required production environment values |
 | D07 | C16, C17 | Code | Resolved | C17 scopes legacy compatibility to applicable known copy statements, restores session mode, and C16 passes under default strict MySQL 8.4 |
 | D08 | C14 | User/worktree | Resolved | The concurrent `phpcs.xml` conflict was resolved outside the C14 diff on 2026-06-29 |
 
@@ -134,6 +134,7 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-29 | C32 | Completed live event-year category derivation and atomic close-time snapshots under the approved D05 policy | Focused tests 43/718; MySQL clean/legacy migration and runtime immutability checks pass; full `composer check` passes 136/1488 including audit | C33 |
 | 2026-06-29 | C33 | In progress: unified dispatched request identity, converted language switching to safe responses, and added rendered 405 handling; paused before full gate at environment usage limit | Focused tests 28/155 plus focused PHPCS/PHPStan pass; required `composer check` not run | Resume C33 verification; do not commit yet |
 | 2026-06-30 | C33 | Completed single-request dispatch, response-based safe language switching, and explicit method-not-allowed handling | Focused tests 28/155; full `composer check` passes 142/1507 including audit | C34 |
+| 2026-06-30 | C34 | Removed confirmed dead code, aligned supported operations, and implemented the approved configuration-driven privacy and retention controls | Focused tests 19/115 with indexed retention plan; exact artifact excludes uploads and boots configured privacy notices; full `composer check` passes 149/1531 including audit | C35 |
 
 ## Milestones
 

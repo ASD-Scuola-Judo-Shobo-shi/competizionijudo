@@ -12,7 +12,9 @@ use App\Core\Response;
 use App\Core\Router;
 use App\Core\Session;
 use App\Core\View;
+use App\Localization;
 use App\Model\Database;
+use App\Service\EventUploadStorage;
 use PDO;
 use PDOStatement;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -62,7 +64,7 @@ final class DeleteActionsTest extends TestCase
             }
 
             $response = $router->dispatch(new Request('POST', $path));
-            self::assertSame(302, $response->status());
+            self::assertSame(302, $response->status(), strip_tags($response->content()));
         }
     }
 
@@ -106,15 +108,121 @@ final class DeleteActionsTest extends TestCase
     public function testValidAdminRequestDeletesEvent(): void
     {
         Session::set('is_admin', true);
-        $this->setDatabase($this->databaseExpectingDelete('DELETE FROM events WHERE id = ?', [501]));
+        $database = new PDO('sqlite::memory:');
+        $database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->createEventTable($database);
+        $database->exec(
+            "INSERT INTO events
+             (id, name, date, location, organizer, registration_deadline, type, description, notes,
+              poster_file, info_file, published, closed)
+             VALUES
+             (501, 'Synthetic event', '2026-07-01', 'Test city', '', '', 'only_competitive', '', '',
+              'uploads/events/old-poster.pdf', 'uploads/events/old-info.pdf', 1, 0)"
+        );
+        $this->setDatabase($database);
+        $publicRoot = sys_get_temp_dir() . '/competizionijudo-delete-' . bin2hex(random_bytes(8));
+        mkdir($publicRoot . '/uploads/events', 0755, true);
+        file_put_contents($publicRoot . '/uploads/events/old-poster.pdf', 'synthetic');
+        file_put_contents($publicRoot . '/uploads/events/old-info.pdf', 'synthetic');
         $request = new Request('POST', '/admin_delete_event.php', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '501',
         ]);
 
-        $response = (new AdminController($this->view, $request))->deleteEvent($request);
+        $response = (new AdminController(
+            $this->view,
+            $request,
+            null,
+            null,
+            null,
+            new EventUploadStorage($publicRoot)
+        ))->deleteEvent($request);
 
         self::assertSame(302, $response->status());
+        self::assertSame(0, (int) $database->query('SELECT COUNT(*) FROM events')->fetchColumn());
+        self::assertFileDoesNotExist($publicRoot . '/uploads/events/old-poster.pdf');
+        self::assertFileDoesNotExist($publicRoot . '/uploads/events/old-info.pdf');
+        rmdir($publicRoot . '/uploads/events');
+        rmdir($publicRoot . '/uploads');
+        rmdir($publicRoot);
+    }
+
+    public function testReplacingEventUploadPurgesPreviousFile(): void
+    {
+        Session::set('is_admin', true);
+        $database = new PDO('sqlite::memory:');
+        $database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->createEventTable($database);
+        $database->exec(
+            "INSERT INTO events
+             (id, name, date, location, organizer, registration_deadline, type, description, notes,
+              poster_file, info_file, published, closed)
+             VALUES
+             (502, 'Synthetic event', '2026-07-01', 'Test city', '', '', 'only_competitive', '', '',
+              'uploads/events/old-poster.png', NULL, 1, 0)"
+        );
+        $this->setDatabase($database);
+
+        $publicRoot = sys_get_temp_dir() . '/competizionijudo-replace-' . bin2hex(random_bytes(8));
+        mkdir($publicRoot . '/uploads/events', 0755, true);
+        file_put_contents($publicRoot . '/uploads/events/old-poster.png', 'synthetic old image');
+        $temporaryUpload = $publicRoot . '/new-poster.png';
+        file_put_contents(
+            $temporaryUpload,
+            base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true)
+        );
+        $_FILES['poster_file'] = [
+            'name' => 'new-poster.png',
+            'type' => 'image/png',
+            'tmp_name' => $temporaryUpload,
+            'error' => UPLOAD_ERR_OK,
+            'size' => filesize($temporaryUpload),
+        ];
+        $request = new Request('POST', '/admin_add_event.php', [], [
+            'csrf_token' => csrf_token(),
+            'event_id' => '502',
+            'name' => 'Synthetic event',
+            'date' => '2026-07-01',
+            'location' => 'Test city',
+            'organizer' => '',
+            'registration_deadline' => '',
+            'type' => 'only_competitive',
+            'description' => '',
+            'notes' => '',
+            'published' => '1',
+            'closed' => '0',
+        ]);
+        $storage = new EventUploadStorage(
+            $publicRoot,
+            static function (string $source, string $destination): bool {
+                return rename($source, $destination);
+            }
+        );
+
+        try {
+            $response = (new AdminController(
+                $this->view,
+                $request,
+                null,
+                null,
+                null,
+                $storage
+            ))->addEvent($request);
+
+            self::assertSame(302, $response->status(), strip_tags($response->content()));
+            self::assertFileDoesNotExist($publicRoot . '/uploads/events/old-poster.png');
+            $storedPath = (string) $database->query('SELECT poster_file FROM events WHERE id = 502')->fetchColumn();
+            self::assertMatchesRegularExpression('#^uploads/events/poster_.*\.png$#', $storedPath);
+            self::assertFileExists($publicRoot . '/' . $storedPath);
+        } finally {
+            unset($_FILES['poster_file']);
+            foreach (glob($publicRoot . '/uploads/events/*') ?: [] as $file) {
+                unlink($file);
+            }
+            rmdir($publicRoot . '/uploads/events');
+            rmdir($publicRoot . '/uploads');
+            rmdir($publicRoot);
+        }
     }
 
     public function testValidClubRequestScopesAthleteDeleteToSessionClub(): void
@@ -152,6 +260,15 @@ final class DeleteActionsTest extends TestCase
             self::assertStringContainsString('name="' . $idField . '"', $template);
             self::assertStringNotContainsString('?delete=', $template);
         }
+
+        self::assertStringContainsString(
+            'live athlete records',
+            Localization::transFor('en', 'admin.clubs.confirm_delete')
+        );
+        self::assertStringContainsString(
+            'Esportali prima',
+            Localization::transFor('it', 'admin.clubs.confirm_delete')
+        );
     }
 
     private function assertCsrfRejected(callable $delete): void
@@ -189,6 +306,18 @@ final class DeleteActionsTest extends TestCase
     private function setDatabase(PDO $database): void
     {
         $this->databaseConnection->setValue(null, $database);
+    }
+
+    private function createEventTable(PDO $database): void
+    {
+        $database->exec(
+            'CREATE TABLE events (
+                id INTEGER PRIMARY KEY, name TEXT NOT NULL, date TEXT NOT NULL, location TEXT NOT NULL,
+                organizer TEXT NOT NULL, registration_deadline TEXT, type TEXT NOT NULL,
+                description TEXT, notes TEXT, poster_file TEXT, info_file TEXT,
+                published INTEGER NOT NULL, closed INTEGER NOT NULL
+            )'
+        );
     }
 
     private function startCleanSession(): void

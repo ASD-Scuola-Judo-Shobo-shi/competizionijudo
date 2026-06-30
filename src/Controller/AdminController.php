@@ -18,27 +18,30 @@ use App\Security\AuthenticationThrottle;
 use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
 use App\Service\DatabasePasswordResetRepository;
+use App\Service\EventUploadStorage;
 use App\Service\PasswordResetRepository;
 use App\Validation\ClubInputValidator;
 use App\Validation\EventInputValidator;
 use PDOException;
-use RuntimeException;
 
 final class AdminController extends Controller
 {
     private ?AuthenticationThrottle $authenticationThrottle;
     private ?PasswordResetRepository $passwordResetRepository;
+    private readonly EventUploadStorage $eventUploadStorage;
 
     public function __construct(
         View $view,
         Request $request,
         ?AuthenticationThrottle $authenticationThrottle = null,
         ?PasswordResetRepository $passwordResetRepository = null,
-        ?Logger $logger = null
+        ?Logger $logger = null,
+        ?EventUploadStorage $eventUploadStorage = null
     ) {
         parent::__construct($view, $request, $logger);
         $this->authenticationThrottle = $authenticationThrottle;
         $this->passwordResetRepository = $passwordResetRepository;
+        $this->eventUploadStorage = $eventUploadStorage ?? new EventUploadStorage();
     }
 
     public function login(Request $request): Response
@@ -186,7 +189,15 @@ final class AdminController extends Controller
         validate_csrf((string) $request->post('csrf_token'));
         $eventId = (int) $request->post('event_id');
         if ($eventId > 0) {
+            $event = Event::findById($eventId);
             Event::remove($eventId);
+            if ($event !== null) {
+                try {
+                    $this->eventUploadStorage->purgeMany([$event->poster_file, $event->info_file]);
+                } catch (\Throwable $exception) {
+                    $this->reportFailure('admin.event_upload_purge_failed', $exception, $request);
+                }
+            }
         }
 
         return $this->redirect('/admin_manage_events.php');
@@ -260,15 +271,19 @@ final class AdminController extends Controller
             }
 
             if ($error === '') {
+                $storedUploads = [];
+                $persisted = false;
                 try {
                     $locandina = $event?->poster_file ?? null;
                     $informativa = $event?->info_file ?? null;
 
                     if (isset($uploads['poster_file'])) {
-                        $locandina = $this->storeEventUpload($uploads['poster_file'], 'poster_');
+                        $locandina = $this->eventUploadStorage->store($uploads['poster_file'], 'poster_');
+                        $storedUploads[] = $locandina;
                     }
                     if (isset($uploads['info_file'])) {
-                        $informativa = $this->storeEventUpload($uploads['info_file'], 'info_');
+                        $informativa = $this->eventUploadStorage->store($uploads['info_file'], 'info_');
+                        $storedUploads[] = $informativa;
                     }
 
                     if ($event) {
@@ -294,6 +309,7 @@ final class AdminController extends Controller
                             (new EntrySnapshotService($db))->consolidate($eventId, $data['date']);
                         }
                         $db->commit();
+                        $persisted = true;
                     } else {
                         $db->prepare(
                             "INSERT INTO events (name, date, location, organizer, registration_deadline, type, description, notes, poster_file, info_file, published, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -311,12 +327,35 @@ final class AdminController extends Controller
                             $data['published'],
                             $data['closed'],
                         ]);
+                        $persisted = true;
+                    }
+
+                    if ($event !== null) {
+                        $replacedUploads = [];
+                        if (isset($uploads['poster_file'])) {
+                            $replacedUploads[] = $event->poster_file;
+                        }
+                        if (isset($uploads['info_file'])) {
+                            $replacedUploads[] = $event->info_file;
+                        }
+                        $this->eventUploadStorage->purgeMany($replacedUploads);
                     }
 
                     return $this->redirect('/admin_manage_events.php');
                 } catch (\Throwable $exception) {
                     if ($db->inTransaction()) {
                         $db->rollBack();
+                    }
+                    if (!$persisted) {
+                        try {
+                            $this->eventUploadStorage->purgeMany($storedUploads);
+                        } catch (\Throwable $cleanupException) {
+                            $this->reportFailure(
+                                'admin.new_event_upload_cleanup_failed',
+                                $cleanupException,
+                                $request
+                            );
+                        }
                     }
                     $this->reportFailure('admin.event_save_failed', $exception, $request);
                     $error = __('errors.save_failed');
@@ -352,27 +391,6 @@ final class AdminController extends Controller
         }
 
         return $uploads;
-    }
-
-    /** @param array<string, mixed> $upload */
-    private function storeEventUpload(array $upload, string $prefix): string
-    {
-        $extension = EventInputValidator::extension($upload);
-        if ($extension === null) {
-            throw new RuntimeException('Validated event upload has no supported extension.');
-        }
-
-        $uploadDir = base_path('public/uploads/events/');
-        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-            throw new RuntimeException('Unable to create event upload directory.');
-        }
-
-        $filename = $prefix . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
-        if (!move_uploaded_file((string) $upload['tmp_name'], $uploadDir . $filename)) {
-            throw new RuntimeException('Unable to store event upload.');
-        }
-
-        return 'uploads/events/' . $filename;
     }
 
     public function editClub(Request $request): Response

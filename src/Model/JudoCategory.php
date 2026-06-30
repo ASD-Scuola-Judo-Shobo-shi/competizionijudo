@@ -52,11 +52,6 @@ final class JudoCategory
         return strtoupper($gender);
     }
 
-    public static function normalizeWeight(string $weight): float
-    {
-        return (float) str_replace(',', '.', trim($weight));
-    }
-
     public static function extractBirthYear(string $value): ?int
     {
         $value = trim($value);
@@ -110,19 +105,6 @@ final class JudoCategory
             'program' => $program,
             'weight_category' => self::weightCategory($classKey, $gender, $weight),
         ];
-    }
-
-    public static function weightCategoryPublic(string $classe, string $gender, float $weight): string
-    {
-        foreach (['it', 'en'] as $locale) {
-            foreach (AgeClass::all($locale) as $ageClass) {
-                if ($ageClass->name === $classe) {
-                    return self::weightCategory($ageClass->key, $gender, $weight);
-                }
-            }
-        }
-
-        return '';
     }
 
     private static function weightCategory(string $classKey, string $gender, float $weight): string

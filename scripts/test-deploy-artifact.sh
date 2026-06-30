@@ -22,6 +22,7 @@ for route in \
   / \
   /index.php \
   /about \
+  /privacy \
   /club_register.php \
   /club_login.php \
   /club_forgot_password.php \
@@ -43,6 +44,7 @@ boot_and_request() {
   local port="$2"
   local expected="$3"
   local body_file="${TEMP_DIR}/${locale}.html"
+  local privacy_body_file="${TEMP_DIR}/${locale}-privacy.html"
   local log_file="${TEMP_DIR}/${locale}.log"
   local status=''
 
@@ -53,6 +55,15 @@ boot_and_request() {
       DB_HOST=127.0.0.1 DB_NAME=synthetic_smoke DB_USER=synthetic_smoke \
       DB_PASS=synthetic-smoke-password ADMIN_USER=synthetic-admin \
       ADMIN_PASS_HASH=synthetic-smoke-password-hash \
+      PRIVACY_CONTROLLER_NAME='Synthetic Controller' \
+      PRIVACY_CONTROLLER_ADDRESS='1 Test Street' \
+      PRIVACY_CONTACT_EMAIL='privacy@example.test' \
+      PRIVACY_ACCOUNT_LEGAL_BASIS='Synthetic account basis' \
+      PRIVACY_ATHLETE_LEGAL_BASIS='Synthetic athlete basis' \
+      PRIVACY_HOSTING_PROVIDER='Synthetic Hosting' \
+      PRIVACY_HOSTING_LOCATION='European Union' \
+      PRIVACY_DATA_TRANSFER_DETAILS='No transfer outside the EEA' \
+      PRIVACY_LOG_RETENTION_DAYS=30 PRIVACY_BACKUP_RETENTION_DAYS=30 \
       php -d display_errors=0 -S "127.0.0.1:${port}" -t public public/index.php
   ) >"$log_file" 2>&1 &
   local server_pid=$!
@@ -86,6 +97,18 @@ boot_and_request() {
 
   if grep -Eiq 'stack trace|fatal error|uncaught exception|xdebug' "$body_file"; then
     echo "Artifact response exposed debug output for locale ${locale}." >&2
+    exit 1
+  fi
+
+  status="$(curl --silent --output "$privacy_body_file" --write-out '%{http_code}' \
+    "http://127.0.0.1:${port}/privacy" || true)"
+  if [[ "$status" != '200' ]] || ! grep -Fq 'Synthetic Controller' "$privacy_body_file"; then
+    echo "Artifact privacy notice did not render configured controller data for locale ${locale}." >&2
+    exit 1
+  fi
+
+  if grep -Fq 'cookie-consent' "$privacy_body_file"; then
+    echo "Artifact privacy notice included the obsolete consent banner." >&2
     exit 1
   fi
 }

@@ -84,19 +84,6 @@ enum Belt: string
         return $components;
     }
 
-    /**
-     * Returns all cases as select options.
-     * @return array<string, string> value => label
-     */
-    public static function options(?string $locale = null): array
-    {
-        $options = [];
-        foreach (self::cases() as $case) {
-            $options[$case->value] = $case->label($locale);
-        }
-        return $options;
-    }
-
     /** @return list<array{key: string, color: string, textColor: string, circle: string}> */
     private function definition(): array
     {

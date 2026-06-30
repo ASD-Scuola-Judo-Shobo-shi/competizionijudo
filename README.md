@@ -1,108 +1,101 @@
 # Competizioni Judo
 
-A production-ready, framework-free MVC PHP application for managing judo competitions. Features event management, club registration, athlete entry management with automatic judo category calculation, admin dashboard, and bilingual (Italian/English) support.
+Small, framework-free PHP MVC application for publishing judo events, managing
+club athlete archives, registering athletes, and administering closed-event
+records. This repository supplies application controls; production readiness
+also depends on correct hosting, privacy, mail, backup, and operational setup.
 
-## Features
+## Supported features
 
-- **Event Management** – Create, edit, publish, and close competitions with poster/info file uploads
-- **Club Registration & Login** – Self-registration with forgot/reset password flow
-- **Athlete Management** – CRUD for athletes within each club's area
-- **Event Registration** – Clubs register athletes for events with duplicate detection
-- **Judo Category Calculation** – Automatic age class and weight category determination
-- **Bilingual UI** – Italian (default) and English with locale switching
-- **Admin Dashboard** – Manage clubs, events, and view entries with pagination
+| Capability | Routes | Access |
+| --- | --- | --- |
+| Home, public events, event details and entries | `/`, `/events.php`, `/event_details.php`, `/event_entries.php` | Public |
+| Privacy notice and language switch | `/privacy`, `/language/switch` | Public |
+| Club registration and login | `/club_register.php`, `/club_login.php` | Public |
+| Club athlete archive and event registration | `/club_area.php`, `/event_register.php` | Authenticated club |
+| Athlete deletion | `/club_delete_athlete.php` | Authenticated club, POST + CSRF |
+| Event and club administration | `/admin_manage_events.php`, `/admin_add_event.php`, `/admin_manage_clubs.php`, `/admin_edit_club.php` | Administrator |
+| Event and club deletion | `/admin_delete_event.php`, `/admin_delete_club.php` | Administrator, POST + CSRF |
+
+Password-reset routes exist, but outbound recovery is deliberately unavailable
+in production until an approved mail transport is configured (roadmap decision
+D01). Do not advertise email recovery to users until that work is completed.
 
 ## Requirements
 
-- PHP 8.2+
-- MySQL 8.0+ or compatible
-- PHP XML extensions: `dom`, `simplexml`, `xml`, `xmlwriter`
-- Composer
+- PHP 8.2 or later with PDO MySQL, mbstring, fileinfo, and XML extensions
+- MySQL 8.0 or 8.4
+- Composer 2
+- `rsync`, Bash, and `curl` for deployment artifact checks
 
-## Quick Start
+## Local setup
 
-```bash
-cp .env.example .env
-# Edit .env with your database credentials
-composer install
-composer serve
+1. Create an empty MySQL database and a dedicated local database user.
+2. Run `composer install`.
+3. Copy `.env.example` to `.env`, set `APP_ENV=local`, and fill every database,
+   administrator, and `PRIVACY_*` value with synthetic local data. Generate
+   `ADMIN_PASS_HASH` with `password_hash()`; do not store a plaintext password.
+4. Run `composer migrate`.
+5. Run `composer serve` and open `http://localhost:8080`.
+
+Local/development startup applies forward migrations automatically. Production
+operators must run `composer migrate` explicitly before directing traffic to a
+new release. Never edit an already-deployed migration.
+
+## Architecture
+
+`public/index.php` is the front controller. `routes/web.php` maps requests to
+small controllers under `src/Controller`; models and explicit services own
+database and lifecycle work; `views/` and `lang/` own presentation. The design
+intentionally avoids a general application framework and dependency container.
+
+Runtime state is not a code artifact:
+
+- MySQL owns clubs, athletes, events, registrations, and security records.
+- `public/uploads/events/` owns event documents. Replacement and event deletion
+  purge old documents; Git and deployment artifacts exclude their contents.
+- `var/log/` owns application logs and must be rotated by the host.
+- backups are host-owned and must follow the configured retention policy.
+
+## Privacy and security
+
+The public `/privacy` notice derives controller identity, legal bases,
+processors, transfer facts, and operational retention periods from environment
+variables. Production startup fails if required values are missing or malformed.
+The comments in `.env.example` identify the required GDPR transparency data.
+Those values must describe the real deployment; software cannot choose a lawful
+basis or validate the controller's arrangements.
+
+Live athlete categories are calculated from source data for the event year.
+Closing an event atomically stores its competition snapshot. Schedule
+`composer privacy:purge` daily to remove closed-event entry snapshots after at
+most one year. Event uploads are deleted when replaced or when their event is deleted.
+Administrators are warned to export live athlete records before deleting a club.
+
+The application uses only its technical session cookie and does not load
+analytics or profiling cookies. Authentication is server-side, destructive
+actions require POST and CSRF validation, authorization is scoped at the server
+and database boundaries, uploaded event documents are allow-listed, and errors
+are logged without exposing stack traces in production. These controls do not
+replace HTTPS, least-privilege database credentials, processor agreements,
+rights/breach procedures, backup expiry, monitoring, or independent review.
+
+See [deployment operations](docs/deployment.md) for the production checklist.
+
+## Verification and deployment
+
+Run the full gate before committing:
+
+```sh
+composer check
 ```
 
-Open `http://localhost:8080`.
+It validates Composer metadata, PHP syntax, coding style, PHPStan, PHPUnit, and
+the Composer security audit. `composer test:migrations` needs an isolated MySQL
+test account. `composer ci` also builds and verifies the exact production-only
+artifact. The build includes only runtime directories and access-control marker
+files, never `.env`, tests, development dependencies, logs, or uploaded files.
 
-## Project Structure
-
-```text
-config/            Application configuration (app.php)
-public/            Web root and front controller
-routes/            Route definitions (web.php)
-src/Controller/    HTTP controllers
-src/Core/          Minimal framework primitives (Router, View, Request, Session, Cache)
-src/Model/         Domain/data models (Club, Event, Athlete, Entry, others)
-views/             PHP templates and layouts
-tests/             PHPUnit unit tests
-migrations/        SQL migration files
-lang/              Translation files (en.php, it.php)
-var/               Runtime logs
-scripts/           Build, migration, and git hook scripts
-docs/              Audit, deployment, and tracking documentation
-.github/workflows/ CI and deployment workflows
-```
-
-## Security
-
-All Phase 1-2 security hardening is implemented and verified:
-
-- ✅ CSRF protection on all POST forms
-- ✅ Session cookie hardening (HttpOnly, Secure, SameSite=Lax)
-- ✅ Login rate-limiting (5 attempts / 5 min cooldown)
-- ✅ Session regeneration after login
-- ✅ Password reset token hardening (single-use, previous tokens invalidated)
-- ✅ Open redirect prevention
-- ✅ Security headers (HSTS, X-Content-Type-Options, X-Frame-Options, etc.)
-- ✅ File upload MIME validation (server-side `finfo` check)
-- ✅ Auto-migrations disabled in production
-- ✅ Prepared statements throughout (no SQL injection)
-
-## Quality Commands
-
-```bash
-composer check      # metadata, syntax, style, static analysis, tests, audit
-composer format     # auto-fix PHP coding-standard issues (PSR-12)
-composer ci         # full check plus deploy artifact smoke build
-composer analyse    # PHPStan static analysis
-composer test       # PHPUnit tests
-```
-
-## Git Hooks
-
-This repository uses local Git hooks from `scripts/git-hooks/`.
-
-- `pre-commit` runs fast checks: Composer metadata validation and syntax checks for staged PHP files.
-- `pre-push` runs `composer ci`, which executes the full local CI suite.
-
-Enable them with:
-
-```bash
-git config core.hooksPath scripts/git-hooks
-```
-
-## Deployment
-
-The project deploys from GitHub Actions over FTP/FTPS to shared hosting (Aruba, Altervista, etc.).
-
-| Branch | Environment | URL |
-|--------|-------------|-----|
-| `main` | Production | `https://www.competizionijudo.it` |
-| `dev`  | Development | `https://dev.competizionijudo.it` |
-
-See `docs/deployment.md` for detailed setup, GitHub secrets, and first-deployment instructions.
-
-## Notes
-
-- Point your web server document root at `public/`.
-- On shared hosting where the document root cannot be changed, the root `.htaccess` rewrites traffic into `public/` and blocks direct access to application folders.
-- Keep secrets in `.env`; commit only `.env.example`.
-- For custom domains, configure the hosting control panel so each subdomain points to its respective subdirectory (`prod/` or `dev/`).
-- See `docs/audit.md` for the full security and architecture audit.
-- See `docs/tracking.md` for implementation progress.
+Project remediation evidence and sequencing live in
+[audit.md](docs/audit.md), [roadmap.md](docs/roadmap.md), and
+[tracking.md](docs/tracking.md). Continue work with [prompt.md](docs/prompt.md).

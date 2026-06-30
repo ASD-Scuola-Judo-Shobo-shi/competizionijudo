@@ -10,3 +10,5 @@
 /.idea/
 /.vscode/
 .DS_Store
+/public/uploads/events/*
+!/public/uploads/events/.htaccess
