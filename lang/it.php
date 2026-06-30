@@ -103,6 +103,10 @@ return [
                 'reset_failed' => 'Impossibile reimpostare la password. Riprovare.',
             ],
         ],
+        'reset_email' => [
+            'subject' => 'Reimposta la password di Competizioni Judo',
+            'body' => "È stato richiesto il reset della password della società.\n\nApri questo link entro un'ora:\n{url}\n\nSe non hai richiesto la modifica, ignora questo messaggio.",
+        ],
         'list' => 'Elenco club',
         'no_clubs' => 'Nessuna società registrata.',
         'name' => 'Nome società',

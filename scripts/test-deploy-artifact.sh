@@ -55,6 +55,7 @@ boot_and_request() {
       DB_HOST=127.0.0.1 DB_NAME=synthetic_smoke DB_USER=synthetic_smoke \
       DB_PASS=synthetic-smoke-password ADMIN_USER=synthetic-admin \
       ADMIN_PASS_HASH=synthetic-smoke-password-hash \
+      PASSWORD_RESET_MAILER=aruba MAIL_FROM_ADDRESS='postmaster@example.test' \
       PRIVACY_CONTROLLER_NAME='Synthetic Controller' \
       PRIVACY_CONTROLLER_ADDRESS='1 Test Street' \
       PRIVACY_CONTACT_EMAIL='privacy@example.test' \

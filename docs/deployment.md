@@ -17,6 +17,8 @@ hosting operator must:
    for the deployed privacy notice. Use a dedicated least-privilege database
    account and a password hash produced with PHP's `password_hash()` for
    `ADMIN_PASS_HASH`; never store the administrator's plaintext password.
+   Set `PASSWORD_RESET_MAILER=aruba` and use the domain's approved postmaster
+   address for `MAIL_FROM_ADDRESS`.
 3. Set `APP_ENV=production`, `APP_DEBUG=false`, and the canonical HTTPS
    `APP_URL` for production. Development may use `APP_ENV=development`, but it
    must use separate database and administrator credentials.
@@ -35,8 +37,9 @@ for each hosting environment before its first deployment.
 
 `.env.example` is the authoritative non-secret inventory. Production startup
 requires `APP_URL`, all four `DB_*` settings, `ADMIN_USER`, `ADMIN_PASS_HASH`,
-and the non-optional `PRIVACY_*` settings. It validates privacy contact email
-and requires positive log and backup retention periods. `PRIVACY_DPO_EMAIL` and
+`PASSWORD_RESET_MAILER`, `MAIL_FROM_ADDRESS`, and the non-optional `PRIVACY_*`
+settings. It validates mail/privacy contact addresses and requires positive log
+and backup retention periods. `PRIVACY_DPO_EMAIL` and
 `PRIVACY_ADDITIONAL_PROCESSORS` are optional only when they do not apply. The
 controller must verify that all published facts and legal bases are accurate;
 application defaults cannot determine them.
@@ -49,6 +52,29 @@ while exception messages and configuration values remain redacted.
 The `MIGRATION_TEST_*` variables documented in `.env.example` belong only to the
 isolated local/CI migration smoke harness. Do not provision them in a deployed
 application environment.
+
+## Aruba Linux Basic prerequisites
+
+The application targets Aruba Linux Basic without SSH or a third-party mail
+service. Aruba documents PHP `mail()` testing in the hosting control panel and
+uses the domain postmaster identity for site-generated messages. The generic
+`PasswordResetMailer` boundary contains that behavior in the `aruba` adapter;
+changing provider does not change the controller or reset-token lifecycle.
+
+Before enabling recovery, create/verify the postmaster mailbox and run Aruba's
+PHP mail test from **Strumenti e impostazioni > Gestione PHP > Test PHP mail**.
+Then request one reset for a synthetic club and confirm delivery, sender,
+one-hour expiry, and one-time use. A transport failure is logged as
+`club.password_reset_delivery_failed` while the public response stays generic.
+
+Linux Basic does not include a database or database backup by default. Purchase
+and provision the MySQL add-on before deployment; also activate a backup policy
+that satisfies the published `PRIVACY_BACKUP_RETENTION_DAYS` value. Do not claim
+backup retention in the privacy notice unless that service is actually active.
+
+References: [Aruba PHP mail test](https://guide.hosting.aruba.it/hosting/hyper/hyper-linux/gestire-la-versione-php.aspx),
+[Aruba site-mail sender behavior](https://guide.aruba.it/hosting-e-domini/hosting/gestione-strumenti-hosting/pubblicazione-gestione-sito/sostituire-form-mail-aruba),
+and [Linux Basic plan comparison](https://hosting.aruba.it/web-hosting/linux).
 
 ## Runtime data and privacy retention
 

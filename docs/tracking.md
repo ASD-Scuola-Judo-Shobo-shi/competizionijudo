@@ -32,7 +32,7 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C02 | [x] | `fix(domain): simplify belt and gender presentation` | Q-01, P-02, A-07 | `1fcddb1` | One exhaustive belt definition; locale cache/state preserved; 36 tests/356 assertions |
 | C03 | [x] | `fix(view): remove editor artifacts from event form` | Q-04 | `03f4085` | Render test confirms artifact-free output and balanced forms; 37 tests/360 assertions |
 | C04 | [x] | `fix(security): stop exposing password reset tokens` | S-01 | `1c97401` | 4 controller tests/21 assertions; full code checks pass with 41 tests/381 assertions; dependency audit not verified |
-| C05 | [!] | `feat(auth): deliver password reset links by email` | S-01, A-08 |  | D01: no verified production mail transport or sender requirements; production recovery remains disabled |
+| C05 | [x] | `feat(auth): deliver password reset links by email` | S-01, A-08 |  | Provider-neutral mailer boundary selects the Aruba PHP-mail adapter; HTTPS one-hour links use explicit postmaster configuration; known/unknown/failure responses stay generic; full checks 163/1628 |
 | C06 | [x] | `fix(security): enforce athlete ownership on registration` | S-02, S-08 | `5fa7722` | Focused PDO fixture: 5 tests/42 assertions; one constrained write per attempt; full code checks pass with 46 tests/423 assertions; dependency audit not verified |
 | C07 | [x] | `fix(security): protect athlete mutations with CSRF` | S-03 | `50d922e` | Controller/application tests: 5 tests/26 assertions; full code checks pass with 51 tests/449 assertions; dependency audit not verified |
 | C08 | [x] | `fix(security): move delete actions to CSRF protected posts` | S-03 | `330d664` | Delete-action tests: 6 tests/51 assertions; no destructive GET patterns remain; full code checks pass with 57 tests/500 assertions; dependency audit not verified |
@@ -62,24 +62,24 @@ This is the mutable execution record for [roadmap.md](roadmap.md). The audit its
 | C32 | [x] | `refactor(domain): derive athlete category for event year` | A-02 | `fb53636` | Athlete rows retain only source facts; open views derive per event/current year; close transition atomically snapshots displayed facts/category; existing closed rows backfill best-effort; MySQL clean/legacy/runtime and full checks pass 136/1488 |
 | C33 | [x] | `refactor(core): use the dispatched request consistently` | A-06 | `ea8a841` | Callable/controller routes receive the identical dispatched request; language switching returns safe same-origin responses without globals/exit; rendered 405 responses include `Allow`; full checks pass 142/1507 |
 | C34 | [x] | `docs: align supported architecture and operations` | A-07, A-08, F-03, O-01 | `9fbb358` | Dead data/wrappers removed; environment-driven Article 13 notice, upload purge, one-year snapshot expiry, runtime ownership, truthful README, and route inventory verified |
-| C35 | [x] | `test: cover critical application workflows` | Q-03, Q-04 |  | Routed SQLite workflow covers account reset/login, athlete/event CRUD, ownership, and entry privacy; CI enforces migrations, 70% changed-source coverage, locked audit, quality, artifact build, and boot; full checks 155/1601 |
+| C35 | [x] | `test: cover critical application workflows` | Q-03, Q-04 | `e7fcca5` | Routed SQLite workflow covers account reset/login, athlete/event CRUD, ownership, and entry privacy; CI enforces migrations, 70% changed-source coverage, locked audit, quality, artifact build, and boot; full checks 155/1601 |
 
 ## Current focus
 
 | Field | Value |
 |---|---|
-| Active commit ID | None; C05 and C23 remain blocked on D01 and D03 |
-| Objective | Roadmap implementation complete pending the documented mail-transport and deployment-health decisions |
-| Files intentionally in scope | None |
-| Last targeted test | C35 focused workflow/coverage/policy tests pass (9 tests/90 assertions) |
-| Last full check | C35 `composer check` passes, including locked dependency audit (155 tests/1601 assertions); isolated MySQL 8.4 `composer ci` also passes migrations, artifact build, and bilingual boot |
-| Next action | Resolve D01 to implement C05 and D03 to implement C23; do not infer either production contract from repository code |
+| Active commit ID | C23 (next) |
+| Objective | Add exact-revision post-deploy health verification and an Aruba Linux Basic-compatible rollback procedure |
+| Files intentionally in scope | To be selected after C05 is committed and the health/deployment boundary is inventoried |
+| Last targeted test | C05 mail controller/adapter/factory/configuration tests pass (16 tests/59 assertions) |
+| Last full check | C05 `composer check` passes, including locked dependency audit (163 tests/1628 assertions); exact artifact manifest and bilingual production boot pass |
+| Next action | Commit C05, then mark C23 in progress and implement the resolved Aruba deployment contract |
 
 ## Blockers and decisions
 
 | ID | Affects | Owner | Status | Decision/blocker |
 |---|---|---|---|---|
-| D01 | C05 | Product/operations | Blocking | Confirm the actual production transport (SMTP/API/host sendmail), authentication/TLS requirements, and approved sender identity; the repository and generic FTP-hosting docs do not establish these facts |
+| D01 | C05 | Product/operations | Resolved | Target Aruba Linux Basic: use its documented PHP `mail()` facility with an explicitly configured domain sender (normally `postmaster@competizionijudo.it`); no SMTP/API credentials or paid mail transport |
 | D02 | Deployment | Operations | Open | Repository-side server provisioning and `.env` preservation are documented; assign the named environment owner and approved secure channel before the first live deployment |
 | D03 | C23 | Operations | Open | Define stable health URL and rollback procedure for FTP hosting |
 | D04 | C25 | Product/privacy | Open | Confirm whether exports are required and, if so, approved formats/fields/access |
@@ -137,13 +137,14 @@ Add one concise row at the end of every working session, including sessions that
 | 2026-06-30 | C34 | Removed confirmed dead code, aligned supported operations, and implemented the approved configuration-driven privacy and retention controls | Focused tests 19/115 with indexed retention plan; exact artifact excludes uploads and boots configured privacy notices; full `composer check` passes 149/1531 including audit | C35 |
 | 2026-06-30 | C35 | In progress: added real routed/database critical-workflow coverage, template smoke requests, expanded PHPCS boundaries, locked audit policy, 70% changed-source coverage, and the complete CI command; paused at approval usage limit before container cleanup/final commit | Focused tests 9/90; isolated MySQL 8.4 `composer ci` passes clean/legacy migrations, 155 tests/1601 assertions, audit, artifact build, and bilingual boot | Resume C35 cleanup, diff review, tracking completion, and commit |
 | 2026-06-30 | C35 | Completed critical routed/database workflow coverage and final quality, coverage, audit, migration, and production-artifact gates | Final diff check passes; `composer check` passes 155/1601 including locked audit; prior isolated MySQL 8.4 `composer ci` passes migrations, artifact build, and bilingual boot | D01/C05 and D03/C23 remain externally blocked |
+| 2026-06-30 | C05 | Added provider-neutral reset mail delivery with an environment-selected Aruba Linux Basic PHP-mail adapter and explicit HTTPS/sender production checks | Focused tests 16/59; full `composer check` passes 163/1628 including audit; exact artifact manifest and bilingual boot pass | C23 |
 
 ## Milestones
 
 | Milestone | Included commits | Status | Exit condition |
 |---|---|---|---|
 | M0 Trustworthy gate | C01-C03 | [x] | Default local quality/test commands are green |
-| M1 Active security closed | C04-C14 | [!] | Critical/high security regression tests pass; C05 awaits the D01 production mail contract |
+| M1 Active security closed | C04-C14 | [x] | Critical/high security regression tests pass |
 | M2 Releasable artifact | C15-C23 | [!] | Schema/artifact gates pass; C23 awaits the D03 health and rollback contract |
 | M3 Route truth restored | C24-C26 | [x] | Supported routes/features match UI and README direction |
 | M4 Simpler bounded runtime | C27-C30 | [x] | No view queries, stale cache, dead profiler, or unbounded primary lists |

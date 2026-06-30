@@ -17,6 +17,8 @@ use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
 use App\Service\DatabasePasswordResetTokenIssuer;
 use App\Service\DatabasePasswordResetRepository;
+use App\Service\PasswordResetMailer;
+use App\Service\PasswordResetMailerFactory;
 use App\Service\PasswordResetTokenIssuer;
 use App\Service\PasswordResetRepository;
 use App\Validation\ClubInputValidator;
@@ -25,6 +27,7 @@ use PDOException;
 final class ClubController extends Controller
 {
     private readonly PasswordResetTokenIssuer $passwordResetTokens;
+    private ?PasswordResetMailer $passwordResetMailer;
     private ?AuthenticationThrottle $authenticationThrottle;
     private ?PasswordResetRepository $passwordResetRepository;
 
@@ -34,10 +37,12 @@ final class ClubController extends Controller
         ?PasswordResetTokenIssuer $passwordResetTokens = null,
         ?AuthenticationThrottle $authenticationThrottle = null,
         ?PasswordResetRepository $passwordResetRepository = null,
-        ?Logger $logger = null
+        ?Logger $logger = null,
+        ?PasswordResetMailer $passwordResetMailer = null
     ) {
         parent::__construct($view, $request, $logger);
         $this->passwordResetTokens = $passwordResetTokens ?? new DatabasePasswordResetTokenIssuer();
+        $this->passwordResetMailer = $passwordResetMailer;
         $this->authenticationThrottle = $authenticationThrottle;
         $this->passwordResetRepository = $passwordResetRepository;
     }
@@ -188,27 +193,36 @@ final class ClubController extends Controller
                     $networkSignal = $this->networkSignal($request);
                     $throttle = $this->authenticationThrottle();
                     $canExposeResetLink = $this->canExposeResetLink();
-                    $success = $canExposeResetLink
-                        ? __('club.forgot_password.success_message')
-                        : __('club.forgot_password.unavailable_message');
+                    $success = __('club.forgot_password.success_message');
 
                     if (!$throttle->isBlocked('password-reset', $email, $networkSignal)) {
                         $throttle->recordAttempt('password-reset', $email, $networkSignal);
 
-                        if ($canExposeResetLink) {
-                            $rawToken = $this->passwordResetTokens->issueForEmail($email);
-                            if ($rawToken !== null) {
-                                $devLink = sprintf(
-                                    '%s/club_reset_password.php?token=%s',
-                                    rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
-                                    $rawToken
-                                );
+                        $rawToken = $this->passwordResetTokens->issueForEmail($email);
+                        if ($rawToken !== null) {
+                            $resetUrl = sprintf(
+                                '%s/club_reset_password.php?token=%s',
+                                rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
+                                $rawToken
+                            );
+                            if ($canExposeResetLink) {
+                                $devLink = $resetUrl;
+                            } else {
+                                try {
+                                    $this->passwordResetMailer()->sendResetLink($email, $resetUrl);
+                                } catch (\Throwable $exception) {
+                                    $this->reportFailure(
+                                        'club.password_reset_delivery_failed',
+                                        $exception,
+                                        $request
+                                    );
+                                }
                             }
                         }
                     }
                 } catch (\Throwable $exception) {
                     $this->reportFailure('club.password_reset_request_failed', $exception, $request);
-                    $errors[] = __('club.forgot_password.errors.request_failed');
+                    $success = __('club.forgot_password.success_message');
                 }
             }
         }
@@ -235,6 +249,11 @@ final class ClubController extends Controller
         return strtolower((string) env('APP_ENV', 'production')) === 'local'
             && filter_var(env('APP_DEBUG', false), FILTER_VALIDATE_BOOL) === true
             && filter_var(env('APP_TEST_RESET_LINKS', false), FILTER_VALIDATE_BOOL) === true;
+    }
+
+    private function passwordResetMailer(): PasswordResetMailer
+    {
+        return $this->passwordResetMailer ??= PasswordResetMailerFactory::fromEnvironment();
     }
 
     public function resetPassword(Request $request): Response

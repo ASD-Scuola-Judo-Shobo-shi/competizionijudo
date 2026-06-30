@@ -103,6 +103,10 @@ return [
                 'reset_failed' => 'Unable to reset the password. Please try again.',
             ],
         ],
+        'reset_email' => [
+            'subject' => 'Competizioni Judo password reset',
+            'body' => "A password reset was requested for your club account.\n\nOpen this link within one hour:\n{url}\n\nIf you did not request this change, ignore this message.",
+        ],
         'list' => 'Clubs list',
         'no_clubs' => 'No clubs registered.',
         'name' => 'Name',

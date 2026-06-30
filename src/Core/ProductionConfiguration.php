@@ -16,6 +16,8 @@ final class ProductionConfiguration
         'DB_PASS',
         'ADMIN_USER',
         'ADMIN_PASS_HASH',
+        'PASSWORD_RESET_MAILER',
+        'MAIL_FROM_ADDRESS',
         'PRIVACY_CONTROLLER_NAME',
         'PRIVACY_CONTROLLER_ADDRESS',
         'PRIVACY_CONTACT_EMAIL',
@@ -71,7 +73,13 @@ final class ProductionConfiguration
         }
 
         $appUrl = trim((string) ($configuration['APP_URL'] ?? ''));
-        if ($appUrl !== '' && filter_var($appUrl, FILTER_VALIDATE_URL) === false) {
+        if (
+            $appUrl !== ''
+            && (
+                filter_var($appUrl, FILTER_VALIDATE_URL) === false
+                || strtolower((string) parse_url($appUrl, PHP_URL_SCHEME)) !== 'https'
+            )
+        ) {
             $issues[] = 'invalid.app_url';
         }
 
@@ -80,11 +88,16 @@ final class ProductionConfiguration
             $issues[] = 'invalid.app_debug';
         }
 
-        foreach (['PRIVACY_CONTACT_EMAIL', 'PRIVACY_DPO_EMAIL'] as $key) {
+        foreach (['MAIL_FROM_ADDRESS', 'PRIVACY_CONTACT_EMAIL', 'PRIVACY_DPO_EMAIL'] as $key) {
             $email = trim((string) ($configuration[$key] ?? ''));
             if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
                 $issues[] = 'invalid.' . strtolower($key);
             }
+        }
+
+        $mailer = strtolower(trim((string) ($configuration['PASSWORD_RESET_MAILER'] ?? '')));
+        if ($mailer !== '' && $mailer !== 'aruba') {
+            $issues[] = 'invalid.password_reset_mailer';
         }
 
         foreach (['PRIVACY_LOG_RETENTION_DAYS', 'PRIVACY_BACKUP_RETENTION_DAYS'] as $key) {

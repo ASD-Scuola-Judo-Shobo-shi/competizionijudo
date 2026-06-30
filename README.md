@@ -12,19 +12,17 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 | Home, public events, event details and entries | `/`, `/events.php`, `/event_details.php`, `/event_entries.php` | Public |
 | Privacy notice and language switch | `/privacy`, `/language/switch` | Public |
 | Club registration and login | `/club_register.php`, `/club_login.php` | Public |
+| Password recovery by email | `/club_forgot_password.php`, `/club_reset_password.php` | Public |
 | Club athlete archive and event registration | `/club_area.php`, `/event_register.php` | Authenticated club |
 | Athlete deletion | `/club_delete_athlete.php` | Authenticated club, POST + CSRF |
 | Event and club administration | `/admin_manage_events.php`, `/admin_add_event.php`, `/admin_manage_clubs.php`, `/admin_edit_club.php` | Administrator |
 | Event and club deletion | `/admin_delete_event.php`, `/admin_delete_club.php` | Administrator, POST + CSRF |
 
-Password-reset routes exist, but outbound recovery is deliberately unavailable
-in production until an approved mail transport is configured (roadmap decision
-D01). Do not advertise email recovery to users until that work is completed.
-
 ## Requirements
 
 - PHP 8.2 or later with PDO MySQL, mbstring, fileinfo, and XML extensions
 - MySQL 8.0 or 8.4
+- a configured `PasswordResetMailer`; production uses the Aruba PHP-mail adapter
 - Composer 2
 - `rsync`, Bash, and `curl` for deployment artifact checks
 
@@ -33,7 +31,7 @@ D01). Do not advertise email recovery to users until that work is completed.
 1. Create an empty MySQL database and a dedicated local database user.
 2. Run `composer install`.
 3. Copy `.env.example` to `.env`, set `APP_ENV=local`, and fill every database,
-   administrator, and `PRIVACY_*` value with synthetic local data. Generate
+   administrator, mail, and `PRIVACY_*` value with synthetic local data. Generate
    `ADMIN_PASS_HASH` with `password_hash()`; do not store a plaintext password.
 4. Run `composer migrate`.
 5. Run `composer serve` and open `http://localhost:8080`.

@@ -76,6 +76,27 @@ final class ProductionConfigurationTest extends TestCase
         ProductionConfiguration::assertReady(new FileLogger($this->logPath), $configuration);
     }
 
+    public function testUnsupportedMailerAndInvalidSenderAreRejected(): void
+    {
+        $configuration = $this->validConfiguration();
+        $configuration['PASSWORD_RESET_MAILER'] = 'unsupported';
+        $configuration['MAIL_FROM_ADDRESS'] = 'not-an-email';
+
+        $this->expectException(RuntimeException::class);
+
+        ProductionConfiguration::assertReady(new FileLogger($this->logPath), $configuration);
+    }
+
+    public function testNonHttpsApplicationUrlIsRejected(): void
+    {
+        $configuration = $this->validConfiguration();
+        $configuration['APP_URL'] = 'http://example.test';
+
+        $this->expectException(RuntimeException::class);
+
+        ProductionConfiguration::assertReady(new FileLogger($this->logPath), $configuration);
+    }
+
     /** @return array<string, string> */
     private function validConfiguration(): array
     {
@@ -88,6 +109,8 @@ final class ProductionConfigurationTest extends TestCase
             'DB_PASS' => 'synthetic-password',
             'ADMIN_USER' => 'synthetic-admin',
             'ADMIN_PASS_HASH' => 'synthetic-password-hash',
+            'PASSWORD_RESET_MAILER' => 'aruba',
+            'MAIL_FROM_ADDRESS' => 'postmaster@example.test',
             'PRIVACY_CONTROLLER_NAME' => 'Synthetic Sports Association',
             'PRIVACY_CONTROLLER_ADDRESS' => '1 Test Street, Test City',
             'PRIVACY_CONTACT_EMAIL' => 'privacy@example.test',
