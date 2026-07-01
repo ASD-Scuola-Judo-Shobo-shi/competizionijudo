@@ -29,6 +29,7 @@ for route in \
   /club_forgot_password.php \
   /club_reset_password.php \
   /clubs.php \
+  /club_athletes_export.csv \
   /events.php \
   /event_details.php \
   /event_entries.php \
@@ -36,6 +37,14 @@ for route in \
   /language/switch; do
   if ! grep -Fq "\$router->get('${route}'" "$ARTIFACT_DIR/routes/web.php"; then
     echo "Missing expected public GET route: $route" >&2
+    exit 1
+  fi
+done
+
+for route in \
+  /club_athletes_import.php; do
+  if ! grep -Fq "\$router->post('${route}'" "$ARTIFACT_DIR/routes/web.php"; then
+    echo "Missing expected protected POST route: $route" >&2
     exit 1
   fi
 done

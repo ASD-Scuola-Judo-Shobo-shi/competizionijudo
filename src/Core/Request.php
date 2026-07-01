@@ -12,6 +12,7 @@ final class Request
      * @param array<string, mixed> $query
      * @param array<string, mixed> $post
      * @param array<string, mixed> $server
+     * @param array<string, mixed> $files
      */
     public function __construct(
         private readonly string $method,
@@ -19,7 +20,8 @@ final class Request
         private readonly array $query = [],
         private readonly array $post = [],
         private readonly array $server = [],
-        ?string $correlationId = null
+        ?string $correlationId = null,
+        private readonly array $files = []
     ) {
         $this->correlationId = is_string($correlationId)
             && preg_match('/\A[a-f0-9]{16,64}\z/i', $correlationId) === 1
@@ -34,7 +36,9 @@ final class Request
             $_SERVER['REQUEST_URI'] ?? '/',
             $_GET,
             $_POST,
-            $_SERVER
+            $_SERVER,
+            null,
+            $_FILES
         );
     }
 
@@ -77,5 +81,13 @@ final class Request
     public function server(string $key, mixed $default = null): mixed
     {
         return $this->server[$key] ?? $default;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function file(string $key): ?array
+    {
+        $file = $this->files[$key] ?? null;
+
+        return is_array($file) ? $file : null;
     }
 }

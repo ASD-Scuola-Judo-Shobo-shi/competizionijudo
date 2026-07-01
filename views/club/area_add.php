@@ -1,4 +1,5 @@
 <?php /** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */ ?>
+<?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <div class="card">
     <h3><?= e($edit ? __('club.area.edit_athlete') : __('club.area.add_athlete')) ?></h3>
     <?php if (!empty($errors)) : ?>

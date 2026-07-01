@@ -526,6 +526,44 @@ a.btn-sm:hover {
     margin-bottom:16px;
 }
 
+.notice.success{
+    background:#e3f6e9;
+    border-color:#8bc69d;
+    color:#155724;
+}
+
+.csv-actions{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    align-items:end;
+    gap:20px;
+}
+
+.csv-import-form{
+    display:grid;
+    grid-template-columns:minmax(220px,1fr) auto;
+    align-items:end;
+    gap:10px;
+}
+
+.csv-import-form label{
+    grid-column:1 / -1;
+    margin:0;
+}
+
+.csv-help{
+    margin:14px 0 0;
+    color:#334b68;
+    font-size:14px;
+    line-height:1.45;
+}
+
+.csv-privacy{
+    margin:14px 0 0;
+    font-weight:700;
+    color:#8b1a2b;
+}
+
 .row{
     display:grid;
     grid-template-columns:repeat(3,1fr);
@@ -805,6 +843,15 @@ textarea{
 
     .info-strip,.row,.row2{
         grid-template-columns:1fr;
+    }
+
+    .csv-actions,
+    .csv-import-form{
+        grid-template-columns:1fr;
+    }
+
+    .csv-import-form label{
+        grid-column:auto;
     }
 
     .site-footer{

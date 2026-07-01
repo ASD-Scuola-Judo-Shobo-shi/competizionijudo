@@ -96,6 +96,98 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('weightDefs.limits[classKey]', $html);
         self::assertStringNotContainsString('childMap', $html);
         self::assertStringNotContainsString('adultMap', $html);
+        self::assertStringContainsString('href="/club_athletes_export.csv"', $html);
+        self::assertStringContainsString('action="/club_athletes_import.php"', $html);
+        self::assertStringContainsString('enctype="multipart/form-data"', $html);
+        self::assertStringContainsString('name="athletes_csv"', $html);
+    }
+
+    public function testPrivacyAndErrorPagesUseSharedTranslucentContentPanel(): void
+    {
+        Localization::setLocale('en');
+        $_GET = [];
+        $view = new View(dirname(__DIR__) . '/views');
+
+        $privacy = $view->render('home/privacy', array_merge([
+            'privacy' => [
+                'controller_fiscal_code' => 'SYNTHETIC-FISCAL-CODE',
+            ],
+        ], $this->layoutData('/privacy')));
+        $error = $view->render('errors/500', [
+            'title' => __('errors.server_error'),
+            'message' => __('errors.unexpected_failure'),
+            'reference' => __('errors.reference', ['id' => 'synthetic-reference']),
+        ], 'layouts/error');
+        $css = file_get_contents(dirname(__DIR__) . '/public/assets/css/app.css');
+
+        self::assertIsString($css);
+        self::assertStringContainsString('background:rgba(255,255,255,.75)', $css);
+        self::assertStringContainsString('class="content-panel privacy-notice"', $privacy);
+        self::assertSame(2, substr_count($privacy, 'Fiscal code: SYNTHETIC-FISCAL-CODE'));
+        self::assertStringContainsString('class="content-panel error-card"', $error);
+        self::assertStringContainsString('<link rel="stylesheet" href="/assets/css/app.css">', $error);
+        self::assertStringContainsString('synthetic-reference', $error);
+    }
+
+    public function testLayoutsUseTheSharedEmbeddedJudogiSvgFavicon(): void
+    {
+        Localization::setLocale('en');
+        $_GET = [];
+        $view = new View(dirname(__DIR__) . '/views');
+        $favicon = (string) config('app.favicon');
+        $expected = '<link rel="icon" href="' . $favicon . '">';
+        $app = $view->render('home/index', $this->layoutData('/'));
+        $error = $view->render('errors/500', [
+            'title' => __('errors.server_error'),
+            'message' => __('errors.unexpected_failure'),
+            'reference' => __('errors.reference', ['id' => 'synthetic-reference']),
+        ], 'layouts/error');
+
+        self::assertSame(
+            'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥋</text></svg>',
+            $favicon
+        );
+        foreach ([$app, $error] as $html) {
+            self::assertStringContainsString($expected, $html);
+        }
+    }
+
+    public function testExistingLogoAppearsInPageHeadingAndHomepage(): void
+    {
+        Localization::setLocale('en');
+        $_GET = [];
+        $view = new View(dirname(__DIR__) . '/views');
+
+        $html = $view->render('home/index', $this->layoutData('/'));
+        $logoPath = '/assets/competizioni-judo-logo-optim.svgz';
+
+        self::assertSame(2, substr_count($html, 'src="' . $logoPath . '"'));
+        self::assertStringContainsString('class="site-heading-logo"', $html);
+        self::assertStringContainsString('class="landing-logo"', $html);
+        self::assertSame(2, substr_count($html, 'alt="Competizioni Judo logo"'));
+        self::assertFileExists(dirname(__DIR__) . '/public' . $logoPath);
+    }
+
+    public function testClubRegistrationRequiresAthleteDataRightsDeclaration(): void
+    {
+        Localization::setLocale('en');
+        $_GET = [];
+        $view = new View(dirname(__DIR__) . '/views');
+
+        $html = $view->render('club/register', array_merge([
+            'errors' => [],
+            'success' => null,
+        ], $this->layoutData('/club_register.php')));
+
+        self::assertStringContainsString(
+            'name="athlete_data_rights_declaration" value="1" required',
+            $html
+        );
+        self::assertStringContainsString(
+            e(__('club.register.athlete_data_rights_declaration')),
+            $html
+        );
+        self::assertStringContainsString('href="/privacy"', $html);
     }
 
     /** @return array<string, mixed> */
@@ -107,6 +199,7 @@ final class ViewRenderTest extends TestCase
             'isLoggedIn' => false,
             'isAdmin' => false,
             'clubEmail' => null,
+            'privacyControllerFiscalCode' => 'SYNTHETIC-FISCAL-CODE',
         ], Navigation::context($currentPath, '', false, false));
     }
 }

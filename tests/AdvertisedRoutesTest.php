@@ -24,6 +24,8 @@ final class AdvertisedRoutesTest extends TestCase
             '/club_register.php' => 'get',
             '/club_login.php' => 'get',
             '/club_area.php' => 'get',
+            '/club_athletes_export.csv' => 'get',
+            '/club_athletes_import.php' => 'post',
             '/event_register.php' => 'get',
             '/club_delete_athlete.php' => 'post',
             '/admin_manage_events.php' => 'get',

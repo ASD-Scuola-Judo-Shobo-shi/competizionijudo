@@ -3,6 +3,7 @@
 /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */
 /** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */
 ?>
+<?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <?php if (!empty($competitions)) : ?>
 <div class="card">
     <h3><?= e(__('club.area.filter_by_competition')) ?></h3>

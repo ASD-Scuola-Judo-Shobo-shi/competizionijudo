@@ -37,6 +37,8 @@ return static function (App\Core\Router $router): void {
     $router->get('/club_area.php', [ClubAreaController::class, 'index']);
     $router->post('/club_area.php', [ClubAreaController::class, 'index']);
     $router->post('/club_delete_athlete.php', [ClubAreaController::class, 'deleteAthlete']);
+    $router->get('/club_athletes_export.csv', [ClubAreaController::class, 'exportAthletes']);
+    $router->post('/club_athletes_import.php', [ClubAreaController::class, 'importAthletes']);
 
     // Events managed by MVC
     $router->get('/events.php', [EventController::class, 'index']);

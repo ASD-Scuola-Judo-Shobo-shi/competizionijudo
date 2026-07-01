@@ -11,6 +11,8 @@ use App\Core\Session;
 use App\Model\Athlete;
 use App\Model\Club;
 use App\Model\Entry;
+use App\Service\AthleteCsvImportException;
+use App\Service\AthleteCsvTransfer;
 use App\Validation\AthleteInputValidator;
 
 final class ClubAreaController extends Controller
@@ -34,6 +36,10 @@ final class ClubAreaController extends Controller
             return $this->redirect('/club_login.php');
         }
 
+        $athleteCsvFeedback = Session::pullFlash('athlete_csv_feedback');
+        if (!is_array($athleteCsvFeedback)) {
+            $athleteCsvFeedback = null;
+        }
         $view = (string) ($request->query('view') ?? 'list');
 
         if ($view === 'add') {
@@ -108,6 +114,8 @@ final class ClubAreaController extends Controller
                 'errors' => $errors,
                 'pagination' => $pagination,
                 'athleteCategories' => $this->athleteCategories($athletes),
+                'athleteCsvFeedback' => $athleteCsvFeedback,
+                'csvReturnView' => 'add',
             ]);
         }
 
@@ -135,6 +143,8 @@ final class ClubAreaController extends Controller
             'eventFilter' => $eventFilter,
             'pagination' => $pagination,
             'athleteCategories' => $this->athleteCategories($athletes),
+            'athleteCsvFeedback' => $athleteCsvFeedback,
+            'csvReturnView' => 'list',
         ]);
     }
 
@@ -167,5 +177,101 @@ final class ClubAreaController extends Controller
         }
 
         return $this->redirect('/club_area.php?view=add');
+    }
+
+    public function exportAthletes(Request $request): Response
+    {
+        Session::start();
+        $clubId = Session::get('club_id');
+        if ($clubId === null || Club::findById((int) $clubId) === null) {
+            return $this->redirect('/club_login.php');
+        }
+
+        $csv = (new AthleteCsvTransfer())->export((int) $clubId);
+
+        return new Response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="athletes-' . date('Y-m-d') . '.csv"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function importAthletes(Request $request): Response
+    {
+        Session::start();
+        $clubId = Session::get('club_id');
+        if ($clubId === null || Club::findById((int) $clubId) === null) {
+            return $this->redirect('/club_login.php');
+        }
+
+        validate_csrf((string) $request->post('csrf_token'));
+        $returnView = $request->post('return_view') === 'add' ? 'add' : 'list';
+        $redirect = '/club_area.php?view=' . $returnView;
+        $file = $request->file('athletes_csv');
+        $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+
+        if ($uploadError === UPLOAD_ERR_NO_FILE) {
+            $this->flashCsvFeedback('error', __('club.area.csv.file_required'));
+            return $this->redirect($redirect);
+        }
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            $this->flashCsvFeedback('error', __('club.area.csv.upload_failed'));
+            return $this->redirect($redirect);
+        }
+
+        $temporaryPath = is_string($file['tmp_name'] ?? null) ? $file['tmp_name'] : '';
+        $declaredSize = (int) ($file['size'] ?? 0);
+        if ($declaredSize > AthleteCsvTransfer::MAX_BYTES) {
+            $this->flashCsvFeedback('error', __('club.area.csv.too_large'));
+            return $this->redirect($redirect);
+        }
+        if (
+            $temporaryPath === ''
+            || !is_file($temporaryPath)
+            || (PHP_SAPI !== 'cli' && !is_uploaded_file($temporaryPath))
+        ) {
+            $this->flashCsvFeedback('error', __('club.area.csv.upload_failed'));
+            return $this->redirect($redirect);
+        }
+
+        try {
+            $result = (new AthleteCsvTransfer())->import($temporaryPath, (int) $clubId);
+            $this->flashCsvFeedback('success', __('club.area.csv.import_success', [
+                'created' => (string) $result->created,
+                'updated' => (string) $result->updated,
+            ]));
+        } catch (AthleteCsvImportException $exception) {
+            $this->flashCsvFeedback('error', $this->csvImportError($exception));
+        } catch (\Throwable $exception) {
+            $this->reportFailure('club.athlete_csv_import_failed', $exception, $request);
+            $this->flashCsvFeedback('error', __('club.area.csv.import_failed'));
+        }
+
+        return $this->redirect($redirect);
+    }
+
+    private function csvImportError(AthleteCsvImportException $exception): string
+    {
+        $replacements = [];
+        if ($exception->row !== null) {
+            $replacements['row'] = (string) $exception->row;
+        }
+        if ($exception->validationKeys !== []) {
+            $replacements['errors'] = implode(' ', array_map(
+                static fn(string $key): string => __($key),
+                $exception->validationKeys
+            ));
+        }
+
+        return __($exception->translationKey, $replacements);
+    }
+
+    private function flashCsvFeedback(string $type, string $message): void
+    {
+        Session::flash('athlete_csv_feedback', [
+            'type' => $type,
+            'message' => $message,
+        ]);
     }
 }
