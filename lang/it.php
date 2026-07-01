@@ -18,6 +18,7 @@ return [
         'clubs' => 'Società',
         'admin' => 'Amministrazione',
         'login' => 'Accedi',
+        'club_login' => 'Accesso società',
         'register' => 'Registra',
     ],
     'home' => [
@@ -73,6 +74,7 @@ return [
                 'credentials_required' => 'Inserire email e password.',
                 'invalid_credentials' => 'Email o password non corrette.',
                 'login_failed' => 'Impossibile completare l\'accesso. Riprovare.',
+                'too_many_attempts' => 'Troppi tentativi di accesso. Attendi 5 minuti e riprova.',
             ],
         ],
         'forgot_password' => [

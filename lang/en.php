@@ -18,6 +18,7 @@ return [
         'clubs' => 'Clubs',
         'admin' => 'Administration',
         'login' => 'Login',
+        'club_login' => 'Club login',
         'register' => 'Register',
     ],
     'home' => [
@@ -73,6 +74,7 @@ return [
                 'credentials_required' => 'Please enter email and password.',
                 'invalid_credentials' => 'Email or password is incorrect.',
                 'login_failed' => 'Unable to complete login. Please try again.',
+                'too_many_attempts' => 'Too many login attempts. Please wait 5 minutes and try again.',
             ],
         ],
         'forgot_password' => [
