@@ -102,3 +102,8 @@ files, never `.env`, tests, development dependencies, logs, or uploaded files.
 Project remediation evidence and sequencing live in
 [audit.md](docs/audit.md), [roadmap.md](docs/roadmap.md), and
 [tracking.md](docs/tracking.md). Continue work with [prompt.md](docs/prompt.md).
+
+## License
+
+This project is proprietary software. All rights are reserved by ASD Scuola
+Judo Shòbò-shi; see [LICENSE](LICENSE) for the applicable terms.

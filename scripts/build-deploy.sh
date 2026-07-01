@@ -13,6 +13,7 @@ rsync -a --no-owner --no-group \
   --exclude="*.swp" \
   --exclude=".DS_Store" \
   --include="/.htaccess" \
+  --include="/LICENSE" \
   --include="/composer.json" \
   --include="/composer.lock" \
   --include="/config/***" \

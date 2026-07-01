@@ -9,6 +9,7 @@ fi
 
 for path in \
   .htaccess \
+  LICENSE \
   REVISION \
   composer.json \
   composer.lock \
