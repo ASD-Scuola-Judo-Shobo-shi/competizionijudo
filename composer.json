@@ -48,6 +48,7 @@
     "migrate": "php scripts/run-migrations.php",
     "privacy:purge": "php scripts/purge-expired-data.php",
     "test:migrations": "php scripts/test-migrations.php",
+    "test:migrations:prepare": "php scripts/setup-migration-test-database.php",
     "test": "phpunit"
   },
   "config": {

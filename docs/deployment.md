@@ -54,9 +54,9 @@ without exposing values. The operator should inspect `var/log/application.log`;
 events such as `configuration.missing.db_name` identify the setting to provision,
 while exception messages and configuration values remain redacted.
 
-The `MIGRATION_TEST_*` variables documented in `.env.example` belong only to the
-isolated local/CI migration smoke harness. Do not provision them in a deployed
-application environment.
+The `MIGRATION_TEST_*` variables documented in `.env.dev.example` belong only
+to the isolated local/CI migration smoke harness. Do not provision them in a
+deployed application environment.
 
 ## Aruba Linux Basic prerequisites
 

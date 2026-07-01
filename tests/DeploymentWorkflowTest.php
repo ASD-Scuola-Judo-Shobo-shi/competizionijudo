@@ -77,7 +77,8 @@ final class DeploymentWorkflowTest extends TestCase
         self::assertStringContainsString('state-name: .deploy-state-development.json', $workflow);
         self::assertSame(3, substr_count($workflow, 'dangerous-clean-slate: false'));
         self::assertStringNotContainsString('dangerous-clean-slate: true', $workflow);
-        self::assertSame(2, substr_count($workflow, '**/.env'));
+        self::assertSame(2, substr_count($workflow, '**/.env' . PHP_EOL));
+        self::assertSame(2, substr_count($workflow, '**/.env.dev'));
         self::assertSame(2, substr_count($workflow, 'legacy/**'));
     }
 

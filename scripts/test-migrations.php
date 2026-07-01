@@ -8,6 +8,8 @@ use App\Model\MigrationRunner;
 require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/src/helpers.php';
 
+load_env_defaults(dirname(__DIR__) . '/.env.dev');
+
 const PRE_SQUASH_MIGRATIONS = [
     '20260619_000000_create_baseline_schema.sql',
     '20260619_000001_copy_italian_columns_to_english.sql',
@@ -136,6 +138,33 @@ function quoteIdentifier(string $identifier): string
     }
 
     return chr(96) . $identifier . chr(96);
+}
+
+function load_env_defaults(string $path): void
+{
+    if (!is_file($path)) {
+        return;
+    }
+
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+        $line = trim($line);
+
+        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+            continue;
+        }
+
+        [$key, $value] = explode('=', $line, 2);
+        $key = trim($key);
+
+        if (getenv($key) !== false || isset($_ENV[$key]) || isset($_SERVER[$key])) {
+            continue;
+        }
+
+        $value = trim($value, " \t\n\r\0\x0B\"'");
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+        putenv($key . '=' . $value);
+    }
 }
 
 function executeSqlFile(PDO $database, string $path): void

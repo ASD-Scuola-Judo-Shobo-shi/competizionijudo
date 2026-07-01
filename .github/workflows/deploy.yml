@@ -163,6 +163,7 @@ jobs:
             **/.git*
             **/.git*/**
             **/.env
+            **/.env.dev
             legacy/**
 
       # STEP B: Deploy the main routing rules directly to the Aruba root folder
@@ -221,6 +222,7 @@ jobs:
             **/.git*
             **/.git*/**
             **/.env
+            **/.env.dev
             legacy/**
 
       - name: Verify development health and revision

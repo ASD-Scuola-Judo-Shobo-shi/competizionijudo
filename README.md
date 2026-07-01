@@ -95,9 +95,13 @@ composer check
 
 It validates Composer metadata, PHP syntax, coding style, PHPStan, PHPUnit, and
 the Composer security audit. `composer test:migrations` needs an isolated MySQL
-test account. `composer ci` also builds and verifies the exact production-only
-artifact. The build includes only runtime directories and access-control marker
-files, never `.env`, tests, development dependencies, logs, or uploaded files.
+test account. Copy `.env.dev.example` to `.env.dev`, fill the local MySQL
+administrator and test-account values, then run `composer test:migrations:prepare`
+once to create the dedicated test user and grants. `composer test:migrations`
+and `composer ci` read `.env.dev` when present. `composer ci` also builds and
+verifies the exact production-only artifact. The build includes only runtime
+directories and access-control marker files, never `.env`, tests, development
+dependencies, logs, or uploaded files.
 
 Project remediation evidence and sequencing live in
 [audit.md](docs/audit.md), [roadmap.md](docs/roadmap.md), and
