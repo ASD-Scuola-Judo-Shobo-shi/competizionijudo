@@ -61,8 +61,16 @@ final class ClubController extends Controller
             $contact = trim((string) $request->post('contact'));
             $password = (string) $request->post('password');
             $password2 = (string) $request->post('password2');
+            $athleteDataRightsDeclared = $request->post('athlete_data_rights_declaration') === '1';
 
-            foreach (ClubInputValidator::registrationErrors($name, $federalCode, $email) as $key) {
+            foreach (
+                ClubInputValidator::registrationErrors(
+                    $name,
+                    $federalCode,
+                    $email,
+                    $athleteDataRightsDeclared
+                ) as $key
+            ) {
                 $errors[] = __($key);
             }
 

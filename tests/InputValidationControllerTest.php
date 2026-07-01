@@ -71,6 +71,32 @@ final class InputValidationControllerTest extends TestCase
         self::assertSame(200, $response->status());
         self::assertStringContainsString(e(__('validation.federal_code_required')), $response->content());
         self::assertStringContainsString(e(__('validation.club_email_invalid')), $response->content());
+        self::assertStringContainsString(
+            e(__('validation.club_athlete_data_rights_required')),
+            $response->content()
+        );
+    }
+
+    public function testClubRegistrationRejectsMissingAthleteDataRightsDeclaration(): void
+    {
+        $this->setDatabase($this->databaseExpectingNoAccess());
+        $password = str_repeat('x', PasswordPolicy::MINIMUM_LENGTH);
+        $request = new Request('POST', '/club_register.php', [], [
+            'csrf_token' => csrf_token(),
+            'name' => 'Synthetic Club',
+            'federal_code' => 'SYN-DECLARATION',
+            'email' => 'declaration@example.test',
+            'password' => $password,
+            'password2' => $password,
+        ]);
+
+        $response = $this->clubController($request)->register($request);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(
+            e(__('validation.club_athlete_data_rights_required')),
+            $response->content()
+        );
     }
 
     public function testInvalidAthletePostPerformsOnlyRequiredReadQueries(): void
@@ -188,6 +214,7 @@ final class InputValidationControllerTest extends TestCase
             'email' => 'duplicate@example.test',
             'password' => str_repeat('x', PasswordPolicy::MINIMUM_LENGTH),
             'password2' => str_repeat('x', PasswordPolicy::MINIMUM_LENGTH),
+            'athlete_data_rights_declaration' => '1',
         ]);
 
         $response = $this->clubController($request)->register($request);

@@ -51,6 +51,8 @@ return [
             'contact_name' => 'Contact person',
             'password' => 'Password',
             'confirm_password' => 'Confirm password',
+            'athlete_data_rights_declaration' => 'I declare that I am authorized, on behalf of the club, to provide and process its athletes’ personal data, including data concerning minors, and that the club holds any required permissions.',
+            'privacy_notice' => 'Read the privacy notice',
             'register_button' => 'Register',
             'success_message' => 'Registration complete. You can now log in with your email and password.',
             'errors' => [
@@ -172,6 +174,7 @@ return [
         'club_name_required' => 'Please enter the club name.',
         'federal_code_required' => 'Please enter the federal code.',
         'club_email_invalid' => 'Please enter a valid club email address.',
+        'club_athlete_data_rights_required' => 'You must confirm that the club is authorized to process its athletes’ personal data.',
         'contact_email_invalid' => 'Please enter a valid contact email address.',
         'recovery_email_invalid' => 'Please enter a valid recovery email address.',
         'athlete_last_name_required' => 'Please enter the athlete’s last name.',

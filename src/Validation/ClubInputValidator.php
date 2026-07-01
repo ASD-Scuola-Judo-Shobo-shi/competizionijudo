@@ -11,9 +11,16 @@ final class ClubInputValidator
     }
 
     /** @return list<string> Translation keys for invalid registration fields. */
-    public static function registrationErrors(string $name, string $federalCode, string $email): array
-    {
+    public static function registrationErrors(
+        string $name,
+        string $federalCode,
+        string $email,
+        bool $athleteDataRightsDeclared
+    ): array {
         $errors = self::identityErrors($name, $federalCode, $email);
+        if (!$athleteDataRightsDeclared) {
+            $errors[] = 'validation.club_athlete_data_rights_required';
+        }
 
         return $errors;
     }

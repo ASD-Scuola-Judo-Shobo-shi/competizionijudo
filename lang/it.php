@@ -51,6 +51,8 @@ return [
             'contact_name' => 'Referente',
             'password' => 'Password',
             'confirm_password' => 'Conferma password',
+            'athlete_data_rights_declaration' => 'Dichiaro di essere autorizzato, per conto della società, a fornire e trattare i dati personali dei suoi atleti, inclusi i dati relativi ai minori, e che la società dispone delle autorizzazioni necessarie.',
+            'privacy_notice' => 'Leggi l’informativa privacy',
             'register_button' => 'Registra',
             'success_message' => 'Registrazione completata. Ora puoi accedere con email e password.',
             'errors' => [
@@ -172,6 +174,7 @@ return [
         'club_name_required' => 'Inserire il nome della società.',
         'federal_code_required' => 'Inserire il codice federale.',
         'club_email_invalid' => 'Inserire un indirizzo email valido per la società.',
+        'club_athlete_data_rights_required' => 'Devi confermare che la società è autorizzata a trattare i dati personali dei propri atleti.',
         'contact_email_invalid' => 'Inserire un indirizzo email valido per il referente.',
         'recovery_email_invalid' => 'Inserire un indirizzo email valido per il recupero.',
         'athlete_last_name_required' => 'Inserire il cognome dell’atleta.',

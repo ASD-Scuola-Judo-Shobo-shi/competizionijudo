@@ -65,6 +65,7 @@ final class PasswordPolicyTest extends TestCase
             'contact' => '',
             'password' => $shortPassword,
             'password2' => $shortPassword,
+            'athlete_data_rights_declaration' => '1',
         ]);
 
         $response = $this->clubController($request, new FakePasswordResetRepository())->register($request);

@@ -20,7 +20,14 @@ final class InputValidatorTest extends TestCase
             'validation.club_name_required',
             'validation.federal_code_required',
             'validation.club_email_invalid',
-        ], ClubInputValidator::registrationErrors('', '', 'invalid'));
+            'validation.club_athlete_data_rights_required',
+        ], ClubInputValidator::registrationErrors('', '', 'invalid', false));
+        self::assertSame([], ClubInputValidator::registrationErrors(
+            'Synthetic Club',
+            'SYN-12',
+            'club@example.test',
+            true
+        ));
         self::assertSame([
             'validation.club_name_required',
             'validation.federal_code_required',

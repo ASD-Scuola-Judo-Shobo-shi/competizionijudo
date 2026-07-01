@@ -304,6 +304,17 @@ label:has(input[type=radio]) input[type=radio]{
     margin-bottom:0;
 }
 
+.consent-field{
+    align-items:flex-start !important;
+    margin:18px 0;
+    line-height:1.45;
+}
+
+.consent-field input[type=checkbox]{
+    flex:0 0 auto;
+    margin-top:.2em;
+}
+
 button,input[type=submit]{cursor:pointer}
 
 button.btn{

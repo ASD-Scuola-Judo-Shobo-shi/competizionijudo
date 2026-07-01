@@ -80,6 +80,7 @@ final class CriticalWorkflowTest extends TestCase
             'contact' => 'Synthetic Contact',
             'password' => $accountPassword,
             'password2' => $accountPassword,
+            'athlete_data_rights_declaration' => '1',
         ]);
 
         self::assertSame(200, $registration->status());

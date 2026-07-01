@@ -41,6 +41,14 @@
             <label><?= e(__('club.register.confirm_password')) ?></label>
             <input type="password" name="password2" minlength="<?= \App\Security\PasswordPolicy::MINIMUM_LENGTH ?>" required>
 
+            <label class="consent-field">
+                <input type="checkbox" name="athlete_data_rights_declaration" value="1" required>
+                <span>
+                    <?= e(__('club.register.athlete_data_rights_declaration')) ?>
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer"><?= e(__('club.register.privacy_notice')) ?></a>
+                </span>
+            </label>
+
             <button class="btn green" type="submit"><?= e(__('club.register.register_button')) ?></button>
             <a class="btn" href="/club_login.php"><?= e(__('nav.club_login')) ?></a>
         </form>
