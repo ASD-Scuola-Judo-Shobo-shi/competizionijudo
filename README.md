@@ -32,8 +32,9 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 1. Create an empty MySQL database and a dedicated local database user.
 2. Run `composer install`.
 3. Copy `.env.example` to `.env`, set `APP_ENV=local`, and fill every database,
-   administrator, mail, and `PRIVACY_*` value with synthetic local data. Generate
-   `ADMIN_PASS_HASH` with `password_hash()`; do not store a plaintext password.
+   administrator, and mail value with synthetic local data. Review the
+   `APP_OWNER*`, `APP_WEBHOST*`, and retention facts. Generate `ADMIN_PASS_HASH`
+   with `password_hash()`; do not store a plaintext password.
 4. Run `composer migrate`.
 5. Run `composer serve` and open `http://localhost:8080`.
 

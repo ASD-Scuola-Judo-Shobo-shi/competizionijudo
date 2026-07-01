@@ -36,6 +36,7 @@ final class LayoutContext
             'clubEmail' => $authenticatedClub?->email,
             'privacyControllerName' => (string) config('privacy.controller_name'),
             'privacyControllerAddress' => (string) config('privacy.controller_address'),
+            'privacyControllerFiscalCode' => (string) config('privacy.controller_fiscal_code'),
         ], Navigation::context($currentPath, $clubView, $isAdmin, $isLoggedIn));
     }
 }

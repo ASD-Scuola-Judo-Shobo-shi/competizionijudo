@@ -120,6 +120,9 @@
     <div>
         <strong><?= e((string) ($privacyControllerName ?? '')) ?></strong><br>
         <?= e((string) ($privacyControllerAddress ?? '')) ?>
+        <?php if ((string) ($privacyControllerFiscalCode ?? '') !== '') : ?>
+            <br><?= e(__('privacy.fiscal_code')) ?>: <?= e((string) $privacyControllerFiscalCode) ?>
+        <?php endif; ?>
     </div>
     <div class="footer-links">
         <a href="https://www.csen.it/" target="_blank" rel="noopener noreferrer">CSEN</a>

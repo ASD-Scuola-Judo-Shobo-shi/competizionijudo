@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 /** @var array<string, mixed> $privacy */
 $email = (string) ($privacy['contact_email'] ?? '');
-$dpo = (string) ($privacy['dpo_email'] ?? '');
 ?>
-<section class="page-card privacy-notice">
+<section class="content-panel privacy-notice">
     <h2><?= e(__('privacy.title')) ?></h2>
     <p><?= e(__('privacy.intro')) ?></p>
 
@@ -14,8 +13,10 @@ $dpo = (string) ($privacy['dpo_email'] ?? '');
     <p>
         <strong><?= e((string) ($privacy['controller_name'] ?? '')) ?></strong><br>
         <?= nl2br(e((string) ($privacy['controller_address'] ?? ''))) ?><br>
+        <?php if ((string) ($privacy['controller_fiscal_code'] ?? '') !== '') : ?>
+            <?= e(__('privacy.fiscal_code')) ?>: <?= e((string) $privacy['controller_fiscal_code']) ?><br>
+        <?php endif; ?>
         <a href="mailto:<?= e($email) ?>"><?= e($email) ?></a>
-        <?php if ($dpo !== '') : ?><br><?= e(__('privacy.dpo')) ?>: <a href="mailto:<?= e($dpo) ?>"><?= e($dpo) ?></a><?php endif; ?>
     </p>
 
     <h3><?= e(__('privacy.data_title')) ?></h3>
@@ -26,9 +27,14 @@ $dpo = (string) ($privacy['dpo_email'] ?? '');
         <li><?= e(__('privacy.security_data')) ?></li>
     </ul>
 
+    <h3><?= e(__('privacy.source_title')) ?></h3>
+    <p><?= e(__('privacy.source')) ?></p>
+
     <h3><?= e(__('privacy.purpose_title')) ?></h3>
-    <p><?= e(__('privacy.account_purpose')) ?><br><strong><?= e(__('privacy.legal_basis')) ?>:</strong> <?= e((string) ($privacy['account_legal_basis'] ?? '')) ?></p>
-    <p><?= e(__('privacy.athlete_purpose')) ?><br><strong><?= e(__('privacy.legal_basis')) ?>:</strong> <?= e((string) ($privacy['athlete_legal_basis'] ?? '')) ?></p>
+    <p><?= e(__('privacy.account_purpose')) ?><br><strong><?= e(__('privacy.legal_basis')) ?>:</strong> <?= e(__('privacy.account_legal_basis')) ?></p>
+    <p><?= e(__('privacy.athlete_purpose')) ?><br><strong><?= e(__('privacy.legal_basis')) ?>:</strong> <?= e(__('privacy.athlete_legal_basis')) ?></p>
+    <p><?= e(__('privacy.special_categories')) ?></p>
+    <p><?= e(__('privacy.club_declaration')) ?></p>
     <p><?= e(__('privacy.provision')) ?></p>
 
     <h3><?= e(__('privacy.recipients_title')) ?></h3>
@@ -36,10 +42,7 @@ $dpo = (string) ($privacy['dpo_email'] ?? '');
         'provider' => (string) ($privacy['hosting_provider'] ?? ''),
         'location' => (string) ($privacy['hosting_location'] ?? ''),
     ])) ?></p>
-    <?php if ((string) ($privacy['additional_processors'] ?? '') !== '') : ?>
-        <p><?= e(__('privacy.additional_processors')) ?>: <?= e((string) $privacy['additional_processors']) ?></p>
-    <?php endif; ?>
-    <p><strong><?= e(__('privacy.transfers')) ?>:</strong> <?= e((string) ($privacy['data_transfer_details'] ?? '')) ?></p>
+    <p><?= e(__('privacy.transfers')) ?></p>
 
     <h3><?= e(__('privacy.retention_title')) ?></h3>
     <ul>
@@ -52,7 +55,7 @@ $dpo = (string) ($privacy['dpo_email'] ?? '');
 
     <h3><?= e(__('privacy.rights_title')) ?></h3>
     <p><?= e(__('privacy.rights')) ?> <a href="mailto:<?= e($email) ?>"><?= e($email) ?></a>.</p>
-    <p><?= e(__('privacy.consent_right')) ?></p>
+    <p><?= e(__('privacy.objection_right')) ?></p>
     <p><?= e(__('privacy.complaint')) ?></p>
 
     <h3><?= e(__('privacy.cookies_title')) ?></h3>

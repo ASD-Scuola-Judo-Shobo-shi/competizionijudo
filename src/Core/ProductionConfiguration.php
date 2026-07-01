@@ -18,16 +18,14 @@ final class ProductionConfiguration
         'ADMIN_PASS_HASH',
         'PASSWORD_RESET_MAILER',
         'MAIL_FROM_ADDRESS',
-        'PRIVACY_CONTROLLER_NAME',
-        'PRIVACY_CONTROLLER_ADDRESS',
-        'PRIVACY_CONTACT_EMAIL',
-        'PRIVACY_ACCOUNT_LEGAL_BASIS',
-        'PRIVACY_ATHLETE_LEGAL_BASIS',
-        'PRIVACY_HOSTING_PROVIDER',
-        'PRIVACY_HOSTING_LOCATION',
-        'PRIVACY_DATA_TRANSFER_DETAILS',
-        'PRIVACY_LOG_RETENTION_DAYS',
-        'PRIVACY_BACKUP_RETENTION_DAYS',
+        'APP_OWNER',
+        'APP_OWNER_ADDRESS',
+        'APP_OWNER_FISCAL_CODE',
+        'APP_OWNER_EMAIL',
+        'APP_WEBHOST',
+        'APP_WEBHOST_LOCATION',
+        'APP_LOG_RETENTION_DAYS',
+        'APP_BACKUP_RETENTION_DAYS',
     ];
 
     /** @param array<string, mixed>|null $configuration */
@@ -52,7 +50,7 @@ final class ProductionConfiguration
     private static function fromEnvironment(): array
     {
         $configuration = [];
-        foreach ([...self::REQUIRED_KEYS, 'APP_DEBUG', 'PRIVACY_DPO_EMAIL'] as $key) {
+        foreach ([...self::REQUIRED_KEYS, 'APP_DEBUG'] as $key) {
             $configuration[$key] = env($key);
         }
 
@@ -88,7 +86,7 @@ final class ProductionConfiguration
             $issues[] = 'invalid.app_debug';
         }
 
-        foreach (['MAIL_FROM_ADDRESS', 'PRIVACY_CONTACT_EMAIL', 'PRIVACY_DPO_EMAIL'] as $key) {
+        foreach (['MAIL_FROM_ADDRESS', 'APP_OWNER_EMAIL'] as $key) {
             $email = trim((string) ($configuration[$key] ?? ''));
             if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
                 $issues[] = 'invalid.' . strtolower($key);
@@ -100,7 +98,7 @@ final class ProductionConfiguration
             $issues[] = 'invalid.password_reset_mailer';
         }
 
-        foreach (['PRIVACY_LOG_RETENTION_DAYS', 'PRIVACY_BACKUP_RETENTION_DAYS'] as $key) {
+        foreach (['APP_LOG_RETENTION_DAYS', 'APP_BACKUP_RETENTION_DAYS'] as $key) {
             $days = filter_var($configuration[$key] ?? null, FILTER_VALIDATE_INT);
             if ($days === false || $days < 1) {
                 $issues[] = 'invalid.' . strtolower($key);

@@ -68,8 +68,8 @@ final class ProductionConfigurationTest extends TestCase
     public function testInvalidPrivacyContactAndRetentionAreRejected(): void
     {
         $configuration = $this->validConfiguration();
-        $configuration['PRIVACY_CONTACT_EMAIL'] = 'not-an-email';
-        $configuration['PRIVACY_LOG_RETENTION_DAYS'] = '0';
+        $configuration['APP_OWNER_EMAIL'] = 'not-an-email';
+        $configuration['APP_LOG_RETENTION_DAYS'] = '0';
 
         $this->expectException(RuntimeException::class);
 
@@ -111,17 +111,14 @@ final class ProductionConfigurationTest extends TestCase
             'ADMIN_PASS_HASH' => 'synthetic-password-hash',
             'PASSWORD_RESET_MAILER' => 'aruba',
             'MAIL_FROM_ADDRESS' => 'postmaster@example.test',
-            'PRIVACY_CONTROLLER_NAME' => 'Synthetic Sports Association',
-            'PRIVACY_CONTROLLER_ADDRESS' => '1 Test Street, Test City',
-            'PRIVACY_CONTACT_EMAIL' => 'privacy@example.test',
-            'PRIVACY_DPO_EMAIL' => '',
-            'PRIVACY_ACCOUNT_LEGAL_BASIS' => 'Synthetic account basis',
-            'PRIVACY_ATHLETE_LEGAL_BASIS' => 'Synthetic athlete basis',
-            'PRIVACY_HOSTING_PROVIDER' => 'Synthetic Hosting Ltd',
-            'PRIVACY_HOSTING_LOCATION' => 'European Union',
-            'PRIVACY_DATA_TRANSFER_DETAILS' => 'No transfer outside the EEA',
-            'PRIVACY_LOG_RETENTION_DAYS' => '30',
-            'PRIVACY_BACKUP_RETENTION_DAYS' => '30',
+            'APP_OWNER' => 'Synthetic Sports Association',
+            'APP_OWNER_ADDRESS' => '1 Test Street, Test City',
+            'APP_OWNER_FISCAL_CODE' => 'SYNTHETIC-FISCAL-CODE',
+            'APP_OWNER_EMAIL' => 'privacy@example.test',
+            'APP_WEBHOST' => 'Synthetic Hosting Ltd',
+            'APP_WEBHOST_LOCATION' => 'European Union',
+            'APP_LOG_RETENTION_DAYS' => '30',
+            'APP_BACKUP_RETENTION_DAYS' => '30',
         ];
     }
 }

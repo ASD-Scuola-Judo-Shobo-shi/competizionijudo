@@ -13,8 +13,8 @@ hosting operator must:
 1. Copy `.env.example` to `.env` through the hosting control panel or another
    approved encrypted administrative channel. Do not place it in a Git commit,
    workflow artifact, ticket, or chat message.
-2. Replace every blank required value, including the `PRIVACY_*` facts required
-   for the deployed privacy notice. Use a dedicated least-privilege database
+2. Replace every blank required value and verify the `APP_OWNER*`,
+   `APP_WEBHOST*`, and retention facts displayed by the privacy notice. Use a dedicated least-privilege database
    account and a password hash produced with PHP's `password_hash()` for
    `ADMIN_PASS_HASH`; never store the administrator's plaintext password.
    Set `PASSWORD_RESET_MAILER=aruba` and use the domain's approved postmaster
@@ -43,12 +43,11 @@ for each hosting environment before its first deployment.
 
 `.env.example` is the authoritative non-secret inventory. Production startup
 requires `APP_URL`, all four `DB_*` settings, `ADMIN_USER`, `ADMIN_PASS_HASH`,
-`PASSWORD_RESET_MAILER`, `MAIL_FROM_ADDRESS`, and the non-optional `PRIVACY_*`
-settings. It validates mail/privacy contact addresses and requires positive log
-and backup retention periods. `PRIVACY_DPO_EMAIL` and
-`PRIVACY_ADDITIONAL_PROCESSORS` are optional only when they do not apply. The
-controller must verify that all published facts and legal bases are accurate;
-application defaults cannot determine them.
+`PASSWORD_RESET_MAILER`, `MAIL_FROM_ADDRESS`, all four `APP_OWNER*` settings,
+both `APP_WEBHOST*` settings, and positive `APP_LOG_RETENTION_DAYS` and
+`APP_BACKUP_RETENTION_DAYS` values. It validates the public owner contact email.
+The controller must verify the published facts and application-owned legal text
+before deployment and update the notice if the actual processing changes.
 
 If required production configuration is missing, startup returns a server error
 without exposing values. The operator should inspect `var/log/application.log`;
@@ -75,7 +74,7 @@ one-hour expiry, and one-time use. A transport failure is logged as
 
 Linux Basic does not include a database or database backup by default. Purchase
 and provision the MySQL add-on before deployment; also activate a backup policy
-that satisfies the published `PRIVACY_BACKUP_RETENTION_DAYS` value. Do not claim
+that satisfies the published `APP_BACKUP_RETENTION_DAYS` value. Do not claim
 backup retention in the privacy notice unless that service is actually active.
 
 References: [Aruba PHP mail test](https://guide.hosting.aruba.it/hosting/hyper/hyper-linux/gestire-la-versione-php.aspx),
@@ -92,15 +91,15 @@ when their event is deleted.
 
 Schedule `composer privacy:purge` at least daily. It deletes closed-event entry
 snapshots older than one year, enforcing a one-year maximum; monitor its exit status. Configure log rotation
-to delete application logs after `PRIVACY_LOG_RETENTION_DAYS`, and configure the
-backup system to delete backups after `PRIVACY_BACKUP_RETENTION_DAYS`. Those two
+to delete application logs after `APP_LOG_RETENTION_DAYS`, and configure the
+backup system to delete backups after `APP_BACKUP_RETENTION_DAYS`. Those two
 host-level policies are not implemented by the PHP process. Test both restores
 and expiry, and document any processor that can access backups or logs.
 
 Before going live, the controller must also establish procedures for data-subject
 requests and breaches, confirm club authority for athletes and minors, sign the
-required processor agreements, and verify that transfers match
-`PRIVACY_DATA_TRANSFER_DETAILS`. The public notice is at `/privacy`.
+required processor agreements, and verify Aruba's subprocessors and any
+international-transfer safeguards. The public notice is at `/privacy`.
 
 ## Post-deployment health and rollback
 

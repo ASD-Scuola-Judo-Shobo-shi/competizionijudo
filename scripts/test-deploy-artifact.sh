@@ -44,8 +44,10 @@ boot_and_request() {
   local locale="$1"
   local port="$2"
   local expected="$3"
+  local expected_privacy="$4"
   local body_file="${TEMP_DIR}/${locale}.html"
   local privacy_body_file="${TEMP_DIR}/${locale}-privacy.html"
+  local logo_headers_file="${TEMP_DIR}/${locale}-logo-headers.txt"
   local log_file="${TEMP_DIR}/${locale}.log"
   local status=''
 
@@ -57,15 +59,11 @@ boot_and_request() {
       DB_PASS=synthetic-smoke-password ADMIN_USER=synthetic-admin \
       ADMIN_PASS_HASH=synthetic-smoke-password-hash \
       PASSWORD_RESET_MAILER=aruba MAIL_FROM_ADDRESS='postmaster@example.test' \
-      PRIVACY_CONTROLLER_NAME='Synthetic Controller' \
-      PRIVACY_CONTROLLER_ADDRESS='1 Test Street' \
-      PRIVACY_CONTACT_EMAIL='privacy@example.test' \
-      PRIVACY_ACCOUNT_LEGAL_BASIS='Synthetic account basis' \
-      PRIVACY_ATHLETE_LEGAL_BASIS='Synthetic athlete basis' \
-      PRIVACY_HOSTING_PROVIDER='Synthetic Hosting' \
-      PRIVACY_HOSTING_LOCATION='European Union' \
-      PRIVACY_DATA_TRANSFER_DETAILS='No transfer outside the EEA' \
-      PRIVACY_LOG_RETENTION_DAYS=30 PRIVACY_BACKUP_RETENTION_DAYS=30 \
+      APP_OWNER='Synthetic Controller' APP_OWNER_ADDRESS='1 Test Street' \
+      APP_OWNER_FISCAL_CODE='SYNTHETIC-FISCAL-CODE' \
+      APP_OWNER_EMAIL='privacy@example.test' \
+      APP_WEBHOST='Synthetic Hosting' APP_WEBHOST_LOCATION='European Union' \
+      APP_LOG_RETENTION_DAYS=30 APP_BACKUP_RETENTION_DAYS=30 \
       php -d display_errors=0 -S "127.0.0.1:${port}" -t public public/index.php
   ) >"$log_file" 2>&1 &
   local server_pid=$!
@@ -104,7 +102,9 @@ boot_and_request() {
 
   status="$(curl --silent --output "$privacy_body_file" --write-out '%{http_code}' \
     "http://127.0.0.1:${port}/privacy" || true)"
-  if [[ "$status" != '200' ]] || ! grep -Fq 'Synthetic Controller' "$privacy_body_file"; then
+  if [[ "$status" != '200' ]] \
+    || ! grep -Fq 'Synthetic Controller' "$privacy_body_file" \
+    || ! grep -Fq "$expected_privacy" "$privacy_body_file"; then
     echo "Artifact privacy notice did not render configured controller data for locale ${locale}." >&2
     exit 1
   fi
@@ -113,9 +113,18 @@ boot_and_request() {
     echo "Artifact privacy notice included the obsolete consent banner." >&2
     exit 1
   fi
+
+  status="$(curl --silent --output /dev/null --dump-header "$logo_headers_file" --write-out '%{http_code}' \
+    "http://127.0.0.1:${port}/assets/competizioni-judo-logo-optim.svgz" || true)"
+  if [[ "$status" != '200' ]] \
+    || ! grep -Eiq '^Content-Type: image/svg\+xml[[:space:]]*$' "$logo_headers_file" \
+    || ! grep -Eiq '^Content-Encoding: gzip[[:space:]]*$' "$logo_headers_file"; then
+    echo "Artifact SVGZ logo was not served with the required type and gzip encoding." >&2
+    exit 1
+  fi
 }
 
-boot_and_request it "$BASE_PORT" 'Una compatta applicazione PHP MVC'
-boot_and_request en "$((BASE_PORT + 1))" 'A compact PHP MVC application'
+boot_and_request it "$BASE_PORT" 'Una compatta applicazione PHP MVC' 'Origine dei dati'
+boot_and_request en "$((BASE_PORT + 1))" 'A compact PHP MVC application' 'Source of the data'
 
 echo "Deployment artifact boot verified for Italian and English."
