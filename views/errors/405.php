@@ -1,5 +1,9 @@
-<section class="page-heading">
-    <p class="eyebrow">405</p>
-    <h1><?= e($title ?? __('errors.method_not_allowed')) ?></h1>
-    <p><?= e($message ?? __('errors.method_not_allowed')) ?></p>
+<section class="content-panel error-card" aria-labelledby="error-title">
+    <p class="error-code" aria-hidden="true">⛔ 405</p>
+    <h1 id="error-title"><?= e($title ?? __('errors.method_not_allowed')) ?></h1>
+    <p class="error-description"><?= e(__('errors.method_not_allowed_description')) ?></p>
+    <div class="error-actions">
+        <a class="btn green" href="/"><?= e(__('errors.go_home')) ?></a>
+        <a class="btn" href="/events.php"><?= e(__('errors.view_events')) ?></a>
+    </div>
 </section>

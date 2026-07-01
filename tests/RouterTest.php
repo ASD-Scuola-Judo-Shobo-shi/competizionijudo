@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Core\Application;
-use App\Core\HttpException;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
@@ -57,17 +56,26 @@ final class RouterTest extends TestCase
         self::assertSame(405, $response->status());
         self::assertSame('GET, POST', $response->headers()['Allow']);
         self::assertStringContainsString('Method not allowed', $response->content());
+        self::assertStringContainsString(
+            e(__('errors.method_not_allowed_description')),
+            $response->content()
+        );
+        self::assertStringContainsString('class="content-panel error-card"', $response->content());
     }
 
-    public function testUnknownPathRemainsNotFound(): void
+    public function testUnknownPathReturnsLocalizedRecoveryPage(): void
     {
-        $router = new Router(new View(dirname(__DIR__) . '/views'));
+        Localization::setLocale('it');
+        $application = new Application(dirname(__DIR__));
 
-        try {
-            $router->dispatch(new Request('GET', '/missing'));
-            self::fail('Missing route did not throw.');
-        } catch (HttpException $exception) {
-            self::assertSame(404, $exception->statusCode());
-        }
+        $response = $application->handle(new Request('GET', '/missing'));
+
+        self::assertSame(404, $response->status());
+        self::assertStringContainsString(e(__('errors.page_not_found')), $response->content());
+        self::assertStringContainsString(
+            e(__('errors.page_not_found_description')),
+            $response->content()
+        );
+        self::assertStringContainsString(e(__('errors.go_home')), $response->content());
     }
 }

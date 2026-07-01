@@ -44,7 +44,7 @@ final class Router
                 );
             }
 
-            throw new HttpException(404, 'Page not found');
+            throw new HttpException(404, __('errors.page_not_found'));
         }
 
         if (is_array($handler)) {

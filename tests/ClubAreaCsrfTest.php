@@ -164,6 +164,10 @@ final class ClubAreaCsrfTest extends TestCase
 
         self::assertSame(419, $response->status());
         self::assertStringContainsString(e(__('errors.invalid_csrf')), $response->content());
+        self::assertStringContainsString(
+            e(__('errors.invalid_csrf_description')),
+            $response->content()
+        );
     }
 
     /** @param array<string, mixed> $overrides */

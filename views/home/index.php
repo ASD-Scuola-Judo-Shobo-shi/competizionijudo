@@ -1,9 +1,16 @@
 <section class="landing landing-clean">
     <div class="landing-copy">
-        <h2><?= translate('header.title') ?></h2>
-        <p>
-            <?= translate('home.description') ?>
-        </p>
+        <img
+            class="landing-logo"
+            src="/assets/competizioni-judo-logo-optim.svgz"
+            alt="<?= e(__('app.logo_alt')) ?>"
+        >
+        <div>
+            <h2><?= translate('header.title') ?></h2>
+            <p>
+                <?= translate('home.description') ?>
+            </p>
+        </div>
     </div>
 </section>
 
@@ -21,4 +28,3 @@
         <span><?= translate('home_info.entries_text') ?></span>
     </div>
 </section>
-

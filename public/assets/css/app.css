@@ -12,12 +12,12 @@ body{
 
 .top-hero{
     position:relative;
-    min-height:140px;
-    padding:14px 42px;
+    min-height:128px;
+    padding:8px 32px;
     display:grid;
-    grid-template-columns:290px minmax(340px,1fr) 170px;
+    grid-template-columns:minmax(180px,1fr) minmax(700px,900px) minmax(180px,1fr);
     align-items:center;
-    gap:28px;
+    gap:18px;
     background:linear-gradient(90deg,#fff 0%,#f7fbff 18%,#fff 50%,#f7fbff 82%,#fff 100%);
     color:#071d3d;
     border-bottom:5px solid #c80022;
@@ -87,7 +87,7 @@ body{
     display:flex;
     align-items:center;
     gap:10px;
-    height:112px;
+    height:100px;
 }
 
 .left-logos a{
@@ -104,32 +104,63 @@ body{
 .left-logos img{
     display:block;
     object-fit:contain;
-    height:108px;
+    height:96px;
     width:auto;
 }
 
 .main-title{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
     text-align:center;
     min-width:0;
 }
 
+.main-title-heading{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    min-width:0;
+}
+
+.site-logo-link{
+    display:block;
+    flex:0 0 auto;
+    line-height:0;
+    transition:transform .15s ease;
+}
+
+.site-logo-link:hover{
+    transform:scale(1.04);
+}
+
+.site-heading-logo{
+    display:block;
+    width:92px;
+    height:auto;
+}
+
 .main-title h1{
     margin:0;
-    font-size:clamp(34px,4.5vw,58px);
+    font-size:clamp(34px,3.7vw,52px);
     line-height:1;
     letter-spacing:1.5px;
     font-weight:900;
     color:#071d3d;
-    white-space:normal;
+    white-space:nowrap;
 }
 
 .main-title p{
-    margin:10px 0 0;
-    font-size:clamp(13px,1.45vw,18px);
+    margin:0;
+    font-size:clamp(11px,1.05vw,15px);
     text-transform:uppercase;
-    letter-spacing:1.6px;
+    letter-spacing:1px;
     color:#0a3775;
     font-weight:800;
+    white-space:nowrap;
 }
 
 .main-nav{
@@ -165,17 +196,35 @@ body{
     min-height:470px;
     display:flex;
     align-items:center;
+    justify-content:center;
 }
 
 .landing-copy{
     color:white;
-    max-width:610px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+    width:100%;
+    max-width:1180px;
     padding:42px;
+    text-align:center;
     border-radius:24px;
     background:linear-gradient(90deg,rgba(5,24,54,.92),rgba(5,24,54,.64));
     text-shadow:0 2px 8px rgba(0,0,0,.42);
     box-shadow:0 18px 42px rgba(0,0,0,.26);
     border:1px solid rgba(255,255,255,.13);
+}
+
+.landing-logo{
+    display:block;
+    width:min(300px,100%);
+    height:auto;
+    filter:drop-shadow(0 8px 16px rgba(0,0,0,.25));
+}
+
+.landing-copy > div{
+    max-width:900px;
 }
 
 .landing-copy h2{
@@ -234,10 +283,14 @@ body{
 }
 
 .footer-links a{
+    display:inline-flex;
+    align-items:center;
     color:#9cc4ff;
     text-decoration:none;
     font-weight:600;
     font-size:14px;
+    min-width:0;
+    min-height:44px;
     transition:color .15s ease;
 }
 
@@ -259,6 +312,80 @@ body{
     padding:24px;
     box-shadow:0 16px 35px rgba(0,0,0,.20);
     margin-bottom:22px;
+}
+
+.content-panel{
+    background:rgba(255,255,255,.75);
+    border:1px solid rgba(255,255,255,.7);
+    border-radius:18px;
+    padding:clamp(24px,4vw,44px);
+    box-shadow:0 16px 35px rgba(0,0,0,.20);
+}
+
+.privacy-notice{
+    line-height:1.6;
+}
+
+.privacy-notice h2{
+    margin-top:0;
+}
+
+.error-card{
+    width:min(720px,100%);
+    margin:0 auto;
+}
+
+.error-code{
+    margin:0 0 8px;
+    color:#c80022;
+    font-size:clamp(42px,8vw,72px);
+    font-weight:900;
+    line-height:1;
+    letter-spacing:.06em;
+}
+
+.error-card h1{
+    margin:0 0 14px;
+    font-size:clamp(28px,4vw,44px);
+}
+
+.error-description{
+    max-width:60ch;
+    margin:0;
+    color:#202f43;
+    font-size:18px;
+    line-height:1.6;
+}
+
+.error-reference{
+    margin:18px 0 0;
+    font-family:monospace;
+    font-size:14px;
+    overflow-wrap:anywhere;
+}
+
+.error-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:26px;
+}
+
+.error-actions .btn{
+    margin:0;
+}
+
+.error-layout{
+    display:flex;
+}
+
+.error-shell{
+    width:min(1180px,calc(100% - 36px));
+    min-height:100vh;
+    margin:0 auto;
+    padding:42px 0;
+    display:flex;
+    align-items:center;
 }
 
 input,textarea,select{
@@ -479,7 +606,6 @@ textarea:focus-visible {
 .main-nav a,
 .submenu-item,
 .club-login-info a,
-.footer-links a,
 button,
 input[type="submit"],
 a.btn,
@@ -650,6 +776,23 @@ textarea{
         max-height:80px;
     }
 
+    .site-heading-logo{
+        width:80px;
+    }
+
+    .main-title-heading{
+        gap:12px;
+    }
+
+    .main-title h1{
+        font-size:clamp(24px,6.5vw,34px);
+    }
+
+    .main-title p{
+        font-size:clamp(8px,1.5vw,11px);
+        letter-spacing:.35px;
+    }
+
     .main-nav a{
         flex:1 1 100%;
         text-align:center;
@@ -667,6 +810,36 @@ textarea{
     .site-footer{
         flex-direction:column;
         text-align:center;
+    }
+}
+
+@media(max-width:700px){
+    .landing-copy{
+        gap:20px;
+    }
+
+    .landing-logo{
+        width:min(260px,80%);
+        margin:0 auto;
+    }
+}
+
+@media(max-width:480px){
+    .site-heading-logo{
+        width:58px;
+    }
+
+    .main-title-heading{
+        gap:8px;
+    }
+
+    .main-title h1{
+        font-size:22px;
+    }
+
+    .main-title p{
+        font-size:7px;
+        letter-spacing:0;
     }
 }
 

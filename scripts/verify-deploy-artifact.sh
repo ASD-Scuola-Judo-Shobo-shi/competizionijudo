@@ -18,6 +18,7 @@ for path in \
   lang/it.php \
   migrations/20260630_000000_create_schema.sql \
   public/index.php \
+  public/assets/competizioni-judo-logo-optim.svgz \
   public/uploads/events/.htaccess \
   routes/web.php \
   scripts/run-migrations.php \

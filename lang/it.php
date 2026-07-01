@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'app' => [
         'title' => 'Competizioni Judo',
+        'logo_alt' => 'Logo Competizioni Judo',
     ],
     'header' => [
         'title' => 'PORTALE GARE JUDO',
@@ -161,11 +162,16 @@ return [
     ],
     'errors' => [
         'page_not_found' => 'Pagina non trovata',
+        'page_not_found_description' => 'La pagina potrebbe essere stata spostata o rimossa, oppure l\'indirizzo potrebbe non essere corretto.',
         'method_not_allowed' => 'Metodo non consentito',
+        'method_not_allowed_description' => 'Questa operazione non può essere eseguita dalla richiesta corrente. Torna a una pagina sicura e riprova.',
         'server_error' => 'Errore del server',
         'unexpected_failure' => 'Si è verificato un errore. Riprovare più tardi.',
         'reference' => 'Riferimento: {id}',
         'invalid_csrf' => 'Il modulo è scaduto o non è valido. Ricaricare la pagina e riprovare.',
+        'invalid_csrf_description' => 'Per la tua sicurezza, il modulo precedente non può più essere inviato. Apri nuovamente la pagina prima di riprovare.',
+        'go_home' => 'Vai alla pagina iniziale',
+        'view_events' => 'Vedi le competizioni',
         'password_too_short' => 'La password deve contenere almeno {minimum} caratteri.',
         'account_conflict' => 'Email o codice federale già utilizzato.',
         'save_failed' => 'Impossibile salvare i dati. Verificare i campi e riprovare.',

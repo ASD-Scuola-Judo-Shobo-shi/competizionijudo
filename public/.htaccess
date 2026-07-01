@@ -3,6 +3,13 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
 
+# SVGZ files are already gzip-compressed SVG documents. Browsers need both
+# headers to decode and render them rather than treating them as raw gzip data.
+<IfModule mod_mime.c>
+    AddType image/svg+xml .svgz
+    AddEncoding gzip .svgz
+</IfModule>
+
 <IfModule mod_php7.c>
     php_value upload_max_filesize 16M
     php_value post_max_size 16M
@@ -37,7 +44,7 @@ Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
 <IfModule mod_headers.c>
-    <FilesMatch "\.(css|js|jpe?g|png|gif|svg|webp|woff2?)$">
+    <FilesMatch "\.(css|js|jpe?g|png|gif|svgz?|webp|woff2?)$">
         Header set Cache-Control "public, max-age=2592000, immutable"
     </FilesMatch>
 </IfModule>

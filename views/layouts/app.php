@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e(($title ?? 'Portale Gare Judo') . ' | ' . $appName) ?></title>
 
+    <link rel="icon" href="<?= $favicon ?>">
     <link rel="stylesheet" href="/assets/css/app.css">
 
     <style>
@@ -47,7 +48,16 @@
         </a>
     </div>
     <div class="main-title">
-        <h1><?= translate('header.title') ?></h1>
+        <div class="main-title-heading">
+            <a href="/" class="site-logo-link" aria-label="<?= e(__('nav.home')) ?>">
+                <img
+                    class="site-heading-logo"
+                    src="/assets/competizioni-judo-logo-optim.svgz"
+                    alt="<?= e(__('app.logo_alt')) ?>"
+                >
+            </a>
+            <h1><?= translate('header.title') ?></h1>
+        </div>
         <p><?= translate('header.subtitle') ?></p>
     </div>
 <form class="lang-switch" action="/language/switch" method="get" aria-label="<?= e(translate('a11y.language_selector')) ?>">

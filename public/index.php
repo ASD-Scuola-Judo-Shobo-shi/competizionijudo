@@ -12,6 +12,15 @@ if (PHP_SAPI === 'cli-server') {
     $publicFile = __DIR__ . $requestedPath;
 
     if ($requestedPath !== '/' && is_file($publicFile) && pathinfo($publicFile, PATHINFO_EXTENSION) !== 'php') {
+        if (strtolower(pathinfo($publicFile, PATHINFO_EXTENSION)) === 'svgz') {
+            header('Content-Type: image/svg+xml');
+            header('Content-Encoding: gzip');
+            header('Content-Length: ' . (string) filesize($publicFile));
+            readfile($publicFile);
+
+            return true;
+        }
+
         return false;
     }
 }

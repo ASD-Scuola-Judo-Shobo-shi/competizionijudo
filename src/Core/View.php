@@ -15,6 +15,9 @@ final class View
     /** @param array<string, mixed> $data */
     public function render(string $template, array $data = [], string $layout = 'layouts/app'): string
     {
+        $data = array_merge([
+            'favicon' => (string) config('app.favicon'),
+        ], $data);
         $content = $this->renderPartial($template, $data);
 
         return $this->renderPartial($layout, array_merge($data, ['content' => $content]));
