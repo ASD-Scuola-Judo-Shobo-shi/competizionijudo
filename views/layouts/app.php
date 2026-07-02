@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= e(($title ?? 'Portale Gare Judo') . ' | ' . $appName) ?></title>
+    <?php $pageTitle = trim((string) ($title ?? '')); ?>
+    <title><?= e($pageTitle !== '' && $pageTitle !== $appName ? $pageTitle . ' | ' . $appName : $appName) ?></title>
 
     <link rel="icon" href="<?= $favicon ?>">
     <link rel="stylesheet" href="/assets/css/app.css">
@@ -84,7 +85,7 @@
 
 <nav class="main-nav" aria-label="<?= e(translate('a11y.main_navigation')) ?>">
     <a href="/" class="<?= $homeActive ? 'active' : '' ?>"><?= translate('nav.home') ?></a>
-    <a href="/events.php" class="<?= $competitionsActive ? 'active' : '' ?>"><?= translate('nav.competitions') ?></a>
+    <a href="/events.php" class="<?= $eventsActive ? 'active' : '' ?>"><?= translate('nav.events') ?></a>
     <a href="<?= e($clubUrl) ?>" class="<?= $clubsActive ? 'active' : '' ?>"><?= translate('nav.clubs') ?></a>
     <a href="/admin_manage_events.php" class="<?= $adminActive ? 'active' : '' ?>"><?= translate('nav.admin') ?></a>
 </nav>

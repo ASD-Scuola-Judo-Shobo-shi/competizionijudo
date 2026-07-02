@@ -6,7 +6,7 @@ namespace App\Presentation;
 
 final class Navigation
 {
-    private const COMPETITION_PATHS = [
+    private const EVENT_PATHS = [
         '/events.php',
         '/event_details.php',
         '/event_entries.php',
@@ -42,7 +42,7 @@ final class Navigation
             'currentPath' => $currentPath,
             'clubView' => $clubView,
             'homeActive' => in_array($currentPath, ['/', '/index.php'], true),
-            'competitionsActive' => in_array($currentPath, self::COMPETITION_PATHS, true),
+            'eventsActive' => in_array($currentPath, self::EVENT_PATHS, true),
             'clubsActive' => in_array($currentPath, self::CLUB_PATHS, true),
             'adminActive' => in_array($currentPath, self::ADMIN_PATHS, true),
             'clubUrl' => $isLoggedIn ? '/club_area.php' : '/club_login.php',
@@ -53,16 +53,16 @@ final class Navigation
     /** @return list<array{label: string, url: string, paths: list<string>, method?: 'post', query?: array<string, list<string>>}> */
     public static function submenu(string $currentPath, bool $isAdmin, bool $isLoggedIn): array
     {
-        $showSubmenu = in_array($currentPath, self::COMPETITION_PATHS, true)
+        $showSubmenu = in_array($currentPath, self::EVENT_PATHS, true)
             || in_array($currentPath, self::CLUB_PATHS, true)
             || in_array($currentPath, self::ADMIN_PATHS, true);
         if (!$showSubmenu) {
             return [];
         }
 
-        if (in_array($currentPath, self::COMPETITION_PATHS, true)) {
+        if (in_array($currentPath, self::EVENT_PATHS, true)) {
             $items = [
-                ['label' => translate('events.submenu.showcase'), 'url' => '/events.php', 'paths' => ['/events.php']],
+                ['label' => translate('events.submenu.list'), 'url' => '/events.php', 'paths' => ['/events.php']],
                 ['label' => translate('events.submenu.details'), 'url' => '/event_details.php', 'paths' => ['/event_details.php']],
             ];
             if ($isAdmin || $isLoggedIn) {

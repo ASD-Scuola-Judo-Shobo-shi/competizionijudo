@@ -305,7 +305,7 @@ body{
     user-select:none;
 }
 
-/* Compatibilità pagine interne */
+/* Internal page compatibility */
 .card{
     background:rgba(255,255,255,.94);
     border-radius:18px;

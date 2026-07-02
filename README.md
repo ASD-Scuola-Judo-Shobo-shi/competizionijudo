@@ -70,7 +70,7 @@ Those values must describe the real deployment; software cannot choose a lawful
 basis or validate the controller's arrangements.
 
 Live athlete categories are calculated from source data for the event year.
-Closing an event atomically stores its competition snapshot. Schedule
+Closing an event atomically stores its event snapshot. Schedule
 `composer privacy:purge` daily to remove closed-event entry snapshots after at
 most one year. Event uploads are deleted when replaced or when their event is deleted.
 Administrators are warned to export live athlete records before deleting a club.

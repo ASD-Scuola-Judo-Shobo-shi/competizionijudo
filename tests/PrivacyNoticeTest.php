@@ -82,7 +82,7 @@ final class PrivacyNoticeTest extends TestCase
         }
     }
 
-    public function testHomepageNoLongerLoadsHardCodedCompetitionData(): void
+    public function testHomepageNoLongerLoadsHardCodedLegacyEventData(): void
     {
         $controller = new HomeController(
             new View(dirname(__DIR__) . '/views'),

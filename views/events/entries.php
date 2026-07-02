@@ -79,7 +79,7 @@
                             <td><?= $i + 1 ?></td>
                             <td><?= e($row['last_name'] ?? '') ?></td>
                             <td><?= e($row['first_name'] ?? '') ?></td>
-                            <td><?= e($row['birth_date'] ?? '') ?></td>
+                            <td><?= e($row['date_of_birth'] ?? '') ?></td>
                             <td><?= e($row['weight_kg'] ?? '') ?></td>
                             <td><?= e(App\Model\Belt::tryFromValue($row['belt'] ?? '')?->label(App\Localization::getLocale()) ?? $row['belt'] ?? '') ?></td>
                             <td><?= e($row['membership_number'] ?? '') ?></td>

@@ -100,7 +100,7 @@
 
 <div class="card">
     <?php if ($event === null) : ?>
-        <p><?= e(__('events.select_competition')) ?></p>
+        <p><?= e(__('events.select_event')) ?></p>
     <?php endif; ?>
     <h3><?= e($event !== null ? __('events.upcoming_events') : __('events.upcoming_heading')) ?></h3>
     <?php

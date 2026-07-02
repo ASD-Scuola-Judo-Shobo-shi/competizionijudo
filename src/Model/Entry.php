@@ -38,10 +38,10 @@ final class Entry
                 CASE WHEN e.closed = 1 THEN en.snapshot_weight_kg ELSE a.weight_kg END AS weight_kg,
                 CASE WHEN e.closed = 1 THEN en.snapshot_belt ELSE a.belt END AS belt,
                 CASE WHEN e.closed = 1 THEN en.snapshot_membership_number ELSE a.membership_number END AS membership_number,
-                CASE WHEN e.closed = 1 THEN en.snapshot_date_of_birth ELSE a.date_of_birth END AS birth_date,
+                CASE WHEN e.closed = 1 THEN en.snapshot_date_of_birth ELSE a.date_of_birth END AS date_of_birth,
                 CASE WHEN e.closed = 1 THEN en.snapshot_program ELSE \'\' END AS program,
                 CASE WHEN e.closed = 1 THEN en.snapshot_weight_category ELSE \'\' END AS weight_category,
-                e.name AS nome_evento, e.date AS data_gara, e.closed AS event_closed
+                e.name AS event_name, e.date AS event_date, e.closed AS event_closed
             FROM entries en
             JOIN clubs c ON c.id = en.club_id
             JOIN athletes a ON a.id = en.athlete_id
@@ -62,10 +62,10 @@ final class Entry
         foreach ($rows as &$row) {
             if (empty($row['event_closed'])) {
                 $category = JudoCategory::calculate(
-                    (string) ($row['birth_date'] ?? ''),
+                    (string) ($row['date_of_birth'] ?? ''),
                     (string) ($row['gender'] ?? ''),
                     (float) ($row['weight_kg'] ?? 0.0),
-                    Athlete::eventYearFromDate((string) ($row['data_gara'] ?? ''))
+                    Athlete::eventYearFromDate((string) ($row['event_date'] ?? ''))
                 );
                 $row['program'] = $category['program'];
                 $row['weight_category'] = $category['weight_category'];
@@ -100,7 +100,7 @@ final class Entry
     }
 
     /** @return list<array{id: int, name: string, date: string}> */
-    public static function competitionsByClub(int $clubId, int $limit): array
+    public static function eventsByClub(int $clubId, int $limit): array
     {
         $stmt = Database::connection()->prepare(
             'SELECT DISTINCT e.id, e.name, e.date

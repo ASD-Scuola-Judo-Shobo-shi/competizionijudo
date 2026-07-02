@@ -8,7 +8,7 @@ $isEdit = !empty($event);
     <h2><?= $isEdit ? e(__('admin.edit.title')) . ' - ' . e($event->name) : e(__('admin.add.title')) ?></h2>
 
     <?php if ($error) : ?>
-        <div class="notice"><strong>Errore tecnico:</strong><br><?= e($error) ?></div>
+        <div class="notice"><?= e($error) ?></div>
     <?php endif; ?>
 
     <form method="post" class="form-card" enctype="multipart/form-data">

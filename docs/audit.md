@@ -16,7 +16,7 @@ The application is not production-ready in its current state. The most urgent is
 4. **High-risk destructive actions:** club, event, and athlete deletion use authenticated GET requests; athlete add/edit does not validate its CSRF token (`S-03`).
 5. **Broken release gate:** `composer check` currently fails PHPStan, while the independent deployment workflow does not run that gate and can deploy anyway (`Q-01`, `R-04`).
 6. **Broken fresh schema:** application queries require `athletes.weight_category`, but no migration creates it (`R-02`).
-7. **Incorrect competition data model:** category data is calculated against the current year when an athlete is edited, then reused for events in other years (`A-02`).
+7. **Incorrect event data model:** category data is calculated against the current year when an athlete is edited, then reused for events in other years (`A-02`).
 
 Security and deployment remediation should precede feature work. The ordered implementation is in [roadmap.md](roadmap.md); execution state belongs in [tracking.md](tracking.md).
 
@@ -104,7 +104,7 @@ These controls reduce risk, but several README claims overstate their completene
 | R-08 | Medium | Release | Deployment has no health check or rollback signal |
 | F-01 | Medium | Functionality | Registration deadlines and “upcoming” semantics are not enforced |
 | F-02 | Medium | Functionality | Duplicate-registration warning is lost during redirect |
-| F-03 | Low | Functionality | Homepage creates unused, hard-coded competition records |
+| F-03 | Low | Functionality | Homepage creates unused, hard-coded event records |
 | O-01 | Medium | Operations | Runtime uploads are tracked/deployed as application source |
 
 ## Security analysis
@@ -129,7 +129,7 @@ Evidence:
 - `Entry::register()` inserts both values without checking `athletes.club_id` (`src/Model/Entry.php:85-98`).
 - The foreign keys validate that the club and athlete exist, but do not validate that they belong together.
 
-Impact: an authenticated club can register an athlete belonging to any other club by changing a checkbox value. This corrupts competition data and crosses a tenant/privacy boundary.
+Impact: an authenticated club can register an athlete belonging to any other club by changing a checkbox value. This corrupts event registration data and crosses a tenant/privacy boundary.
 
 Required fix: perform an atomic insert constrained by both athlete ID and owning club, or reject unless `Athlete::findById($athleteId, $clubId)` succeeds. Preserve the database unique constraint and handle duplicate-key errors as the authoritative race-safe result.
 
@@ -267,7 +267,7 @@ Choose one canonical URL per feature. Restore only required features with author
 
 Athlete edit calculates `program` and `weight_category` using the server's current year (`ClubAreaController.php:61`). Event entry display calculates age class with the event year but reads the stored weight category. An athlete registered for a future/past event can therefore have an age class and weight category derived from different years. Later athlete edits also mutate historical registration output.
 
-Store source facts on the athlete and derive event-specific categories using the event date. If competition records must be historically immutable, snapshot the relevant athlete facts/category on the entry when registration closes. Centralize the definitions so PHP and generated JavaScript cannot drift.
+Store source facts on the athlete and derive event-specific categories using the event date. If event records must be historically immutable, snapshot the relevant athlete facts/category on the entry when registration closes. Centralize the definitions so PHP and generated JavaScript cannot drift.
 
 ### A-03 — Boundary violations (Medium)
 
@@ -282,7 +282,7 @@ The layout queries the club on every authenticated render. The club list view qu
 - Belt colors, text colors, split status, circles, components, and labels encode overlapping representations; the duplication caused the current PHPStan failure.
 - Judo weight tables are repeated in calculation and JSON-export methods.
 - Navigation path arrays appear in both the helper and layout.
-- `Competition::upcoming()` contains past hard-coded 2026 records, and `HomeController` passes them to a view that never uses them.
+- A removed legacy event data source contained past hard-coded 2026 records, and `HomeController` passed them to a view that never used them.
 - `AgeClass::options()`, enum option helpers, and some legacy views/controllers appear unused.
 
 Prefer one data definition with small rendering adapters, then remove confirmed dead code under route/usage tests.

@@ -6,7 +6,7 @@
     <h2><?= e(__('admin.edit.title')) ?> - <?= e($event->name) ?></h2>
 
     <?php if ($error) : ?>
-        <div class="notice"><strong>Errore tecnico:</strong><br><?= e($error) ?></div>
+        <div class="notice"><?= e($error) ?></div>
     <?php endif; ?>
 
     <form method="post" enctype="multipart/form-data">

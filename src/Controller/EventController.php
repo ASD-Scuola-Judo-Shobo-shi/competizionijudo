@@ -26,6 +26,7 @@ final class EventController extends Controller
         $events = Event::upcomingPublished(date('Y-m-d'), $limit);
 
         return $this->view('events/index', [
+            'title' => __('nav.events'),
             'events' => $events,
             'canViewEntries' => $this->canViewEntries(),
         ]);
@@ -45,6 +46,7 @@ final class EventController extends Controller
             $nextEvents = Event::nextUpcomingPublished($id, date('Y-m-d'), $limit);
 
             return $this->view('events/show', [
+                'title' => $event->name,
                 'event' => $event,
                 'nextEvents' => $nextEvents,
                 'upcomingEvents' => [],
@@ -55,6 +57,7 @@ final class EventController extends Controller
         $upcomingEvents = Event::upcomingPublished(date('Y-m-d'), $limit);
 
         return $this->view('events/show', [
+            'title' => __('nav.events'),
             'event' => null,
             'nextEvents' => [],
             'upcomingEvents' => $upcomingEvents,
@@ -80,6 +83,7 @@ final class EventController extends Controller
             $upcomingEvents = Event::upcomingPublished($registrationDate, $limit);
 
             return $this->view('events/register', [
+                'title' => __('events.registration'),
                 'event' => null,
                 'athletes' => [],
                 'registered' => [],
@@ -95,6 +99,7 @@ final class EventController extends Controller
             $upcomingEvents = Event::upcomingPublished($registrationDate, $limit);
 
             return $this->view('events/register', [
+                'title' => __('events.registration'),
                 'event' => null,
                 'athletes' => [],
                 'registered' => [],
@@ -149,6 +154,7 @@ final class EventController extends Controller
         $registrationFeedback = $this->registrationFeedback($id);
 
         return $this->view('events/register', [
+            'title' => __('events.registration') . ' - ' . $event->name,
             'event' => $event,
             'athletes' => $athletes,
             'registered' => $registered,
@@ -197,8 +203,8 @@ final class EventController extends Controller
 
         $grouped = [];
         foreach ($rows as $row) {
-            $birthDate = $row['birth_date'] ?? '';
-            $eventDate = $row['data_gara'] ?? '';
+            $birthDate = $row['date_of_birth'] ?? '';
+            $eventDate = $row['event_date'] ?? '';
             $birthYear = JudoCategory::extractBirthYear($birthDate);
             $eventYear = $eventDate !== '' ? (int) substr($eventDate, 0, 4) : (int) date('Y');
             if ($birthYear !== null) {
@@ -220,6 +226,7 @@ final class EventController extends Controller
         }
 
         return $this->view('events/entries', [
+            'title' => __('events.entries') . ' - ' . $event->name,
             'event' => $event,
             'clubs' => $clubs,
             'rows' => $rows,

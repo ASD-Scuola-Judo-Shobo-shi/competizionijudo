@@ -4,15 +4,15 @@
 /** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */
 ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
-<?php if (!empty($competitions)) : ?>
+<?php if (!empty($events)) : ?>
 <div class="card">
-    <h3><?= e(__('club.area.filter_by_competition')) ?></h3>
+    <h3><?= e(__('club.area.filter_by_event')) ?></h3>
     <form method="get" class="form-inline">
         <input type="hidden" name="view" value="list">
-        <label><?= e(__('club.area.competition')) ?></label>
+        <label><?= e(__('club.area.event')) ?></label>
         <select name="event" onchange="this.form.submit()">
-            <option value="0"><?= e(__('club.area.all_competitions')) ?></option>
-            <?php foreach ($competitions as $c) : ?>
+            <option value="0"><?= e(__('club.area.all_events')) ?></option>
+            <?php foreach ($events as $c) : ?>
                 <option value="<?= e((string) $c['id']) ?>" <?= $eventFilter === (int) $c['id'] ? 'selected' : '' ?>>
                     <?= e($c['name'] . ' - ' . $c['date']) ?>
                 </option>

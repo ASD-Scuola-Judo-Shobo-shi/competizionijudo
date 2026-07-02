@@ -12,13 +12,13 @@ final class HomeController extends Controller
 {
     public function index(Request $request): Response
     {
-        return $this->view('home/index', ['title' => 'Dashboard']);
+        return $this->view('home/index', ['title' => __('nav.home')]);
     }
 
     public function about(Request $request): Response
     {
         return $this->view('home/about', [
-            'title' => 'About',
+            'title' => __('about.title'),
         ]);
     }
 

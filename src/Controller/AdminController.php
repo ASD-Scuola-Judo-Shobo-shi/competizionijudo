@@ -81,6 +81,7 @@ final class AdminController extends Controller
         }
 
         return $this->view('admin/login', [
+            'title' => __('admin.login.title'),
             'errors' => $errors,
         ]);
     }
@@ -125,6 +126,7 @@ final class AdminController extends Controller
         $clubs = array_map(fn(array $row) => Club::fromArray($row), $stmt->fetchAll() ?: []);
 
         return $this->view('admin/manage_clubs', [
+            'title' => __('admin.clubs.title'),
             'clubs' => $clubs,
             'pagination' => $pagination,
         ]);
@@ -173,6 +175,7 @@ final class AdminController extends Controller
         $counts = \App\Model\Entry::countsByEventIds($eventIds);
 
         return $this->view('admin/manage_events', [
+            'title' => __('admin.events.title'),
             'events' => $events,
             'entry_counts' => $counts,
             'pagination' => $pagination,
@@ -363,6 +366,7 @@ final class AdminController extends Controller
             }
 
             return $this->view('admin/add_event', [
+                'title' => $event !== null ? __('admin.edit.title') . ' - ' . $event->name : __('admin.add.title'),
                 'event' => $event,
                 'error' => $error,
                 'locations' => $locations,
@@ -370,6 +374,7 @@ final class AdminController extends Controller
         }
 
         return $this->view('admin/add_event', [
+            'title' => $event !== null ? __('admin.edit.title') . ' - ' . $event->name : __('admin.add.title'),
             'event' => $event,
             'error' => $error,
             'locations' => $locations,
@@ -462,6 +467,7 @@ final class AdminController extends Controller
         }
 
         return $this->view('admin/edit_club', [
+            'title' => __('admin.clubs.edit_title') . ' - ' . $club->name,
             'club' => $club,
             'error' => $error,
         ]);

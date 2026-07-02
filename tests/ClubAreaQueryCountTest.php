@@ -58,15 +58,15 @@ final class ClubAreaQueryCountTest extends TestCase
             $entries[] = [
                 'event_id' => 101,
                 'athlete_id' => $athleteId,
-                'nome_evento' => 'Synthetic Event',
-                'data_gara' => '2026-06-29',
+                'event_name' => 'Synthetic Event',
+                'event_date' => '2026-06-29',
             ];
             if ($index === 1) {
                 $entries[] = [
                     'event_id' => 102,
                     'athlete_id' => $athleteId,
-                    'nome_evento' => 'Other Event',
-                    'data_gara' => '2026-07-01',
+                    'event_name' => 'Other Event',
+                    'event_date' => '2026-07-01',
                 ];
             }
         }
@@ -83,7 +83,7 @@ final class ClubAreaQueryCountTest extends TestCase
             ],
             array_filter($entries, static fn(array $entry): bool => $entry['event_id'] === 101)
         ));
-        $competitionStatement = $this->statementReturningAll([
+        $eventStatement = $this->statementReturningAll([
             ['id' => 102, 'name' => 'Other Event', 'date' => '2026-07-01'],
             ['id' => 101, 'name' => 'Synthetic Event', 'date' => '2026-06-29'],
         ]);
@@ -96,7 +96,7 @@ final class ClubAreaQueryCountTest extends TestCase
                     $athleteCountStatement,
                     $athleteStatement,
                     $registrationStatement,
-                    $competitionStatement
+                    $eventStatement
                 ): PDOStatement {
                     if (str_starts_with($sql, 'SELECT * FROM clubs WHERE id')) {
                         return $clubStatement;
@@ -111,7 +111,7 @@ final class ClubAreaQueryCountTest extends TestCase
                         return $registrationStatement;
                     }
                     if (str_starts_with($sql, 'SELECT DISTINCT e.id')) {
-                        return $competitionStatement;
+                        return $eventStatement;
                     }
 
                     throw new RuntimeException('Unexpected query in club-area count fixture.');

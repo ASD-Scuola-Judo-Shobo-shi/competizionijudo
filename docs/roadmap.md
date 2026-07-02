@@ -582,7 +582,7 @@ Commit: `docs: align supported architecture and operations`
 
 Changes:
 
-- Remove unused `Competition` data, unused view/controller helpers, obsolete wrappers, and stale comments only after usage/route tests confirm they are dead.
+- Remove unused legacy event data, unused view/controller helpers, obsolete wrappers, and stale comments only after usage/route tests confirm they are dead.
 - Update README requirements, quick start, feature list, security claims, migration procedure, deployment procedure, and links to root audit/roadmap/tracking/prompt documents.
 - Document runtime upload ownership and retention; exclude runtime uploads from code deployments.
 

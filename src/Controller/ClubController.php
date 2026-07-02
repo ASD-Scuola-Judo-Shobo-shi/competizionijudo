@@ -113,6 +113,7 @@ final class ClubController extends Controller
         }
 
         return $this->view('club/register', [
+            'title' => __('club.register.title'),
             'errors' => $errors,
             'success' => $success,
         ]);
@@ -158,6 +159,7 @@ final class ClubController extends Controller
         }
 
         return $this->view('club/login', [
+            'title' => __('club.login.title'),
             'errors' => $errors,
         ]);
     }
@@ -169,6 +171,7 @@ final class ClubController extends Controller
         $clubs = Club::page($pagination['per_page'], $pagination['offset']);
 
         return $this->view('club/list', [
+            'title' => __('club.list'),
             'clubs' => $clubs,
             'pagination' => $pagination,
         ]);
@@ -236,6 +239,7 @@ final class ClubController extends Controller
         }
 
         return $this->view('club/forgot_password', [
+            'title' => __('club.forgot_password.title'),
             'errors' => $errors,
             'success' => $success,
             'dev_link' => $devLink,
@@ -322,6 +326,7 @@ final class ClubController extends Controller
         }
 
         return $this->view('club/reset_password', [
+            'title' => __('club.reset_password.title'),
             'errors' => $errors,
             'token' => $token,
             'valid' => $valid,

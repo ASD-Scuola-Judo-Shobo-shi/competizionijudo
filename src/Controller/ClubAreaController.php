@@ -108,6 +108,7 @@ final class ClubAreaController extends Controller
             );
 
             return $this->view('club/area_add', [
+                'title' => $edit !== null ? __('club.area.edit_athlete') : __('club.area.add_athlete'),
                 'club' => $club,
                 'athletes' => $athletes,
                 'edit' => $edit,
@@ -133,13 +134,14 @@ final class ClubAreaController extends Controller
             $athleteIds,
             $eventFilter > 0 ? $eventFilter : null
         );
-        $competitions = Entry::competitionsByClub($club->id, 100);
+        $events = Entry::eventsByClub($club->id, 100);
 
         return $this->view('club/area_list', [
+            'title' => __('club.area.athlete_archive'),
             'club' => $club,
             'athletes' => $athletes,
             'registrationCounts' => $registrationCounts,
-            'competitions' => $competitions,
+            'events' => $events,
             'eventFilter' => $eventFilter,
             'pagination' => $pagination,
             'athleteCategories' => $this->athleteCategories($athletes),
