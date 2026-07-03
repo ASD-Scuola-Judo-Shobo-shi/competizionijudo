@@ -29,12 +29,28 @@ repository/hosting operator must:
    notice. Use a dedicated least-privilege database account and a password hash
    produced with PHP's `password_hash()` for `ADMIN_PASS_HASH`; never store the
    administrator's plaintext password.
-5. Run the deploy workflow. It renders `.env` inside GitHub Actions and uploads
-   it to the target directory after the application files. If an operator makes
-   an emergency manual `.env` edit on the host, they must immediately mirror
-   that change back into the matching GitHub environment or the next deploy
-   will overwrite it.
-6. Run `php scripts/run-migrations.php` from the deployed application
+5. **Run the deploy workflow.** The deploy job stages and uploads two root
+   router files to the FTP host root alongside the environment-specific
+   application artifact:
+   - `root.htaccess` → `.htaccess` (renamed at stage time)
+   - `index.php` → `index.php` (as-is)
+   
+   `root.htaccess` serves as the Apache front controller: it enforces HTTPS and
+   rewrites all non-file, non-directory requests to `index.php`. The PHP front
+   controller handles subdomain redirects and internally routes each request to
+   the correct environment directory (`prod/`, `dev/`, or `legacy/`).
+   
+   These files live outside any per-environment directory (they go to the FTP
+   root, the directory that contains `prod/`, `dev/`, etc.). Every deploy
+   re-uploads them, so changes to `root.htaccess` or `index.php` take effect
+   on the next deployment.
+6. Verify that `https://www.competizionijudo.it/health` returns HTTP 200 before
+   enabling traffic. The workflow renders `.env` inside GitHub Actions and
+   uploads it to the target directory after the application files. If an
+   operator makes an emergency manual `.env` edit on the host, they must
+   immediately mirror that change back into the matching GitHub environment or
+   the next deploy will overwrite it.
+7. Run `php scripts/run-migrations.php` from the deployed application
    directory, then perform the documented deployment smoke check before
    enabling traffic.
 

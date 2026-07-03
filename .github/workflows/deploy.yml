@@ -97,16 +97,17 @@ jobs:
           file_put_contents($outputPath, "path={$value}" . PHP_EOL, FILE_APPEND);
           PHP
 
-      - name: Stage production root htaccess
-        run: bash scripts/stage-root-router.sh build/root-htaccess
+      - name: Stage root router (.htaccess + index.php)
+        run: bash scripts/stage-root-router.sh build/root-router
 
-      - name: Verify staged root htaccess
+      - name: Verify staged root router
         run: |
-          test -s build/root-htaccess/.htaccess
-          cd build/root-htaccess
-          sha256sum --check --strict htaccess.sha256
-          rm htaccess.sha256
-          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 1
+          test -s build/root-router/.htaccess
+          test -s build/root-router/index.php
+          cd build/root-router
+          sha256sum --check --strict router.sha256
+          rm router.sha256
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 2
 
       - name: Upload to production FTP directory
         env:
@@ -172,7 +173,7 @@ jobs:
           mirror -R build/runtime-env/ .
           "
 
-      - name: Upload Routing .htaccess to Host Root
+      - name: Upload root router to host root
         env:
           FTP_SERVER: ${{ vars.FTP_SERVER }}
           FTP_PORT: ${{ vars.FTP_PORT || 21 }}
@@ -185,7 +186,7 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate false;
           open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
-          mirror -R --no-perms build/root-htaccess/ .
+          mirror -R --no-perms build/root-router/ .
           "
 
       - name: Verify production health and revision

@@ -1,5 +1,4 @@
 RewriteEngine On
-RewriteBase /
 
 # =====================================================================
 # GLOBAL HTTPS ENFORCEMENT
@@ -9,27 +8,14 @@ RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # =====================================================================
-# 1. SUBDOMAIN EXTERNAL REDIRECTS
+# BLOCK SENSITIVE INTERNAL RESOURCES
 # =====================================================================
-# Route prod.competizionijudo.it -> www.competizionijudo.it/prod/
-RewriteCond %{HTTP_HOST} ^prod\.competizionijudo\.it$ [NC]
-RewriteRule ^(.*)$ https://www.competizionijudo.it/prod/$1 [R=301,L]
-
-# Route dev.competizionijudo.it -> www.competizionijudo.it/dev/
-RewriteCond %{HTTP_HOST} ^dev\.competizionijudo\.it$ [NC]
-RewriteRule ^(.*)$ https://www.competizionijudo.it/dev/$1 [R=301,L]
-
-# Route legacy.competizionijudo.it -> www.competizionijudo.it/legacy/
-RewriteCond %{HTTP_HOST} ^legacy\.competizionijudo\.it$ [NC]
-RewriteRule ^(.*)$ https://www.competizionijudo.it/legacy/$1 [R=301,L]
+RewriteRule ^(?:src|config|routes|views|tests|var|vendor)(?:/|$) - [F,L]
+RewriteRule ^(?:composer\.(?:json|lock)|phpunit\.xml|phpstan\.neon|phpcs\.xml|Makefile|README\.md|\.env.*)$ - [F,L]
 
 # =====================================================================
-# 2. MAIN SITE PASSTHROUGH
+# FRONT CONTROLLER — route everything through index.php
 # =====================================================================
-RewriteRule ^(prod|dev|legacy)(/.*)?$ - [L,NC]
-
-# =====================================================================
-# 3. MAIN SITE FLEXIBLE SWITCHER
-# =====================================================================
-RewriteCond %{HTTP_HOST} ^(www\.)?competizionijudo\.it$ [NC]
-RewriteRule ^(.*)$ prod/$1 [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
