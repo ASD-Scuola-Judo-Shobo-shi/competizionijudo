@@ -14,10 +14,10 @@ $returnView = ($csvReturnView ?? 'list') === 'add' ? 'add' : 'list';
     <?php endif; ?>
     <p><?= e(__('club.area.csv.description')) ?></p>
     <div class="csv-actions">
-        <a class="btn" href="<?= e(app_path('/club_athletes_export.csv')) ?>"><?= e(__('club.area.csv.export')) ?></a>
+        <a class="btn" href="<?= e(base_url('/club_athletes_export.csv')) ?>"><?= e(__('club.area.csv.export')) ?></a>
         <form
             method="post"
-            action="<?= e(app_path('/club_athletes_import.php')) ?>"
+            action="<?= e(base_url('/club_athletes_import.php')) ?>"
             enctype="multipart/form-data"
             class="csv-import-form"
         >

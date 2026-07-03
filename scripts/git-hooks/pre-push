@@ -8,3 +8,8 @@ php vendor/bin/phpunit tests/QualityPolicyTest.php
 
 echo "pre-push: running full local CI"
 composer ci
+
+echo "pre-push: enforcing changed-code coverage"
+mkdir -p build
+php vendor/bin/phpunit --coverage-clover build/coverage.xml
+php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70

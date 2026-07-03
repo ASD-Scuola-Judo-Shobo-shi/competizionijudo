@@ -53,13 +53,13 @@ $isEdit = !empty($event);
         <label><?= e($isEdit ? __('admin.edit.poster') : __('admin.add.poster')) ?></label>
         <input type="file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->poster_file)) : ?>
-            <p><a href="<?= e(app_path((string) $event->poster_file)) ?>" target="_blank"><?= e($isEdit ? __('events.view_current_poster') : __('events.view_uploaded_file')) ?></a></p>
+            <p><a href="<?= e(base_url((string) $event->poster_file)) ?>" target="_blank"><?= e($isEdit ? __('events.view_current_poster') : __('events.view_uploaded_file')) ?></a></p>
         <?php endif; ?>
 
         <label><?= e($isEdit ? __('admin.edit.info_file') : __('admin.add.info_file')) ?></label>
         <input type="file" name="info_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->info_file)) : ?>
-            <p><a href="<?= e(app_path((string) $event->info_file)) ?>" target="_blank"><?= e($isEdit ? __('events.view_current_info') : __('events.view_uploaded_file')) ?></a></p>
+            <p><a href="<?= e(base_url((string) $event->info_file)) ?>" target="_blank"><?= e($isEdit ? __('events.view_current_info') : __('events.view_uploaded_file')) ?></a></p>
         <?php endif; ?>
 
         <p class="checkbox-group">

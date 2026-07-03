@@ -31,7 +31,7 @@ function app_base_path(): string
     return $cachedPath;
 }
 
-function app_path(string $path = ''): string
+function base_url(string $path = ''): string
 {
     if ($path === '') {
         return app_base_path() === '' ? '/' : app_base_path();

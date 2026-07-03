@@ -45,12 +45,12 @@ final class RenderDeployEnvScriptTest extends TestCase
             'ADMIN_USER' => 'dev-admin',
             'ADMIN_PASS_HASH' => '$2y$12$abcdefghijklmnopqrstuvABCDEFGHIJKLMNOpqrstuvwxyz01234',
             'MAIL_FROM_ADDRESS' => 'postmaster@dev.example.test',
-            'APP_OWNER' => 'ASD Scuola Judo Shòbò-shi',
-            'APP_OWNER_ADDRESS' => 'via Bonorva 4, 09044 Quartucciu CA, Italy',
-            'APP_OWNER_FISCAL_CODE' => '90015550927',
-            'APP_OWNER_EMAIL' => 'info@competizionijudo.it',
-            'APP_WEBHOST' => 'Aruba',
-            'APP_WEBHOST_LOCATION' => 'Italy',
+            'APP_OWNER' => 'Synthetic Sports Association',
+            'APP_OWNER_ADDRESS' => '1 Test Street, Test City',
+            'APP_OWNER_FISCAL_CODE' => 'SYNTHETIC-FISCAL-CODE',
+            'APP_OWNER_EMAIL' => 'privacy@synthetic.test',
+            'APP_WEBHOST' => 'Synthetic Hosting Ltd',
+            'APP_WEBHOST_LOCATION' => 'European Union',
             'APP_LOG_RETENTION_DAYS' => '30',
             'APP_BACKUP_RETENTION_DAYS' => '30',
         ]);
@@ -64,7 +64,7 @@ final class RenderDeployEnvScriptTest extends TestCase
         self::assertStringContainsString('APP_URL=https://dev.example.test', $contents);
         self::assertStringContainsString('DB_NAME=competizionijudo_dev', $contents);
         self::assertStringContainsString('PASSWORD_RESET_MAILER=aruba', $contents);
-        self::assertStringContainsString('APP_OWNER=ASD Scuola Judo Shòbò-shi', $contents);
+        self::assertStringContainsString('APP_OWNER=Synthetic Sports Association', $contents);
     }
 
     public function testRejectsMissingRequiredValues(): void
@@ -79,12 +79,12 @@ final class RenderDeployEnvScriptTest extends TestCase
             'ADMIN_USER' => 'prod-admin',
             'ADMIN_PASS_HASH' => '$2y$12$abcdefghijklmnopqrstuvABCDEFGHIJKLMNOpqrstuvwxyz01234',
             'MAIL_FROM_ADDRESS' => 'postmaster@example.test',
-            'APP_OWNER' => 'ASD Scuola Judo Shòbò-shi',
-            'APP_OWNER_ADDRESS' => 'via Bonorva 4, 09044 Quartucciu CA, Italy',
-            'APP_OWNER_FISCAL_CODE' => '90015550927',
-            'APP_OWNER_EMAIL' => 'info@competizionijudo.it',
-            'APP_WEBHOST' => 'Aruba',
-            'APP_WEBHOST_LOCATION' => 'Italy',
+            'APP_OWNER' => 'Synthetic Sports Association',
+            'APP_OWNER_ADDRESS' => '1 Test Street, Test City',
+            'APP_OWNER_FISCAL_CODE' => 'SYNTHETIC-FISCAL-CODE',
+            'APP_OWNER_EMAIL' => 'privacy@synthetic.test',
+            'APP_WEBHOST' => 'Synthetic Hosting Ltd',
+            'APP_WEBHOST_LOCATION' => 'European Union',
             'APP_LOG_RETENTION_DAYS' => '30',
             'APP_BACKUP_RETENTION_DAYS' => '30',
         ]);

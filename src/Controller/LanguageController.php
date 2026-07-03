@@ -53,6 +53,16 @@ final class LanguageController extends Controller
         }
 
         $path = '/' . ltrim((string) ($parts['path'] ?? '/'), '/');
+
+        // Strip the environment prefix (e.g. /prod, /dev, /legacy) from the
+        // referer path so that redirect() does not double it via base_url().
+        $basePath = app_base_path();
+        if ($basePath !== '' && str_starts_with($path, $basePath . '/')) {
+            $path = substr($path, strlen($basePath));
+        } elseif ($basePath !== '' && $path === $basePath) {
+            $path = '/';
+        }
+
         if (isset($parts['query']) && $parts['query'] !== '') {
             $path .= '?' . $parts['query'];
         }

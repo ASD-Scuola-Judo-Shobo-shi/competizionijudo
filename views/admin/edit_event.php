@@ -61,14 +61,14 @@
                 <label><?= e(__('admin.edit.poster')) ?></label>
                 <input type="file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
                 <?php if ($event->poster_file) : ?>
-                    <p><a href="<?= e(app_path((string) $event->poster_file)) ?>" target="_blank"><?= e(__('events.view_current_poster')) ?></a></p>
+                    <p><a href="<?= e(base_url((string) $event->poster_file)) ?>" target="_blank"><?= e(__('events.view_current_poster')) ?></a></p>
                 <?php endif; ?>
             </div>
             <div>
                 <label><?= e(__('admin.edit.info_file')) ?></label>
                 <input type="file" name="info_file" accept=".pdf,.jpg,.jpeg,.png">
                 <?php if ($event->info_file) : ?>
-                    <p><a href="<?= e(app_path((string) $event->info_file)) ?>" target="_blank"><?= e(__('events.view_current_info')) ?></a></p>
+                    <p><a href="<?= e(base_url((string) $event->info_file)) ?>" target="_blank"><?= e(__('events.view_current_info')) ?></a></p>
                 <?php endif; ?>
             </div>
         </div>

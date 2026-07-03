@@ -18,7 +18,7 @@ final class ArubaPhpMailPasswordResetMailerTest extends TestCase
     {
         $this->senderExisted = array_key_exists('MAIL_FROM_ADDRESS', $_ENV);
         $this->originalSender = $_ENV['MAIL_FROM_ADDRESS'] ?? null;
-        $_ENV['MAIL_FROM_ADDRESS'] = 'postmaster@competizionijudo.it';
+        $_ENV['MAIL_FROM_ADDRESS'] = 'postmaster@mailer.example.test';
         Localization::setLocale('it');
     }
 
@@ -44,7 +44,7 @@ final class ArubaPhpMailPasswordResetMailerTest extends TestCase
 
             return true;
         });
-        $url = 'https://www.competizionijudo.it/club_reset_password.php?token=synthetic-token';
+        $url = 'https://www.mailer.example.test/club_reset_password.php?token=synthetic-token';
 
         $mailer->sendResetLink('club@example.test', $url);
 
@@ -52,7 +52,7 @@ final class ArubaPhpMailPasswordResetMailerTest extends TestCase
         self::assertSame('club@example.test', $calls[0]['recipient']);
         self::assertSame(__('club.reset_email.subject'), $calls[0]['subject']);
         self::assertStringContainsString($url, $calls[0]['message']);
-        self::assertSame('postmaster@competizionijudo.it', $calls[0]['headers']['From']);
+        self::assertSame('postmaster@mailer.example.test', $calls[0]['headers']['From']);
         self::assertSame('text/plain; charset=UTF-8', $calls[0]['headers']['Content-Type']);
     }
 
@@ -87,7 +87,7 @@ final class ArubaPhpMailPasswordResetMailerTest extends TestCase
 
         $mailer->sendResetLink(
             'club@example.test',
-            'https://www.competizionijudo.it/club_reset_password.php?token=synthetic'
+            'https://www.mailer.example.test/club_reset_password.php?token=synthetic'
         );
     }
 }

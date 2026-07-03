@@ -18,11 +18,20 @@ final class LanguageControllerTest extends TestCase
     private array $originalGet;
     /** @var array<string, mixed> */
     private array $originalServer;
+    /** @var array<string, mixed> */
+    private array $originalEnv;
+    /** @var array<string, mixed> */
+    private array $originalCookie;
+    /** @var array<string, string|null> */
+    private array $originalPutenv = [];
 
     protected function setUp(): void
     {
         $this->originalGet = $_GET;
         $this->originalServer = $_SERVER;
+        $this->originalEnv = $_ENV;
+        $this->originalCookie = $_COOKIE;
+        $this->originalPutenv = [];
         Session::destroy();
         Session::start();
         Localization::setLocale('it');
@@ -32,6 +41,15 @@ final class LanguageControllerTest extends TestCase
     {
         $_GET = $this->originalGet;
         $_SERVER = $this->originalServer;
+        $_ENV = $this->originalEnv;
+        $_COOKIE = $this->originalCookie;
+        foreach ($this->originalPutenv as $key => $value) {
+            if ($value === null) {
+                putenv($key);
+            } else {
+                putenv($key . '=' . $value);
+            }
+        }
         Session::destroy();
     }
 
@@ -81,6 +99,41 @@ final class LanguageControllerTest extends TestCase
         self::assertSame('/club_area.php?view=list', $response->headers()['Location']);
         self::assertSame('it', Session::get('locale'));
         self::assertSame('it', Localization::getLocale());
+    }
+
+    public function testRefererPathStripsEnvironmentPrefixWhenBasePathIsSet(): void
+    {
+        $this->originalPutenv['APP_URL'] = getenv('APP_URL') ?: null;
+        // Simulate APP_URL=http://localhost:8000/prod so that app_base_path() returns '/prod'
+        $_ENV['APP_URL'] = 'http://localhost:8000/prod';
+        $_SERVER['APP_URL'] = 'http://localhost:8000/prod';
+        putenv('APP_URL=http://localhost:8000/prod');
+
+        $request = new Request('GET', '/language/switch', ['locale' => 'en'], [], [
+            'HTTP_REFERER' => '/prod/events.php?page=2',
+        ]);
+
+        $response = $this->router()->dispatch($request);
+
+        // redirect() prepends app_base_path() (/prod) via base_url()
+        self::assertSame('/prod/events.php?page=2', $response->headers()['Location']);
+    }
+
+    public function testRefererPathIsRootWhenPathEqualsBasePath(): void
+    {
+        $this->originalPutenv['APP_URL'] = getenv('APP_URL') ?: null;
+        $_ENV['APP_URL'] = 'http://localhost:8000/prod';
+        $_SERVER['APP_URL'] = 'http://localhost:8000/prod';
+        putenv('APP_URL=http://localhost:8000/prod');
+
+        $request = new Request('GET', '/language/switch', ['locale' => 'en'], [], [
+            'HTTP_REFERER' => '/prod',
+        ]);
+
+        $response = $this->router()->dispatch($request);
+
+        // redirect() prepends app_base_path() (/prod) via base_url()
+        self::assertSame('/prod/', $response->headers()['Location']);
     }
 
     private function router(): Router

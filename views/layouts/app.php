@@ -8,7 +8,7 @@
     <title><?= e($pageTitle !== '' && $pageTitle !== $appName ? $pageTitle . ' | ' . $appName : $appName) ?></title>
 
     <link rel="icon" href="<?= $favicon ?>">
-    <link rel="stylesheet" href="<?= e(app_path('/assets/css/app.css')) ?>">
+    <link rel="stylesheet" href="<?= e(base_url('/assets/css/app.css')) ?>">
 
     <style>
         .next-events-list {
@@ -48,18 +48,18 @@
     <header class="top-hero">
         <div class="left-panel">
             <a href="https://www.csen.it/" target="_blank" rel="noopener noreferrer" class="club-link" title="CSEN">
-                <img src="<?= e(app_path('/assets/logo-csen.svg')) ?>" alt="CSEN">
+                <img src="<?= e(base_url('/assets/logo-csen.svg')) ?>" alt="CSEN">
             </a>
             <a href="https://www.fijlkam.it/" target="_blank" rel="noopener noreferrer" class="club-link" title="FIJLKAM">
-                <img src="<?= e(app_path('/assets/logo-fijlkam-judo.svg')) ?>" alt="FIJLKAM">
+                <img src="<?= e(base_url('/assets/logo-fijlkam-judo.svg')) ?>" alt="FIJLKAM">
             </a>
         </div>
         <div class="main-title">
             <div class="main-title-heading">
-                <a href="<?= e(app_path('/')) ?>" class="site-logo-link" aria-label="<?= e(__('nav.home')) ?>">
+                <a href="<?= e(base_url('/')) ?>" class="site-logo-link" aria-label="<?= e(__('nav.home')) ?>">
                     <img
                         class="site-heading-logo"
-                        src="<?= e(app_path('/assets/competizioni-judo-logo-optim.svgz')) ?>"
+                        src="<?= e(base_url('/assets/competizioni-judo-logo-optim.svgz')) ?>"
                         alt="<?= e(__('app.logo_alt')) ?>">
                 </a>
                 <h1><?= translate('header.title') ?></h1>
@@ -67,7 +67,7 @@
             <p><?= translate('header.subtitle') ?></p>
         </div>
         <div class="right-panel">
-            <form class="lang-switch" action="<?= e(app_path('/language/switch')) ?>" method="get" aria-label="<?= e(translate('a11y.language_selector')) ?>">
+            <form class="lang-switch" action="<?= e(base_url('/language/switch')) ?>" method="get" aria-label="<?= e(translate('a11y.language_selector')) ?>">
                 <label for="locale-select" class="sr-only"><?= e(translate('a11y.language_selector')) ?></label>
                 <select id="locale-select" name="locale" onchange="this.form.submit()">
                     <option value="it" <?= $locale === 'it' ? 'selected' : '' ?>>🇮🇹 Italiano</option>
@@ -77,24 +77,24 @@
             <?php if ($isLoggedIn) : ?>
                 <div class="club-login-info">
                     <span><?= e($clubEmail) ?></span>
-                    <form method="post" action="<?= e(app_path('/club_logout.php')) ?>" class="logout-form">
+                    <form method="post" action="<?= e(base_url('/club_logout.php')) ?>" class="logout-form">
                         <?= csrf_field() ?>
                         <button type="submit" class="logout-link"><?= translate('club.area.submenu.logout') ?></button>
                     </form>
                 </div>
             <?php else : ?>
                 <div class="club-login-info">
-                    <a href="<?= e(app_path('/club_login.php')) ?>"><?= translate('nav.login') ?></a> | <a href="<?= e(app_path('/club_register.php')) ?>"><?= translate('nav.register') ?></a>
+                    <a href="<?= e(base_url('/club_login.php')) ?>"><?= translate('nav.login') ?></a> | <a href="<?= e(base_url('/club_register.php')) ?>"><?= translate('nav.register') ?></a>
                 </div>
             <?php endif; ?>
         </div>
     </header>
 
     <nav class="main-nav" aria-label="<?= e(translate('a11y.main_navigation')) ?>">
-        <a href="<?= e(app_path('/')) ?>" class="<?= $homeActive ? 'active' : '' ?>"><?= translate('nav.home') ?></a>
-        <a href="<?= e(app_path('/events.php')) ?>" class="<?= $eventsActive ? 'active' : '' ?>"><?= translate('nav.events') ?></a>
+        <a href="<?= e(base_url('/')) ?>" class="<?= $homeActive ? 'active' : '' ?>"><?= translate('nav.home') ?></a>
+        <a href="<?= e(base_url('/events.php')) ?>" class="<?= $eventsActive ? 'active' : '' ?>"><?= translate('nav.events') ?></a>
         <a href="<?= e($clubUrl) ?>" class="<?= $clubsActive ? 'active' : '' ?>"><?= translate('nav.clubs') ?></a>
-        <a href="<?= e(app_path('/admin_manage_events.php')) ?>" class="<?= $adminActive ? 'active' : '' ?>"><?= translate('nav.admin') ?></a>
+        <a href="<?= e(base_url('/admin_manage_events.php')) ?>" class="<?= $adminActive ? 'active' : '' ?>"><?= translate('nav.admin') ?></a>
     </nav>
 
     <?php if ($submenuItems) : ?>
@@ -141,7 +141,7 @@
             <span class="footer-sep">•</span>
             <a href="https://it.m.wikipedia.org/wiki/Judo_(sport)" target="_blank" rel="noopener noreferrer">Judo</a>
             <span class="footer-sep">•</span>
-            <a href="<?= e(app_path('/privacy')) ?>"><?= e(__('privacy.footer_link')) ?></a>
+            <a href="<?= e(base_url('/privacy')) ?>"><?= e(__('privacy.footer_link')) ?></a>
         </div>
     </footer>
 

@@ -116,13 +116,13 @@ final class HelpersTest extends TestCase
 
     public function testAppPathPrefixesConfiguredBasePath(): void
     {
-        $_ENV['APP_URL'] = 'https://example.test/prod';
-        $_SERVER['APP_URL'] = 'https://example.test/prod';
+        $_ENV['APP_URL'] = 'https://example.test/subdir';
+        $_SERVER['APP_URL'] = 'https://example.test/subdir';
 
-        self::assertSame('/prod', app_base_path());
-        self::assertSame('/prod/events.php', app_path('/events.php'));
-        self::assertSame('/prod/uploads/events/poster.pdf', app_path('uploads/events/poster.pdf'));
-        self::assertSame('https://external.example.test/file.pdf', app_path('https://external.example.test/file.pdf'));
+        self::assertSame('/subdir', app_base_path());
+        self::assertSame('/subdir/events.php', base_url('/events.php'));
+        self::assertSame('/subdir/uploads/events/poster.pdf', base_url('uploads/events/poster.pdf'));
+        self::assertSame('https://external.example.test/file.pdf', base_url('https://external.example.test/file.pdf'));
 
         unset($_ENV['APP_URL'], $_SERVER['APP_URL']);
     }

@@ -53,7 +53,7 @@ This does not require adopting a large framework. The simpler target is to prese
 
 ## Positive foundations
 
-- PHP 8.2 baseline, strict types, PSR-4 autoloading, and readonly record properties.
+- PHP 8.4 baseline, strict types, PSR-4 autoloading, and readonly record properties.
 - Prepared statements are used for request-derived SQL values. The few interpolated pagination integers are cast first.
 - Most user-controlled output is passed through `e()`.
 - Passwords use `password_hash()` and `password_verify()`.

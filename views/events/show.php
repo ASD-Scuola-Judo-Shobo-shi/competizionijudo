@@ -14,17 +14,17 @@ $eventsList = $event !== null ? $nextEvents : $upcomingEvents;
             <?php if ($event->poster_file) : ?>
                 <?php $ext = strtolower(pathinfo($event->poster_file, PATHINFO_EXTENSION)); ?>
                 <?php if (in_array($ext, ['jpg', 'jpeg', 'png'], true)) : ?>
-                    <a href="<?= e(app_path((string) $event->poster_file)) ?>" target="_blank">
-                        <img src="<?= e(app_path((string) $event->poster_file)) ?>" alt="<?= e(__('events.poster_alt', ['name' => $event->name])) ?>">
+                    <a href="<?= e(base_url((string) $event->poster_file)) ?>" target="_blank">
+                        <img src="<?= e(base_url((string) $event->poster_file)) ?>" alt="<?= e(__('events.poster_alt', ['name' => $event->name])) ?>">
                     </a>
                 <?php else : ?>
                     <div class="poster-pdf">
                         <strong><?= e(__('events.poster_pdf')) ?></strong><br>
-                        <a class="btn orange" href="<?= e(app_path((string) $event->poster_file)) ?>" target="_blank" download><?= e(__('events.download_poster')) ?></a>
+                        <a class="btn orange" href="<?= e(base_url((string) $event->poster_file)) ?>" target="_blank" download><?= e(__('events.download_poster')) ?></a>
                     </div>
                 <?php endif; ?>
             <?php else : ?>
-                <div class="poster-placeholder" style="background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('<?= e(app_path('/assets/judo-bg.jpg')) ?>') center center / cover no-repeat;">
+                <div class="poster-placeholder" style="background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('<?= e(base_url('/assets/judo-bg.jpg')) ?>') center center / cover no-repeat;">
                     <span style="background: rgba(255,255,255,0.75); padding: 8px 14px; border-radius: 0.75em; display: inline-block;">
                         <strong><?= e(__('events.poster_not_available')) ?></strong>
                     </span>
@@ -69,16 +69,20 @@ $eventsList = $event !== null ? $nextEvents : $upcomingEvents;
             <?php endif; ?>
             <div class="event-details-actions">
                 <?php if ($canViewEntries) : ?>
-                    <a class="btn" href="<?= e(app_path('/event_entries.php?event=' . (string) $event->id)) ?>"><?= e(__('events.entries')) ?></a>
+                    <a class="btn" href="<?= e(base_url('/event_entries.php?event=' . (string) $event->id)) ?>"><?= e(__('events.entries')) ?></a>
                 <?php endif; ?>
-                <a class="btn green" href="<?= e(app_path('/event_register.php?id=' . (string) $event->id)) ?>"><?= e(__('events.registration')) ?></a>
+                <a class="btn green" href="<?= e(base_url('/event_register.php?id=' . (string) $event->id)) ?>"><?= e(__('events.registration')) ?></a>
             </div>
         </div>
     </div>
 </div>
 <?php endif; ?>
 
-<?php if (!empty($eventsList)) : ?>
+<?php if ($event === null && empty($eventsList)) : ?>
+<div class="card">
+    <p><?= e(__('events.none')) ?></p>
+</div>
+<?php elseif (!empty($eventsList)) : ?>
 <div class="card">
     <?php if ($event === null) : ?>
         <p><?= e(__('events.select_event')) ?></p>
@@ -86,7 +90,7 @@ $eventsList = $event !== null ? $nextEvents : $upcomingEvents;
     <h3><?= e($event !== null ? __('events.upcoming_events') : __('events.upcoming_heading')) ?></h3>
     <?php foreach ($eventsList as $next) : ?>
         <div class="event-line">
-            <a class="btn btn-sm event-details-btn" href="<?= e(app_path('/event_details.php?event=' . (string) $next->id)) ?>"><?= e(__('events.details')) ?></a>
+            <a class="btn btn-sm event-details-btn" href="<?= e(base_url('/event_details.php?event=' . (string) $next->id)) ?>"><?= e(__('events.details')) ?></a>
             <?= e($next->date) ?>
             - <?= e($next->name) ?>
             - <?= e($next->location) ?>

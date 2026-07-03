@@ -179,9 +179,9 @@ final class ForgotPasswordControllerTest extends TestCase
         $_ENV['APP_ENV'] = $environment;
         $_ENV['APP_DEBUG'] = $debug ? 'true' : 'false';
         $_ENV['APP_TEST_RESET_LINKS'] = $testResetLinks ? 'true' : 'false';
-        $_ENV['APP_URL'] = 'https://www.competizionijudo.it';
+        $_ENV['APP_URL'] = 'https://reset.example.test';
         $_ENV['PASSWORD_RESET_MAILER'] = 'aruba';
-        $_ENV['MAIL_FROM_ADDRESS'] = 'postmaster@competizionijudo.it';
+        $_ENV['MAIL_FROM_ADDRESS'] = 'postmaster@reset.example.test';
     }
 
     private function submit(

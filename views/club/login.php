@@ -20,9 +20,9 @@
         <input type="password" name="password" required>
 
         <p class="form-footer">
-            <a href="<?= e(app_path('/club_forgot_password.php')) ?>"><?= e(__('club.login.forgot_password_link')) ?></a>
+            <a href="<?= e(base_url('/club_forgot_password.php')) ?>"><?= e(__('club.login.forgot_password_link')) ?></a>
         </p>
         <button class="btn green" type="submit"><?= e(__('club.login.login_button')) ?></button>
-        <a class="btn" href="<?= e(app_path('/club_register.php')) ?>"><?= e(__('club.login.register_link')) ?></a>
+        <a class="btn" href="<?= e(base_url('/club_register.php')) ?>"><?= e(__('club.login.register_link')) ?></a>
     </form>
 </div>

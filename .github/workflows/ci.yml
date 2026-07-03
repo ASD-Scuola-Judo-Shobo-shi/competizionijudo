@@ -65,8 +65,8 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
-          extensions: dom, simplexml, pdo_mysql
-          coverage: xdebug
+          extensions: dom, simplexml, pdo_mysql, pcov
+          coverage: pcov
           tools: composer:v2
 
       - name: Validate Composer metadata
@@ -91,8 +91,6 @@ jobs:
         run: composer check
 
       - name: Generate coverage for changed source
-        env:
-          XDEBUG_MODE: coverage
         run: |
           mkdir -p build
           vendor/bin/phpunit --coverage-clover build/coverage.xml
@@ -123,7 +121,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.4"
           extensions: dom, simplexml
           coverage: none
           tools: composer:v2

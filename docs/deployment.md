@@ -17,9 +17,12 @@ repository/hosting operator must:
    `ADMIN_PASS_HASH`, and `FTP_PASSWORD`. Store non-secret values such as
    `DB_HOST`, `DB_NAME`, `DB_USER`, `ADMIN_USER`, `APP_URL`, `APP_OWNER*`,
    `APP_WEBHOST*`, retention days, `FTP_SERVER`, and `FTP_USERNAME` as
-   environment variables. Set `FTP_PROD_DIR` and `FTP_DEV_DIR` to dedicated
-   directories relative to the FTP login root, for example `prod/` and `dev/`.
-   Do not use `/`, `./`, or absolute-looking values such as `/prod/`.
+    environment variables. Set `FTP_BASE_DIR` to the common base directory
+    (e.g. `competizionijudo/`), and `FTP_PROD_DIR` / `FTP_DEV_DIR` to the
+    environment-specific subdirectories (e.g. `prod/` and `dev/`). The
+    workflow combines them as `FTP_BASE_DIR/FTP_PROD_DIR` and
+    `FTP_BASE_DIR/FTP_DEV_DIR`. Do not use `/`, `./`, or absolute-looking
+    values such as `/prod/`.
 3. Set `APP_URL` to the canonical HTTPS base URL for the target environment.
    The workflow sets `APP_ENV=production` on `main`, `APP_ENV=development` on
    `dev`, and `APP_DEBUG=false` in both environments. Production and

@@ -8,8 +8,8 @@ return [
         'logo_alt' => 'Competizioni Judo logo',
     ],
     'header' => [
-        'title' => 'JUDO EVENTS PORTAL',
-        'subtitle' => 'PRIVATE SARDINIAN CLUB EVENTS • REGISTRATION • MANAGEMENT • ORGANIZATION',
+        'title' => 'JUDO EVENTS',
+        'subtitle' => 'PRIVATE EVENTS • REGISTRATION • MANAGEMENT • ORGANIZATION',
     ],
     'nav' => [
         'dashboard' => 'Dashboard',
@@ -23,7 +23,7 @@ return [
         'register' => 'Register',
     ],
     'home' => [
-        'headline' => 'JUDO EVENTS<br>PORTAL',
+        'headline' => 'JUDO EVENTS',
         'description' => 'Portal for sports clubs to browse published events, register their club, manage athletes, and submit event registrations.',
         'upcoming' => 'Upcoming events',
         'table' => [

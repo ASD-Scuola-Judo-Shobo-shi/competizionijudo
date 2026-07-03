@@ -153,7 +153,7 @@ body {
     letter-spacing: 1.5px;
     font-weight: 900;
     color: #071d3d;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .main-title p {
@@ -756,7 +756,7 @@ textarea {
 /* SMARTPHONE & GENERAL MOBILE OVERRIDES */
 @media screen and (max-width:768px) {
     body {
-        font-size: 15px;
+        font-size: 16px;
         padding: 6px;
     }
 
@@ -795,7 +795,7 @@ textarea {
 /* VERY SMALL SCREENS */
 @media screen and (max-width:480px) {
     body {
-        font-size: 14px;
+        font-size: 15px;
     }
 
     .btn,

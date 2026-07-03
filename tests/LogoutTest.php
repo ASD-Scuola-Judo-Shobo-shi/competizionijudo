@@ -108,7 +108,7 @@ final class LogoutTest extends TestCase
     {
         $layout = file_get_contents(dirname(__DIR__) . '/views/layouts/app.php');
         self::assertIsString($layout);
-        self::assertStringContainsString('method="post" action="<?= e(app_path(\'/club_logout.php\')) ?>"', $layout);
+        self::assertStringContainsString('method="post" action="<?= e(base_url(\'/club_logout.php\')) ?>"', $layout);
         self::assertStringNotContainsString('href="/club_logout.php"', $layout);
 
         $adminLogout = $this->findLogoutItem(Navigation::submenu('/admin_manage_events.php', true, false));

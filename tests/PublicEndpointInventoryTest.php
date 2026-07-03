@@ -54,7 +54,7 @@ final class PublicEndpointInventoryTest extends TestCase
         foreach (['event.php', 'event_show.php'] as $file) {
             $contents = (string) file_get_contents($root . '/public/' . $file);
             self::assertStringContainsString("require dirname(__DIR__) . '/src/bootstrap.php';", $contents);
-            self::assertStringContainsString("header('Location: ' . app_path('/event_details.php'));", $contents);
+            self::assertStringContainsString("header('Location: ' . base_url('/event_details.php'));", $contents);
             self::assertStringContainsString('exit;', $contents);
         }
     }

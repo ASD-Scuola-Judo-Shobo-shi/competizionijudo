@@ -4,9 +4,10 @@
   "type": "project",
   "license": "proprietary",
   "require": {
-    "php": "^8.2"
+    "php": "^8.4"
   },
   "require-dev": {
+    "ext-pcov": "*",
     "phpstan/phpstan": "^1.12",
     "phpunit/phpunit": "^11.0",
     "squizlabs/php_codesniffer": "^4.0"

@@ -18,7 +18,7 @@
         <strong><?= e(__('events.entries_athletes_count')) ?>:</strong> <?= e((string) count($rows)) ?><br>
     </p>
     <p>
-        <a class="btn" href="<?= e(app_path('/events.php')) ?>"><?= e(__('events.back')) ?></a>
+        <a class="btn" href="<?= e(base_url('/events.php')) ?>"><?= e(__('events.back')) ?></a>
         <button class="btn green" onclick="window.print()" type="button"><?= e(__('events.entries_print')) ?></button>
     </p>
 </div>
@@ -41,7 +41,7 @@
                     <td><strong><?= e($club['club_name'] ?? '') ?></strong></td>
                     <td><?= e($club['federal_code'] ?? '') ?></td>
                     <td>
-                        <a class="btn green" href="<?= e(app_path('/event_entries.php?' . http_build_query([
+                        <a class="btn green" href="<?= e(base_url('/event_entries.php?' . http_build_query([
                             'event' => $event->id,
                             'club' => $club['id'] ?? '',
                         ]))) ?>">

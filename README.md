@@ -22,7 +22,7 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 
 ## Requirements
 
-- PHP 8.2 or later with PDO MySQL, mbstring, fileinfo, and XML extensions
+- PHP 8.4 or later with PDO MySQL, mbstring, fileinfo, and XML extensions
 - MySQL 8.0 or 8.4
 - a configured `PasswordResetMailer`; production uses the Aruba PHP-mail adapter
 - Composer 2

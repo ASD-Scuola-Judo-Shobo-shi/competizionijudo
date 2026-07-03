@@ -6,10 +6,10 @@ declare(strict_types=1);
  * Root front controller — replaces the root.htaccess RewriteRule logic.
  *
  * Responsibilities:
- *  - HTTPS enforcement (belt-and-suspenders with root.htaccess)
- *  - Subdomain → www redirects (prod.*, dev.*, legacy.*)
- *  - Environment prefix routing for the main site
- *  - Pass-through to the correct application entry point
+ * - HTTPS enforcement (belt-and-suspenders with root.htaccess)
+ * - Subdomain → www redirects (prod.*, dev.*, legacy.*)
+ * - Environment prefix routing for the main site
+ * - Pass-through to the correct application entry point
  *
  * The corresponding root.htaccess sends all non-file, non-directory requests
  * here via the RewriteRule ^(.*)$ index.php [QSA,L].
@@ -66,16 +66,29 @@ if (preg_match('#^/(prod|dev|legacy)(/|$)#', $uri_path, $matches)) {
 } else {
     $env_prefix = $active_environment;
 
-    // Rewrite REQUEST_URI so the downstream application sees the
-    // environment prefix — mirrors what root.htaccess RewriteRule did.
+    // Externally redirect the browser to the canonical environment-prefixed URL,
+    // so the user always sees /prod/... in the address bar.
     $query_string = parse_url($request_uri, PHP_URL_QUERY) ?? '';
-    $_SERVER['REQUEST_URI'] = '/' . $active_environment . $uri_path . ($query_string !== '' ? '?' . $query_string : '');
+    $redirect_path = '/' . $active_environment . $uri_path . ($query_string !== '' ? '?' . $query_string : '');
+    header('Location: ' . $redirect_path, true, 302);
+    exit();
 }
 
 $app_dir = __DIR__ . '/' . $env_prefix;
 $entry_point = $app_dir . '/public/index.php';
 
 if (is_file($entry_point)) {
+    // =====================================================================
+    // DOWNSTREAM ROUTER COMPATIBILITY FIX
+    // Strip internal environment prefixes from REQUEST_URI before execution.
+    // =====================================================================
+    $cleaned_uri = $_SERVER['REQUEST_URI'];
+    if (preg_match('#^/(prod|dev|legacy)(/|$)#', $cleaned_uri, $env_match)) {
+        $cleaned_uri = '/' . ltrim(substr($cleaned_uri, strlen($env_match[0])), '/');
+    }
+    $_SERVER['REQUEST_URI'] = $cleaned_uri;
+    // =====================================================================
+
     // Transfer control to the application. The application handles its own
     // response (headers, body, status code).
     require $entry_point;

@@ -26,6 +26,7 @@ for path in \
   scripts/purge-expired-data.php \
   src/bootstrap.php \
   vendor/autoload.php \
+  vendor/composer/ClassLoader.php \
   views/layouts/app.php \
   var/log/.gitkeep; do
   if [[ ! -e "$ARTIFACT_DIR/$path" ]]; then

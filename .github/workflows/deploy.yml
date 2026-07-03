@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - dev
   workflow_dispatch:
     inputs:
       deployment_ref:
@@ -42,7 +43,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.4"
 
       - name: Install lftp
         run: |
@@ -58,7 +59,7 @@ jobs:
       - name: Resolve production FTP target directory
         id: production-ftp-dir
         env:
-          RAW_FTP_DIR: ${{ vars.FTP_PROD_DIR }}
+          RAW_FTP_DIR: ${{ vars.FTP_BASE_DIR }}/${{ vars.FTP_PROD_DIR }}
           DEFAULT_FTP_DIR: prod/
         run: |
           php <<'PHP'
@@ -70,12 +71,12 @@ jobs:
           $value = $raw === false || trim($raw) === '' ? $default : trim($raw);
 
           if (in_array($value, ['.', './', '/'], true)) {
-              fwrite(STDERR, "FTP_PROD_DIR must point to a dedicated application directory relative to the FTP login root, for example prod/." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_PROD_DIR must point to a dedicated application directory relative to the FTP login root, for example prod/." . PHP_EOL);
               exit(1);
           }
 
           if (str_contains($value, '..')) {
-              fwrite(STDERR, "FTP_PROD_DIR must not contain parent-directory segments." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_PROD_DIR must not contain parent-directory segments." . PHP_EOL);
               exit(1);
           }
 
@@ -84,7 +85,7 @@ jobs:
           $value = rtrim((string) $value, '/') . '/';
 
           if ($value === '/') {
-              fwrite(STDERR, "FTP_PROD_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_PROD_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
               exit(1);
           }
 
@@ -125,6 +126,7 @@ jobs:
           open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
           mkdir -p \"${REMOTE_DIR}\";
           cd \"${REMOTE_DIR}\";
+          rm -rf vendor/
           mirror -R \
             --exclude-glob .git* \
             --exclude-glob .env* \
@@ -179,6 +181,7 @@ jobs:
           FTP_PORT: ${{ vars.FTP_PORT || 21 }}
           FTP_USERNAME: ${{ vars.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_BASE_DIR: ${{ vars.FTP_BASE_DIR }}
         run: |
           lftp -c "
           set ftp:ssl-allow true;
@@ -186,7 +189,7 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate false;
           open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
-          mirror -R --no-perms build/root-router/ .
+          mirror -R --no-perms build/root-router/ ${FTP_BASE_DIR}/
           "
 
       - name: Verify production health and revision
@@ -213,7 +216,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.4"
 
       - name: Install lftp
         run: |
@@ -229,7 +232,7 @@ jobs:
       - name: Resolve development FTP target directory
         id: development-ftp-dir
         env:
-          RAW_FTP_DIR: ${{ vars.FTP_DEV_DIR }}
+          RAW_FTP_DIR: ${{ vars.FTP_BASE_DIR }}/${{ vars.FTP_DEV_DIR }}
           DEFAULT_FTP_DIR: dev/
         run: |
           php <<'PHP'
@@ -241,12 +244,12 @@ jobs:
           $value = $raw === false || trim($raw) === '' ? $default : trim($raw);
 
           if (in_array($value, ['.', './', '/'], true)) {
-              fwrite(STDERR, "FTP_DEV_DIR must point to a dedicated application directory relative to the FTP login root, for example dev/." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEV_DIR must point to a dedicated application directory relative to the FTP login root, for example dev/." . PHP_EOL);
               exit(1);
           }
 
           if (str_contains($value, '..')) {
-              fwrite(STDERR, "FTP_DEV_DIR must not contain parent-directory segments." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEV_DIR must not contain parent-directory segments." . PHP_EOL);
               exit(1);
           }
 
@@ -255,7 +258,7 @@ jobs:
           $value = rtrim((string) $value, '/') . '/';
 
           if ($value === '/') {
-              fwrite(STDERR, "FTP_DEV_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEV_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
               exit(1);
           }
 
@@ -284,6 +287,7 @@ jobs:
           open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
           mkdir -p \"${REMOTE_DIR}\";
           cd \"${REMOTE_DIR}\";
+          rm -rf vendor/
           mirror -R \
             --exclude-glob .git* \
             --exclude-glob .env* \
