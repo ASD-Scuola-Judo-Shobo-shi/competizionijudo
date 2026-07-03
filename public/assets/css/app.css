@@ -504,6 +504,7 @@ a.btn.green {
 
 a.btn.red,
 button.btn.red {
+    color: white;
     background: #c80022;
 }
 

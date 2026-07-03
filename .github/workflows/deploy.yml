@@ -185,7 +185,7 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate false;
           open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
-          mirror -R build/root-htaccess/ .
+          mirror -R --no-perms build/root-htaccess/ .
           "
 
       - name: Verify production health and revision
