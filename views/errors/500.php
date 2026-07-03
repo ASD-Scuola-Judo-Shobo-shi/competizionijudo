@@ -6,6 +6,6 @@
         <p class="error-reference"><?= e($reference) ?></p>
     <?php endif; ?>
     <div class="error-actions">
-        <a class="btn green" href="/"><?= e(__('errors.go_home')) ?></a>
+        <a class="btn green" href="<?= e(app_path('/')) ?>"><?= e(__('errors.go_home')) ?></a>
     </div>
 </section>

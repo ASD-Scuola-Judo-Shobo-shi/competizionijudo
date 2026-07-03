@@ -114,6 +114,19 @@ final class HelpersTest extends TestCase
         self::assertFileExists($nested);
     }
 
+    public function testAppPathPrefixesConfiguredBasePath(): void
+    {
+        $_ENV['APP_URL'] = 'https://example.test/prod';
+        $_SERVER['APP_URL'] = 'https://example.test/prod';
+
+        self::assertSame('/prod', app_base_path());
+        self::assertSame('/prod/events.php', app_path('/events.php'));
+        self::assertSame('/prod/uploads/events/poster.pdf', app_path('uploads/events/poster.pdf'));
+        self::assertSame('https://external.example.test/file.pdf', app_path('https://external.example.test/file.pdf'));
+
+        unset($_ENV['APP_URL'], $_SERVER['APP_URL']);
+    }
+
     public function testTranslateFunction(): void
     {
         // Use a known key

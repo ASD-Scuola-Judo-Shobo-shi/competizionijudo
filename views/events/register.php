@@ -109,7 +109,7 @@
     <?php if (!empty($eventsList)) : ?>
         <?php foreach ($eventsList as $next) : ?>
             <div class="event-line">
-                <a class="btn green btn-sm event-details-btn" href="/event_register.php?id=<?= e($next->id) ?>"><?= e(__('events.registration')) ?></a>
+                <a class="btn green btn-sm event-details-btn" href="<?= e(app_path('/event_register.php?id=' . (string) $next->id)) ?>"><?= e(__('events.registration')) ?></a>
                 <?= e($next->date) ?>
                 - <?= e($next->name) ?>
                 - <?= e($next->location) ?>

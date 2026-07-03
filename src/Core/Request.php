@@ -25,8 +25,8 @@ final class Request
     ) {
         $this->correlationId = is_string($correlationId)
             && preg_match('/\A[a-f0-9]{16,64}\z/i', $correlationId) === 1
-                ? strtolower($correlationId)
-                : bin2hex(random_bytes(16));
+            ? strtolower($correlationId)
+            : bin2hex(random_bytes(16));
     }
 
     public static function fromGlobals(): self
@@ -50,8 +50,17 @@ final class Request
     public function path(): string
     {
         $path = parse_url($this->uri, PHP_URL_PATH) ?: '/';
+        $path = '/' . trim($path, '/');
+        $basePath = app_base_path();
 
-        return '/' . trim($path, '/');
+        if (
+            $basePath !== ''
+            && ($path === $basePath || str_starts_with($path, $basePath . '/'))
+        ) {
+            $path = substr($path, strlen($basePath)) ?: '/';
+        }
+
+        return $path;
     }
 
     public function correlationId(): string

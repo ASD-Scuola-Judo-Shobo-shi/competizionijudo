@@ -32,4 +32,4 @@ RewriteRule ^(prod|dev|legacy)(/.*)?$ - [L,NC]
 # 3. MAIN SITE FLEXIBLE SWITCHER
 # =====================================================================
 RewriteCond %{HTTP_HOST} ^(www\.)?competizionijudo\.it$ [NC]
-RewriteRule ^(.*)$ legacy/$1 [L]
+RewriteRule ^(.*)$ prod/$1 [L]

@@ -13,7 +13,7 @@
 
     <?php if (!empty($success)) : ?>
         <div class="notice success"><?= e($success) ?></div>
-        <a class="btn green" href="/club_login.php"><?= e(__('buttons.back_to_login')) ?></a>
+        <a class="btn green" href="<?= e(app_path('/club_login.php')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
     <?php else : ?>
         <form method="post" class="form-card">
             <?= csrf_field() ?>
@@ -45,12 +45,12 @@
                 <input type="checkbox" name="athlete_data_rights_declaration" value="1" required>
                 <span>
                     <?= e(__('club.register.athlete_data_rights_declaration')) ?>
-                    <a href="/privacy" target="_blank" rel="noopener noreferrer"><?= e(__('club.register.privacy_notice')) ?></a>
+                    <a href="<?= e(app_path('/privacy')) ?>" target="_blank" rel="noopener noreferrer"><?= e(__('club.register.privacy_notice')) ?></a>
                 </span>
             </label>
 
             <button class="btn green" type="submit"><?= e(__('club.register.register_button')) ?></button>
-            <a class="btn" href="/club_login.php"><?= e(__('nav.club_login')) ?></a>
+            <a class="btn" href="<?= e(app_path('/club_login.php')) ?>"><?= e(__('nav.club_login')) ?></a>
         </form>
     <?php endif; ?>
 </div>

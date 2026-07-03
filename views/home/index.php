@@ -2,7 +2,7 @@
     <div class="landing-copy">
         <img
             class="landing-logo"
-            src="/assets/competizioni-judo-logo-optim.svgz"
+            src="<?= e(app_path('/assets/competizioni-judo-logo-optim.svgz')) ?>"
             alt="<?= e(__('app.logo_alt')) ?>"
         >
         <div>

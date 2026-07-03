@@ -191,7 +191,7 @@ jobs:
       - name: Verify production health and revision
         run: >-
           bash scripts/check-deployment-health.sh
-          "${{ vars.PRODUCTION_HEALTH_URL || 'https://www.competizionijudo.it/health' }}"
+          "${{ vars.PRODUCTION_HEALTH_URL || 'https://www.competizionijudo.it/prod/health' }}"
           "${{ needs.ci.outputs.revision }}"
 
   deploy-development:
@@ -334,5 +334,5 @@ jobs:
       - name: Verify development health and revision
         run: >-
           bash scripts/check-deployment-health.sh
-          "${{ vars.DEVELOPMENT_HEALTH_URL || 'https://dev.competizionijudo.it/health' }}"
+          "${{ vars.DEVELOPMENT_HEALTH_URL || 'https://www.competizionijudo.it/dev/health' }}"
           "${{ needs.ci.outputs.revision }}"

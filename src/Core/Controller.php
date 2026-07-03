@@ -31,6 +31,10 @@ abstract class Controller
 
     protected function redirect(string $to, int $status = 302): Response
     {
+        if (str_starts_with($to, '/')) {
+            $to = app_path($to);
+        }
+
         return new Response('', $status, ['Location' => $to]);
     }
 

@@ -35,8 +35,8 @@
                         <?php endif; ?>
                     </td>
                     <td>
-                        <a class="btn btn-sm green" href="/admin_add_event.php?event_id=<?= (int) $event->id ?>"><?= e(__('admin.events.edit')) ?></a>
-                        <form method="post" action="/admin_delete_event.php" style="display:inline" onsubmit="return confirm('<?= e(__('admin.events.confirm_delete')) ?>')">
+                        <a class="btn btn-sm green" href="<?= e(app_path('/admin_add_event.php?event_id=' . (int) $event->id)) ?>"><?= e(__('admin.events.edit')) ?></a>
+                        <form method="post" action="<?= e(app_path('/admin_delete_event.php')) ?>" style="display:inline" onsubmit="return confirm('<?= e(__('admin.events.confirm_delete')) ?>')">
                             <?= csrf_field() ?>
                             <input type="hidden" name="event_id" value="<?= (int) $event->id ?>">
                             <button class="btn btn-sm red" type="submit"><?= e(__('admin.events.delete')) ?></button>

@@ -3,7 +3,7 @@
     <h1 id="error-title"><?= e($title ?? __('errors.method_not_allowed')) ?></h1>
     <p class="error-description"><?= e(__('errors.method_not_allowed_description')) ?></p>
     <div class="error-actions">
-        <a class="btn green" href="/"><?= e(__('errors.go_home')) ?></a>
-        <a class="btn" href="/events.php"><?= e(__('errors.view_events')) ?></a>
+        <a class="btn green" href="<?= e(app_path('/')) ?>"><?= e(__('errors.go_home')) ?></a>
+        <a class="btn" href="<?= e(app_path('/events.php')) ?>"><?= e(__('errors.view_events')) ?></a>
     </div>
 </section>

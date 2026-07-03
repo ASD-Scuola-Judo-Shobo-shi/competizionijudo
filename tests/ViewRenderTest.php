@@ -121,7 +121,7 @@ final class ViewRenderTest extends TestCase
         $css = file_get_contents(dirname(__DIR__) . '/public/assets/css/app.css');
 
         self::assertIsString($css);
-        self::assertStringContainsString('background:rgba(255,255,255,.75)', $css);
+        self::assertMatchesRegularExpression('/background:\s*rgba\(255,\s*255,\s*255,\s*\.75\)/', $css);
         self::assertStringContainsString('class="content-panel privacy-notice"', $privacy);
         self::assertSame(2, substr_count($privacy, 'Fiscal code: SYNTHETIC-FISCAL-CODE'));
         self::assertStringContainsString('class="content-panel error-card"', $error);

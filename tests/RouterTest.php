@@ -44,6 +44,18 @@ final class RouterTest extends TestCase
         self::assertSame('same-request', $response->content());
     }
 
+    public function testRequestPathStripsConfiguredApplicationBasePath(): void
+    {
+        $_ENV['APP_URL'] = 'https://example.test/prod';
+        $_SERVER['APP_URL'] = 'https://example.test/prod';
+
+        $request = new Request('GET', '/prod/admin_manage_events.php?page=2');
+
+        self::assertSame('/admin_manage_events.php', $request->path());
+
+        unset($_ENV['APP_URL'], $_SERVER['APP_URL']);
+    }
+
     public function testKnownPathWithWrongMethodReturnsRendered405AndAllowHeader(): void
     {
         Localization::setLocale('en');

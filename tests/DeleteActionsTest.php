@@ -255,7 +255,7 @@ final class DeleteActionsTest extends TestCase
         foreach ($templates as $path => [$action, $idField]) {
             $template = file_get_contents(dirname(__DIR__) . '/' . $path);
             self::assertIsString($template);
-            self::assertStringContainsString('method="post" action="' . $action . '"', $template);
+            self::assertStringContainsString('method="post" action="<?= e(app_path(\'' . $action . '\')) ?>"', $template);
             self::assertStringContainsString('csrf_field()', $template);
             self::assertStringContainsString('name="' . $idField . '"', $template);
             self::assertStringNotContainsString('?delete=', $template);

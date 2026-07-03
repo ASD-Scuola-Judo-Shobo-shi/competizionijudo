@@ -12,6 +12,45 @@ function base_path(string $path = ''): string
     return $path === '' ? $base : $base . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR);
 }
 
+function app_base_path(): string
+{
+    static $cachedUrl = null;
+    static $cachedPath = '';
+
+    $appUrl = (string) env('APP_URL', (string) config('app.url', 'http://localhost:8080'));
+    if ($cachedUrl === $appUrl) {
+        return $cachedPath;
+    }
+
+    $path = (string) parse_url($appUrl, PHP_URL_PATH);
+    $path = trim($path, '/');
+
+    $cachedUrl = $appUrl;
+    $cachedPath = $path === '' ? '' : '/' . $path;
+
+    return $cachedPath;
+}
+
+function app_path(string $path = ''): string
+{
+    if ($path === '') {
+        return app_base_path() === '' ? '/' : app_base_path();
+    }
+
+    if (
+        preg_match('#^[a-z][a-z0-9+\-.]*:#i', $path) === 1
+        || str_starts_with($path, '//')
+        || str_starts_with($path, '#')
+    ) {
+        return $path;
+    }
+
+    $normalizedPath = '/' . ltrim($path, '/');
+    $basePath = app_base_path();
+
+    return $basePath === '' ? $normalizedPath : $basePath . $normalizedPath;
+}
+
 function config(string $key, mixed $default = null): mixed
 {
     static $items = [];
