@@ -1,32 +1,42 @@
 # Deployment
 
-GitHub Actions builds a production-only application artifact and synchronizes it
-to the branch-specific FTP directory. The artifact never contains `.env`, and
-the FTP jobs explicitly exclude `.env`, so deployments preserve the copy owned
-by the server operator.
+GitHub Actions builds an application artifact without runtime secrets and
+synchronizes it to the branch-specific FTP directory. The artifact never
+contains `.env`. Instead, each deploy job renders an environment-specific
+`.env` from GitHub Actions environment variables/secrets and uploads it
+separately to the target directory.
 
 ## First-time environment provisioning
 
 Before directing traffic to a new `prod/` or `dev/` directory, an authorized
-hosting operator must:
+repository/hosting operator must:
 
-1. Copy `.env.example` to `.env` through the hosting control panel or another
-   approved encrypted administrative channel. Do not place it in a Git commit,
-   workflow artifact, ticket, or chat message.
-2. Replace every blank required value and verify the `APP_OWNER*`,
-   `APP_WEBHOST*`, and retention facts displayed by the privacy notice. Use a dedicated least-privilege database
-   account and a password hash produced with PHP's `password_hash()` for
-   `ADMIN_PASS_HASH`; never store the administrator's plaintext password.
-   Set `PASSWORD_RESET_MAILER=aruba` and use the domain's approved postmaster
-   address for `MAIL_FROM_ADDRESS`.
-3. Set `APP_ENV=production`, `APP_DEBUG=false`, and the canonical HTTPS
-   `APP_URL` for production. Development may use `APP_ENV=development`, but it
-   must use separate database and administrator credentials.
-4. Restrict `.env` permissions to the hosting account and PHP runtime. On hosts
-   that support Unix modes, use `0600`, or `0640` with a dedicated runtime
-   group. Confirm that web requests cannot retrieve dotfiles.
-5. Run `php scripts/run-migrations.php` from the deployed application directory,
-   then perform the documented deployment smoke check before enabling traffic.
+1. Create or update the GitHub Actions environments named `production` and
+   `development`. Use the same key names as `.env.example`.
+2. Store only sensitive values as environment secrets: at minimum `DB_PASS`,
+   `ADMIN_PASS_HASH`, and `FTP_PASSWORD`. Store non-secret values such as
+   `DB_HOST`, `DB_NAME`, `DB_USER`, `ADMIN_USER`, `APP_URL`, `APP_OWNER*`,
+   `APP_WEBHOST*`, retention days, `FTP_SERVER`, and `FTP_USERNAME` as
+   environment variables. Set `FTP_PROD_DIR` and `FTP_DEV_DIR` to dedicated
+   directories relative to the FTP login root, for example `prod/` and `dev/`.
+   Do not use `/`, `./`, or absolute-looking values such as `/prod/`.
+3. Set `APP_URL` to the canonical HTTPS base URL for the target environment.
+   The workflow sets `APP_ENV=production` on `main`, `APP_ENV=development` on
+   `dev`, and `APP_DEBUG=false` in both environments. Production and
+   development must use separate database and administrator credentials.
+4. Review every blank required key from `.env.example` and verify the
+   `APP_OWNER*`, `APP_WEBHOST*`, and retention facts displayed by the privacy
+   notice. Use a dedicated least-privilege database account and a password hash
+   produced with PHP's `password_hash()` for `ADMIN_PASS_HASH`; never store the
+   administrator's plaintext password.
+5. Run the deploy workflow. It renders `.env` inside GitHub Actions and uploads
+   it to the target directory after the application files. If an operator makes
+   an emergency manual `.env` edit on the host, they must immediately mirror
+   that change back into the matching GitHub environment or the next deploy
+   will overwrite it.
+6. Run `php scripts/run-migrations.php` from the deployed application
+   directory, then perform the documented deployment smoke check before
+   enabling traffic.
 
 The consolidated schema baseline can initialize an empty database or adopt a
 database that has recorded every pre-squash migration. It deliberately rejects
@@ -34,20 +44,27 @@ existing application tables without that complete history, as well as partial
 pre-squash histories. Back up the database and investigate its migration records
 instead of bypassing this guard.
 
-The deployment workflow does not create or update `.env`. Rotating credentials
-is therefore a server-side operation and does not require rebuilding the
-artifact. Operations must assign the named owner and secure provisioning channel
-for each hosting environment before its first deployment.
+Rotating credentials is now a GitHub environment operation: update the affected
+environment variable or secret, redeploy the branch, and verify `/health`.
+Do not commit generated `.env` files, workflow artifacts, ticket attachments,
+or chat messages containing runtime secrets. Operations must assign the named
+owner and secure provisioning channel for each hosting environment before its
+first deployment.
 
 ## Required application settings
 
-`.env.example` is the authoritative non-secret inventory. Production startup
-requires `APP_URL`, all four `DB_*` settings, `ADMIN_USER`, `ADMIN_PASS_HASH`,
-`PASSWORD_RESET_MAILER`, `MAIL_FROM_ADDRESS`, all four `APP_OWNER*` settings,
-both `APP_WEBHOST*` settings, and positive `APP_LOG_RETENTION_DAYS` and
-`APP_BACKUP_RETENTION_DAYS` values. It validates the public owner contact email.
-The controller must verify the published facts and application-owned legal text
-before deployment and update the notice if the actual processing changes.
+`.env.example` is the authoritative non-secret inventory. The deploy workflow
+expects GitHub environment entries with the same names for all blank required
+keys and reuses the template defaults for `APP_NAME`, `APP_LOCALE`,
+`APP_TEST_RESET_LINKS`, `EVENTS_UPCOMING_LIMIT`, and
+`PASSWORD_RESET_MAILER=aruba` unless a future workflow override is added.
+Startup requires `APP_URL`, all four `DB_*` settings, `ADMIN_USER`,
+`ADMIN_PASS_HASH`, `PASSWORD_RESET_MAILER`, `MAIL_FROM_ADDRESS`, all four
+`APP_OWNER*` settings, both `APP_WEBHOST*` settings, and positive
+`APP_LOG_RETENTION_DAYS` and `APP_BACKUP_RETENTION_DAYS` values. It validates
+the public owner contact email. The controller must verify the published facts
+and application-owned legal text before deployment and update the notice if the
+actual processing changes.
 
 If required production configuration is missing, startup returns a server error
 without exposing values. The operator should inspect `var/log/application.log`;
@@ -110,12 +127,13 @@ the endpoint after FTPS upload and fail unless HTTP 200 reports the exact SHA
 that was built. Override `PRODUCTION_HEALTH_URL` or `DEVELOPMENT_HEALTH_URL`
 only when the canonical host differs from the workflow defaults.
 
-The FTP action uses a separate state file in each environment. Normal sync
+The FTP action uses a separate state file in each environment. Normal app sync
 removes code files that were present in the preceding artifact but are absent
-from the new one. `dangerous-clean-slate` remains disabled: server-owned `.env`,
-runtime uploads/logs that never enter the artifact state, and the independent
-`legacy/` directory are preserved. Do not delete either deployment state file
-manually, because doing so disables reliable stale-code retirement.
+from the new one. The application sync still excludes `.env`, while a dedicated
+runtime-config sync uploads only the generated `.env`. `dangerous-clean-slate`
+remains disabled: runtime uploads/logs that never enter either sync state and
+the independent `legacy/` directory are preserved. Do not delete deployment
+state files manually, because doing so disables reliable stale-code retirement.
 
 Repository administrators own rollback execution. Record the last healthy SHA
 after each deployment. If health verification fails:

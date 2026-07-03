@@ -10,6 +10,21 @@ on:
       - main
       - dev
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+      artifact_name:
+        required: false
+        type: string
+    outputs:
+      revision:
+        description: Checked out revision used for quality checks and artifact build
+        value: ${{ jobs.deploy-artifact.outputs.revision }}
+      artifact-name:
+        description: Uploaded deployment artifact name
+        value: ${{ jobs.deploy-artifact.outputs.artifact-name }}
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -39,37 +54,31 @@ jobs:
       MIGRATION_TEST_PORT: 3306
       MIGRATION_TEST_USER: root
 
-    strategy:
-      fail-fast: false
-      matrix:
-        php-version:
-          - "8.2"
-          - "8.4"
-
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: "8.4"
           extensions: dom, simplexml, pdo_mysql
-          coverage: ${{ matrix.php-version == '8.4' && 'xdebug' || 'none' }}
+          coverage: xdebug
           tools: composer:v2
 
       - name: Validate Composer metadata
         run: composer validate --strict --no-check-lock
 
       - name: Cache Composer dependencies
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@v4
         with:
           path: ~/.composer/cache/files
-          key: composer-${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('composer.lock') }}
+          key: composer-${{ runner.os }}-php-8.4-${{ hashFiles('composer.lock') }}
           restore-keys: |
-            composer-${{ runner.os }}-php-${{ matrix.php-version }}-
+            composer-${{ runner.os }}-php-8.4-
             composer-${{ runner.os }}-
 
       - name: Install dependencies
@@ -82,7 +91,6 @@ jobs:
         run: composer check
 
       - name: Generate coverage for changed source
-        if: matrix.php-version == '8.4'
         env:
           XDEBUG_MODE: coverage
         run: |
@@ -90,7 +98,6 @@ jobs:
           vendor/bin/phpunit --coverage-clover build/coverage.xml
 
       - name: Enforce changed-code coverage
-        if: matrix.php-version == '8.4'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70
@@ -99,15 +106,23 @@ jobs:
     name: Deployment artifact smoke test
     runs-on: ubuntu-latest
     needs: quality
+    outputs:
+      revision: ${{ steps.revision.outputs.sha }}
+      artifact-name: ${{ steps.artifact.outputs.name }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Resolve build revision
+        id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        uses: shivammathur/setup-php@v2
         with:
-          # Match this to your primary targeted production server PHP version
           php-version: "8.2"
           extensions: dom, simplexml
           coverage: none
@@ -117,6 +132,8 @@ jobs:
         run: composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
 
       - name: Build deploy artifact
+        env:
+          BUILD_REVISION: ${{ steps.revision.outputs.sha }}
         run: bash scripts/build-deploy.sh
 
       - name: Verify deploy artifact
@@ -124,3 +141,18 @@ jobs:
 
       - name: Boot deploy artifact
         run: bash scripts/test-deploy-artifact.sh build/deploy
+
+      - name: Select artifact name
+        id: artifact
+        env:
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        run: echo "name=${ARTIFACT_NAME:-app-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload application artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: build/deploy
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 3

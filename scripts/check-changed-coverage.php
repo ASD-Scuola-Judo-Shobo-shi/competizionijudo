@@ -32,23 +32,15 @@ if (is_string($diffFile) && $diffFile !== '') {
         exit(2);
     }
 
-    $process = proc_open(
-        ['git', 'diff', '--unified=0', '--diff-filter=AM', $baseReference . '...HEAD', '--', 'src'],
-        [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
-        $pipes
-    );
-    if (!is_resource($process)) {
-        fwrite(STDERR, "Unable to start git diff for coverage.\n");
-        exit(2);
-    }
-    $diff = stream_get_contents($pipes[1]);
-    $error = stream_get_contents($pipes[2]);
-    fclose($pipes[1]);
-    fclose($pipes[2]);
-    $status = proc_close($process);
-    if ($status !== 0 || !is_string($diff)) {
-        fwrite(STDERR, "Unable to calculate changed lines: " . trim((string) $error) . "\n");
-        exit(2);
+    if (!gitReferenceExists($baseReference)) {
+        $fallbackReference = gitReferenceExists('HEAD^') ? 'HEAD^' : null;
+        if ($fallbackReference === null) {
+            $diff = gitRootDiff();
+        } else {
+            $diff = gitDiffFromReference($fallbackReference);
+        }
+    } else {
+        $diff = gitDiffFromReference($baseReference);
     }
 }
 
@@ -123,3 +115,53 @@ echo sprintf(
     $minimum
 );
 exit($percentage + 0.00001 >= $minimum ? 0 : 1);
+
+function gitReferenceExists(string $reference): bool
+{
+    [$status] = runProcess(['git', 'rev-parse', '--quiet', '--verify', $reference . '^{commit}']);
+
+    return $status === 0;
+}
+
+function gitDiffFromReference(string $reference): string
+{
+    [$status, $diff, $error] = runProcess(
+        ['git', 'diff', '--unified=0', '--diff-filter=AM', $reference . '...HEAD', '--', 'src']
+    );
+    if ($status !== 0) {
+        fwrite(STDERR, "Unable to calculate changed lines: " . trim($error) . "\n");
+        exit(2);
+    }
+
+    return $diff;
+}
+
+function gitRootDiff(): string
+{
+    [$status, $diff, $error] = runProcess(
+        ['git', 'diff-tree', '--root', '--unified=0', '--diff-filter=AM', '--no-commit-id', '-r', 'HEAD', '--', 'src']
+    );
+    if ($status !== 0) {
+        fwrite(STDERR, "Unable to calculate changed lines: " . trim($error) . "\n");
+        exit(2);
+    }
+
+    return $diff;
+}
+
+/** @return array{int, string, string} */
+function runProcess(array $command): array
+{
+    $process = proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    if (!is_resource($process)) {
+        fwrite(STDERR, "Unable to start git diff for coverage.\n");
+        exit(2);
+    }
+
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    return [proc_close($process), (string) $stdout, (string) $stderr];
+}

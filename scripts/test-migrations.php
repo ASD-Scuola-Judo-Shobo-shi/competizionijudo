@@ -49,7 +49,7 @@ $options = [
     PDO::ATTR_EMULATE_PREPARES => false,
     PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
 ];
-$server = new PDO(
+$server = connectWithRetry(
     sprintf('mysql:host=%s;port=%d;charset=utf8mb4', $host, $port),
     $user,
     $password,
@@ -111,7 +111,7 @@ function databaseConnection(
     string $password,
     array $options
 ): PDO {
-    return new PDO(
+    return connectWithRetry(
         sprintf(
             'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
             $host,
@@ -122,6 +122,33 @@ function databaseConnection(
         $password,
         $options
     );
+}
+
+/** @param array<int, mixed> $options */
+function connectWithRetry(
+    string $dsn,
+    string $user,
+    string $password,
+    array $options
+): PDO {
+    $attempts = max(1, (int) (getenv('MIGRATION_TEST_CONNECT_ATTEMPTS') ?: 10));
+    $sleepMicros = max(0, (int) (getenv('MIGRATION_TEST_CONNECT_DELAY_MICROS') ?: 500000));
+    $lastException = null;
+
+    for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+        try {
+            return new PDO($dsn, $user, $password, $options);
+        } catch (PDOException $exception) {
+            $lastException = $exception;
+            if ($attempt === $attempts) {
+                break;
+            }
+
+            usleep($sleepMicros);
+        }
+    }
+
+    throw $lastException ?? new RuntimeException('Unable to connect to the migration test database.');
 }
 
 function recreateDatabase(PDO $server, string $database): void

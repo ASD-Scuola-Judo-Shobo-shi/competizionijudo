@@ -39,6 +39,12 @@ rsync -a --no-owner --no-group \
   --exclude="*" \
   "${ROOT_DIR}/" "${BUILD_DIR}/"
 
+mkdir -p \
+  "${BUILD_DIR}/public/uploads/events" \
+  "${BUILD_DIR}/var/log"
+touch \
+  "${BUILD_DIR}/var/log/.gitkeep"
+
 BUILD_REVISION="${BUILD_REVISION:-}"
 if [[ -z "$BUILD_REVISION" ]]; then
   BUILD_REVISION="$(git -C "$ROOT_DIR" rev-parse HEAD)"

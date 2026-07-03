@@ -17,92 +17,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build artifact
-    runs-on: ubuntu-latest
-    outputs:
-      revision: ${{ steps.revision.outputs.sha }}
-
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping --silent"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=20
-
-    env:
-      MIGRATION_TEST_DATABASE_PREFIX: competizionijudo_test_deploy
-      MIGRATION_TEST_HOST: 127.0.0.1
-      MIGRATION_TEST_PORT: 3306
-      MIGRATION_TEST_USER: root
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          ref: ${{ inputs.deployment_ref || github.sha }}
-          fetch-depth: 0
-
-      - name: Resolve deployment revision
-        id: revision
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
-        with:
-          php-version: "8.2"
-          extensions: dom, simplexml, pdo_mysql
-          coverage: xdebug
-          tools: composer:v2
-
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
-
-      - name: Run migration smoke tests
-        run: composer test:migrations
-
-      - name: Run full quality suite
-        run: composer check
-
-      - name: Generate coverage for changed source
-        env:
-          XDEBUG_MODE: coverage
-        run: |
-          mkdir -p build
-          vendor/bin/phpunit --coverage-clover build/coverage.xml
-
-      - name: Enforce changed-code coverage
-        env:
-          BASE_SHA: ${{ github.event.before }}
-        run: php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70
-
-      - name: Build deploy directory
-        env:
-          BUILD_REVISION: ${{ steps.revision.outputs.sha }}
-        run: bash scripts/build-deploy.sh
-
-      - name: Boot deploy artifact
-        run: bash scripts/test-deploy-artifact.sh build/deploy
-
-      - name: Upload application artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: app-${{ github.ref_name }}
-          path: build/deploy
-          if-no-files-found: error
-          include-hidden-files: true
-          retention-days: 3
+  ci:
+    name: CI gate
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.deployment_ref || github.sha }}
+      artifact_name: app-${{ github.run_id }}-${{ github.run_attempt }}
 
   deploy-production:
     name: Deploy production
-    needs: build
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.build.result == 'success'
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.ci.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -110,15 +35,67 @@ jobs:
 
     steps:
       - name: Checkout deployment verifier
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@v4
         with:
-          ref: ${{ needs.build.outputs.revision }}
+          ref: ${{ needs.ci.outputs.revision }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+
+      - name: Install lftp
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp
 
       - name: Download application artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@v4
         with:
-          name: app-main
+          name: ${{ needs.ci.outputs.artifact-name }}
           path: build/deploy
+
+      - name: Resolve production FTP target directory
+        id: production-ftp-dir
+        env:
+          RAW_FTP_DIR: ${{ vars.FTP_PROD_DIR }}
+          DEFAULT_FTP_DIR: prod/
+        run: |
+          php <<'PHP'
+          <?php
+          declare(strict_types=1);
+
+          $raw = getenv('RAW_FTP_DIR');
+          $default = getenv('DEFAULT_FTP_DIR') ?: 'prod/';
+          $value = $raw === false || trim($raw) === '' ? $default : trim($raw);
+
+          if (in_array($value, ['.', './', '/'], true)) {
+              fwrite(STDERR, "FTP_PROD_DIR must point to a dedicated application directory relative to the FTP login root, for example prod/." . PHP_EOL);
+              exit(1);
+          }
+
+          if (str_contains($value, '..')) {
+              fwrite(STDERR, "FTP_PROD_DIR must not contain parent-directory segments." . PHP_EOL);
+              exit(1);
+          }
+
+          $value = ltrim($value, '/');
+          $value = preg_replace('#/+#', '/', $value);
+          $value = rtrim((string) $value, '/') . '/';
+
+          if ($value === '/') {
+              fwrite(STDERR, "FTP_PROD_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
+              exit(1);
+          }
+
+          $outputPath = getenv('GITHUB_OUTPUT');
+          if ($outputPath === false || $outputPath === '') {
+              fwrite(STDERR, "GITHUB_OUTPUT is not available." . PHP_EOL);
+              exit(1);
+          }
+
+          file_put_contents($outputPath, "path={$value}" . PHP_EOL, FILE_APPEND);
+          PHP
 
       - name: Stage production root htaccess
         run: bash scripts/stage-root-router.sh build/root-htaccess
@@ -131,49 +108,96 @@ jobs:
           rm htaccess.sha256
           test "$(find . -maxdepth 1 -type f | wc -l)" -eq 1
 
-      # STEP A: Upload the application files to the /prod/ directory
       - name: Upload to production FTP directory
-        uses: SamKirkland/FTP-Deploy-Action@8e83cea8672e3fbcbb9fdafff34debf6ae4c5f65 # v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
-          port: ${{ vars.FTP_PORT || 21 }}
-          local-dir: build/deploy/
-          server-dir: ${{ vars.FTP_PROD_DIR || 'prod/' }}
-          state-name: .deploy-state-production.json
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.env
-            **/.env.dev
-            legacy/**
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ steps.production-ftp-dir.outputs.path }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow true;
+          set ftp:ssl-force true;
+          set ftp:ssl-protect-data true;
+          set ssl:verify-certificate false;
+          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
+          mkdir -p \"${REMOTE_DIR}\";
+          cd \"${REMOTE_DIR}\";
+          mirror -R \
+            --exclude-glob .git* \
+            --exclude-glob .env* \
+            --exclude-glob legacy/ \
+            build/deploy/ .
+          "
 
-      # STEP B: Deploy the main routing rules directly to the Aruba root folder
+      - name: Render runtime .env
+        env:
+          APP_ENV: production
+          APP_DEBUG: "false"
+          APP_URL: ${{ vars.APP_URL }}
+          DB_HOST: ${{ vars.DB_HOST }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_USER: ${{ vars.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          ADMIN_USER: ${{ vars.ADMIN_USER }}
+          ADMIN_PASS_HASH: ${{ secrets.ADMIN_PASS_HASH }}
+          MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
+          APP_OWNER: ${{ vars.APP_OWNER }}
+          APP_OWNER_ADDRESS: ${{ vars.APP_OWNER_ADDRESS }}
+          APP_OWNER_FISCAL_CODE: ${{ vars.APP_OWNER_FISCAL_CODE }}
+          APP_OWNER_EMAIL: ${{ vars.APP_OWNER_EMAIL }}
+          APP_WEBHOST: ${{ vars.APP_WEBHOST }}
+          APP_WEBHOST_LOCATION: ${{ vars.APP_WEBHOST_LOCATION }}
+          APP_LOG_RETENTION_DAYS: ${{ vars.APP_LOG_RETENTION_DAYS }}
+          APP_BACKUP_RETENTION_DAYS: ${{ vars.APP_BACKUP_RETENTION_DAYS }}
+        run: php scripts/render-deploy-env.php build/runtime-env
+
+      - name: Upload production runtime env
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ steps.production-ftp-dir.outputs.path }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow true;
+          set ftp:ssl-force true;
+          set ftp:ssl-protect-data true;
+          set ssl:verify-certificate false;
+          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
+          mkdir -p \"${REMOTE_DIR}\";
+          cd \"${REMOTE_DIR}\";
+          mirror -R build/runtime-env/ .
+          "
+
       - name: Upload Routing .htaccess to Host Root
-        uses: SamKirkland/FTP-Deploy-Action@8e83cea8672e3fbcbb9fdafff34debf6ae4c5f65 # v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
-          port: ${{ vars.FTP_PORT || 21 }}
-          local-dir: build/root-htaccess/
-          server-dir: ./
-          dangerous-clean-slate: false
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow true;
+          set ftp:ssl-force true;
+          set ftp:ssl-protect-data true;
+          set ssl:verify-certificate false;
+          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
+          mirror -R build/root-htaccess/ .
+          "
 
       - name: Verify production health and revision
         run: >-
           bash scripts/check-deployment-health.sh
           "${{ vars.PRODUCTION_HEALTH_URL || 'https://www.competizionijudo.it/health' }}"
-          "${{ needs.build.outputs.revision }}"
+          "${{ needs.ci.outputs.revision }}"
 
   deploy-development:
     name: Deploy development
-    needs: build
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev' && needs.build.result == 'success'
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev' && needs.ci.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: development
@@ -181,37 +205,134 @@ jobs:
 
     steps:
       - name: Checkout deployment verifier
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@v4
         with:
-          ref: ${{ needs.build.outputs.revision }}
+          ref: ${{ needs.ci.outputs.revision }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+
+      - name: Install lftp
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp
 
       - name: Download application artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@v4
         with:
-          name: app-dev
+          name: ${{ needs.ci.outputs.artifact-name }}
           path: build/deploy
 
+      - name: Resolve development FTP target directory
+        id: development-ftp-dir
+        env:
+          RAW_FTP_DIR: ${{ vars.FTP_DEV_DIR }}
+          DEFAULT_FTP_DIR: dev/
+        run: |
+          php <<'PHP'
+          <?php
+          declare(strict_types=1);
+
+          $raw = getenv('RAW_FTP_DIR');
+          $default = getenv('DEFAULT_FTP_DIR') ?: 'dev/';
+          $value = $raw === false || trim($raw) === '' ? $default : trim($raw);
+
+          if (in_array($value, ['.', './', '/'], true)) {
+              fwrite(STDERR, "FTP_DEV_DIR must point to a dedicated application directory relative to the FTP login root, for example dev/." . PHP_EOL);
+              exit(1);
+          }
+
+          if (str_contains($value, '..')) {
+              fwrite(STDERR, "FTP_DEV_DIR must not contain parent-directory segments." . PHP_EOL);
+              exit(1);
+          }
+
+          $value = ltrim($value, '/');
+          $value = preg_replace('#/+#', '/', $value);
+          $value = rtrim((string) $value, '/') . '/';
+
+          if ($value === '/') {
+              fwrite(STDERR, "FTP_DEV_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
+              exit(1);
+          }
+
+          $outputPath = getenv('GITHUB_OUTPUT');
+          if ($outputPath === false || $outputPath === '') {
+              fwrite(STDERR, "GITHUB_OUTPUT is not available." . PHP_EOL);
+              exit(1);
+          }
+
+          file_put_contents($outputPath, "path={$value}" . PHP_EOL, FILE_APPEND);
+          PHP
+
       - name: Upload to development FTP directory
-        uses: SamKirkland/FTP-Deploy-Action@8e83cea8672e3fbcbb9fdafff34debf6ae4c5f65 # v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
-          port: ${{ vars.FTP_PORT || 21 }}
-          local-dir: build/deploy/
-          server-dir: ${{ vars.FTP_DEV_DIR || 'dev/' }}
-          state-name: .deploy-state-development.json
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.env
-            **/.env.dev
-            legacy/**
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ steps.development-ftp-dir.outputs.path }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow true;
+          set ftp:ssl-force true;
+          set ftp:ssl-protect-data true;
+          set ssl:verify-certificate false;
+          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
+          mkdir -p \"${REMOTE_DIR}\";
+          cd \"${REMOTE_DIR}\";
+          mirror -R \
+            --exclude-glob .git* \
+            --exclude-glob .env* \
+            --exclude-glob legacy/ \
+            build/deploy/ .
+          "
+
+      - name: Render runtime .env
+        env:
+          APP_ENV: development
+          APP_DEBUG: "false"
+          APP_URL: ${{ vars.APP_URL }}
+          DB_HOST: ${{ vars.DB_HOST }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_USER: ${{ vars.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          ADMIN_USER: ${{ vars.ADMIN_USER }}
+          ADMIN_PASS_HASH: ${{ secrets.ADMIN_PASS_HASH }}
+          MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
+          APP_OWNER: ${{ vars.APP_OWNER }}
+          APP_OWNER_ADDRESS: ${{ vars.APP_OWNER_ADDRESS }}
+          APP_OWNER_FISCAL_CODE: ${{ vars.APP_OWNER_FISCAL_CODE }}
+          APP_OWNER_EMAIL: ${{ vars.APP_OWNER_EMAIL }}
+          APP_WEBHOST: ${{ vars.APP_WEBHOST }}
+          APP_WEBHOST_LOCATION: ${{ vars.APP_WEBHOST_LOCATION }}
+          APP_LOG_RETENTION_DAYS: ${{ vars.APP_LOG_RETENTION_DAYS }}
+          APP_BACKUP_RETENTION_DAYS: ${{ vars.APP_BACKUP_RETENTION_DAYS }}
+        run: php scripts/render-deploy-env.php build/runtime-env
+
+      - name: Upload development runtime env
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ steps.development-ftp-dir.outputs.path }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow true;
+          set ftp:ssl-force true;
+          set ftp:ssl-protect-data true;
+          set ssl:verify-certificate false;
+          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
+          mkdir -p \"${REMOTE_DIR}\";
+          cd \"${REMOTE_DIR}\";
+          mirror -R build/runtime-env/ .
+          "
 
       - name: Verify development health and revision
         run: >-
           bash scripts/check-deployment-health.sh
           "${{ vars.DEVELOPMENT_HEALTH_URL || 'https://dev.competizionijudo.it/health' }}"
-          "${{ needs.build.outputs.revision }}"
+          "${{ needs.ci.outputs.revision }}"

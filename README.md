@@ -32,12 +32,14 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 
 1. Create an empty MySQL database and a dedicated local database user.
 2. Run `composer install`.
-3. Copy `.env.example` to `.env`, set `APP_ENV=local`, and fill every database,
+3. Run `composer hooks:install` once for the clone so Git uses the repository
+   hooks from `scripts/git-hooks/`.
+4. Copy `.env.example` to `.env`, set `APP_ENV=local`, and fill every database,
    administrator, and mail value with synthetic local data. Review the
    `APP_OWNER*`, `APP_WEBHOST*`, and retention facts. Generate `ADMIN_PASS_HASH`
    with `password_hash()`; do not store a plaintext password.
-4. Run `composer migrate`.
-5. Run `composer serve` and open `http://localhost:8080`.
+5. Run `composer migrate`.
+6. Run `composer serve` and open `http://localhost:8080`.
 
 Local/development startup applies forward migrations automatically. Production
 operators must run `composer migrate` explicitly before directing traffic to a
@@ -93,6 +95,12 @@ Run the full gate before committing:
 composer check
 ```
 
+Install the repository hooks once per clone if you have not already:
+
+```sh
+composer hooks:install
+```
+
 It validates Composer metadata, PHP syntax, coding style, PHPStan, PHPUnit, and
 the Composer security audit. `composer test:migrations` needs an isolated MySQL
 test account. Copy `.env.dev.example` to `.env.dev`, fill the local MySQL
@@ -102,6 +110,9 @@ and `composer ci` read `.env.dev` when present. `composer ci` also builds and
 verifies the exact production-only artifact. The build includes only runtime
 directories and access-control marker files, never `.env`, tests, development
 dependencies, logs, or uploaded files.
+
+The pre-commit hook validates Composer metadata and staged PHP syntax. The
+pre-push hook runs the GitHub Actions guardrail tests first, then `composer ci`.
 
 Project remediation evidence and sequencing live in
 [audit.md](docs/audit.md), [roadmap.md](docs/roadmap.md), and

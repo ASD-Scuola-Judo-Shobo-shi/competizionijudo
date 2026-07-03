@@ -1,7 +1,10 @@
-.PHONY: install serve test lint format analyse security-audit syntax check ci
+.PHONY: install hooks-install serve test lint format analyse security-audit syntax check ci
 
 install:
 	composer install
+
+hooks-install:
+	composer hooks:install
 
 serve:
 	composer serve

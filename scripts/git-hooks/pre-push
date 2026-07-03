@@ -3,5 +3,8 @@ set -eu
 
 export COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-$(pwd)/.cache/composer}"
 
+echo "pre-push: running GitHub Actions guardrails"
+php vendor/bin/phpunit tests/QualityPolicyTest.php
+
 echo "pre-push: running full local CI"
 composer ci

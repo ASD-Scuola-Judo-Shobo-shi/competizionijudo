@@ -14,16 +14,43 @@ use Tests\Support\FakeAuthenticationThrottle;
 
 final class IntegrationTest extends TestCase
 {
+    private const ENVIRONMENT_KEYS = [
+        'ADMIN_USER',
+        'ADMIN_PASS_HASH',
+    ];
+
     private View $view;
+
+    /** @var array<string, array{exists: bool, value: mixed}> */
+    private array $originalEnvironment = [];
 
     protected function setUp(): void
     {
+        foreach (self::ENVIRONMENT_KEYS as $key) {
+            $this->originalEnvironment[$key] = [
+                'exists' => array_key_exists($key, $_ENV),
+                'value' => $_ENV[$key] ?? null,
+            ];
+        }
+
         $this->startCleanSession();
+        $this->setAdminEnvironment();
         $this->view = new View(dirname(__DIR__) . '/views');
     }
 
     protected function tearDown(): void
     {
+        foreach ($this->originalEnvironment as $key => $original) {
+            if ($original['exists']) {
+                $_ENV[$key] = $original['value'];
+                $_SERVER[$key] = $original['value'];
+                putenv($key . '=' . (string) $original['value']);
+            } else {
+                unset($_ENV[$key], $_SERVER[$key]);
+                putenv($key);
+            }
+        }
+
         $this->destroySession();
     }
 
@@ -136,6 +163,19 @@ final class IntegrationTest extends TestCase
     {
         $this->destroySession();
         Session::start();
+    }
+
+    private function setAdminEnvironment(): void
+    {
+        $_ENV['ADMIN_USER'] = 'synthetic-admin';
+        $_SERVER['ADMIN_USER'] = 'synthetic-admin';
+        putenv('ADMIN_USER=synthetic-admin');
+
+        $hash = password_hash('CorrectPassword123!', PASSWORD_DEFAULT);
+        self::assertIsString($hash);
+        $_ENV['ADMIN_PASS_HASH'] = $hash;
+        $_SERVER['ADMIN_PASS_HASH'] = $hash;
+        putenv('ADMIN_PASS_HASH=' . $hash);
     }
 
     private function destroySession(): void

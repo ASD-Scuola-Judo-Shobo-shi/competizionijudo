@@ -16,6 +16,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
+stop_server() {
+  local pid="$1"
+
+  kill "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+}
+
 bash "${ROOT_DIR}/scripts/verify-deploy-artifact.sh" "$ARTIFACT_DIR"
 
 for route in \
@@ -57,44 +64,67 @@ boot_and_request() {
   local body_file="${TEMP_DIR}/${locale}.html"
   local privacy_body_file="${TEMP_DIR}/${locale}-privacy.html"
   local logo_headers_file="${TEMP_DIR}/${locale}-logo-headers.txt"
-  local log_file="${TEMP_DIR}/${locale}.log"
+  local log_file=''
+  local server_pid=''
   local status=''
 
-  (
-    cd "$ARTIFACT_DIR"
-    APP_ENV=production APP_DEBUG=false APP_LOCALE="$locale" \
-      APP_URL='https://smoke.example.test' \
-      DB_HOST=127.0.0.1 DB_NAME=synthetic_smoke DB_USER=synthetic_smoke \
-      DB_PASS=synthetic-smoke-password ADMIN_USER=synthetic-admin \
-      ADMIN_PASS_HASH=synthetic-smoke-password-hash \
-      PASSWORD_RESET_MAILER=aruba MAIL_FROM_ADDRESS='postmaster@example.test' \
-      APP_OWNER='Synthetic Controller' APP_OWNER_ADDRESS='1 Test Street' \
-      APP_OWNER_FISCAL_CODE='SYNTHETIC-FISCAL-CODE' \
-      APP_OWNER_EMAIL='privacy@example.test' \
-      APP_WEBHOST='Synthetic Hosting' APP_WEBHOST_LOCATION='European Union' \
-      APP_LOG_RETENTION_DAYS=30 APP_BACKUP_RETENTION_DAYS=30 \
-      php -d display_errors=0 -S "127.0.0.1:${port}" -t public public/index.php
-  ) >"$log_file" 2>&1 &
-  local server_pid=$!
-  SERVER_PIDS+=("$server_pid")
+  for _attempt in {1..10}; do
+    log_file="${TEMP_DIR}/${locale}-${port}.log"
+    status=''
 
-  for _ in {1..30}; do
-    if ! kill -0 "$server_pid" 2>/dev/null; then
-      echo "Artifact server stopped before the ${locale} request." >&2
-      sed -n '1,120p' "$log_file" >&2
-      exit 1
-    fi
+    (
+      cd "$ARTIFACT_DIR"
+      APP_ENV=production APP_DEBUG=false APP_LOCALE="$locale" \
+        APP_URL='https://smoke.example.test' \
+        DB_HOST=127.0.0.1 DB_NAME=synthetic_smoke DB_USER=synthetic_smoke \
+        DB_PASS=synthetic-smoke-password ADMIN_USER=synthetic-admin \
+        ADMIN_PASS_HASH=synthetic-smoke-password-hash \
+        PASSWORD_RESET_MAILER=aruba MAIL_FROM_ADDRESS='postmaster@example.test' \
+        APP_OWNER='Synthetic Controller' APP_OWNER_ADDRESS='1 Test Street' \
+        APP_OWNER_FISCAL_CODE='SYNTHETIC-FISCAL-CODE' \
+        APP_OWNER_EMAIL='privacy@example.test' \
+        APP_WEBHOST='Synthetic Hosting' APP_WEBHOST_LOCATION='European Union' \
+        APP_LOG_RETENTION_DAYS=30 APP_BACKUP_RETENTION_DAYS=30 \
+        php -d display_errors=0 -S "127.0.0.1:${port}" -t public public/index.php
+    ) >"$log_file" 2>&1 &
+    server_pid=$!
+    SERVER_PIDS+=("$server_pid")
 
-    status="$(curl --silent --output "$body_file" --write-out '%{http_code}' \
-      "http://127.0.0.1:${port}/about" || true)"
+    for _ in {1..30}; do
+      if ! kill -0 "$server_pid" 2>/dev/null; then
+        break
+      fi
+
+      status="$(curl --silent --output "$body_file" --write-out '%{http_code}' \
+        "http://127.0.0.1:${port}/about" || true)"
+      if [[ "$status" == '200' ]]; then
+        break
+      fi
+      sleep 0.1
+    done
+
     if [[ "$status" == '200' ]]; then
       break
     fi
-    sleep 0.1
+
+    stop_server "$server_pid"
+
+    if grep -Fq "Failed to listen on 127.0.0.1:${port}" "$log_file"; then
+      port="$((port + 1))"
+      continue
+    fi
+
+    if [[ -s "$log_file" ]]; then
+      echo "Artifact server stopped before the ${locale} request." >&2
+      sed -n '1,120p' "$log_file" >&2
+    else
+      echo "Artifact /about returned HTTP ${status:-unavailable} for locale ${locale}." >&2
+    fi
+    exit 1
   done
 
   if [[ "$status" != '200' ]]; then
-    echo "Artifact /about returned HTTP ${status:-unavailable} for locale ${locale}." >&2
+    echo "Could not find a free local port for the ${locale} artifact smoke test." >&2
     sed -n '1,120p' "$log_file" >&2
     exit 1
   fi
@@ -131,6 +161,8 @@ boot_and_request() {
     echo "Artifact SVGZ logo was not served with the required type and gzip encoding." >&2
     exit 1
   fi
+
+  stop_server "$server_pid"
 }
 
 boot_and_request it "$BASE_PORT" 'Una compatta applicazione PHP MVC' 'Origine dei dati'
