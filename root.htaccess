@@ -1,0 +1,35 @@
+RewriteEngine On
+RewriteBase /
+
+# =====================================================================
+# GLOBAL HTTPS ENFORCEMENT
+# Forces all http:// traffic to https:// immediately
+# =====================================================================
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# =====================================================================
+# 1. SUBDOMAIN EXTERNAL REDIRECTS
+# =====================================================================
+# Route prod.competizionijudo.it -> www.competizionijudo.it/prod/
+RewriteCond %{HTTP_HOST} ^prod\.competizionijudo\.it$ [NC]
+RewriteRule ^(.*)$ https://www.competizionijudo.it/prod/$1 [R=301,L]
+
+# Route dev.competizionijudo.it -> www.competizionijudo.it/dev/
+RewriteCond %{HTTP_HOST} ^dev\.competizionijudo\.it$ [NC]
+RewriteRule ^(.*)$ https://www.competizionijudo.it/dev/$1 [R=301,L]
+
+# Route legacy.competizionijudo.it -> www.competizionijudo.it/legacy/
+RewriteCond %{HTTP_HOST} ^legacy\.competizionijudo\.it$ [NC]
+RewriteRule ^(.*)$ https://www.competizionijudo.it/legacy/$1 [R=301,L]
+
+# =====================================================================
+# 2. MAIN SITE PASSTHROUGH
+# =====================================================================
+RewriteRule ^(prod|dev|legacy)(/.*)?$ - [L,NC]
+
+# =====================================================================
+# 3. MAIN SITE FLEXIBLE SWITCHER
+# =====================================================================
+RewriteCond %{HTTP_HOST} ^(www\.)?competizionijudo\.it$ [NC]
+RewriteRule ^(.*)$ legacy/$1 [L]

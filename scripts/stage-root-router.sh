@@ -2,11 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SOURCE_PATH="${ROOT_DIR}/.htaccess"
+SOURCE_PATH="${ROOT_DIR}/root.htaccess"
 STAGING_DIR="${1:-${ROOT_DIR}/build/root-htaccess}"
 
 if [[ ! -s "$SOURCE_PATH" ]]; then
-  echo "Required repository root .htaccess is missing or empty." >&2
+  echo "Required repository root.htaccess is missing or empty." >&2
   exit 1
 fi
 
@@ -25,4 +25,4 @@ fi
   sha256sum --check --strict htaccess.sha256
 )
 
-echo "Repository root .htaccess staged and verified."
+echo "Repository root.htaccess staged as .htaccess and verified."

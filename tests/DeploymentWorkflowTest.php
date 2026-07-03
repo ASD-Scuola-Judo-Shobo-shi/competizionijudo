@@ -82,6 +82,25 @@ final class DeploymentWorkflowTest extends TestCase
         self::assertSame(2, substr_count($workflow, 'legacy/**'));
     }
 
+    public function testProductionOnlyStagesDedicatedRootHtaccessForHostRootUpload(): void
+    {
+        $workflow = $this->workflow('deploy.yml');
+        $script = (string) file_get_contents(dirname(__DIR__) . '/scripts/stage-root-router.sh');
+
+        self::assertStringContainsString(
+            'SOURCE_PATH="${ROOT_DIR}/root.htaccess"',
+            $script
+        );
+        self::assertStringContainsString(
+            'cp "$SOURCE_PATH" "$STAGING_DIR/.htaccess"',
+            $script
+        );
+        self::assertSame(1, substr_count($workflow, 'bash scripts/stage-root-router.sh build/root-htaccess'));
+        self::assertStringNotContainsString('Upload root htaccess artifact', $workflow);
+        self::assertStringNotContainsString('Download root htaccess artifact', $workflow);
+        self::assertStringContainsString('Upload Routing .htaccess to Host Root', $workflow);
+    }
+
     private function workflow(string $name): string
     {
         $contents = file_get_contents(dirname(__DIR__) . '/.github/workflows/' . $name);
