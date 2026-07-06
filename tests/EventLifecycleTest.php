@@ -431,4 +431,16 @@ final class EventLifecycleTest extends TestCase
         $_SESSION = [];
         session_id('');
     }
+
+    public function testEntriesWithoutEventIdShowsUpcomingEvents(): void
+    {
+        $this->insertEvent(date: '2099-06-29');
+        Session::set('is_admin', true);
+
+        $response = $this->dispatchEntries([]);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(__('events.entries'), $response->content());
+        self::assertStringContainsString('Synthetic Event', $response->content());
+    }
 }

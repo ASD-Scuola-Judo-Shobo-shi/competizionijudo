@@ -170,6 +170,7 @@ final class EventController extends Controller
         Session::start();
         $isAdmin = !empty(Session::get('is_admin'));
         $clubId = Session::get('club_id');
+        $limit = max(1, (int) config('app.events_upcoming_limit'));
 
         if (!$isAdmin && (!is_numeric($clubId) || (int) $clubId <= 0)) {
             return $this->redirect('/club_login.php');
@@ -177,7 +178,19 @@ final class EventController extends Controller
 
         $eventId = (int) ($request->input('event') ?? $request->query('event') ?? $request->query('id'));
         if ($eventId <= 0) {
-            return $this->redirect('/events.php');
+            $events = Event::upcomingPublished(date('Y-m-d'), $limit);
+
+            return $this->view('events/entries', [
+                'title' => __('events.entries'),
+                'event' => null,
+                'clubs' => [],
+                'rows' => [],
+                'grouped' => [],
+                'selectedClub' => null,
+                'clubFilter' => 0,
+                'isAdmin' => $isAdmin,
+                'events' => $events,
+            ]);
         }
 
         $event = Event::findById($eventId);

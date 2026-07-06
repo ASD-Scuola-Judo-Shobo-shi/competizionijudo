@@ -32,12 +32,8 @@ final class Navigation
     ];
 
     /** @return array<string, mixed> */
-    public static function context(
-        string $currentPath,
-        string $clubView,
-        bool $isAdmin,
-        bool $isLoggedIn
-    ): array {
+    public static function context(string $currentPath, string $clubView, bool $isAdmin, bool $isLoggedIn): array
+    {
         return [
             'currentPath' => $currentPath,
             'clubView' => $clubView,
@@ -91,7 +87,7 @@ final class Navigation
         ];
         if (!$isLoggedIn) {
             $items[] = ['label' => translate('nav.login'), 'url' => base_url('/club_login.php'), 'paths' => ['/club_login.php']];
-
+            $items[] = ['label' => translate('nav.register'), 'url' => base_url('/club_register.php'), 'paths' => ['/club_register.php']];
             return $items;
         }
 
