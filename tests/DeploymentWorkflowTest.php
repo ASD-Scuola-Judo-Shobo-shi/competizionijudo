@@ -9,22 +9,22 @@ use PHPUnit\Framework\TestCase;
 final class DeploymentWorkflowTest extends TestCase
 {
     /**
-     * Safety guardrail: external marketplace actions must use immutable commits.
+     * Safety guardrail: external marketplace actions use stable major versions.
      */
-    public function testEveryExternalWorkflowActionUsesImmutableCommitPins(): void
+    public function testEveryExternalWorkflowActionUsesSafeVersionTags(): void
     {
         foreach (['ci.yml', 'deploy.yml'] as $workflowName) {
             $workflow = $this->workflow($workflowName);
 
-            // Extracts the immutable revision following the '@' symbol for external actions.
+            // Extracts the version tag following the '@' symbol for external actions.
             preg_match_all('/^\s*uses:\s*[^@\s]+@([^\s#]+)/m', $workflow, $matches);
 
             if ($matches[1] !== []) {
-                foreach ($matches[1] as $revision) {
+                foreach ($matches[1] as $tag) {
                     self::assertMatchesRegularExpression(
-                        '/\A[a-f0-9]{40}\z/i',
-                        $revision,
-                        "Workflow '{$workflowName}' contains a mutable action reference: '@{$revision}'."
+                        '/\Av\d+(?:\.\d+\.\d+)?\z/',
+                        $tag,
+                        "Workflow '{$workflowName}' contains an unpinned or unstable action tag: '@{$tag}'."
                     );
                 }
             }
