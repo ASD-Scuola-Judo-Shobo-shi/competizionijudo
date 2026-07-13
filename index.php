@@ -82,6 +82,7 @@ if (is_file($entry_point)) {
     // DOWNSTREAM ROUTER COMPATIBILITY FIX
     // Strip internal environment prefixes from REQUEST_URI before execution.
     // =====================================================================
+    $_SERVER['APP_ROUTE_PREFIX'] = '/' . $env_prefix;
     $cleaned_uri = $_SERVER['REQUEST_URI'];
     if (preg_match('#^/(prod|dev|legacy)(/|$)#', $cleaned_uri, $env_match)) {
         $cleaned_uri = '/' . ltrim(substr($cleaned_uri, strlen($env_match[0])), '/');

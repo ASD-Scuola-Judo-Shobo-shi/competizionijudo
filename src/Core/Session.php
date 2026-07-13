@@ -4,12 +4,68 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use LogicException;
+use RuntimeException;
+
 final class Session
 {
+    private const CONTEXT_KEY = '_session_context';
+
+    private static ?SessionConfiguration $configuration = null;
+
+    public static function configureFromEnvironment(): void
+    {
+        self::configure(SessionConfiguration::fromEnvironment());
+    }
+
+    public static function configure(SessionConfiguration $configuration): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            throw new LogicException('Cannot configure an active session.');
+        }
+
+        self::setIni('session.use_strict_mode', '1');
+        self::setIni('session.use_only_cookies', '1');
+
+        session_name($configuration->cookieName);
+        if (session_name() !== $configuration->cookieName) {
+            throw new RuntimeException('Unable to configure the session cookie name.');
+        }
+
+        if (
+            !session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => $configuration->cookiePath,
+            'domain' => '',
+            'secure' => self::isSecureRequest(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+            ])
+        ) {
+            throw new RuntimeException('Unable to configure the session cookie parameters.');
+        }
+
+        self::$configuration = $configuration;
+    }
+
+    public static function configuration(): SessionConfiguration
+    {
+        if (self::$configuration === null) {
+            self::configureFromEnvironment();
+        }
+
+        return self::$configuration;
+    }
+
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+            $submittedId = self::submittedSessionId();
+            if (!session_start()) {
+                throw new RuntimeException('Unable to start the session.');
+            }
+
+            self::verifyContext($submittedId);
         }
     }
 
@@ -97,5 +153,60 @@ final class Session
         }
 
         session_id('');
+    }
+
+    private static function verifyContext(string $submittedId): void
+    {
+        $configuration = self::configuration();
+        $context = $_SESSION[self::CONTEXT_KEY] ?? null;
+        if (is_string($context) && hash_equals($configuration->context, $context)) {
+            return;
+        }
+
+        if ($submittedId !== '' && hash_equals($submittedId, session_id())) {
+            self::replaceForeignSession();
+
+            return;
+        }
+
+        $_SESSION[self::CONTEXT_KEY] = $configuration->context;
+    }
+
+    private static function replaceForeignSession(): void
+    {
+        $sessionName = session_name();
+        session_write_close();
+        session_id('');
+        unset($_COOKIE[$sessionName]);
+
+        if (!session_start()) {
+            throw new RuntimeException('Unable to replace a session from another environment.');
+        }
+
+        $_SESSION = [self::CONTEXT_KEY => self::configuration()->context];
+    }
+
+    private static function submittedSessionId(): string
+    {
+        $sessionName = session_name();
+        $cookieId = $_COOKIE[$sessionName] ?? null;
+        if (is_string($cookieId) && $cookieId !== '') {
+            return $cookieId;
+        }
+
+        return session_id();
+    }
+
+    private static function setIni(string $key, string $value): void
+    {
+        if (ini_set($key, $value) === false || ini_get($key) !== $value) {
+            throw new RuntimeException(sprintf('Unable to enable required PHP session setting: %s.', $key));
+        }
+    }
+
+    private static function isSecureRequest(): bool
+    {
+        return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (!empty($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
     }
 }

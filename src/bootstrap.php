@@ -2,22 +2,6 @@
 
 declare(strict_types=1);
 
-if (session_status() === PHP_SESSION_NONE) {
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (!empty($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] === 443);
-
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'domain' => '',
-        'secure' => $secure,
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
-
-    session_start();
-}
-
 $autoload = dirname(__DIR__) . '/vendor/autoload.php';
 
 if (is_file($autoload)) {
@@ -41,7 +25,14 @@ if (is_file($autoload)) {
 }
 
 require __DIR__ . '/helpers.php';
+$routePrefix = $_SERVER['APP_ROUTE_PREFIX'] ?? null;
 load_env(dirname(__DIR__) . '/.env');
+if (is_string($routePrefix) && $routePrefix !== '') {
+    $_SERVER['APP_ROUTE_PREFIX'] = $routePrefix;
+}
+
+App\Core\Session::configureFromEnvironment();
+App\Core\Session::start();
 
 if (function_exists('env')) {
     $locale = $_SESSION['locale'] ?? env('APP_LOCALE', 'it');

@@ -94,6 +94,23 @@ The `MIGRATION_TEST_*` variables documented in `.env.dev.example` belong only
 to the isolated local/CI migration smoke harness. Do not provision them in a
 deployed application environment.
 
+## Session environment boundary
+
+The root router passes the selected path prefix to the application before its
+bootstrap starts a PHP session. Production therefore uses the `/prod` cookie
+path and development uses `/dev`; each environment also receives a distinct
+cookie name and an environment marker inside the PHP session record. Keep the
+workflow-provided `APP_ENV` values distinct (`production` for `main`,
+`development` for `dev`) and do not manually reuse session cookies between
+environments.
+
+The first deployment containing this boundary intentionally invalidates legacy
+`PHPSESSID` sessions and any session record without the matching environment
+marker. Users must authenticate again once; no database migration or runtime
+data cleanup is required. Verify both `/prod/health` and `/dev/health` after
+deployment, then confirm that a login in one environment is anonymous in the
+other.
+
 ## Aruba Linux Basic prerequisites
 
 The application targets Aruba Linux Basic without SSH or a third-party mail
