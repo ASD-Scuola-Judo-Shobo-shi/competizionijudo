@@ -116,7 +116,10 @@ pre-push hook runs the GitHub Actions guardrail tests first, then `composer ci`.
 
 Project remediation evidence and sequencing live in
 [audit.md](docs/audit.md), [roadmap.md](docs/roadmap.md), and
-[tracking.md](docs/tracking.md). Continue work with [prompt.md](docs/prompt.md).
+[tracking.md](docs/tracking.md). The current post-remediation findings and
+incremental PR plan are in
+[review-tracking-2026-07-13.md](docs/review-tracking-2026-07-13.md).
+Continue work with [prompt.md](docs/prompt.md).
 
 ## License
 
