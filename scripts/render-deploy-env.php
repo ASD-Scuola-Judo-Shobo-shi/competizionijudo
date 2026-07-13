@@ -82,6 +82,11 @@ function main(array $argv): int
 
             return 1;
         }
+        if (!chmod($outputPath, 0600) || (fileperms($outputPath) & 0777) !== 0600) {
+            fwrite(STDERR, "Unable to secure deploy env file permissions: {$outputPath}" . PHP_EOL);
+
+            return 1;
+        }
 
         fwrite(STDOUT, "Rendered deploy environment: {$outputPath}" . PHP_EOL);
 

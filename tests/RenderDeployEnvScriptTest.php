@@ -65,6 +65,7 @@ final class RenderDeployEnvScriptTest extends TestCase
         self::assertStringContainsString('DB_NAME=competizionijudo_dev', $contents);
         self::assertStringContainsString('PASSWORD_RESET_MAILER=aruba', $contents);
         self::assertStringContainsString('APP_OWNER=Synthetic Sports Association', $contents);
+        self::assertSame(0600, fileperms($this->directory . '/.env') & 0777);
     }
 
     public function testRejectsMissingRequiredValues(): void
