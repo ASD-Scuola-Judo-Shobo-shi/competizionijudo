@@ -40,4 +40,10 @@ final class Response
     {
         return $this->headers;
     }
+
+    /** @param array<string, string> $headers */
+    public function withHeaders(array $headers): self
+    {
+        return new self($this->content, $this->status, array_merge($this->headers, $headers));
+    }
 }

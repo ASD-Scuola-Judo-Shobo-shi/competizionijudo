@@ -28,7 +28,7 @@ final class Application
     public function handle(Request $request): Response
     {
         try {
-            return $this->router->dispatch($request);
+            return $this->secure($this->router->dispatch($request));
         } catch (HttpException $exception) {
             if ($exception->statusCode() >= 500) {
                 $this->logFailure('application.http_failure', $exception, $request);
@@ -41,11 +41,11 @@ final class Application
                     'message' => $exception->getMessage(),
                 ], LayoutContext::build($request));
 
-            return new Response(
+            return $this->secure(new Response(
                 $this->view->render('errors/' . $exception->statusCode(), $data),
                 $exception->statusCode(),
                 $exception->headers()
-            );
+            ));
         } catch (Throwable $exception) {
             $this->logFailure('application.unhandled_failure', $exception, $request);
 
@@ -69,13 +69,29 @@ final class Application
 
     private function serverError(Request $request): Response
     {
-        return new Response(
+        return $this->secure(new Response(
             $this->view->render('errors/500', [
                 'title' => __('errors.server_error'),
                 'message' => __('errors.unexpected_failure'),
                 'reference' => __('errors.reference', ['id' => $request->correlationId()]),
             ], 'layouts/error'),
             500
-        );
+        ));
+    }
+
+    private function secure(Response $response): Response
+    {
+        $headers = [
+            'Content-Security-Policy-Report-Only' => "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; form-action 'self'",
+            'Permissions-Policy' => 'camera=(), geolocation=(), microphone=()',
+            'Referrer-Policy' => 'strict-origin-when-cross-origin',
+            'X-Content-Type-Options' => 'nosniff',
+            'X-Frame-Options' => 'SAMEORIGIN',
+        ];
+        if (session_status() === PHP_SESSION_ACTIVE && AuthContext::isAuthenticated()) {
+            $headers['Cache-Control'] = 'private, no-store, max-age=0';
+        }
+
+        return $response->withHeaders($headers);
     }
 }

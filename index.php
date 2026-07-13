@@ -15,18 +15,25 @@ declare(strict_types=1);
  * here via the RewriteRule ^(.*)$ index.php [QSA,L].
  */
 
-// =====================================================================
-// HTTPS ENFORCEMENT
-// If root.htaccess isn't active (dev server, misconfiguration), enforce
-// HTTPS at the PHP level too.
-// =====================================================================
-if (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off') {
-    header('Location: https://' . ($_SERVER['HTTP_HOST'] ?? '') . ($_SERVER['REQUEST_URI'] ?? '/'), true, 301);
+$host = strtolower((string) parse_url('//' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST));
+$request_uri = $_SERVER['REQUEST_URI'] ?? '/';
+$allowedHosts = ['www.competizionijudo.it', 'competizionijudo.it', 'prod.competizionijudo.it', 'dev.competizionijudo.it', 'legacy.competizionijudo.it'];
+
+if (!in_array($host, $allowedHosts, true)) {
+    http_response_code(400);
+    header('Content-Type: text/plain; charset=utf-8');
+    header('X-Content-Type-Options: nosniff');
+    echo 'Bad Request';
     exit();
 }
 
-$host = strtolower($_SERVER['HTTP_HOST'] ?? '');
-$request_uri = $_SERVER['REQUEST_URI'] ?? '/';
+// HTTPS enforcement must use the canonical host, never a request-supplied one.
+if (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off') {
+    header('Location: https://www.competizionijudo.it' . $request_uri, true, 301);
+    exit();
+}
+
+header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 
 // =====================================================================
 // SUBDOMAIN → www REDIRECTS
