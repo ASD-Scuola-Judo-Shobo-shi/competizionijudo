@@ -21,6 +21,7 @@ does not establish that the same control is still present at this revision.
 | `[ ]` | Not started |
 | `[/]` | In progress; only one PR should normally have this state |
 | `[x]` | Merged and verified against its acceptance criteria |
+| `[v]` | Implemented and locally verified; awaiting review/merge |
 | `[!]` | Blocked by a recorded decision or external dependency |
 | `[~]` | Superseded or deliberately accepted with a recorded rationale |
 
@@ -173,8 +174,8 @@ destructive cleanup follows a measured compatibility window in a later PR.
 
 | PR | Status | Title and bounded scope | Dependencies | Acceptance criteria | Resolves |
 |---|---|---|---|---|---|
-| PR-01 | `[/]` | `fix(session): isolate deployment environments` - load typed environment identity before session start; use distinct cookie namespace/path and session backend namespace or an environment-bound session record; enable strict mode. | None | A real shared-handler integration test proves a dev session ID cannot authenticate prod even if copied manually; cookie flags/path/name are correct through root routing. | SEC-01 |
-| PR-02 | `[ ]` | `fix(auth): make session principals exclusive` - centralize club/admin login transitions, clear all prior auth and flash/CSRF state, regenerate the ID, and define one typed principal. | PR-01 | Switching club/admin in either direction leaves exactly one principal; fixation and dual-role regression tests pass. | SEC-02 |
+| PR-01 | `[v]` | `fix(session): isolate deployment environments` - load typed environment identity before session start; use distinct cookie namespace/path and session backend namespace or an environment-bound session record; enable strict mode. | None | A real shared-handler integration test proves a dev session ID cannot authenticate prod even if copied manually; cookie flags/path/name are correct through root routing. | SEC-01 |
+| PR-02 | `[v]` | `fix(auth): make session principals exclusive` - centralize club/admin login transitions, clear all prior auth and flash/CSRF state, regenerate the ID, and define one typed principal. | PR-01 | Switching club/admin in either direction leaves exactly one principal; fixation and dual-role regression tests pass. | SEC-02 |
 | PR-03 | `[ ]` | `fix(auth): revoke and bound sessions` - add credential/session versioning, idle and absolute expiry, lazy session start, and early session close after mutation. | PR-02 | Password reset/change invalidates prior sessions; expiry uses an injectable clock; anonymous health/public requests do not emit or lock a session. | SEC-02, PERF-04 |
 | PR-04 | `[ ]` | `fix(deploy): authenticate the delivery chain` - enable FTPS CA/hostname verification, pin actions by immutable SHA, force/verify `.env` permissions, and remove unsafe command interpolation where feasible. | None | A bad certificate fails closed; all third-party `uses` references are SHA-pinned with version comments; artifact/env tests verify permissions and secret exclusion. | SEC-03, DEP-06, QUAL-01 |
 | PR-05 | `[ ]` | `fix(deploy): retire stale executable files` - implement manifest/state-based deletion limited to owned code paths, preserve `.env`/uploads/logs/legacy, restore structural workflow tests, and correct the runbook. | PR-04 | A fixture deployment removes a file absent from the new manifest and preserves every server-owned path; docs describe the actual mechanism. | DEP-01, QUAL-01 |
@@ -259,3 +260,5 @@ destructive cleanup follows a measured compatibility window in a later PR.
 |---|---|---|---|---|
 | 2026-07-13 | Post-remediation static architecture/security/performance review | Drafted findings, decisions, and 32 incremental PRs against `34c1f55` | Code gates passed through PHPUnit; dependency audit and live MySQL/hosting checks remain explicitly unverified | Triage SEC-01 and approve PR-01 |
 | 2026-07-13 | PR-01 session isolation | Implemented environment-specific cookie/context boundary and root-prefix propagation; pending review/merge | PHPUnit 198/5,340; PHPStan; PHPCS; metadata/syntax; root staging; production artifact bilingual boot | Review/merge PR-01, deploy once, verify cross-environment login isolation, then begin PR-02 |
+| 2026-07-13 | PR-01 commit | `870bc7c` created; remote dry-run succeeds without modifying `origin` | Full pre-push gate: migration smoke, 198 tests/5,340 assertions, 76.2% changed coverage, artifact build/boot, audit | Await review/merge and production verification |
+| 2026-07-13 | PR-02 exclusive principals | `7652a99` created; club/admin login clears the other role and rotates ID/CSRF | Focused 5/30; full 200 tests/5,349 assertions; PHPStan; PHPCS; remote dry-run | Await review/merge, then begin PR-03 |
