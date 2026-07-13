@@ -57,6 +57,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify action version lock
+        run: php scripts/check-workflow-action-lock.php
         with:
           ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
