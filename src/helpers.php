@@ -51,6 +51,17 @@ function base_url(string $path = ''): string
     return $basePath === '' ? $normalizedPath : $basePath . $normalizedPath;
 }
 
+function asset_url(string $path): string
+{
+    $path = ltrim($path, '/');
+    $file = base_path('public/' . $path);
+    if (!is_file($file)) {
+        return base_url('/' . $path);
+    }
+
+    return base_url('/' . $path) . '?v=' . substr(hash_file('sha256', $file), 0, 12);
+}
+
 function config(string $key, mixed $default = null): mixed
 {
     static $items = [];

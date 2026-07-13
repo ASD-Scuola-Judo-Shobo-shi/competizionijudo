@@ -24,7 +24,7 @@ $eventsList = $event !== null ? $nextEvents : $upcomingEvents;
                     </div>
                 <?php endif; ?>
             <?php else : ?>
-                <div class="poster-placeholder" style="background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('<?= e(base_url('/assets/judo-bg.jpg')) ?>') center center / cover no-repeat;">
+                <div class="poster-placeholder" style="background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('<?= e(asset_url('assets/judo-bg-1280.webp')) ?>') center center / cover no-repeat;">
                     <span style="background: rgba(255,255,255,0.75); padding: 8px 14px; border-radius: 0.75em; display: inline-block;">
                         <strong><?= e(__('events.poster_not_available')) ?></strong>
                     </span>

@@ -8,7 +8,7 @@
     <title><?= e($pageTitle !== '' && $pageTitle !== $appName ? $pageTitle . ' | ' . $appName : $appName) ?></title>
 
     <link rel="icon" href="<?= $favicon ?>">
-    <link rel="stylesheet" href="<?= e(base_url('/assets/css/app.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset_url('assets/css/app.css')) ?>">
 
     <style>
         .next-events-list {
@@ -48,10 +48,10 @@
     <header class="top-hero">
         <div class="left-panel">
             <a href="https://www.csen.it/" target="_blank" rel="noopener noreferrer" class="club-link" title="CSEN">
-                <img src="<?= e(base_url('/assets/logo-csen.svg')) ?>" alt="CSEN">
+                <img src="<?= e(asset_url('assets/logo-csen.svg')) ?>" alt="CSEN">
             </a>
             <a href="https://www.fijlkam.it/" target="_blank" rel="noopener noreferrer" class="club-link" title="FIJLKAM">
-                <img src="<?= e(base_url('/assets/logo-fijlkam-judo.svg')) ?>" alt="FIJLKAM">
+                <img src="<?= e(asset_url('assets/logo-fijlkam-judo.svg')) ?>" alt="FIJLKAM">
             </a>
         </div>
         <div class="main-title">
@@ -59,7 +59,7 @@
                 <a href="<?= e(base_url('/')) ?>" class="site-logo-link" aria-label="<?= e(__('nav.home')) ?>">
                     <img
                         class="site-heading-logo"
-                        src="<?= e(base_url('/assets/competizioni-judo-logo-optim.svgz')) ?>"
+                        src="<?= e(asset_url('assets/competizioni-judo-logo-optim.svgz')) ?>"
                         alt="<?= e(__('app.logo_alt')) ?>">
                 </a>
                 <h1><?= translate('header.title') ?></h1>

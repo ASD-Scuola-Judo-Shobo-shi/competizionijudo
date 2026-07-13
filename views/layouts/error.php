@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title ?? __('errors.server_error')) ?></title>
     <link rel="icon" href="<?= $favicon ?>">
-    <link rel="stylesheet" href="<?= e(base_url('/assets/css/app.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset_url('assets/css/app.css')) ?>">
 </head>
 <body class="error-layout">
     <main class="error-shell" id="main-content">

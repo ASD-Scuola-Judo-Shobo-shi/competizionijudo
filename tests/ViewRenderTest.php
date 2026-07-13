@@ -125,7 +125,10 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('class="content-panel privacy-notice"', $privacy);
         self::assertSame(2, substr_count($privacy, 'Fiscal code: SYNTHETIC-FISCAL-CODE'));
         self::assertStringContainsString('class="content-panel error-card"', $error);
-        self::assertStringContainsString('<link rel="stylesheet" href="/assets/css/app.css">', $error);
+        self::assertMatchesRegularExpression(
+            '#<link rel="stylesheet" href="/assets/css/app\.css\?v=[a-f0-9]{12}">#',
+            $error
+        );
         self::assertStringContainsString('synthetic-reference', $error);
     }
 
@@ -161,7 +164,7 @@ final class ViewRenderTest extends TestCase
         $html = $view->render('home/index', $this->layoutData('/'));
         $logoPath = '/assets/competizioni-judo-logo-optim.svgz';
 
-        self::assertSame(2, substr_count($html, 'src="' . $logoPath . '"'));
+        self::assertSame(2, substr_count($html, 'src="' . $logoPath . '?v='));
         self::assertStringContainsString('class="site-heading-logo"', $html);
         self::assertStringContainsString('class="landing-logo"', $html);
         self::assertSame(2, substr_count($html, 'alt="Competizioni Judo logo"'));
