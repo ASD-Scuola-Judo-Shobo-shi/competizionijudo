@@ -68,9 +68,7 @@ final class AdminController extends Controller
                     $errors[] = __('admin.login.errors.too_many_attempts');
                 } elseif ($user === $adminUser && password_verify($pass, $adminHash)) {
                     $throttle->clear('admin-login', $user, $networkSignal);
-                    Session::regenerate();
-                    Session::set('is_admin', true);
-                    Session::set('csrf_token', bin2hex(random_bytes(32)));
+                    Session::authenticateAdministrator();
 
                     return $this->redirect('/admin_manage_events.php');
                 } else {

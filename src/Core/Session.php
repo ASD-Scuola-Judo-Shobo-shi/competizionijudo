@@ -10,6 +10,7 @@ use RuntimeException;
 final class Session
 {
     private const CONTEXT_KEY = '_session_context';
+    private const CONTEXT_VERSION = 'v2';
 
     private static ?SessionConfiguration $configuration = null;
 
@@ -126,6 +127,33 @@ final class Session
         session_regenerate_id(true);
     }
 
+    public static function authenticateClub(int $clubId): void
+    {
+        self::authenticate(SessionPrincipal::club($clubId));
+    }
+
+    public static function authenticateAdministrator(): void
+    {
+        self::authenticate(SessionPrincipal::administrator());
+    }
+
+    public static function principal(): ?SessionPrincipal
+    {
+        self::start();
+        $principal = $_SESSION['principal'] ?? null;
+        if (!is_array($principal) || !isset($principal['type']) || !is_string($principal['type'])) {
+            return null;
+        }
+
+        return match ($principal['type']) {
+            'administrator' => SessionPrincipal::administrator(),
+            'club' => isset($principal['club_id']) && is_int($principal['club_id'])
+                ? SessionPrincipal::club($principal['club_id'])
+                : null,
+            default => null,
+        };
+    }
+
     public static function destroy(): void
     {
         $sessionName = session_name();
@@ -159,7 +187,7 @@ final class Session
     {
         $configuration = self::configuration();
         $context = $_SESSION[self::CONTEXT_KEY] ?? null;
-        if (is_string($context) && hash_equals($configuration->context, $context)) {
+        if (is_string($context) && hash_equals(self::context(), $context)) {
             return;
         }
 
@@ -169,7 +197,7 @@ final class Session
             return;
         }
 
-        $_SESSION[self::CONTEXT_KEY] = $configuration->context;
+        $_SESSION[self::CONTEXT_KEY] = self::context();
     }
 
     private static function replaceForeignSession(): void
@@ -183,7 +211,7 @@ final class Session
             throw new RuntimeException('Unable to replace a session from another environment.');
         }
 
-        $_SESSION = [self::CONTEXT_KEY => self::configuration()->context];
+        $_SESSION = [self::CONTEXT_KEY => self::context()];
     }
 
     private static function submittedSessionId(): string
@@ -195,6 +223,33 @@ final class Session
         }
 
         return session_id();
+    }
+
+    private static function authenticate(SessionPrincipal $principal): void
+    {
+        self::start();
+        $locale = $_SESSION['locale'] ?? null;
+        session_regenerate_id(true);
+        $_SESSION = [
+            self::CONTEXT_KEY => self::context(),
+            'principal' => $principal->type === 'club'
+                ? ['type' => 'club', 'club_id' => $principal->clubId]
+                : ['type' => 'administrator'],
+            'csrf_token' => bin2hex(random_bytes(32)),
+        ];
+        if (is_string($locale) && in_array($locale, ['it', 'en'], true)) {
+            $_SESSION['locale'] = $locale;
+        }
+        if ($principal->type === 'club') {
+            $_SESSION['club_id'] = $principal->clubId;
+        } else {
+            $_SESSION['is_admin'] = true;
+        }
+    }
+
+    private static function context(): string
+    {
+        return self::CONTEXT_VERSION . ':' . self::configuration()->context;
     }
 
     private static function setIni(string $key, string $value): void

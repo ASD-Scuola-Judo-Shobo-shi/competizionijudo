@@ -145,8 +145,7 @@ final class ClubController extends Controller
                             $errors[] = __('club.login.errors.invalid_credentials');
                         } else {
                             $throttle->clear('club-login', $email, $networkSignal);
-                            Session::regenerate();
-                            Session::set('club_id', $club->id);
+                            Session::authenticateClub($club->id);
 
                             return $this->redirect('/club_area.php?view=list');
                         }

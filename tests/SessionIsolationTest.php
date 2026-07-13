@@ -82,7 +82,7 @@ final class SessionIsolationTest extends TestCase
         self::assertSame('/dev', session_get_cookie_params()['path']);
         self::assertSame('1', ini_get('session.use_strict_mode'));
         self::assertNull(Session::get('is_admin'));
-        self::assertSame($development->context, $_SESSION['_session_context']);
+        self::assertSame('v2:' . $development->context, $_SESSION['_session_context']);
         self::assertNotSame($productionId, session_id());
     }
 
