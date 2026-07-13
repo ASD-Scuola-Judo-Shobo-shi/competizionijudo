@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Core\Controller;
+use App\Core\AuthContext;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
@@ -20,7 +21,7 @@ final class ClubAreaController extends Controller
     public function index(Request $request): Response
     {
         Session::start();
-        $clubId = Session::get('club_id');
+        $clubId = AuthContext::clubId();
 
         if ($clubId === null) {
             return $this->redirect('/club_login.php');
@@ -167,7 +168,7 @@ final class ClubAreaController extends Controller
     public function deleteAthlete(Request $request): Response
     {
         Session::start();
-        $clubId = Session::get('club_id');
+        $clubId = AuthContext::clubId();
         if ($clubId === null) {
             return $this->redirect('/club_login.php');
         }
@@ -184,7 +185,7 @@ final class ClubAreaController extends Controller
     public function exportAthletes(Request $request): Response
     {
         Session::start();
-        $clubId = Session::get('club_id');
+        $clubId = AuthContext::clubId();
         if ($clubId === null || Club::findById((int) $clubId) === null) {
             return $this->redirect('/club_login.php');
         }
@@ -202,7 +203,7 @@ final class ClubAreaController extends Controller
     public function importAthletes(Request $request): Response
     {
         Session::start();
-        $clubId = Session::get('club_id');
+        $clubId = AuthContext::clubId();
         if ($clubId === null || Club::findById((int) $clubId) === null) {
             return $this->redirect('/club_login.php');
         }

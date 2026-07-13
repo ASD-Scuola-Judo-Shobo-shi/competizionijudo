@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Core\Application;
+use App\Core\AuthContext;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
+use App\Core\Session;
 use App\Core\View;
 use App\Localization;
 use PHPUnit\Framework\TestCase;
@@ -42,6 +44,45 @@ final class RouterTest extends TestCase
         $response = $router->dispatch($dispatched);
 
         self::assertSame('same-request', $response->content());
+    }
+
+    public function testDeclaredRoutePoliciesRejectTheWrongPrincipalBeforeTheHandler(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            Session::destroy();
+        }
+
+        $router = new Router(new View(dirname(__DIR__) . '/views'));
+        $handled = [];
+        $router->get('/club-only', static function (Request $request) use (&$handled): Response {
+            $handled[] = 'club';
+
+            return new Response('club');
+        }, AuthContext::CLUB);
+        $router->get('/admin-only', static function (Request $request) use (&$handled): Response {
+            $handled[] = 'admin';
+
+            return new Response('admin');
+        }, AuthContext::ADMINISTRATOR);
+
+        try {
+            self::assertSame(302, $router->dispatch(new Request('GET', '/club-only'))->status());
+            self::assertSame([], $handled);
+
+            Session::authenticateClub(42);
+            self::assertSame(200, $router->dispatch(new Request('GET', '/club-only'))->status());
+            self::assertSame(302, $router->dispatch(new Request('GET', '/admin-only'))->status());
+            self::assertSame(['club'], $handled);
+
+            Session::authenticateAdministrator();
+            self::assertSame(302, $router->dispatch(new Request('GET', '/club-only'))->status());
+            self::assertSame(200, $router->dispatch(new Request('GET', '/admin-only'))->status());
+            self::assertSame(['club', 'admin'], $handled);
+        } finally {
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                Session::destroy();
+            }
+        }
     }
 
     public function testRequestPathStripsConfiguredApplicationBasePath(): void

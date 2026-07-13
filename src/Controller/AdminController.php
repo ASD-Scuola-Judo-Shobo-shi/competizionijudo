@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Core\Controller;
+use App\Core\AuthContext;
 use App\Core\Logger;
 use App\Core\Request;
 use App\Core\Response;
@@ -97,7 +98,7 @@ final class AdminController extends Controller
     public function dashboard(Request $request): Response
     {
         Session::start();
-        if (empty(Session::get('is_admin'))) {
+        if (!AuthContext::isAdministrator()) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -107,7 +108,7 @@ final class AdminController extends Controller
     public function manageClubs(Request $request): Response
     {
         Session::start();
-        if (empty(Session::get('is_admin'))) {
+        if (!AuthContext::isAdministrator()) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -133,7 +134,7 @@ final class AdminController extends Controller
     public function deleteClub(Request $request): Response
     {
         Session::start();
-        if (empty(Session::get('is_admin'))) {
+        if (!AuthContext::isAdministrator()) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -149,7 +150,7 @@ final class AdminController extends Controller
     public function manageEvents(Request $request): Response
     {
         Session::start();
-        if (empty(Session::get('is_admin'))) {
+        if (!AuthContext::isAdministrator()) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -183,7 +184,7 @@ final class AdminController extends Controller
     public function deleteEvent(Request $request): Response
     {
         Session::start();
-        if (empty(Session::get('is_admin'))) {
+        if (!AuthContext::isAdministrator()) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -207,7 +208,7 @@ final class AdminController extends Controller
     public function addEvent(Request $request): Response
     {
         Session::start();
-        if (empty(Session::get('is_admin'))) {
+        if (!AuthContext::isAdministrator()) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -399,7 +400,7 @@ final class AdminController extends Controller
     public function editClub(Request $request): Response
     {
         Session::start();
-        if (empty(Session::get('is_admin'))) {
+        if (!AuthContext::isAdministrator()) {
             return $this->redirect('/admin_login.php');
         }
 
@@ -487,7 +488,7 @@ final class AdminController extends Controller
     public function editEvent(Request $request): Response
     {
         Session::start();
-        if (empty(Session::get('is_admin'))) {
+        if (!AuthContext::isAdministrator()) {
             return $this->redirect('/admin_login.php');
         }
 

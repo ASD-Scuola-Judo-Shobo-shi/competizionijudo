@@ -11,20 +11,23 @@ final class Router
      */
     private array $routes = [];
 
+    /** @var array<string, array<string, string>> */
+    private array $policies = [];
+
     public function __construct(private readonly View $view)
     {
     }
 
     /** @param callable|array{0: class-string<Controller>, 1: string} $handler */
-    public function get(string $path, callable|array $handler): void
+    public function get(string $path, callable|array $handler, string $policy = AuthContext::PUBLIC): void
     {
-        $this->add('GET', $path, $handler);
+        $this->add('GET', $path, $handler, $policy);
     }
 
     /** @param callable|array{0: class-string<Controller>, 1: string} $handler */
-    public function post(string $path, callable|array $handler): void
+    public function post(string $path, callable|array $handler, string $policy = AuthContext::PUBLIC): void
     {
-        $this->add('POST', $path, $handler);
+        $this->add('POST', $path, $handler, $policy);
     }
 
     public function dispatch(Request $request): Response
@@ -47,6 +50,11 @@ final class Router
             throw new HttpException(404, __('errors.page_not_found'));
         }
 
+        $policy = $this->policies[$request->method()][$request->path()] ?? AuthContext::PUBLIC;
+        if (!AuthContext::permits($policy)) {
+            return new Response('', 302, ['Location' => base_url(AuthContext::loginPath($policy))]);
+        }
+
         if (is_array($handler)) {
             [$controller, $method] = $handler;
             $handler = [new $controller($this->view, $request), $method];
@@ -62,10 +70,15 @@ final class Router
     }
 
     /** @param callable|array{0: class-string<Controller>, 1: string} $handler */
-    private function add(string $method, string $path, callable|array $handler): void
-    {
+    private function add(
+        string $method,
+        string $path,
+        callable|array $handler,
+        string $policy
+    ): void {
         $normalizedPath = '/' . trim($path, '/');
         $this->routes[strtoupper($method)][$normalizedPath] = $handler;
+        $this->policies[strtoupper($method)][$normalizedPath] = $policy;
     }
 
     /** @return list<string> */

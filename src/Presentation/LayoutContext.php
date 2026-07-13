@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation;
 
 use App\Core\Request;
-use App\Core\Session;
+use App\Core\AuthContext;
 use App\Localization;
 use App\Model\Club;
 
@@ -14,7 +14,7 @@ final class LayoutContext
     /** @return array<string, mixed> */
     public static function build(Request $request, ?Club $candidateClub = null): array
     {
-        $sessionClubId = Session::get('club_id');
+        $sessionClubId = AuthContext::clubId();
         $authenticatedClub = null;
         if (is_numeric($sessionClubId) && (int) $sessionClubId > 0) {
             $clubId = (int) $sessionClubId;
@@ -24,7 +24,7 @@ final class LayoutContext
         }
 
         $isLoggedIn = $authenticatedClub !== null;
-        $isAdmin = !empty(Session::get('is_admin'));
+        $isAdmin = AuthContext::isAdministrator();
         $currentPath = $request->path();
         $clubView = (string) $request->query('view', '');
 

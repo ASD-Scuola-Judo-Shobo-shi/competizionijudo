@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Core\Controller;
+use App\Core\AuthContext;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
@@ -68,7 +69,7 @@ final class EventController extends Controller
     public function register(Request $request): Response
     {
         Session::start();
-        $clubId = Session::get('club_id');
+        $clubId = AuthContext::clubId();
 
         if (!is_numeric($clubId) || (int) $clubId <= 0) {
             return $this->redirect('/club_login.php');
@@ -168,8 +169,8 @@ final class EventController extends Controller
     public function entries(Request $request): Response
     {
         Session::start();
-        $isAdmin = !empty(Session::get('is_admin'));
-        $clubId = Session::get('club_id');
+        $isAdmin = AuthContext::isAdministrator();
+        $clubId = AuthContext::clubId();
         $limit = max(1, (int) config('app.events_upcoming_limit'));
 
         if (!$isAdmin && (!is_numeric($clubId) || (int) $clubId <= 0)) {
@@ -252,7 +253,7 @@ final class EventController extends Controller
 
     private function canViewEntries(): bool
     {
-        return !empty(Session::get('is_admin')) || Session::has('club_id');
+        return AuthContext::isAuthenticated();
     }
 
     /**
