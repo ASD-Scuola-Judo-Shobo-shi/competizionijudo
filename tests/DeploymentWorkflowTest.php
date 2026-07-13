@@ -50,6 +50,17 @@ final class DeploymentWorkflowTest extends TestCase
         }
     }
 
+    public function testDependabotMaintainsComposerAndWorkflowDependencies(): void
+    {
+        $path = dirname(__DIR__) . '/.github/dependabot.yml';
+        self::assertFileExists($path);
+        $configuration = (string) file_get_contents($path);
+
+        self::assertStringContainsString('package-ecosystem: "composer"', $configuration);
+        self::assertStringContainsString('package-ecosystem: "github-actions"', $configuration);
+        self::assertSame(2, substr_count($configuration, 'interval: "weekly"'));
+    }
+
     private function workflow(string $name): string
     {
         $path = dirname(__DIR__) . '/.github/workflows/' . $name;
