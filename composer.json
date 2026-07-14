@@ -4,6 +4,11 @@
   "type": "project",
   "license": "proprietary",
   "require": {
+    "ext-fileinfo": "*",
+    "ext-mbstring": "*",
+    "ext-pdo": "*",
+    "ext-pdo_mysql": "*",
+    "ext-xml": "*",
     "php": "^8.4"
   },
   "require-dev": {
