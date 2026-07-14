@@ -10,7 +10,6 @@
                     <th>#</th>
                     <th><?= e(__('club.name')) ?></th>
                     <th><?= e(__('club.federal_code')) ?></th>
-                    <th><?= e(__('club.register.contact_name')) ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -19,7 +18,6 @@
                         <td><?= $pagination['offset'] + $i + 1 ?></td>
                         <td><?= e($club->name) ?></td>
                         <td><?= e($club->federal_code) ?></td>
-                        <td><?= e($club->contact_first_name . ' ' . $club->contact_last_name) ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

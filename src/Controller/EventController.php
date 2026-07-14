@@ -194,7 +194,7 @@ final class EventController extends Controller
             ]);
         }
 
-        $event = Event::findById($eventId);
+        $event = $isAdmin ? Event::findById($eventId) : Event::findPublishedById($eventId);
         if ($event === null) {
             return $this->redirect('/events.php');
         }
