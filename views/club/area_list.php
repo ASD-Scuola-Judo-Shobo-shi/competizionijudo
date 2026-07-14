@@ -2,6 +2,8 @@
 /** @var array<int, int> $registrationCounts */
 /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */
 /** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */
+/** @var list<array{id: int, name: string, date: string}> $events */
+/** @var int $eventFilter */
 ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <?php if (!empty($events)) : ?>
@@ -44,9 +46,9 @@
             <tbody>
                 <?php foreach ($athletes as $athlete) :
                     $_birthYear = (int) substr($athlete->date_of_birth, 0, 4);
-                    $_eventYear = date('Y');
+                    $_eventYear = (int) date('Y');
                     $_ac = App\Model\AgeClass::calculate($_birthYear, $_eventYear, App\Localization::getLocale());
-                    $_ageClassLabel = $_ac['label'] ?? '';
+                    $_ageClassLabel = $_ac['label'];
                     ?>
                     <tr>
                         <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>

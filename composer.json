@@ -51,7 +51,7 @@
     "metadata": "composer validate --strict --no-check-lock",
     "security:audit": "composer audit --locked --abandoned=fail",
     "serve": "php -S 0.0.0.0:8080 -t public public/index.php",
-    "syntax": "find config public routes scripts src tests views -name '*.php' -print0 | xargs -0 -n1 php -l",
+    "syntax": "find config lang public routes scripts src tests views -name '*.php' -print0 | xargs -0 -n1 php -l",
     "migrate": "php scripts/run-migrations.php",
     "privacy:purge": "php scripts/purge-expired-data.php",
     "test:migrations": "php scripts/test-migrations.php",

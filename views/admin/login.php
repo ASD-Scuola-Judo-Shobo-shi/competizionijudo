@@ -1,5 +1,5 @@
 <?php
-/** @var array $errors */
+/** @var list<string> $errors */
 ?>
 <div class="card">
     <h2><?= e(__('admin.login.title')) ?></h2>

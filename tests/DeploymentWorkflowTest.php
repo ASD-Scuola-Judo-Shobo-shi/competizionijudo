@@ -8,25 +8,28 @@ use PHPUnit\Framework\TestCase;
 
 final class DeploymentWorkflowTest extends TestCase
 {
-    /**
-     * Safety guardrail: external marketplace actions use stable major versions.
-     */
-    public function testEveryExternalWorkflowActionUsesSafeVersionTags(): void
+    public function testEveryExternalWorkflowActionHasAReviewedImmutableLock(): void
     {
+        $lock = json_decode(
+            (string) file_get_contents(dirname(__DIR__) . '/config/workflow-action-lock.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+        self::assertIsArray($lock);
+
         foreach (['ci.yml', 'deploy.yml'] as $workflowName) {
             $workflow = $this->workflow($workflowName);
 
-            // Extracts the version tag following the '@' symbol for external actions.
-            preg_match_all('/^\s*uses:\s*[^@\s]+@([^\s#]+)/m', $workflow, $matches);
+            preg_match_all('/^\s*uses:\s*([^@\s]+@(v\d+(?:\.\d+\.\d+)?))\b/m', $workflow, $matches);
 
-            if ($matches[1] !== []) {
-                foreach ($matches[1] as $tag) {
-                    self::assertMatchesRegularExpression(
-                        '/\Av\d+(?:\.\d+\.\d+)?\z/',
-                        $tag,
-                        "Workflow '{$workflowName}' contains an unpinned or unstable action tag: '@{$tag}'."
-                    );
-                }
+            foreach ($matches[1] as $reference) {
+                self::assertArrayHasKey(
+                    $reference,
+                    $lock,
+                    "Workflow '{$workflowName}' action '{$reference}' has no reviewed immutable lock."
+                );
+                self::assertMatchesRegularExpression('/\A[a-f0-9]{40}\z/i', (string) $lock[$reference]);
             }
         }
     }

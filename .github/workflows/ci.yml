@@ -57,12 +57,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Verify action version lock
-        run: php scripts/check-workflow-action-lock.php
         with:
           ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
+
+      - name: Verify action version lock
+        run: php scripts/check-workflow-action-lock.php
+
+      - name: Install actionlint
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+
+      - name: Lint GitHub Actions workflows
+        run: "$(go env GOPATH)/bin/actionlint"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2

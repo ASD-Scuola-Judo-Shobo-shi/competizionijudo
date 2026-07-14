@@ -1,7 +1,7 @@
 <?php
 /** @var \App\Model\Event|null $event */
 /** @var string $error */
-/** @var array $locations */
+/** @var list<string> $locations */
 $isEdit = !empty($event);
 ?>
 <div class="card">
@@ -25,7 +25,7 @@ $isEdit = !empty($event);
         <label><?= e($isEdit ? __('admin.edit.location') : __('admin.add.location')) ?></label>
         <input name="location" value="<?= e($event?->location ?? '') ?>" list="locations_list" required>
         <datalist id="locations_list">
-            <?php foreach (($locations ?? []) as $loc) : ?>
+            <?php foreach ($locations as $loc) : ?>
                 <option value="<?= e($loc) ?>">
             <?php endforeach; ?>
         </datalist>
@@ -53,13 +53,13 @@ $isEdit = !empty($event);
         <label><?= e($isEdit ? __('admin.edit.poster') : __('admin.add.poster')) ?></label>
         <input type="file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->poster_file)) : ?>
-            <p><a href="<?= e(base_url((string) $event->poster_file)) ?>" target="_blank"><?= e($isEdit ? __('events.view_current_poster') : __('events.view_uploaded_file')) ?></a></p>
+            <p><a href="<?= e(base_url((string) $event->poster_file)) ?>" target="_blank"><?= e(__('events.view_current_poster')) ?></a></p>
         <?php endif; ?>
 
         <label><?= e($isEdit ? __('admin.edit.info_file') : __('admin.add.info_file')) ?></label>
         <input type="file" name="info_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->info_file)) : ?>
-            <p><a href="<?= e(base_url((string) $event->info_file)) ?>" target="_blank"><?= e($isEdit ? __('events.view_current_info') : __('events.view_uploaded_file')) ?></a></p>
+            <p><a href="<?= e(base_url((string) $event->info_file)) ?>" target="_blank"><?= e(__('events.view_current_info')) ?></a></p>
         <?php endif; ?>
 
         <p class="checkbox-group">

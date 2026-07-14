@@ -1,3 +1,20 @@
+<?php
+/** @var string $appName */
+/** @var string $favicon */
+/** @var string $locale */
+/** @var bool $isLoggedIn */
+/** @var string|null $clubEmail */
+/** @var bool $homeActive */
+/** @var bool $eventsActive */
+/** @var string $clubUrl */
+/** @var bool $clubsActive */
+/** @var bool $adminActive */
+/** @var list<array{paths: list<string>, query?: array<string, list<string>>, method?: 'post', url: string, label: string}> $submenuItems */
+/** @var string $currentPath */
+/** @var string $clubView */
+/** @var string $content */
+/** @var string $privacyControllerFiscalCode */
+?>
 <!doctype html>
 <html lang="<?= e(\App\Localization::getLocale()) ?>">
 
@@ -128,7 +145,7 @@
         <div>
             <strong><?= e((string) ($privacyControllerName ?? '')) ?></strong><br>
             <?= e((string) ($privacyControllerAddress ?? '')) ?>
-            <?php if ((string) ($privacyControllerFiscalCode ?? '') !== '') : ?>
+            <?php if ($privacyControllerFiscalCode !== '') : ?>
                 <br><?= e(__('privacy.fiscal_code')) ?>: <?= e((string) $privacyControllerFiscalCode) ?>
             <?php endif; ?>
         </div>

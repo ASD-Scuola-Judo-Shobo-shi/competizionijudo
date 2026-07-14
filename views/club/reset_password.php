@@ -1,3 +1,9 @@
+<?php
+/** @var string $email */
+/** @var list<string> $errors */
+/** @var string $token */
+/** @var bool $valid */
+?>
 <div class="card">
     <h2><?= e(__('club.reset_password.heading')) ?></h2>
 

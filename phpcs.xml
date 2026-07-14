@@ -14,4 +14,6 @@
   <file>config</file>
   <file>routes</file>
   <file>scripts</file>
+  <file>views</file>
+  <file>lang</file>
 </ruleset>

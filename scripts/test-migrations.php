@@ -133,6 +133,7 @@ function connectWithRetry(
 ): PDO {
     $attempts = max(1, (int) (getenv('MIGRATION_TEST_CONNECT_ATTEMPTS') ?: 10));
     $sleepMicros = max(0, (int) (getenv('MIGRATION_TEST_CONNECT_DELAY_MICROS') ?: 500000));
+    /** @var PDOException|null $lastException */
     $lastException = null;
 
     for ($attempt = 1; $attempt <= $attempts; $attempt++) {
@@ -148,7 +149,7 @@ function connectWithRetry(
         }
     }
 
-    throw $lastException ?? new RuntimeException('Unable to connect to the migration test database.');
+    throw $lastException;
 }
 
 function recreateDatabase(PDO $server, string $database): void

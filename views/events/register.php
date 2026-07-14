@@ -1,8 +1,8 @@
 <?php
 
-/** @var \App\Model\Event $event */
-/** @var array $athletes */
-/** @var int[] $registered */
+/** @var \App\Model\Event|null $event */
+/** @var list<\App\Model\Athlete> $athletes */
+/** @var list<int> $registered */
 /** @var list<\App\Model\Event> $nextEvents */
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var array{added: int, already_registered: int, rejected: int, failed: int}|null $registrationFeedback */
@@ -77,7 +77,7 @@
                                             <?php if (in_array($athlete->id, $registered, true)) : ?>
                                                 <?= e(__('events.already_registered')) ?>
                                             <?php else : ?>
-                                                <input type="checkbox" name="athletes[]" value="<?= e($athlete->id) ?>">
+                                                <input type="checkbox" name="athletes[]" value="<?= e((string) $athlete->id) ?>">
                                             <?php endif; ?>
                                         </td>
                                         <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>

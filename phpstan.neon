@@ -7,6 +7,14 @@ parameters:
     - src/Controller
     - src/Model
     - src/Service
+    - src/Security
+    - src/Presentation
     - src/Validation
     - src/helpers.php
+    - src/bootstrap.php
     - public
+    - config
+    - routes
+    - scripts
+    - views
+    - lang

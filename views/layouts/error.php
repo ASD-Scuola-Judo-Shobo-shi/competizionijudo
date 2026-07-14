@@ -1,3 +1,9 @@
+<?php
+
+/** @var string $favicon */
+/** @var string $content */
+?>
+
 <!doctype html>
 <html lang="<?= e(\App\Localization::getLocale()) ?>">
 <head>

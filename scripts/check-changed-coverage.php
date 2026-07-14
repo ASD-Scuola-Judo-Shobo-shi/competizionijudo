@@ -149,7 +149,10 @@ function gitRootDiff(): string
     return $diff;
 }
 
-/** @return array{int, string, string} */
+/**
+ * @param list<string> $command
+ * @return array{int, string, string}
+ */
 function runProcess(array $command): array
 {
     $process = proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);

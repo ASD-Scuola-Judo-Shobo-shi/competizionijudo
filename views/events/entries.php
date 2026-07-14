@@ -1,9 +1,9 @@
 <?php
 /** @var \App\Model\Event|null $event */
-/** @var array<string, mixed> $clubs */
-/** @var array<string, mixed> $rows */
-/** @var array<string, array<string, mixed>> $grouped */
-/** @var array<string, mixed>|null $selectedClub */
+/** @var list<array{id: int, club_name: string, federal_code: string}> $clubs */
+/** @var list<array<string, string>> $rows */
+/** @var array<string, list<array<string, string>>> $grouped */
+/** @var array{club_name: string}|null $selectedClub */
 /** @var int $clubFilter */
 /** @var bool $isAdmin */
 /** @var array<int, \App\Model\Event> $events */
@@ -58,13 +58,13 @@
                 </tr>
                 <?php foreach ($clubs as $i => $club) : ?>
                     <tr>
-                        <td><?= $i + 1 ?></td>
-                        <td><strong><?= e($club['club_name'] ?? '') ?></strong></td>
-                        <td><?= e($club['federal_code'] ?? '') ?></td>
+                        <td><?= (int) $i + 1 ?></td>
+                        <td><strong><?= e($club['club_name']) ?></strong></td>
+                        <td><?= e($club['federal_code']) ?></td>
                         <td>
                             <a class="btn green" href="<?= e(base_url('/event_entries.php?' . http_build_query([
                                 'event' => $event->id,
-                                'club' => $club['id'] ?? '',
+                                'club' => $club['id'],
                             ]))) ?>">
                                 <?= e(__('events.entries_view_club')) ?>
                             </a>
@@ -95,7 +95,7 @@
                         </tr>
                         <?php foreach ($athletes as $i => $row) : ?>
                             <tr>
-                                <td><?= $i + 1 ?></td>
+                                <td><?= (int) $i + 1 ?></td>
                                 <td><?= e($row['last_name'] ?? '') ?></td>
                                 <td><?= e($row['first_name'] ?? '') ?></td>
                                 <td><?= e($row['date_of_birth'] ?? '') ?></td>
@@ -110,5 +110,3 @@
         </div>
     <?php endif; ?>
 <?php endif; ?>
-</parameter>
-</write_to_file>

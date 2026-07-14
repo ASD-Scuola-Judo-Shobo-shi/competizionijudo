@@ -63,14 +63,73 @@ final class QualityPolicyTest extends TestCase
         );
     }
 
-    public function testPhpcsCoversNonTemplatePhpBoundaries(): void
+    public function testPhpcsCoversApplicationPhpBoundaries(): void
     {
         $rules = (string) file_get_contents(dirname(__DIR__) . '/phpcs.xml');
 
-        foreach (['src', 'tests', 'public', 'config', 'routes', 'scripts'] as $directory) {
+        foreach (['src', 'tests', 'public', 'config', 'routes', 'scripts', 'views', 'lang'] as $directory) {
             self::assertStringContainsString('<file>' . $directory . '</file>', $rules);
         }
-        self::assertStringNotContainsString('<file>views</file>', $rules);
+    }
+
+    public function testPhpstanAndSyntaxCoverEveryApplicationPhpBoundary(): void
+    {
+        $phpstan = (string) file_get_contents(dirname(__DIR__) . '/phpstan.neon');
+        foreach (
+            [
+                'src/Core',
+                'src/Controller',
+                'src/Model',
+                'src/Service',
+                'src/Security',
+                'src/Presentation',
+                'src/Validation',
+                'src/bootstrap.php',
+                'src/helpers.php',
+                'public',
+                'config',
+                'routes',
+                'scripts',
+                'views',
+                'lang',
+            ] as $path
+        ) {
+            self::assertStringContainsString('- ' . $path, $phpstan);
+        }
+
+        $composer = (string) file_get_contents(dirname(__DIR__) . '/composer.json');
+        self::assertStringContainsString(
+            "find config lang public routes scripts src tests views -name '*.php'",
+            $composer
+        );
+    }
+
+    public function testCiLocksAndLintsWorkflowDefinitions(): void
+    {
+        $workflow = (string) file_get_contents(dirname(__DIR__) . '/.github/workflows/ci.yml');
+
+        self::assertStringContainsString('php scripts/check-workflow-action-lock.php', $workflow);
+        self::assertStringContainsString(
+            'go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7',
+            $workflow
+        );
+        self::assertStringContainsString('"$(go env GOPATH)/bin/actionlint"', $workflow);
+    }
+
+    public function testTemplatesContainNoEditorInstructionArtifacts(): void
+    {
+        $templates = '';
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(dirname(__DIR__) . '/views')
+        );
+        foreach ($iterator as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                $templates .= (string) file_get_contents($file->getPathname());
+            }
+        }
+
+        self::assertStringNotContainsString('</parameter>', $templates);
+        self::assertStringNotContainsString('</write_to_file>', $templates);
     }
 
     public function testDeployArtifactSmokeScriptRetriesPortSelectionAndStopsEachServer(): void
