@@ -115,6 +115,35 @@ final class SessionIsolationTest extends TestCase
         }
     }
 
+    public function testRootRouterServesMaintenanceBeforeBootingTheEnvironment(): void
+    {
+        $directory = sys_get_temp_dir() . '/competizioni-judo-maintenance-' . bin2hex(random_bytes(8));
+        self::assertTrue(mkdir($directory . '/prod', 0700, true));
+        self::assertTrue(copy(dirname(__DIR__) . '/index.php', $directory . '/index.php'));
+        file_put_contents($directory . '/prod/.maintenance', 'deploying');
+
+        try {
+            $code = '$_SERVER = ' . var_export([
+                'HTTPS' => 'on',
+                'HTTP_HOST' => 'www.competizionijudo.it',
+                'REQUEST_URI' => '/prod/health',
+            ], true) . '; require ' . var_export($directory . '/index.php', true) . ';';
+            $process = proc_open([PHP_BINARY, '-r', $code], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+            self::assertIsResource($process);
+            $output = stream_get_contents($pipes[1]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            self::assertSame(0, proc_close($process));
+            self::assertSame('Maintenance in progress', $output);
+        } finally {
+            @unlink($directory . '/prod/.maintenance');
+            @rmdir($directory . '/prod');
+            @unlink($directory . '/index.php');
+            @rmdir($directory);
+        }
+    }
+
     /** @return array{prefix: string, uri: string} */
     private function dispatchRootRouter(string $directory, string $environment): array
     {

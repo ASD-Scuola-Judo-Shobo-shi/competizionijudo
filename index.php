@@ -84,6 +84,15 @@ if (preg_match('#^/(prod|dev|legacy)(/|$)#', $uri_path, $matches)) {
 $app_dir = __DIR__ . '/' . $env_prefix;
 $entry_point = $app_dir . '/public/index.php';
 
+if (is_file($app_dir . '/.maintenance')) {
+    http_response_code(503);
+    header('Content-Type: text/plain; charset=utf-8');
+    header('Cache-Control: no-store');
+    header('Retry-After: 900');
+    echo 'Maintenance in progress';
+    exit();
+}
+
 if (is_file($entry_point)) {
     // =====================================================================
     // DOWNSTREAM ROUTER COMPATIBILITY FIX
