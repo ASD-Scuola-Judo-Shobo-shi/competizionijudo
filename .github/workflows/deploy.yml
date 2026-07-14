@@ -117,22 +117,7 @@ jobs:
           FTP_USERNAME: ${{ vars.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ steps.production-ftp-dir.outputs.path }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow true;
-          set ftp:ssl-force true;
-          set ftp:ssl-protect-data true;
-          set ssl:verify-certificate true;
-          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
-          mkdir -p \"${REMOTE_DIR}\";
-          cd \"${REMOTE_DIR}\";
-          rm -rf vendor/
-          mirror -R \
-            --exclude-glob .git* \
-            --exclude-glob .env* \
-            --exclude-glob legacy/ \
-            build/deploy/ .
-          "
+        run: bash scripts/lftp-upload.sh deploy "$REMOTE_DIR"
 
       - name: Render runtime .env
         env:
@@ -163,17 +148,7 @@ jobs:
           FTP_USERNAME: ${{ vars.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ steps.production-ftp-dir.outputs.path }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow true;
-          set ftp:ssl-force true;
-          set ftp:ssl-protect-data true;
-          set ssl:verify-certificate true;
-          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
-          mkdir -p \"${REMOTE_DIR}\";
-          cd \"${REMOTE_DIR}\";
-          mirror -R build/runtime-env/ .
-          "
+        run: bash scripts/lftp-upload.sh env "$REMOTE_DIR"
 
       - name: Upload root router to host root
         env:
@@ -182,15 +157,7 @@ jobs:
           FTP_USERNAME: ${{ vars.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_BASE_DIR: ${{ vars.FTP_BASE_DIR }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow true;
-          set ftp:ssl-force true;
-          set ftp:ssl-protect-data true;
-          set ssl:verify-certificate true;
-          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
-          mirror -R --no-perms build/root-router/ ${FTP_BASE_DIR}/
-          "
+        run: bash scripts/lftp-upload.sh root "$FTP_BASE_DIR"
 
       - name: Verify production health and revision
         run: >-
@@ -278,22 +245,7 @@ jobs:
           FTP_USERNAME: ${{ vars.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ steps.development-ftp-dir.outputs.path }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow true;
-          set ftp:ssl-force true;
-          set ftp:ssl-protect-data true;
-          set ssl:verify-certificate true;
-          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
-          mkdir -p \"${REMOTE_DIR}\";
-          cd \"${REMOTE_DIR}\";
-          rm -rf vendor/
-          mirror -R \
-            --exclude-glob .git* \
-            --exclude-glob .env* \
-            --exclude-glob legacy/ \
-            build/deploy/ .
-          "
+        run: bash scripts/lftp-upload.sh deploy "$REMOTE_DIR"
 
       - name: Render runtime .env
         env:
@@ -324,17 +276,7 @@ jobs:
           FTP_USERNAME: ${{ vars.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ steps.development-ftp-dir.outputs.path }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow true;
-          set ftp:ssl-force true;
-          set ftp:ssl-protect-data true;
-          set ssl:verify-certificate true;
-          open -p ${FTP_PORT} -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" \"${FTP_SERVER}\";
-          mkdir -p \"${REMOTE_DIR}\";
-          cd \"${REMOTE_DIR}\";
-          mirror -R build/runtime-env/ .
-          "
+        run: bash scripts/lftp-upload.sh env "$REMOTE_DIR"
 
       - name: Verify development health and revision
         run: >-
