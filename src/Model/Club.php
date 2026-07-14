@@ -33,7 +33,7 @@ final class Club
             (string) ($data['contact_first_name'] ?? ''),
             (string) ($data['contact_last_name'] ?? ''),
             (string) ($data['contact_phone'] ?? ''),
-            $data['contact_email'] !== '' ? (string) ($data['contact_email']) : null,
+            ($data['contact_email'] ?? '') !== '' ? (string) $data['contact_email'] : null,
             (string) ($data['organization'] ?? ''),
             (string) ($data['recovery_email'] ?? ''),
             (string) ($data['password_hash'] ?? ''),
@@ -140,7 +140,8 @@ final class Club
     public static function page(int $limit, int $offset): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT * FROM clubs ORDER BY name ASC, id ASC LIMIT ? OFFSET ?'
+            'SELECT id, federal_code, name, contact_first_name, contact_last_name '
+            . 'FROM clubs ORDER BY name ASC, id ASC LIMIT ? OFFSET ?'
         );
         $stmt->bindValue(1, max(1, $limit), \PDO::PARAM_INT);
         $stmt->bindValue(2, max(0, $offset), \PDO::PARAM_INT);
