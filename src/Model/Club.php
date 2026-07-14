@@ -43,8 +43,20 @@ final class Club
 
     public static function findByEmail(string $email): ?self
     {
-        $stmt = Database::connection()->prepare('SELECT * FROM clubs WHERE email = ?');
+        $stmt = Database::connection()->prepare(
+            'SELECT id, email, recovery_email, password_hash '
+            . 'FROM clubs WHERE normalized_email = ?'
+        );
         $stmt->execute([self::normalizeEmail($email)]);
+        $row = $stmt->fetch();
+
+        return $row ? self::fromArray($row) : null;
+    }
+
+    public static function findForLayoutById(int $id): ?self
+    {
+        $stmt = Database::connection()->prepare('SELECT id, email FROM clubs WHERE id = ?');
+        $stmt->execute([$id]);
         $row = $stmt->fetch();
 
         return $row ? self::fromArray($row) : null;

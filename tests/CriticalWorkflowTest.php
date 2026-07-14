@@ -362,6 +362,7 @@ final class CriticalWorkflowTest extends TestCase
                 federal_code TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL UNIQUE,
                 email TEXT NOT NULL UNIQUE,
+                normalized_email TEXT GENERATED ALWAYS AS (LOWER(TRIM(email))) STORED UNIQUE,
                 phone TEXT NOT NULL DEFAULT \'\',
                 contact_first_name TEXT NOT NULL DEFAULT \'\',
                 contact_last_name TEXT NOT NULL DEFAULT \'\',

@@ -20,7 +20,7 @@ final class LayoutContext
             $clubId = (int) $sessionClubId;
             $authenticatedClub = $candidateClub?->id === $clubId
                 ? $candidateClub
-                : Club::findById($clubId);
+                : Club::findForLayoutById($clubId);
         }
 
         $isLoggedIn = $authenticatedClub !== null;
