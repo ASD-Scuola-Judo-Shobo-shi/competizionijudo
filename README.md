@@ -9,7 +9,8 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 
 | Capability | Routes | Access |
 | --- | --- | --- |
-| Home, public events, event details and entries | `/`, `/events.php`, `/event_details.php`, `/event_entries.php` | Public |
+| Home, public events, and event details | `/`, `/events.php`, `/event_details.php` | Public |
+| Event entries | `/event_entries.php` | Authenticated club or administrator |
 | Privacy notice and language switch | `/privacy`, `/language/switch` | Public |
 | Deployment health and build revision | `/health` | Public, minimal JSON |
 | Club registration and login | `/club_register.php`, `/club_login.php` | Public |
