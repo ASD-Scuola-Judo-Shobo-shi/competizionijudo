@@ -1,5 +1,4 @@
-/.env
-/.env.dev
+*.env
 /.cache/
 /build/
 /vendor/
@@ -8,8 +7,5 @@
 !/var/cache/.gitkeep
 !/var/log/.gitkeep
 /.phpunit.cache/
-/.idea/
-/.vscode/
-.DS_Store
 /public/uploads/events/*
 !/public/uploads/events/.htaccess

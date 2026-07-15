@@ -8,7 +8,7 @@ use App\Model\MigrationRunner;
 require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/src/helpers.php';
 
-load_env_defaults(dirname(__DIR__) . '/.env.dev');
+load_env_defaults(dirname(__DIR__) . '/dev.env');
 
 const PRE_SQUASH_MIGRATIONS = [
     '20260619_000000_create_baseline_schema.sql',

@@ -107,7 +107,7 @@ without exposing values. The operator should inspect `var/log/application.log`;
 events such as `configuration.missing.db_name` identify the setting to provision,
 while exception messages and configuration values remain redacted.
 
-The `MIGRATION_TEST_*` variables documented in `.env.dev.example` belong only
+The `MIGRATION_TEST_*` variables documented in `dev.env.example` belong only
 to the isolated local/CI migration smoke harness. Do not provision them in a
 deployed application environment. For the deployment migration job,
 `MIGRATION_DB_HOST`, `MIGRATION_DB_NAME`, and `MIGRATION_DB_USER` are optional

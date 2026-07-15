@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/helpers.php';
 
-$envPath = $argv[1] ?? dirname(__DIR__) . '/.env.dev';
+$envPath = $argv[1] ?? dirname(__DIR__) . '/dev.env';
 
 if (!is_file($envPath)) {
-    fwrite(STDERR, "Missing .env.dev. Copy .env.dev.example to .env.dev and fill the values.\n");
+    fwrite(STDERR, "Missing dev.env. Copy dev.env.example to dev.env and fill the values.\n");
     exit(2);
 }
 
@@ -72,7 +72,7 @@ function requiredEnv(string $key): string
 {
     $value = optionalEnv($key);
     if ($value === '') {
-        fwrite(STDERR, "{$key} must be set in .env.dev.\n");
+        fwrite(STDERR, "{$key} must be set in dev.env.\n");
         exit(2);
     }
 

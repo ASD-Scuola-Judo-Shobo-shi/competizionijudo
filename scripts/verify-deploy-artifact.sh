@@ -44,8 +44,8 @@ fi
 
 for path in \
   .env \
-  .env.dev \
-  .env.dev.example \
+  dev.env \
+  dev.env.example \
   docs \
   tests \
   scripts/build-deploy.sh \
