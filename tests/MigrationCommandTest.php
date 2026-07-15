@@ -19,6 +19,27 @@ final class MigrationCommandTest extends TestCase
         self::assertStringNotContainsString("require dirname(__DIR__) . '/src/bootstrap.php';", $command);
     }
 
+    public function testMigrationCommandReportsARedactedRootCauseBeforeApplyingAVersion(): void
+    {
+        $process = proc_open(
+            [PHP_BINARY, dirname(__DIR__) . '/scripts/run-migrations.php'],
+            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+            $pipes,
+            dirname(__DIR__),
+            ['DB_PASS' => 'migration-test-secret']
+        );
+        self::assertIsResource($process);
+
+        $output = (string) stream_get_contents($pipes[1]) . (string) stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        self::assertSame(1, proc_close($process));
+        self::assertStringContainsString('Migration failed before a version could be applied.', $output);
+        self::assertMatchesRegularExpression('/Migration diagnostic \([^)]+\):/', $output);
+        self::assertStringNotContainsString('migration-test-secret', $output);
+    }
+
     public function testAutomaticMigrationSafetyCheckAllowsOnlyRetryableTableCreation(): void
     {
         $directory = sys_get_temp_dir() . '/competizionijudo-automatic-migration-'
