@@ -174,9 +174,9 @@ destructive cleanup follows a measured compatibility window in a later PR.
 
 | Field | Value |
 |---|---|
-| Active PR | None; PR-13 is locally verified and awaiting review plus MySQL verification. |
-| Objective | Continue with the next dependency- and decision-unblocked PR after PR-13 is reviewed. |
-| Scope | No active implementation. |
+| Active PR | Operator-directed GHA migration gate; this does not complete PR-08/PR-09. |
+| Objective | Run artifact migrations directly from GitHub Actions before each branch deployment, without web-host access. |
+| Scope | Deployment workflow, migration CLI command, workflow tests, and deployment runbook. |
 
 ### Phase 0: immediate containment
 
@@ -282,3 +282,4 @@ destructive cleanup follows a measured compatibility window in a later PR.
 | 2026-07-14 | Product decisions | Approved D-01 opaque athlete export identity, D-02 terminal closure with one-year closed-entry retention, D-03 administrator approval plus environment-configured 1,000 default limits, and D-05 minimal public club listing; deferred D-07 administrator identity design | Product direction supplied by owner | PR-12, PR-13, PR-16, PR-19, and PR-20 may proceed once their technical dependencies are satisfied |
 | 2026-07-14 | PR-31 static/platform/workflow assurance | Declared runtime extensions, widened syntax/PHPCS/PHPStan through views and localization, corrected template types and residual editor artifacts, and added action-lock/actionlint CI invariants | actionlint 1.7.7; PHPStan full application scope; PHPCS; PHPUnit 209/5,448 with no warnings; `composer check` code gates pass, while Packagist audit is not verified because DNS is unavailable | Resume after PR-09, PR-18, and PR-19 to add their real MySQL integration coverage |
 | 2026-07-15 | PR-13 privacy evidence | Added a forward migration and transactional registration evidence for the club athlete-data-rights declaration; reduced the public club projection and locked unpublished event entry details behind publication | Focused 32 tests/215 assertions and full code gates 212/5,470 pass; `composer test:migrations` cannot start without PDO MySQL; locked audit is unverified because Packagist DNS is unavailable | Review PR-13; resume with the next dependency- and decision-unblocked PR |
+| 2026-07-15 | Operator-directed GHA migration gate | Added production/development artifact migration jobs before upload; optional `MIGRATION_DB_*` credentials fall back to current GitHub `DB_*`; deployments queue rather than cancel during migrations | Workflow/CLI focused tests pass locally; direct MySQL connectivity and actionlint must be verified by GitHub Actions | Provision a separate migration account, then complete PR-08/PR-09 hardening |

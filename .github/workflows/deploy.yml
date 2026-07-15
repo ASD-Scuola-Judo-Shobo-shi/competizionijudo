@@ -14,7 +14,7 @@ on:
 
 concurrency:
   group: deploy-${{ github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   ci:
@@ -24,10 +24,39 @@ jobs:
       ref: ${{ inputs.deployment_ref || github.sha }}
       artifact_name: app-${{ github.run_id }}-${{ github.run_attempt }}
 
-  deploy-production:
-    name: Deploy production
+  migrate_production:
+    name: Run production migrations
     needs: ci
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.ci.result == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Setup PHP with MySQL support
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_mysql
+          coverage: none
+
+      - name: Download application artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.ci.outputs.artifact-name }}
+          path: build/deploy
+
+      - name: Run production migrations against MySQL
+        env:
+          DB_HOST: ${{ vars.MIGRATION_DB_HOST || vars.DB_HOST }}
+          DB_NAME: ${{ vars.MIGRATION_DB_NAME || vars.DB_NAME }}
+          DB_USER: ${{ vars.MIGRATION_DB_USER || vars.DB_USER }}
+          DB_PASS: ${{ secrets.MIGRATION_DB_PASS || secrets.DB_PASS }}
+        run: php build/deploy/scripts/run-migrations.php
+
+  deploy-production:
+    name: Deploy production
+    needs: [ci, migrate_production]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.ci.result == 'success' && needs.migrate_production.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -164,10 +193,39 @@ jobs:
           "${{ vars.PRODUCTION_HEALTH_URL || 'https://www.competizionijudo.it/prod/health' }}"
           "${{ needs.ci.outputs.revision }}"
 
-  deploy-development:
-    name: Deploy development
+  migrate_development:
+    name: Run development migrations
     needs: ci
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev' && needs.ci.result == 'success'
+    runs-on: ubuntu-latest
+    environment: development
+
+    steps:
+      - name: Setup PHP with MySQL support
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_mysql
+          coverage: none
+
+      - name: Download application artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.ci.outputs.artifact-name }}
+          path: build/deploy
+
+      - name: Run development migrations against MySQL
+        env:
+          DB_HOST: ${{ vars.MIGRATION_DB_HOST || vars.DB_HOST }}
+          DB_NAME: ${{ vars.MIGRATION_DB_NAME || vars.DB_NAME }}
+          DB_USER: ${{ vars.MIGRATION_DB_USER || vars.DB_USER }}
+          DB_PASS: ${{ secrets.MIGRATION_DB_PASS || secrets.DB_PASS }}
+        run: php build/deploy/scripts/run-migrations.php
+
+  deploy-development:
+    name: Deploy development
+    needs: [ci, migrate_development]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev' && needs.ci.result == 'success' && needs.migrate_development.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: development

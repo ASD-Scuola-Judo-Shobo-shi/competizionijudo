@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/src/bootstrap.php';
+require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/src/helpers.php';
+
+load_env(dirname(__DIR__) . '/.env');
 
 use App\Model\Database;
 use App\Model\MigrationException;

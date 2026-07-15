@@ -53,9 +53,19 @@ repository/hosting operator must:
    operator makes an emergency manual `.env` edit on the host, they must
    immediately mirror that change back into the matching GitHub environment or
    the next deploy will overwrite it.
-7. Run `php scripts/run-migrations.php` from the deployed application
-   directory, then perform the documented deployment smoke check before
+7. The deploy workflow runs `php scripts/run-migrations.php` directly from the
+   built artifact before it uploads application code. It connects to MySQL with
+   `MIGRATION_DB_*` GitHub environment values when present, otherwise the
+   existing `DB_*` values. A failed database connection or migration fails the
+   workflow before upload. It does not require SSH or any other access to the
+   web host. Then perform the documented deployment smoke check before
    enabling traffic.
+
+The MySQL service must accept a direct connection from the GitHub Actions
+runner. The workflow never opens an SSH, FTP-shell, or HTTP migration session
+to the web host. Deployment concurrency queues a newer run instead of
+cancelling an active one, so an in-progress migration is not interrupted by a
+new push.
 
 The consolidated schema baseline can initialize an empty database or adopt a
 database that has recorded every pre-squash migration. It deliberately rejects
@@ -92,7 +102,12 @@ while exception messages and configuration values remain redacted.
 
 The `MIGRATION_TEST_*` variables documented in `.env.dev.example` belong only
 to the isolated local/CI migration smoke harness. Do not provision them in a
-deployed application environment.
+deployed application environment. For the deployment migration job,
+`MIGRATION_DB_HOST`, `MIGRATION_DB_NAME`, and `MIGRATION_DB_USER` are optional
+GitHub environment variables, and `MIGRATION_DB_PASS` is an optional secret.
+When they are absent, the job falls back to `DB_*`. Provision a separate
+least-privilege migration account before revoking DDL privileges from the
+runtime `DB_USER`.
 
 ## Session environment boundary
 
