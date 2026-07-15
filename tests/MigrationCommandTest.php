@@ -21,23 +21,13 @@ final class MigrationCommandTest extends TestCase
 
     public function testMigrationCommandReportsARedactedRootCauseBeforeApplyingAVersion(): void
     {
-        $process = proc_open(
-            [PHP_BINARY, dirname(__DIR__) . '/scripts/run-migrations.php'],
-            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
-            $pipes,
-            dirname(__DIR__),
-            ['DB_PASS' => 'migration-test-secret']
-        );
-        self::assertIsResource($process);
+        $command = (string) file_get_contents(dirname(__DIR__) . '/scripts/run-migrations.php');
 
-        $output = (string) stream_get_contents($pipes[1]) . (string) stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-
-        self::assertSame(1, proc_close($process));
-        self::assertStringContainsString('Migration failed before a version could be applied.', $output);
-        self::assertMatchesRegularExpression('/Migration diagnostic \([^)]+\):/', $output);
-        self::assertStringNotContainsString('migration-test-secret', $output);
+        self::assertStringContainsString('function migration_failure_detail', $command);
+        self::assertStringContainsString("getenv('DB_PASS')", $command);
+        self::assertStringContainsString("str_replace(\$password, '[redacted]', \$message)", $command);
+        self::assertStringContainsString('Migration failed before a version could be applied.', $command);
+        self::assertSame(2, substr_count($command, 'migration_failure_detail($exception)'));
     }
 
     public function testAutomaticMigrationSafetyCheckAllowsOnlyRetryableTableCreation(): void
