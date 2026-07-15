@@ -152,7 +152,7 @@ final class Club
     public static function page(int $limit, int $offset): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, federal_code, name, contact_first_name, contact_last_name '
+            'SELECT id, federal_code, name '
             . 'FROM clubs ORDER BY name ASC, id ASC LIMIT ? OFFSET ?'
         );
         $stmt->bindValue(1, max(1, $limit), \PDO::PARAM_INT);

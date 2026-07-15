@@ -203,6 +203,9 @@ final class InputValidationControllerTest extends TestCase
         $exception = new PDOException('Synthetic internal constraint detail', 23000);
         $insert->expects(self::once())->method('execute')->willThrowException($exception);
         $database = $this->createMock(PDO::class);
+        $database->expects(self::once())->method('beginTransaction')->willReturn(true);
+        $database->expects(self::once())->method('inTransaction')->willReturn(true);
+        $database->expects(self::once())->method('rollBack')->willReturn(true);
         $database->expects(self::exactly(2))
             ->method('prepare')
             ->willReturnOnConsecutiveCalls($lookup, $insert);

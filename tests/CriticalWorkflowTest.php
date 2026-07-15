@@ -8,6 +8,7 @@ use App\Core\Application;
 use App\Core\Request;
 use App\Core\Session;
 use App\Localization;
+use App\Model\ClubDataRightsDeclaration;
 use App\Model\Database;
 use PDO;
 use PHPUnit\Framework\TestCase;
@@ -89,6 +90,14 @@ final class CriticalWorkflowTest extends TestCase
             "SELECT id FROM clubs WHERE email = 'club.one@example.test'"
         )->fetchColumn();
         self::assertGreaterThan(0, $clubId);
+        $declaration = $this->database->query(
+            'SELECT club_id, declared_by_club_id, declaration_version, declared_at '
+            . 'FROM club_data_rights_declarations'
+        )->fetch();
+        self::assertSame($clubId, (int) $declaration['club_id']);
+        self::assertSame($clubId, (int) $declaration['declared_by_club_id']);
+        self::assertSame(ClubDataRightsDeclaration::VERSION, $declaration['declaration_version']);
+        self::assertNotSame('', $declaration['declared_at']);
 
         $rawToken = 'synthetic-reset-token-that-never-leaves-this-test';
         $token = $this->database->prepare(
@@ -371,6 +380,13 @@ final class CriticalWorkflowTest extends TestCase
                 organization TEXT NOT NULL DEFAULT \'\',
                 recovery_email TEXT NOT NULL DEFAULT \'\',
                 password_hash TEXT NOT NULL
+            );
+            CREATE TABLE club_data_rights_declarations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club_id INTEGER NOT NULL,
+                declared_by_club_id INTEGER NOT NULL,
+                declaration_version TEXT NOT NULL,
+                declared_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE athletes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

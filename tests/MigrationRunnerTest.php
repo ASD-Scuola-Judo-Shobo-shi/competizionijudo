@@ -90,7 +90,7 @@ final class MigrationRunnerTest extends TestCase
         $migrationQuery->method('fetchAll')->willReturn($historicalVersions);
         $recordedVersions = [];
         $recordStatement = $this->createMock(PDOStatement::class);
-        $recordStatement->expects(self::once())
+        $recordStatement->expects(self::exactly(2))
             ->method('execute')
             ->willReturnCallback(
                 static function (?array $parameters = null) use (&$recordedVersions): bool {
@@ -106,16 +106,20 @@ final class MigrationRunnerTest extends TestCase
             ->willReturn(true);
         $database = $this->createMock(PDO::class);
         $database->expects(self::once())->method('query')->willReturn($migrationQuery);
-        $database->expects(self::exactly(2))
+        $database->expects(self::exactly(3))
             ->method('prepare')
-            ->willReturnOnConsecutiveCalls($recordStatement, $deleteStatement);
-        $database->expects(self::once())->method('exec');
-        $database->expects(self::once())->method('beginTransaction')->willReturn(true);
-        $database->expects(self::once())->method('commit')->willReturn(true);
+            ->willReturnOnConsecutiveCalls($recordStatement, $deleteStatement, $recordStatement);
+        $database->expects(self::exactly(2))->method('exec');
+        $database->expects(self::exactly(2))->method('beginTransaction')->willReturn(true);
+        $database->expects(self::once())->method('inTransaction')->willReturn(true);
+        $database->expects(self::exactly(2))->method('commit')->willReturn(true);
 
         (new MigrationRunner($database))->run();
 
-        self::assertSame(['20260630_000000_create_schema.sql'], $recordedVersions);
+        self::assertSame([
+            '20260630_000000_create_schema.sql',
+            '20260715_000001_create_club_data_rights_declarations.sql',
+        ], $recordedVersions);
     }
 
     public function testIncompleteHistoricalChainFailsBeforeChangingTheSchema(): void

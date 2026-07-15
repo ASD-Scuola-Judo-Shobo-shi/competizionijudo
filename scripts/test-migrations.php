@@ -321,6 +321,7 @@ function assertSchemaContract(PDO $database): void
     $requiredTables = [
         'schema_migrations',
         'clubs',
+        'club_data_rights_declarations',
         'events',
         'athletes',
         'entries',
@@ -337,6 +338,9 @@ function assertSchemaContract(PDO $database): void
     }
 
     assertColumn($database, 'clubs', 'normalized_email');
+    assertColumn($database, 'club_data_rights_declarations', 'declared_by_club_id', 'NO');
+    assertColumn($database, 'club_data_rights_declarations', 'declaration_version', 'NO');
+    assertColumn($database, 'club_data_rights_declarations', 'declared_at', 'NO');
     assertColumn($database, 'events', 'location', 'NO');
     assertColumn($database, 'entries', 'athlete_id');
     $snapshotColumns = [
@@ -372,6 +376,12 @@ function assertSchemaContract(PDO $database): void
     assertIndex($database, 'clubs', 'idx_clubs_name_id', 'name,id');
     assertIndex(
         $database,
+        'club_data_rights_declarations',
+        'idx_club_data_rights_declarations_club_declared',
+        'club_id,declared_at'
+    );
+    assertIndex(
+        $database,
         'athletes',
         'idx_athletes_club_name_id',
         'club_id,last_name,first_name,id'
@@ -381,6 +391,8 @@ function assertSchemaContract(PDO $database): void
 
     $expectedForeignKeys = [
         'athletes.club_id=clubs.id',
+        'club_data_rights_declarations.club_id=clubs.id',
+        'club_data_rights_declarations.declared_by_club_id=clubs.id',
         'entries.athlete_id=athletes.id',
         'entries.club_id=clubs.id',
         'entries.event_id=events.id',

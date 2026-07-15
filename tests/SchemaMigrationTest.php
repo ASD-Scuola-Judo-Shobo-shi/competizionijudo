@@ -10,12 +10,15 @@ final class SchemaMigrationTest extends TestCase
 {
     private const BASELINE = '/migrations/20260630_000000_create_schema.sql';
 
-    public function testRepositoryContainsOneConsolidatedMigration(): void
+    public function testRepositoryContainsBaselineAndForwardMigrations(): void
     {
         $migrations = glob(dirname(__DIR__) . '/migrations/*.sql') ?: [];
 
         self::assertSame(
-            [dirname(__DIR__) . self::BASELINE],
+            [
+                dirname(__DIR__) . self::BASELINE,
+                dirname(__DIR__) . '/migrations/20260715_000001_create_club_data_rights_declarations.sql',
+            ],
             array_values($migrations)
         );
     }
@@ -31,7 +34,7 @@ final class SchemaMigrationTest extends TestCase
         self::assertStringNotContainsString('CREATE TABLE IF NOT EXISTS clubs', $migration);
     }
 
-    public function testBaselineDefinesTheCurrentSchemaDirectly(): void
+    public function testBaselineDefinesTheConsolidatedHistoricalSchema(): void
     {
         $migration = $this->migration();
 
@@ -73,6 +76,19 @@ final class SchemaMigrationTest extends TestCase
         ) {
             self::assertStringContainsString($definition, $migration);
         }
+    }
+
+    public function testForwardMigrationDefinesClubRightsDeclarationEvidence(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260715_000001_create_club_data_rights_declarations.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString('CREATE TABLE IF NOT EXISTS club_data_rights_declarations', $migration);
+        self::assertStringContainsString('declared_by_club_id INT NOT NULL', $migration);
+        self::assertStringContainsString('declaration_version VARCHAR(64) NOT NULL', $migration);
+        self::assertStringContainsString('declared_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', $migration);
     }
 
     private function migration(): string

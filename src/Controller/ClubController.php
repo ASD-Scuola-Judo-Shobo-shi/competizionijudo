@@ -11,6 +11,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
 use App\Model\Club;
+use App\Model\ClubDataRightsDeclaration;
 use App\Model\Database;
 use App\Security\AuthenticationThrottle;
 use App\Security\DatabaseAuthenticationThrottle;
@@ -23,6 +24,7 @@ use App\Service\PasswordResetTokenIssuer;
 use App\Service\PasswordResetRepository;
 use App\Validation\ClubInputValidator;
 use PDOException;
+use RuntimeException;
 
 final class ClubController extends Controller
 {
@@ -87,7 +89,7 @@ final class ClubController extends Controller
                     if (Club::findByName($name) !== null) {
                         $errors[] = __('club.register.errors.club_exists');
                     } else {
-                        $club = Club::add([
+                        $this->registerClubWithDeclaration([
                             'federal_code' => $federalCode,
                             'name' => $name,
                             'email' => $email,
@@ -248,6 +250,31 @@ final class ClubController extends Controller
     private function authenticationThrottle(): AuthenticationThrottle
     {
         return $this->authenticationThrottle ??= new DatabaseAuthenticationThrottle(Database::connection());
+    }
+
+    /** @param array<string, mixed> $data */
+    private function registerClubWithDeclaration(array $data): void
+    {
+        $database = Database::connection();
+
+        try {
+            if (!$database->beginTransaction()) {
+                throw new RuntimeException('Unable to begin club registration.');
+            }
+
+            $club = Club::add($data);
+            ClubDataRightsDeclaration::record($club->id);
+
+            if (!$database->commit()) {
+                throw new RuntimeException('Unable to record club registration.');
+            }
+        } catch (\Throwable $exception) {
+            if ($database->inTransaction()) {
+                $database->rollBack();
+            }
+
+            throw $exception;
+        }
     }
 
     private function networkSignal(Request $request): string

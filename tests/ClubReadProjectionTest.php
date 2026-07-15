@@ -69,6 +69,32 @@ final class ClubReadProjectionTest extends TestCase
         self::assertSame('', $club?->recovery_email);
     }
 
+    public function testPublicListProjectionExcludesContactFields(): void
+    {
+        $statement = $this->createMock(PDOStatement::class);
+        $statement->expects(self::exactly(2))
+            ->method('bindValue')
+            ->willReturn(true);
+        $statement->expects(self::once())->method('execute')->willReturn(true);
+        $statement->expects(self::once())->method('fetchAll')->willReturn([[
+            'id' => 7,
+            'federal_code' => 'SYN-007',
+            'name' => 'Synthetic Club',
+        ]]);
+        $database = $this->databaseFor(
+            $statement,
+            'SELECT id, federal_code, name FROM clubs ORDER BY name ASC, id ASC LIMIT ? OFFSET ?'
+        );
+        $this->databaseConnection->setValue(null, $database);
+
+        $clubs = Club::page(50, 0);
+
+        self::assertSame('Synthetic Club', $clubs[0]->name);
+        self::assertSame('SYN-007', $clubs[0]->federal_code);
+        self::assertSame('', $clubs[0]->contact_first_name);
+        self::assertNull($clubs[0]->contact_email);
+    }
+
     /** @return PDO&MockObject */
     private function databaseFor(PDOStatement $statement, string $expectedSql): PDO
     {

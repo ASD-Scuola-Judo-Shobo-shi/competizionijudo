@@ -158,6 +158,18 @@ final class EventLifecycleTest extends TestCase
         self::assertStringNotContainsString('ForeignFamily', $response->content());
     }
 
+    public function testClubEntryDetailsDoNotExposeUnpublishedEventMetadata(): void
+    {
+        $this->insertEvent(published: false, description: 'UNPUBLISHED-ENTRY-METADATA');
+        Session::set('club_id', 201);
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(302, $response->status());
+        self::assertSame('/events.php', $response->headers()['Location']);
+        self::assertStringNotContainsString('UNPUBLISHED-ENTRY-METADATA', $response->content());
+    }
+
     public function testDuplicateRegistrationFeedbackSurvivesRedirectAndIsShownOnce(): void
     {
         $today = date('Y-m-d');
