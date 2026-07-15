@@ -22,6 +22,7 @@ for path in \
   public/assets/competizioni-judo-logo-optim.svgz \
   public/uploads/events/.htaccess \
   routes/web.php \
+  scripts/check-automatic-migrations.php \
   scripts/run-migrations.php \
   scripts/purge-expired-data.php \
   src/bootstrap.php \

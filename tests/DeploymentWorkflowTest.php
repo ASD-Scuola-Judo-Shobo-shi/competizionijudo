@@ -77,6 +77,10 @@ final class DeploymentWorkflowTest extends TestCase
         ));
         self::assertSame(2, substr_count(
             $workflow,
+            'run: php build/deploy/scripts/check-automatic-migrations.php'
+        ));
+        self::assertSame(2, substr_count(
+            $workflow,
             'DB_HOST: ${{ vars.MIGRATION_DB_HOST || vars.DB_HOST }}'
         ));
         self::assertStringContainsString('needs: [ci, migrate_production]', $workflow);

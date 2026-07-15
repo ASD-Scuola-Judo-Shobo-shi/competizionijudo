@@ -67,6 +67,13 @@ to the web host. Deployment concurrency queues a newer run instead of
 cancelling an active one, so an in-progress migration is not interrupted by a
 new push.
 
+Automatic deployments accept only additive `CREATE TABLE IF NOT EXISTS`
+forward migrations after the consolidated baseline. They are safe to retry if
+the table was created before a failed run could record the migration. Any
+index, column, data, rename, or destructive change requires a database backup
+and a separately approved maintenance procedure; it is intentionally blocked
+from the automatic deployment path.
+
 The consolidated schema baseline can initialize an empty database or adopt a
 database that has recorded every pre-squash migration. It deliberately rejects
 existing application tables without that complete history, as well as partial

@@ -45,6 +45,9 @@ jobs:
           name: ${{ needs.ci.outputs.artifact-name }}
           path: build/deploy
 
+      - name: Validate automatic migration safety
+        run: php build/deploy/scripts/check-automatic-migrations.php
+
       - name: Run production migrations against MySQL
         env:
           DB_HOST: ${{ vars.MIGRATION_DB_HOST || vars.DB_HOST }}
@@ -213,6 +216,9 @@ jobs:
         with:
           name: ${{ needs.ci.outputs.artifact-name }}
           path: build/deploy
+
+      - name: Validate automatic migration safety
+        run: php build/deploy/scripts/check-automatic-migrations.php
 
       - name: Run development migrations against MySQL
         env:
