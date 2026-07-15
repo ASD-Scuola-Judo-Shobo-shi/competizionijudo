@@ -113,7 +113,27 @@ final class QualityPolicyTest extends TestCase
             'go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7',
             $workflow
         );
-        self::assertStringContainsString('"$(go env GOPATH)/bin/actionlint"', $workflow);
+        self::assertStringContainsString('actionlint_path="$(go env GOPATH)/bin/actionlint"', $workflow);
+        self::assertStringContainsString('"$actionlint_path"', $workflow);
+    }
+
+    public function testPrePushMirrorsTheExecutableGithubActionsQualityGates(): void
+    {
+        $hook = (string) file_get_contents(dirname(__DIR__) . '/scripts/git-hooks/pre-push');
+
+        foreach (
+            [
+                'php scripts/check-workflow-action-lock.php',
+                'go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7',
+                'actionlint_path="$(go env GOPATH)/bin/actionlint"',
+                '"$actionlint_path"',
+                'composer install --prefer-dist --no-interaction --no-progress',
+                'composer ci',
+                'php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70',
+            ] as $command
+        ) {
+            self::assertStringContainsString($command, $hook);
+        }
     }
 
     public function testTemplatesContainNoEditorInstructionArtifacts(): void

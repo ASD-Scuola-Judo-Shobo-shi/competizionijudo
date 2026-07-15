@@ -3,8 +3,18 @@ set -eu
 
 export COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-$(pwd)/.cache/composer}"
 
-echo "pre-push: running GitHub Actions guardrails"
-php vendor/bin/phpunit tests/QualityPolicyTest.php
+echo "pre-push: verifying GitHub Actions action versions"
+php scripts/check-workflow-action-lock.php
+
+echo "pre-push: installing GitHub Actions workflow linter"
+go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+
+echo "pre-push: linting GitHub Actions workflows"
+actionlint_path="$(go env GOPATH)/bin/actionlint"
+"$actionlint_path"
+
+echo "pre-push: installing Composer dependencies"
+composer install --prefer-dist --no-interaction --no-progress
 
 echo "pre-push: running full local CI"
 composer ci
