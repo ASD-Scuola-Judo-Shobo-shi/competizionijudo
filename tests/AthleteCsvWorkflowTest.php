@@ -251,7 +251,7 @@ final class AthleteCsvWorkflowTest extends TestCase
                 contact_last_name TEXT NOT NULL,
                 contact_phone TEXT NOT NULL,
                 contact_email TEXT,
-                organization TEXT NOT NULL,
+                affiliation TEXT NOT NULL,
                 recovery_email TEXT NOT NULL,
                 password_hash TEXT NOT NULL
             );

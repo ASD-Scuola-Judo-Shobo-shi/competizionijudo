@@ -33,6 +33,7 @@ final class ViewRenderTest extends TestCase
             '/<form method="post" class="form-card" enctype="multipart\/form-data">.*<\/form>/s',
             $html
         );
+        self::assertSame(4, substr_count($html, 'class="required-marker"'));
         self::assertSame(substr_count($html, '<form'), substr_count($html, '</form>'));
     }
 
@@ -186,10 +187,25 @@ final class ViewRenderTest extends TestCase
             'name="athlete_data_rights_declaration" value="1" required',
             $html
         );
+        self::assertSame(13, substr_count($html, 'class="required-marker"'));
+        foreach (
+            [
+                'contact_first_name',
+                'contact_last_name',
+                'address_line',
+                'postal_code',
+                'province',
+                'city',
+                'affiliation[]',
+            ] as $field
+        ) {
+            self::assertStringContainsString('name="' . $field . '"', $html);
+        }
         self::assertStringContainsString(
             e(__('club.register.athlete_data_rights_declaration')),
             $html
         );
+        self::assertStringContainsString('value="FIJLKAM"', $html);
         self::assertStringContainsString('href="/privacy"', $html);
     }
 

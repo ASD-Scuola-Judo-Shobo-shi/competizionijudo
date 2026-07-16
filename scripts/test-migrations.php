@@ -239,7 +239,7 @@ function preparePreSquashDatabase(PDO $database): void
             contact_phone, organization, recovery_email, password_hash
         ) VALUES (
             1, 'SYN-PRE-SQUASH-1', 'Synthetic Pre-squash Club',
-            'presquash@example.test', '', 'Synthetic', 'Contact', '', 'TEST',
+            'presquash@example.test', '', 'Synthetic', 'Contact', '0700000000', 'TEST',
             'recovery@example.test', 'synthetic-hash'
         )"
     );
@@ -321,6 +321,7 @@ function assertSchemaContract(PDO $database): void
     $requiredTables = [
         'schema_migrations',
         'clubs',
+        'club_registration_confirmations',
         'club_data_rights_declarations',
         'events',
         'athletes',
@@ -338,6 +339,17 @@ function assertSchemaContract(PDO $database): void
     }
 
     assertColumn($database, 'clubs', 'normalized_email');
+    assertColumn($database, 'clubs', 'address_line', 'YES');
+    assertColumn($database, 'clubs', 'postal_code', 'YES');
+    assertColumn($database, 'clubs', 'city', 'NO');
+    assertColumn($database, 'clubs', 'province', 'NO');
+    assertColumn($database, 'clubs', 'affiliation', 'YES');
+    assertColumn($database, 'club_registration_confirmations', 'registration_payload', 'NO');
+    assertColumn($database, 'club_registration_confirmations', 'confirmed_at', 'YES');
+    assertColumnMissing($database, 'clubs', 'contact_phone');
+    assertColumnMissing($database, 'clubs', 'contact_email');
+    assertColumnMissing($database, 'clubs', 'recovery_email');
+    assertColumnMissing($database, 'clubs', 'organization');
     assertColumn($database, 'club_data_rights_declarations', 'declared_by_club_id', 'NO');
     assertColumn($database, 'club_data_rights_declarations', 'declaration_version', 'NO');
     assertColumn($database, 'club_data_rights_declarations', 'declared_at', 'NO');
@@ -505,10 +517,11 @@ function assertCleanWritesAndReads(PDO $database): void
     $database->exec(
         "INSERT INTO clubs (
             id, federal_code, name, email, phone, contact_first_name, contact_last_name,
-            contact_phone, organization, recovery_email, password_hash
+            address_line, postal_code, city, province, affiliation, password_hash
         ) VALUES (
             101, 'SYN-CLEAN-101', 'Synthetic Clean Club', 'clean@example.test', '',
-            'Synthetic', 'Contact', '', 'TEST', 'recovery@example.test', 'synthetic-hash'
+            'Synthetic', 'Contact', NULL, NULL, 'Nuoro', 'Provincia di Nuoro', 'TEST',
+            'synthetic-hash'
         )"
     );
     $database->exec(
@@ -539,13 +552,15 @@ function assertCleanWritesAndReads(PDO $database): void
 function assertPreSquashDataPreserved(PDO $database): void
 {
     $club = $database->query(
-        'SELECT federal_code, email FROM clubs WHERE id = 1'
+        'SELECT federal_code, email, phone, affiliation FROM clubs WHERE id = 1'
     )->fetch();
     if (!is_array($club)) {
         throw new RuntimeException('Pre-squash club fixture disappeared.');
     }
     assertSameValue('SYN-PRE-SQUASH-1', $club['federal_code'], 'Pre-squash federal code changed.');
     assertSameValue('presquash@example.test', $club['email'], 'Pre-squash email changed.');
+    assertSameValue('0700000000', $club['phone'], 'Pre-squash contact phone was not consolidated.');
+    assertSameValue('TEST', $club['affiliation'], 'Pre-squash affiliation was not preserved.');
 
     $event = $database->query(
         'SELECT name, date, location FROM events WHERE id = 1'

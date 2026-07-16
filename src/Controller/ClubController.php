@@ -10,9 +10,11 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
+use App\Model\Affiliation;
 use App\Model\Club;
-use App\Model\ClubDataRightsDeclaration;
+use App\Model\ClubRegistrationConfirmation;
 use App\Model\Database;
+use App\Model\SardinianLocation;
 use App\Security\AuthenticationThrottle;
 use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
@@ -24,7 +26,6 @@ use App\Service\PasswordResetTokenIssuer;
 use App\Service\PasswordResetRepository;
 use App\Validation\ClubInputValidator;
 use PDOException;
-use RuntimeException;
 
 final class ClubController extends Controller
 {
@@ -53,24 +54,52 @@ final class ClubController extends Controller
     {
         $errors = [];
         $success = null;
+        $confirmationLink = null;
+        $formData = [
+            'name' => '',
+            'federal_code' => '',
+            'email' => '',
+            'phone' => '',
+            'address_line' => '',
+            'postal_code' => '',
+            'city' => '',
+            'province' => '',
+            'contact_first_name' => '',
+            'contact_last_name' => '',
+            'affiliation' => [],
+            'athlete_data_rights_declaration' => false,
+        ];
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
-            $name = trim((string) $request->post('name'));
-            $federalCode = trim((string) $request->post('federal_code'));
-            $email = Club::normalizeEmail((string) $request->post('email'));
-            $phone = trim((string) $request->post('phone'));
-            $contact = trim((string) $request->post('contact'));
+            $formData = [
+                'name' => trim((string) $request->post('name')),
+                'federal_code' => trim((string) $request->post('federal_code')),
+                'email' => Club::normalizeEmail((string) $request->post('email')),
+                'phone' => trim((string) $request->post('phone')),
+                'address_line' => trim((string) $request->post('address_line')),
+                'postal_code' => trim((string) $request->post('postal_code')),
+                'city' => trim((string) $request->post('city')),
+                'province' => trim((string) $request->post('province')),
+                'contact_first_name' => trim((string) $request->post('contact_first_name')),
+                'contact_last_name' => trim((string) $request->post('contact_last_name')),
+                'affiliation' => Affiliation::selected($request->post('affiliation')),
+                'athlete_data_rights_declaration' => $request->post('athlete_data_rights_declaration') === '1',
+            ];
             $password = (string) $request->post('password');
             $password2 = (string) $request->post('password2');
-            $athleteDataRightsDeclared = $request->post('athlete_data_rights_declaration') === '1';
 
             foreach (
                 ClubInputValidator::registrationErrors(
-                    $name,
-                    $federalCode,
-                    $email,
-                    $athleteDataRightsDeclared
+                    $formData['name'],
+                    $formData['federal_code'],
+                    $formData['email'],
+                    $formData['phone'],
+                    $formData['address_line'],
+                    $formData['postal_code'],
+                    $formData['province'],
+                    $formData['city'],
+                    $formData['athlete_data_rights_declaration']
                 ) as $key
             ) {
                 $errors[] = __($key);
@@ -86,24 +115,38 @@ final class ClubController extends Controller
 
             if ($errors === []) {
                 try {
-                    if (Club::findByName($name) !== null) {
+                    if (Club::findByName($formData['name']) !== null) {
                         $errors[] = __('club.register.errors.club_exists');
                     } else {
-                        $this->registerClubWithDeclaration([
-                            'federal_code' => $federalCode,
-                            'name' => $name,
-                            'email' => $email,
-                            'phone' => $phone,
-                            'contact_first_name' => $contact,
-                            'contact_last_name' => '-',
-                            'contact_phone' => $phone,
-                            'contact_email' => $email,
-                            'organization' => 'FIJLKAM',
-                            'recovery_email' => $email,
+                        $token = ClubRegistrationConfirmation::issue([
+                            'federal_code' => $formData['federal_code'],
+                            'name' => $formData['name'],
+                            'email' => $formData['email'],
+                            'phone' => $formData['phone'],
+                            'address_line' => $formData['address_line'],
+                            'postal_code' => $formData['postal_code'],
+                            'city' => $formData['city'],
+                            'province' => $formData['province'],
+                            'contact_first_name' => $formData['contact_first_name'],
+                            'contact_last_name' => $formData['contact_last_name'],
+                            'affiliation' => Affiliation::encode($formData['affiliation']),
                             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                         ]);
+                        $confirmationUrl = sprintf(
+                            '%s/club_confirm_registration.php?token=%s',
+                            rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
+                            $token
+                        );
+                        if ($this->canExposeResetLink()) {
+                            $confirmationLink = $confirmationUrl;
+                        } else {
+                            $this->passwordResetMailer()->sendRegistrationConfirmationLink(
+                                $formData['email'],
+                                $confirmationUrl
+                            );
+                        }
 
-                        $success = __('club.register.success_message');
+                        $success = __('club.register.confirmation_sent');
                     }
                 } catch (\Throwable $exception) {
                     $this->reportFailure('club.registration_failed', $exception, $request);
@@ -118,6 +161,38 @@ final class ClubController extends Controller
             'title' => __('club.register.title'),
             'errors' => $errors,
             'success' => $success,
+            'confirmation_link' => $confirmationLink,
+            'formData' => $formData,
+            'sardinianLocations' => SardinianLocation::all(),
+            'sardinianPostalCodes' => SardinianLocation::postalCodes(),
+            'affiliationOptions' => Affiliation::options(),
+        ]);
+    }
+
+    public function confirmRegistration(Request $request): Response
+    {
+        $token = (string) $request->query('token', '');
+        $success = false;
+        $error = null;
+
+        if ($token === '') {
+            $error = __('club.confirm_registration.invalid_token');
+        } else {
+            try {
+                $success = ClubRegistrationConfirmation::confirm($token);
+                if (!$success) {
+                    $error = __('club.confirm_registration.invalid_token');
+                }
+            } catch (\Throwable $exception) {
+                $this->reportFailure('club.registration_confirmation_failed', $exception, $request);
+                $error = __('club.confirm_registration.failed');
+            }
+        }
+
+        return $this->view('club/confirm_registration', [
+            'title' => __('club.confirm_registration.title'),
+            'success' => $success,
+            'error' => $error,
         ]);
     }
 
@@ -250,31 +325,6 @@ final class ClubController extends Controller
     private function authenticationThrottle(): AuthenticationThrottle
     {
         return $this->authenticationThrottle ??= new DatabaseAuthenticationThrottle(Database::connection());
-    }
-
-    /** @param array<string, mixed> $data */
-    private function registerClubWithDeclaration(array $data): void
-    {
-        $database = Database::connection();
-
-        try {
-            if (!$database->beginTransaction()) {
-                throw new RuntimeException('Unable to begin club registration.');
-            }
-
-            $club = Club::add($data);
-            ClubDataRightsDeclaration::record($club->id);
-
-            if (!$database->commit()) {
-                throw new RuntimeException('Unable to record club registration.');
-            }
-        } catch (\Throwable $exception) {
-            if ($database->inTransaction()) {
-                $database->rollBack();
-            }
-
-            throw $exception;
-        }
     }
 
     private function networkSignal(Request $request): string

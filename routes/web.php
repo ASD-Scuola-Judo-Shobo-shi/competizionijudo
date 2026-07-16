@@ -23,6 +23,7 @@ return static function (App\Core\Router $router): void {
 
     $router->get('/club_register.php', [ClubController::class, 'register']);
     $router->post('/club_register.php', [ClubController::class, 'register']);
+    $router->get('/club_confirm_registration.php', [ClubController::class, 'confirmRegistration']);
 
     $router->get('/club_login.php', [ClubController::class, 'login']);
     $router->post('/club_login.php', [ClubController::class, 'login']);

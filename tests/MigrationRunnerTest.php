@@ -90,7 +90,7 @@ final class MigrationRunnerTest extends TestCase
         $migrationQuery->method('fetchAll')->willReturn($historicalVersions);
         $recordedVersions = [];
         $recordStatement = $this->createMock(PDOStatement::class);
-        $recordStatement->expects(self::exactly(2))
+        $recordStatement->expects(self::exactly(6))
             ->method('execute')
             ->willReturnCallback(
                 static function (?array $parameters = null) use (&$recordedVersions): bool {
@@ -106,19 +106,31 @@ final class MigrationRunnerTest extends TestCase
             ->willReturn(true);
         $database = $this->createMock(PDO::class);
         $database->expects(self::once())->method('query')->willReturn($migrationQuery);
-        $database->expects(self::exactly(3))
+        $database->expects(self::exactly(7))
             ->method('prepare')
-            ->willReturnOnConsecutiveCalls($recordStatement, $deleteStatement, $recordStatement);
-        $database->expects(self::exactly(2))->method('exec');
-        $database->expects(self::exactly(2))->method('beginTransaction')->willReturn(true);
-        $database->expects(self::once())->method('inTransaction')->willReturn(true);
-        $database->expects(self::exactly(2))->method('commit')->willReturn(true);
+            ->willReturnOnConsecutiveCalls(
+                $recordStatement,
+                $deleteStatement,
+                $recordStatement,
+                $recordStatement,
+                $recordStatement,
+                $recordStatement,
+                $recordStatement
+            );
+        $database->expects(self::exactly(7))->method('exec');
+        $database->expects(self::exactly(6))->method('beginTransaction')->willReturn(true);
+        $database->expects(self::exactly(5))->method('inTransaction')->willReturn(true);
+        $database->expects(self::exactly(6))->method('commit')->willReturn(true);
 
         (new MigrationRunner($database))->run();
 
         self::assertSame([
             '20260630_000000_create_schema.sql',
             '20260715_000001_create_club_data_rights_declarations.sql',
+            '20260716_000001_consolidate_club_contacts_and_add_addresses.sql',
+            '20260716_000002_rename_club_organization_to_affiliation.sql',
+            '20260717_000001_make_club_affiliation_nullable_and_multiple.sql',
+            '20260717_000002_create_club_registration_confirmations.sql',
         ], $recordedVersions);
     }
 

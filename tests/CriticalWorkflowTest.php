@@ -44,6 +44,10 @@ final class CriticalWorkflowTest extends TestCase
 
         $this->setEnvironment('ADMIN_USER', 'synthetic-admin');
         $this->setEnvironment('ADMIN_PASS_HASH', password_hash('AdminPassword123!', PASSWORD_DEFAULT));
+        $this->setEnvironment('APP_ENV', 'local');
+        $this->setEnvironment('APP_DEBUG', 'true');
+        $this->setEnvironment('APP_TEST_RESET_LINKS', 'true');
+        $this->setEnvironment('APP_URL', 'https://club.example.test');
         Localization::setLocale('it');
         $this->resetSession();
 
@@ -78,14 +82,31 @@ final class CriticalWorkflowTest extends TestCase
             'federal_code' => 'SYN001',
             'email' => 'Club.One@Example.Test',
             'phone' => '0000000000',
-            'contact' => 'Synthetic Contact',
+            'address_line' => 'Via Roma 1',
+            'postal_code' => '08100',
+            'province' => 'Provincia di Nuoro',
+            'city' => 'Nuoro',
+            'contact_first_name' => 'Synthetic',
+            'contact_last_name' => 'Contact',
+            'affiliation' => ['FIJLKAM'],
             'password' => $accountPassword,
             'password2' => $accountPassword,
             'athlete_data_rights_declaration' => '1',
         ]);
 
         self::assertSame(200, $registration->status());
-        self::assertStringContainsString(__('club.register.success_message'), $registration->content());
+        self::assertStringContainsString(e(__('club.register.confirmation_sent')), $registration->content());
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM clubs')->fetchColumn());
+        self::assertMatchesRegularExpression(
+            '#/club_confirm_registration\.php\?token=([a-f0-9]{64})#',
+            $registration->content()
+        );
+        preg_match('#/club_confirm_registration\.php\?token=([a-f0-9]{64})#', $registration->content(), $match);
+        self::assertSame(200, $this->request(
+            'GET',
+            '/club_confirm_registration.php',
+            ['token' => $match[1]]
+        )->status());
         $clubId = (int) $this->database->query(
             "SELECT id FROM clubs WHERE email = 'club.one@example.test'"
         )->fetchColumn();
@@ -325,8 +346,8 @@ final class CriticalWorkflowTest extends TestCase
         $club = $this->database->prepare(
             'INSERT INTO clubs
              (federal_code, name, email, phone, contact_first_name, contact_last_name,
-              contact_phone, contact_email, organization, recovery_email, password_hash)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+              city, province, affiliation, password_hash)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $club->execute([
             'SYN002',
@@ -335,10 +356,9 @@ final class CriticalWorkflowTest extends TestCase
             '',
             'Foreign',
             'Contact',
-            '',
-            'club.two@example.test',
+            'Nuoro',
+            'Provincia di Nuoro',
             'FIJLKAM',
-            'club.two@example.test',
             password_hash('ForeignPassword123!', PASSWORD_DEFAULT),
         ]);
         $clubId = (int) $this->database->lastInsertId();
@@ -373,12 +393,13 @@ final class CriticalWorkflowTest extends TestCase
                 email TEXT NOT NULL UNIQUE,
                 normalized_email TEXT GENERATED ALWAYS AS (LOWER(TRIM(email))) STORED UNIQUE,
                 phone TEXT NOT NULL DEFAULT \'\',
+                address_line TEXT,
+                postal_code TEXT,
+                city TEXT NOT NULL DEFAULT \'\',
+                province TEXT NOT NULL DEFAULT \'\',
                 contact_first_name TEXT NOT NULL DEFAULT \'\',
                 contact_last_name TEXT NOT NULL DEFAULT \'\',
-                contact_phone TEXT NOT NULL DEFAULT \'\',
-                contact_email TEXT NOT NULL DEFAULT \'\',
-                organization TEXT NOT NULL DEFAULT \'\',
-                recovery_email TEXT NOT NULL DEFAULT \'\',
+                affiliation TEXT NOT NULL DEFAULT \'\',
                 password_hash TEXT NOT NULL
             );
             CREATE TABLE club_data_rights_declarations (
@@ -439,6 +460,15 @@ final class CriticalWorkflowTest extends TestCase
                 token_hash TEXT NOT NULL UNIQUE,
                 expires_at TEXT NOT NULL,
                 used INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE club_registration_confirmations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE,
+                token_hash TEXT NOT NULL UNIQUE,
+                registration_payload TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                confirmed_at TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE authentication_throttles (
                 throttle_key TEXT PRIMARY KEY,

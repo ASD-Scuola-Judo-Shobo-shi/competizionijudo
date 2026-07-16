@@ -119,7 +119,7 @@ final class EventCategorySnapshotTest extends TestCase
                 id INTEGER PRIMARY KEY, federal_code TEXT NOT NULL, name TEXT NOT NULL,
                 email TEXT NOT NULL, phone TEXT NOT NULL, contact_first_name TEXT NOT NULL,
                 contact_last_name TEXT NOT NULL, contact_phone TEXT NOT NULL, contact_email TEXT,
-                organization TEXT NOT NULL, recovery_email TEXT NOT NULL, password_hash TEXT NOT NULL
+                affiliation TEXT NOT NULL, recovery_email TEXT NOT NULL, password_hash TEXT NOT NULL
             )'
         );
         $this->database->exec(

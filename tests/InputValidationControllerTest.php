@@ -203,9 +203,9 @@ final class InputValidationControllerTest extends TestCase
         $exception = new PDOException('Synthetic internal constraint detail', 23000);
         $insert->expects(self::once())->method('execute')->willThrowException($exception);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::once())->method('beginTransaction')->willReturn(true);
-        $database->expects(self::once())->method('inTransaction')->willReturn(true);
-        $database->expects(self::once())->method('rollBack')->willReturn(true);
+        $database->expects(self::never())->method('beginTransaction');
+        $database->expects(self::never())->method('inTransaction');
+        $database->expects(self::never())->method('rollBack');
         $database->expects(self::exactly(2))
             ->method('prepare')
             ->willReturnOnConsecutiveCalls($lookup, $insert);
@@ -215,6 +215,14 @@ final class InputValidationControllerTest extends TestCase
             'name' => 'Synthetic Club',
             'federal_code' => 'SYN-42',
             'email' => 'duplicate@example.test',
+            'phone' => '0700000000',
+            'address_line' => 'Via Roma 1',
+            'postal_code' => '08100',
+            'contact_first_name' => 'Synthetic',
+            'contact_last_name' => 'Contact',
+            'province' => 'Provincia di Nuoro',
+            'city' => 'Nuoro',
+            'affiliation' => ['FIJLKAM'],
             'password' => str_repeat('x', PasswordPolicy::MINIMUM_LENGTH),
             'password2' => str_repeat('x', PasswordPolicy::MINIMUM_LENGTH),
             'athlete_data_rights_declaration' => '1',
@@ -246,13 +254,14 @@ final class InputValidationControllerTest extends TestCase
             'id' => (string) $id,
             'name' => 'Synthetic Club',
             'email' => $email,
-            'phone' => '',
+            'phone' => '0700000000',
+            'address_line' => 'Via Roma 1',
+            'postal_code' => '08100',
+            'province' => 'Provincia di Nuoro',
+            'city' => 'Nuoro',
             'contact_first_name' => 'Synthetic',
             'contact_last_name' => 'Contact',
-            'contact_phone' => '',
-            'contact_email' => 'contact@example.test',
-            'organization' => 'TEST',
-            'recovery_email' => 'recovery@example.test',
+            'affiliation' => ['ACSI'],
             'federal_code' => 'SYN-' . $id,
             'password_hash' => '',
         ]);
@@ -265,13 +274,14 @@ final class InputValidationControllerTest extends TestCase
             'id' => $id,
             'name' => 'Synthetic Club',
             'email' => 'club@example.test',
-            'phone' => '',
+            'phone' => '0700000000',
+            'address_line' => 'Via Roma 1',
+            'postal_code' => '08100',
+            'province' => 'Provincia di Nuoro',
+            'city' => 'Nuoro',
             'contact_first_name' => 'Synthetic',
             'contact_last_name' => 'Contact',
-            'contact_phone' => '',
-            'contact_email' => 'contact@example.test',
-            'organization' => 'TEST',
-            'recovery_email' => 'recovery@example.test',
+            'affiliation' => ['ACSI'],
             'password_hash' => hash('sha256', 'credential-fixture'),
             'federal_code' => 'SYN-' . $id,
         ];

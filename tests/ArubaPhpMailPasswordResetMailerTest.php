@@ -56,6 +56,28 @@ final class ArubaPhpMailPasswordResetMailerTest extends TestCase
         self::assertSame('text/plain; charset=UTF-8', $calls[0]['headers']['Content-Type']);
     }
 
+    public function testSendsLocalizedRegistrationConfirmationMessageThroughArubaPhpMail(): void
+    {
+        $calls = [];
+        $mailer = new ArubaPhpMailPasswordResetMailer(static function (
+            string $recipient,
+            string $subject,
+            string $message,
+            array $headers
+        ) use (&$calls): bool {
+            $calls[] = compact('recipient', 'subject', 'message', 'headers');
+
+            return true;
+        });
+        $url = 'https://www.mailer.example.test/club_confirm_registration.php?token=synthetic-token';
+
+        $mailer->sendRegistrationConfirmationLink('club@example.test', $url);
+
+        self::assertCount(1, $calls);
+        self::assertSame(__('club.registration_confirmation_email.subject'), $calls[0]['subject']);
+        self::assertStringContainsString($url, $calls[0]['message']);
+    }
+
     public function testRejectsNonHttpsResetLinksBeforeCallingTransport(): void
     {
         $mailer = new ArubaPhpMailPasswordResetMailer(static function (

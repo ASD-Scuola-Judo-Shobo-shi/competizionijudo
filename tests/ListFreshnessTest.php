@@ -122,7 +122,7 @@ final class ListFreshnessTest extends TestCase
         $statement = $this->database->prepare(
             'INSERT INTO clubs (
                 id, federal_code, name, email, phone, contact_first_name,
-                contact_last_name, contact_phone, contact_email, organization,
+                contact_last_name, contact_phone, contact_email, affiliation,
                 recovery_email, password_hash
              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
@@ -172,7 +172,7 @@ final class ListFreshnessTest extends TestCase
                 contact_last_name TEXT NOT NULL,
                 contact_phone TEXT NOT NULL,
                 contact_email TEXT,
-                organization TEXT NOT NULL,
+                affiliation TEXT NOT NULL,
                 recovery_email TEXT NOT NULL,
                 password_hash TEXT NOT NULL
             )'

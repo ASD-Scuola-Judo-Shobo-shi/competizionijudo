@@ -13,16 +13,16 @@
         <?= csrf_field() ?>
         <div class="row">
             <div>
-                <label><?= e(__('admin.edit.name')) ?></label>
+                <label><?= e(__('admin.edit.name')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
                 <input name="name" value="<?= e($event->name) ?>" required>
             </div>
             <div>
-                <label><?= e(__('admin.edit.date')) ?></label>
+                <label><?= e(__('admin.edit.date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
                 <input name="date" value="<?= e($event->date) ?>" required>
             </div>
             <div>
-                <label><?= e(__('admin.edit.location')) ?></label>
-                <input name="location" value="<?= e($event->location) ?>">
+                <label><?= e(__('admin.edit.location')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+                <input name="location" value="<?= e($event->location) ?>" required>
             </div>
         </div>
 
@@ -36,8 +36,8 @@
                 <input name="registration_deadline" value="<?= e($event->registration_deadline) ?>">
             </div>
             <div>
-                <label><?= e(__('admin.edit.type')) ?></label>
-                <select name="type">
+                <label><?= e(__('admin.edit.type')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+                <select name="type" required>
                     <option value="only_precompetitive" <?= $event->type === 'only_precompetitive' ? 'selected' : '' ?>><?= e(__('events.type.only_precompetitive')) ?></option>
                     <option value="only_competitive" <?= $event->type === 'only_competitive' ? 'selected' : '' ?>><?= e(__('events.type.only_competitive')) ?></option>
                     <option value="precompetitive_and_competitive" <?= $event->type === 'precompetitive_and_competitive' ? 'selected' : '' ?>><?= e(__('events.type.precompetitive_and_competitive')) ?></option>

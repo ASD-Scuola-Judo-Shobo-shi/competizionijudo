@@ -51,4 +51,33 @@ final class ArubaPhpMailPasswordResetMailer implements PasswordResetMailer
             throw new RuntimeException('Aruba PHP mail rejected the password reset message.');
         }
     }
+
+    public function sendRegistrationConfirmationLink(string $recipient, string $confirmationUrl): void
+    {
+        $sender = trim((string) env('MAIL_FROM_ADDRESS', ''));
+        if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
+            throw new RuntimeException('Registration confirmation recipient is invalid.');
+        }
+        if (filter_var($sender, FILTER_VALIDATE_EMAIL) === false) {
+            throw new RuntimeException('Registration confirmation sender is invalid.');
+        }
+        if (filter_var($confirmationUrl, FILTER_VALIDATE_URL) === false || !str_starts_with($confirmationUrl, 'https://')) {
+            throw new RuntimeException('Registration confirmation URL must use HTTPS.');
+        }
+
+        $headers = [
+            'From' => $sender,
+            'MIME-Version' => '1.0',
+            'Content-Type' => 'text/plain; charset=UTF-8',
+        ];
+        $sent = ($this->send)(
+            $recipient,
+            __('club.registration_confirmation_email.subject'),
+            __('club.registration_confirmation_email.body', ['url' => $confirmationUrl]),
+            $headers
+        );
+        if (!$sent) {
+            throw new RuntimeException('Aruba PHP mail rejected the registration confirmation message.');
+        }
+    }
 }

@@ -20,28 +20,58 @@ final class InputValidatorTest extends TestCase
             'validation.club_name_required',
             'validation.federal_code_required',
             'validation.club_email_invalid',
+            'validation.club_phone_required',
+            'validation.club_address_line_required',
+            'validation.club_postal_code_required',
+            'validation.club_province_invalid',
+            'validation.club_city_invalid',
             'validation.club_athlete_data_rights_required',
-        ], ClubInputValidator::registrationErrors('', '', 'invalid', false));
+        ], ClubInputValidator::registrationErrors('', '', 'invalid', '', '', '', '', '', false));
         self::assertSame([], ClubInputValidator::registrationErrors(
             'Synthetic Club',
             'SYN-12',
             'club@example.test',
+            '0700000000',
+            'Via Roma 1',
+            '08100',
+            'Provincia di Nuoro',
+            'Nuoro',
+            true
+        ));
+        self::assertSame([
+            'validation.club_province_invalid',
+            'validation.club_city_invalid',
+        ], ClubInputValidator::registrationErrors(
+            'Synthetic Club',
+            'SYN-12',
+            'club@example.test',
+            '0700000000',
+            'Via Roma 1',
+            '08100',
+            'invalid',
+            'Nuoro',
             true
         ));
         self::assertSame([
             'validation.club_name_required',
             'validation.federal_code_required',
             'validation.club_email_invalid',
-            'validation.contact_email_invalid',
-            'validation.recovery_email_invalid',
-        ], ClubInputValidator::errors('', '', 'invalid', 'invalid', ''));
+            'validation.club_phone_required',
+            'validation.club_address_line_required',
+            'validation.club_postal_code_required',
+            'validation.club_province_invalid',
+            'validation.club_city_invalid',
+        ], ClubInputValidator::errors('', '', 'invalid', '', '', '', 'invalid', ''));
 
         self::assertSame([], ClubInputValidator::errors(
             'Synthetic Club',
             'SYN-12',
             'club@example.test',
-            'contact@example.test',
-            'recovery@example.test'
+            '0700000000',
+            'Via Roma 1',
+            '08100',
+            'Provincia di Nuoro',
+            'Nuoro'
         ));
         self::assertSame('club@example.test', Club::normalizeEmail(' Club@Example.Test '));
     }

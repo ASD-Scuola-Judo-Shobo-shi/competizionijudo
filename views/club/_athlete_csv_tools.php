@@ -23,7 +23,7 @@ $returnView = ($csvReturnView ?? 'list') === 'add' ? 'add' : 'list';
         >
             <?= csrf_field() ?>
             <input type="hidden" name="return_view" value="<?= e($returnView) ?>">
-            <label for="athletes_csv_<?= e($returnView) ?>"><?= e(__('club.area.csv.file_label')) ?></label>
+            <label for="athletes_csv_<?= e($returnView) ?>"><?= e(__('club.area.csv.file_label')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
             <input
                 id="athletes_csv_<?= e($returnView) ?>"
                 type="file"

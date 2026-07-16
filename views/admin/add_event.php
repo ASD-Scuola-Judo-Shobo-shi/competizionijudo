@@ -16,13 +16,13 @@ $isEdit = !empty($event);
         <input type="hidden" name="MAX_FILE_SIZE" value="<?= \App\Validation\EventInputValidator::MAX_UPLOAD_BYTES ?>">
         <input type="hidden" name="event_id" value="<?= e($event?->id ?? '') ?>">
 
-        <label><?= e($isEdit ? __('admin.edit.name') : __('admin.add.name')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.name') : __('admin.add.name')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <input name="name" value="<?= e($event?->name ?? '') ?>" required>
 
-        <label><?= e($isEdit ? __('admin.edit.date') : __('admin.add.date')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.date') : __('admin.add.date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <input type="date" name="date" value="<?= e($event?->date ?? '') ?>" required>
 
-        <label><?= e($isEdit ? __('admin.edit.location') : __('admin.add.location')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.location') : __('admin.add.location')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <input name="location" value="<?= e($event?->location ?? '') ?>" list="locations_list" required>
         <datalist id="locations_list">
             <?php foreach ($locations as $loc) : ?>
@@ -36,7 +36,7 @@ $isEdit = !empty($event);
         <label><?= e($isEdit ? __('admin.edit.registration_deadline') : __('admin.add.registration_deadline')) ?></label>
         <input type="date" name="registration_deadline" value="<?= e($event?->registration_deadline ?? '') ?>">
 
-        <label><?= e($isEdit ? __('admin.edit.type') : __('admin.add.type')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.type') : __('admin.add.type')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <select name="type" required>
             <option value="">—</option>
             <option value="only_precompetitive" <?= ($event?->type ?? '') === 'only_precompetitive' ? 'selected' : '' ?>><?= e(__('events.type.only_precompetitive')) ?></option>

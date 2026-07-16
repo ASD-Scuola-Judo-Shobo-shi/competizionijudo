@@ -18,6 +18,10 @@ final class SchemaMigrationTest extends TestCase
             [
                 dirname(__DIR__) . self::BASELINE,
                 dirname(__DIR__) . '/migrations/20260715_000001_create_club_data_rights_declarations.sql',
+                dirname(__DIR__) . '/migrations/20260716_000001_consolidate_club_contacts_and_add_addresses.sql',
+                dirname(__DIR__) . '/migrations/20260716_000002_rename_club_organization_to_affiliation.sql',
+                dirname(__DIR__) . '/migrations/20260717_000001_make_club_affiliation_nullable_and_multiple.sql',
+                dirname(__DIR__) . '/migrations/20260717_000002_create_club_registration_confirmations.sql',
             ],
             array_values($migrations)
         );
@@ -89,6 +93,53 @@ final class SchemaMigrationTest extends TestCase
         self::assertStringContainsString('declared_by_club_id INT NOT NULL', $migration);
         self::assertStringContainsString('declaration_version VARCHAR(64) NOT NULL', $migration);
         self::assertStringContainsString('declared_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', $migration);
+    }
+
+    public function testForwardMigrationConsolidatesClubContactsAndAddsAddresses(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260716_000001_consolidate_club_contacts_and_add_addresses.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString('SET phone = contact_phone', $migration);
+        self::assertStringContainsString('DROP COLUMN contact_phone', $migration);
+        self::assertStringContainsString('DROP COLUMN contact_email', $migration);
+        self::assertStringContainsString('DROP COLUMN recovery_email', $migration);
+        self::assertStringContainsString('ADD COLUMN city VARCHAR(120) NOT NULL', $migration);
+        self::assertStringContainsString('ADD COLUMN province VARCHAR(120) NOT NULL', $migration);
+    }
+
+    public function testForwardMigrationRenamesOrganizationToAffiliation(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260716_000002_rename_club_organization_to_affiliation.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString('CHANGE COLUMN organization affiliation VARCHAR(50) NOT NULL', $migration);
+    }
+
+    public function testForwardMigrationMakesAffiliationsNullableAndMultiValueReady(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260717_000001_make_club_affiliation_nullable_and_multiple.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString('MODIFY COLUMN affiliation TEXT NULL', $migration);
+    }
+
+    public function testForwardMigrationCreatesRegistrationConfirmations(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260717_000002_create_club_registration_confirmations.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString('CREATE TABLE club_registration_confirmations', $migration);
+        self::assertStringContainsString('registration_payload JSON NOT NULL', $migration);
+        self::assertStringContainsString('uniq_club_registration_confirmations_token', $migration);
     }
 
     private function migration(): string

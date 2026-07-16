@@ -1,0 +1,2 @@
+ALTER TABLE clubs
+    MODIFY COLUMN affiliation TEXT NULL;

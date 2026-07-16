@@ -35,12 +35,11 @@ final class ClubReadProjectionTest extends TestCase
         $statement = $this->statementReturning([
             'id' => 7,
             'email' => 'club@example.test',
-            'recovery_email' => 'recovery@example.test',
             'password_hash' => 'hash',
         ], 'club@example.test');
         $database = $this->databaseFor(
             $statement,
-            'SELECT id, email, recovery_email, password_hash FROM clubs WHERE normalized_email = ?'
+            'SELECT id, email, password_hash FROM clubs WHERE normalized_email = ?'
         );
         $this->databaseConnection->setValue(null, $database);
 
@@ -66,7 +65,7 @@ final class ClubReadProjectionTest extends TestCase
 
         self::assertSame('club@example.test', $club?->email);
         self::assertSame('', $club?->password_hash);
-        self::assertSame('', $club?->recovery_email);
+        self::assertSame('', $club?->city);
     }
 
     public function testPublicListProjectionExcludesContactFields(): void
@@ -92,7 +91,7 @@ final class ClubReadProjectionTest extends TestCase
         self::assertSame('Synthetic Club', $clubs[0]->name);
         self::assertSame('SYN-007', $clubs[0]->federal_code);
         self::assertSame('', $clubs[0]->contact_first_name);
-        self::assertNull($clubs[0]->contact_email);
+        self::assertNull($clubs[0]->postal_code);
     }
 
     /** @return PDO&MockObject */

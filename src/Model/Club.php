@@ -11,12 +11,13 @@ final class Club
         public readonly string $name,
         public readonly string $email,
         public readonly string $phone,
+        public readonly ?string $address_line,
+        public readonly ?string $postal_code,
+        public readonly string $city,
+        public readonly string $province,
         public readonly string $contact_first_name,
         public readonly string $contact_last_name,
-        public readonly string $contact_phone,
-        public readonly ?string $contact_email,
-        public readonly string $organization,
-        public readonly string $recovery_email,
+        public readonly ?string $affiliation,
         public readonly string $password_hash,
         public readonly string $federal_code
     ) {
@@ -30,12 +31,13 @@ final class Club
             (string) ($data['name'] ?? ''),
             (string) ($data['email'] ?? ''),
             (string) ($data['phone'] ?? ''),
+            ($data['address_line'] ?? '') !== '' ? (string) $data['address_line'] : null,
+            ($data['postal_code'] ?? '') !== '' ? (string) $data['postal_code'] : null,
+            (string) ($data['city'] ?? ''),
+            (string) ($data['province'] ?? ''),
             (string) ($data['contact_first_name'] ?? ''),
             (string) ($data['contact_last_name'] ?? ''),
-            (string) ($data['contact_phone'] ?? ''),
-            ($data['contact_email'] ?? '') !== '' ? (string) $data['contact_email'] : null,
-            (string) ($data['organization'] ?? ''),
-            (string) ($data['recovery_email'] ?? ''),
+            self::nullableString($data['affiliation'] ?? null),
             (string) ($data['password_hash'] ?? ''),
             (string) ($data['federal_code'] ?? '')
         );
@@ -44,7 +46,7 @@ final class Club
     public static function findByEmail(string $email): ?self
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, email, recovery_email, password_hash '
+            'SELECT id, email, password_hash '
             . 'FROM clubs WHERE normalized_email = ?'
         );
         $stmt->execute([self::normalizeEmail($email)]);
@@ -87,7 +89,7 @@ final class Club
     public static function add(array $data): self
     {
         $stmt = Database::connection()->prepare(
-            'INSERT INTO clubs (federal_code, name, email, phone, contact_first_name, contact_last_name, contact_phone, contact_email, organization, recovery_email, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO clubs (federal_code, name, email, phone, address_line, postal_code, city, province, contact_first_name, contact_last_name, affiliation, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
 
         $stmt->execute([
@@ -95,12 +97,13 @@ final class Club
             $data['name'] ?? '',
             self::normalizeEmail((string) ($data['email'] ?? '')),
             $data['phone'] ?? '',
+            $data['address_line'] ?? null,
+            $data['postal_code'] ?? null,
+            $data['city'] ?? '',
+            $data['province'] ?? '',
             $data['contact_first_name'] ?? '',
             $data['contact_last_name'] ?? '-',
-            $data['contact_phone'] ?? '',
-            $data['contact_email'] ?? '',
-            $data['organization'] ?? 'FIJLKAM',
-            $data['recovery_email'] ?? '',
+            $data['affiliation'] ?? null,
             $data['password_hash'] ?? '',
         ]);
 
@@ -112,7 +115,7 @@ final class Club
     {
         $parts = [];
         $params = [];
-        $allowed = ['name','email','phone','contact_first_name','contact_last_name','contact_phone','contact_email','organization','recovery_email','federal_code','password_hash'];
+        $allowed = ['name','email','phone','address_line','postal_code','city','province','contact_first_name','contact_last_name','affiliation','federal_code','password_hash'];
 
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
@@ -135,6 +138,17 @@ final class Club
     public static function normalizeEmail(string $email): string
     {
         return mb_strtolower(trim($email));
+    }
+
+    /** @return list<string> */
+    public function affiliations(): array
+    {
+        return Affiliation::decode($this->affiliation);
+    }
+
+    private static function nullableString(mixed $value): ?string
+    {
+        return is_string($value) && trim($value) !== '' ? $value : null;
     }
 
     public static function remove(int $id): void

@@ -237,7 +237,7 @@ final class ClubAreaCsrfTest extends TestCase
             'contact_last_name' => 'Contact',
             'contact_phone' => '',
             'contact_email' => 'contact@example.test',
-            'organization' => 'SYNTHETIC',
+            'affiliation' => 'SYNTHETIC',
             'recovery_email' => 'recovery@example.test',
             'password_hash' => 'synthetic-hash',
             'federal_code' => 'SYNTHETIC-CODE',

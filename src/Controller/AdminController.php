@@ -11,10 +11,12 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
+use App\Model\Affiliation;
 use App\Model\Club;
 use App\Model\Database;
 use App\Model\EntrySnapshotService;
 use App\Model\Event;
+use App\Model\SardinianLocation;
 use App\Security\AuthenticationThrottle;
 use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
@@ -423,12 +425,13 @@ final class AdminController extends Controller
                     'name' => trim((string) $request->post('name')),
                     'email' => Club::normalizeEmail((string) $request->post('email')),
                     'phone' => trim((string) $request->post('phone')),
+                    'address_line' => trim((string) $request->post('address_line')),
+                    'postal_code' => trim((string) $request->post('postal_code')),
+                    'city' => trim((string) $request->post('city')),
+                    'province' => trim((string) $request->post('province')),
                     'contact_first_name' => trim((string) $request->post('contact_first_name')),
                     'contact_last_name' => trim((string) $request->post('contact_last_name')),
-                    'contact_phone' => trim((string) $request->post('contact_phone')),
-                    'contact_email' => trim((string) $request->post('contact_email')),
-                    'organization' => trim((string) $request->post('organization')),
-                    'recovery_email' => trim((string) $request->post('recovery_email')),
+                    'affiliation' => Affiliation::encode(Affiliation::selected($request->post('affiliation'))),
                     'federal_code' => trim((string) $request->post('federal_code')),
                 ];
 
@@ -437,8 +440,11 @@ final class AdminController extends Controller
                     $data['name'],
                     $data['federal_code'],
                     $data['email'],
-                    $data['contact_email'],
-                    $data['recovery_email']
+                    $data['phone'],
+                    $data['address_line'],
+                    $data['postal_code'],
+                    $data['province'],
+                    $data['city']
                 );
                 if ($validationErrors !== []) {
                     $error = __($validationErrors[0]);
@@ -469,6 +475,9 @@ final class AdminController extends Controller
             'title' => __('admin.clubs.edit_title') . ' - ' . $club->name,
             'club' => $club,
             'error' => $error,
+            'sardinianLocations' => SardinianLocation::all(),
+            'sardinianPostalCodes' => SardinianLocation::postalCodes(),
+            'affiliationOptions' => Affiliation::options(),
         ]);
     }
 

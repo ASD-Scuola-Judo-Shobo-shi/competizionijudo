@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Validation;
 
+use App\Model\SardinianLocation;
+
 final class ClubInputValidator
 {
     private function __construct()
@@ -15,9 +17,23 @@ final class ClubInputValidator
         string $name,
         string $federalCode,
         string $email,
+        string $phone,
+        string $addressLine,
+        string $postalCode,
+        string $province,
+        string $city,
         bool $athleteDataRightsDeclared
     ): array {
-        $errors = self::identityErrors($name, $federalCode, $email);
+        $errors = self::errors(
+            $name,
+            $federalCode,
+            $email,
+            $phone,
+            $addressLine,
+            $postalCode,
+            $province,
+            $city
+        );
         if (!$athleteDataRightsDeclared) {
             $errors[] = 'validation.club_athlete_data_rights_required';
         }
@@ -30,15 +46,27 @@ final class ClubInputValidator
         string $name,
         string $federalCode,
         string $email,
-        string $contactEmail,
-        string $recoveryEmail
+        string $phone,
+        string $addressLine,
+        string $postalCode,
+        string $province,
+        string $city
     ): array {
         $errors = self::identityErrors($name, $federalCode, $email);
-        if (trim($contactEmail) !== '' && !self::validEmail($contactEmail)) {
-            $errors[] = 'validation.contact_email_invalid';
+        if (trim($phone) === '') {
+            $errors[] = 'validation.club_phone_required';
         }
-        if (!self::validEmail($recoveryEmail)) {
-            $errors[] = 'validation.recovery_email_invalid';
+        if (trim($addressLine) === '') {
+            $errors[] = 'validation.club_address_line_required';
+        }
+        if (trim($postalCode) === '') {
+            $errors[] = 'validation.club_postal_code_required';
+        }
+        if (!array_key_exists($province, SardinianLocation::all())) {
+            $errors[] = 'validation.club_province_invalid';
+        }
+        if (!SardinianLocation::isValid($province, $city)) {
+            $errors[] = 'validation.club_city_invalid';
         }
 
         return $errors;
