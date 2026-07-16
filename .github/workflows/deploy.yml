@@ -24,42 +24,10 @@ jobs:
       ref: ${{ inputs.deployment_ref || github.sha }}
       artifact_name: app-${{ github.run_id }}-${{ github.run_attempt }}
 
-  migrate_production:
-    name: Run production migrations
-    needs: ci
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.ci.result == 'success'
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - name: Setup PHP with MySQL support
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-          extensions: pdo_mysql
-          coverage: none
-
-      - name: Download application artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.ci.outputs.artifact-name }}
-          path: build/deploy
-
-      - name: Validate automatic migration safety
-        run: php build/deploy/scripts/check-automatic-migrations.php
-
-      - name: Run production migrations against MySQL
-        env:
-          DB_HOST: ${{ vars.MIGRATION_DB_HOST || vars.DB_HOST }}
-          DB_NAME: ${{ vars.MIGRATION_DB_NAME || vars.DB_NAME }}
-          DB_USER: ${{ vars.MIGRATION_DB_USER || vars.DB_USER }}
-          DB_PASS: ${{ secrets.MIGRATION_DB_PASS || secrets.DB_PASS }}
-        run: php build/deploy/scripts/run-migrations.php
-
   deploy-production:
     name: Deploy production
-    needs: [ci, migrate_production]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.ci.result == 'success' && needs.migrate_production.result == 'success'
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.ci.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -159,6 +127,7 @@ jobs:
           DB_NAME: ${{ vars.DB_NAME }}
           DB_USER: ${{ vars.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
+          MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}
           ADMIN_USER: ${{ vars.ADMIN_USER }}
           ADMIN_PASS_HASH: ${{ secrets.ADMIN_PASS_HASH }}
           MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
@@ -190,48 +159,22 @@ jobs:
           FTP_BASE_DIR: ${{ vars.FTP_BASE_DIR }}
         run: bash scripts/lftp-upload.sh root "$FTP_BASE_DIR"
 
+      - name: Run production migrations on the hosting server
+        env:
+          MIGRATION_ENDPOINT_URL: ${{ vars.PRODUCTION_MIGRATION_URL || format('{0}/migrations', vars.APP_URL) }}
+          MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}
+        run: bash scripts/trigger-server-migrations.sh
+
       - name: Verify production health and revision
         run: >-
           bash scripts/check-deployment-health.sh
           "${{ vars.PRODUCTION_HEALTH_URL || 'https://www.competizionijudo.it/prod/health' }}"
           "${{ needs.ci.outputs.revision }}"
 
-  migrate_development:
-    name: Run development migrations
-    needs: ci
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev' && needs.ci.result == 'success'
-    runs-on: ubuntu-latest
-    environment: development
-
-    steps:
-      - name: Setup PHP with MySQL support
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-          extensions: pdo_mysql
-          coverage: none
-
-      - name: Download application artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.ci.outputs.artifact-name }}
-          path: build/deploy
-
-      - name: Validate automatic migration safety
-        run: php build/deploy/scripts/check-automatic-migrations.php
-
-      - name: Run development migrations against MySQL
-        env:
-          DB_HOST: ${{ vars.MIGRATION_DB_HOST || vars.DB_HOST }}
-          DB_NAME: ${{ vars.MIGRATION_DB_NAME || vars.DB_NAME }}
-          DB_USER: ${{ vars.MIGRATION_DB_USER || vars.DB_USER }}
-          DB_PASS: ${{ secrets.MIGRATION_DB_PASS || secrets.DB_PASS }}
-        run: php build/deploy/scripts/run-migrations.php
-
   deploy-development:
     name: Deploy development
-    needs: [ci, migrate_development]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev' && needs.ci.result == 'success' && needs.migrate_development.result == 'success'
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev' && needs.ci.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: development
@@ -319,6 +262,7 @@ jobs:
           DB_NAME: ${{ vars.DB_NAME }}
           DB_USER: ${{ vars.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
+          MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}
           ADMIN_USER: ${{ vars.ADMIN_USER }}
           ADMIN_PASS_HASH: ${{ secrets.ADMIN_PASS_HASH }}
           MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
@@ -340,6 +284,12 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ steps.development-ftp-dir.outputs.path }}
         run: bash scripts/lftp-upload.sh env "$REMOTE_DIR"
+
+      - name: Run development migrations on the hosting server
+        env:
+          MIGRATION_ENDPOINT_URL: ${{ vars.DEVELOPMENT_MIGRATION_URL || format('{0}/migrations', vars.APP_URL) }}
+          MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}
+        run: bash scripts/trigger-server-migrations.sh
 
       - name: Verify development health and revision
         run: >-

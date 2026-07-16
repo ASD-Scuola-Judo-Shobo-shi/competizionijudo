@@ -7,6 +7,7 @@ use App\Controller\ClubController;
 use App\Controller\HomeController;
 use App\Controller\HealthController;
 use App\Controller\EventController;
+use App\Controller\MigrationWebhookController;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\HttpException;
@@ -18,6 +19,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/about', [HomeController::class, 'about']);
     $router->get('/privacy', [HomeController::class, 'privacy']);
     $router->get('/health', [HealthController::class, 'show']);
+    $router->post('/migrations', [MigrationWebhookController::class, 'run']);
 
     $router->get('/club_register.php', [ClubController::class, 'register']);
     $router->post('/club_register.php', [ClubController::class, 'register']);

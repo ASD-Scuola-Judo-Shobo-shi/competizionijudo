@@ -14,7 +14,8 @@ repository/hosting operator must:
 1. Create or update the GitHub Actions environments named `production` and
    `development`. Use the same key names as `.env.example`.
 2. Store only sensitive values as environment secrets: at minimum `DB_PASS`,
-   `ADMIN_PASS_HASH`, and `FTP_PASSWORD`. Store non-secret values such as
+   `ADMIN_PASS_HASH`, `FTP_PASSWORD`, and a distinct randomly generated
+   `MIGRATION_WEBHOOK_SECRET` for each environment. Store non-secret values such as
    `DB_HOST`, `DB_NAME`, `DB_USER`, `ADMIN_USER`, `APP_URL`, `APP_OWNER*`,
    `APP_WEBHOST*`, retention days, `FTP_SERVER`, and `FTP_USERNAME` as
     environment variables. Set `FTP_BASE_DIR` to the common base directory
@@ -53,19 +54,23 @@ repository/hosting operator must:
    operator makes an emergency manual `.env` edit on the host, they must
    immediately mirror that change back into the matching GitHub environment or
    the next deploy will overwrite it.
-7. The deploy workflow runs `php scripts/run-migrations.php` directly from the
-   built artifact before it uploads application code. It connects to MySQL with
-   `MIGRATION_DB_*` GitHub environment values when present, otherwise the
-   existing `DB_*` values. A failed database connection or migration fails the
-   workflow before upload. It does not require SSH or any other access to the
-   web host. Then perform the documented deployment smoke check before
-   enabling traffic.
+7. The deploy workflow uploads the artifact and generated `.env`, then sends a
+   signed HTTPS `POST` request to `APP_URL/migrations` (or the optional
+   `PRODUCTION_MIGRATION_URL` / `DEVELOPMENT_MIGRATION_URL` override). The
+   endpoint runs on the hosting server, where MySQL is locally reachable. It
+   accepts only a current (five-minute) HMAC signature made with
+   `MIGRATION_WEBHOOK_SECRET`; it does not use an administrator session or
+   password. A POST without a valid signature receives a generic 404.
+   A migration failure fails the workflow and returns a password-redacted
+   diagnostic only to the signed request.
 
-The MySQL service must accept a direct connection from the GitHub Actions
-runner. The workflow never opens an SSH, FTP-shell, or HTTP migration session
-to the web host. Deployment concurrency queues a newer run instead of
-cancelling an active one, so an in-progress migration is not interrupted by a
-new push.
+The workflow never connects directly to MySQL, so GitHub runner IP addresses
+do not need database access. Do not create `MIGRATION_DB_*` GitHub entries for
+this flow. Deployment concurrency queues a newer run instead of cancelling an
+active one, so an in-progress migration request is not interrupted by a new
+push. Generate each environment's secret with `openssl rand -hex 32`, add the
+same value as the GitHub environment secret, and do not place it in a local
+file or chat message.
 
 Automatic deployments accept only additive `CREATE TABLE IF NOT EXISTS`
 forward migrations after the consolidated baseline. They are safe to retry if
@@ -109,12 +114,9 @@ while exception messages and configuration values remain redacted.
 
 The `MIGRATION_TEST_*` variables documented in `dev.env.example` belong only
 to the isolated local/CI migration smoke harness. Do not provision them in a
-deployed application environment. For the deployment migration job,
-`MIGRATION_DB_HOST`, `MIGRATION_DB_NAME`, and `MIGRATION_DB_USER` are optional
-GitHub environment variables, and `MIGRATION_DB_PASS` is an optional secret.
-When they are absent, the job falls back to `DB_*`. Provision a separate
-least-privilege migration account before revoking DDL privileges from the
-runtime `DB_USER`.
+deployed application environment. The rendered deployment environment also
+requires `MIGRATION_WEBHOOK_SECRET`; it is used only by the signed migration
+route and is never returned in an HTTP response or written to application logs.
 
 ## Session environment boundary
 
@@ -196,7 +198,8 @@ state files manually, because doing so disables reliable stale-code retirement.
 Repository administrators own rollback execution. Record the last healthy SHA
 after each deployment. If health verification fails:
 
-1. Do not rerun the failed SHA and do not reverse database migrations.
+1. Do not reverse database migrations. Automatic migrations are additive table
+   creations only, and a retry is safe after the failure cause is corrected.
 2. In GitHub Actions, run the **Deploy** workflow from the affected branch and
    enter the last healthy complete SHA as `deployment_ref`.
 3. Confirm the rollback run passes build gates and `/health` reports that SHA.

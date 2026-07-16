@@ -23,11 +23,11 @@ final class MigrationCommandTest extends TestCase
     {
         $command = (string) file_get_contents(dirname(__DIR__) . '/scripts/run-migrations.php');
 
-        self::assertStringContainsString('function migration_failure_detail', $command);
-        self::assertStringContainsString("getenv('DB_PASS')", $command);
-        self::assertStringContainsString("str_replace(\$password, '[redacted]', \$message)", $command);
+        self::assertStringContainsString('use App\\Service\\MigrationExecutor;', $command);
+        self::assertStringContainsString('MigrationExecutor::run()', $command);
+        self::assertStringContainsString('MigrationExecutor::failureDetail($exception)', $command);
         self::assertStringContainsString('Migration failed before a version could be applied.', $command);
-        self::assertSame(2, substr_count($command, 'migration_failure_detail($exception)'));
+        self::assertSame(2, substr_count($command, 'MigrationExecutor::failureDetail($exception)'));
     }
 
     public function testAutomaticMigrationSafetyCheckAllowsOnlyRetryableTableCreation(): void

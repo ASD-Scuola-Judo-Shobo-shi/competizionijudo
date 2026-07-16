@@ -64,27 +64,24 @@ final class DeploymentWorkflowTest extends TestCase
         self::assertSame(2, substr_count($configuration, 'interval: "weekly"'));
     }
 
-    public function testDeploymentsRunArtifactMigrationsBeforeUploadingCode(): void
+    public function testDeploymentsInvokeSignedServerLocalMigrationsAfterUpload(): void
     {
         $workflow = $this->workflow('deploy.yml');
 
-        foreach (['migrate_production', 'migrate_development'] as $job) {
-            self::assertStringContainsString("  {$job}:", $workflow);
-        }
         self::assertSame(2, substr_count(
             $workflow,
-            'run: php build/deploy/scripts/run-migrations.php'
+            'run: bash scripts/trigger-server-migrations.sh'
         ));
-        self::assertSame(2, substr_count(
+        self::assertSame(4, substr_count(
             $workflow,
-            'run: php build/deploy/scripts/check-automatic-migrations.php'
+            'MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}'
         ));
-        self::assertSame(2, substr_count(
-            $workflow,
-            'DB_HOST: ${{ vars.MIGRATION_DB_HOST || vars.DB_HOST }}'
-        ));
-        self::assertStringContainsString('needs: [ci, migrate_production]', $workflow);
-        self::assertStringContainsString('needs: [ci, migrate_development]', $workflow);
+        self::assertStringContainsString('vars.PRODUCTION_MIGRATION_URL', $workflow);
+        self::assertStringContainsString('vars.DEVELOPMENT_MIGRATION_URL', $workflow);
+        self::assertStringNotContainsString('migrate_production:', $workflow);
+        self::assertStringNotContainsString('migrate_development:', $workflow);
+        self::assertStringNotContainsString('MIGRATION_DB_HOST', $workflow);
+        self::assertSame(2, substr_count($workflow, 'needs: ci'));
         self::assertStringContainsString('cancel-in-progress: false', $workflow);
     }
 
