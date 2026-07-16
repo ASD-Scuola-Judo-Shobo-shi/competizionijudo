@@ -4,7 +4,7 @@ set -euo pipefail
 : "${MIGRATION_ENDPOINT_URL:?MIGRATION_ENDPOINT_URL is required}"
 : "${MIGRATION_WEBHOOK_SECRET:?MIGRATION_WEBHOOK_SECRET is required}"
 
-if [[ ! "$MIGRATION_ENDPOINT_URL" =~ ^https://[^[:space:]/?#]+(?:/[^[:space:]?#]*)?$ ]]; then
+if [[ ! "$MIGRATION_ENDPOINT_URL" =~ ^https://[^[:space:]/?#]+(/[^[:space:]?#]*)?$ ]]; then
   echo 'MIGRATION_ENDPOINT_URL must be an HTTPS URL without a query string or fragment.' >&2
   exit 2
 fi

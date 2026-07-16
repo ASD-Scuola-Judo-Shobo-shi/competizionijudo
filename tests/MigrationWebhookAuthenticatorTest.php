@@ -132,6 +132,40 @@ final class MigrationWebhookAuthenticatorTest extends TestCase
         self::assertStringContainsString('X-Migration-Timestamp:', $script);
         self::assertStringContainsString('X-Migration-Signature:', $script);
         self::assertStringContainsString('--fail-with-body', $script);
+        self::assertStringNotContainsString('(?:', $script);
+    }
+
+    public function testGitHubTriggerAcceptsAnHttpsEndpointWithAPath(): void
+    {
+        $directory = sys_get_temp_dir() . '/competizionijudo-fake-curl-' . bin2hex(random_bytes(8));
+        self::assertTrue(mkdir($directory, 0700));
+        $fakeCurl = $directory . '/curl';
+        self::assertNotFalse(file_put_contents($fakeCurl, "#!/usr/bin/env bash\nexit 0\n"));
+        self::assertTrue(chmod($fakeCurl, 0700));
+
+        try {
+            $process = proc_open(
+                ['bash', dirname(__DIR__) . '/scripts/trigger-server-migrations.sh'],
+                [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+                $pipes,
+                dirname(__DIR__),
+                [
+                    'PATH' => $directory . ':' . (string) getenv('PATH'),
+                    'MIGRATION_ENDPOINT_URL' => 'https://www.competizionijudo.it/prod/migrations',
+                    'MIGRATION_WEBHOOK_SECRET' => 'synthetic-migration-webhook-secret',
+                ]
+            );
+            self::assertIsResource($process);
+
+            $output = (string) stream_get_contents($pipes[1]) . (string) stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            self::assertSame(0, proc_close($process), $output);
+        } finally {
+            unlink($fakeCurl);
+            rmdir($directory);
+        }
     }
 
     private function controller(
