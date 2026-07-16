@@ -12,6 +12,8 @@ final class LftpUploadScriptTest extends TestCase
     {
         $script = (string) file_get_contents(dirname(__DIR__) . '/scripts/lftp-upload.sh');
 
+        self::assertStringContainsString('FTPS upload wrapper v2:', $script);
+        self::assertStringContainsString('FTP_PASSWORD must not contain line breaks', $script);
         self::assertStringContainsString('set cmd:fail-exit true', $script);
         self::assertStringContainsString('set ftp:ssl-force true', $script);
         self::assertStringContainsString(' ${open_command} pwd;', $script);

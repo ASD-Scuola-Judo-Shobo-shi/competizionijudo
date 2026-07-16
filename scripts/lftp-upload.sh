@@ -6,9 +6,15 @@ remote_dir="${2:?remote directory required}"
 : "${FTP_SERVER:?FTP_SERVER is required}" "${FTP_PORT:?FTP_PORT is required}" \
   "${FTP_USERNAME:?FTP_USERNAME is required}" "${FTP_PASSWORD:?FTP_PASSWORD is required}"
 
+echo "FTPS upload wrapper v2: preflighting ${FTP_SERVER}:${FTP_PORT}."
+
 [[ "$FTP_SERVER" =~ ^[A-Za-z0-9.-]+$ ]] || { echo 'Invalid FTP_SERVER' >&2; exit 2; }
 [[ "$FTP_PORT" =~ ^[0-9]{1,5}$ ]] || { echo 'Invalid FTP_PORT' >&2; exit 2; }
 [[ "$remote_dir" =~ ^[A-Za-z0-9_./-]+$ ]] || { echo 'Invalid remote directory' >&2; exit 2; }
+[[ "$FTP_USERNAME" != *$'\n'* && "$FTP_USERNAME" != *$'\r'* ]] \
+  || { echo 'FTP_USERNAME must not contain line breaks.' >&2; exit 2; }
+[[ "$FTP_PASSWORD" != *$'\n'* && "$FTP_PASSWORD" != *$'\r'* ]] \
+  || { echo 'FTP_PASSWORD must not contain line breaks; recreate the GitHub secret.' >&2; exit 2; }
 
 lftp_quote() {
   local value="$1"
