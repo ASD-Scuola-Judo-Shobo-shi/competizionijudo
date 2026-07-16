@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Checkout deployment verifier
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.ci.outputs.revision }}
 
@@ -50,7 +50,7 @@ jobs:
           sudo apt-get install -y lftp
 
       - name: Download application artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.ci.outputs.artifact-name }}
           path: build/deploy
@@ -182,7 +182,7 @@ jobs:
 
     steps:
       - name: Checkout deployment verifier
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.ci.outputs.revision }}
 
@@ -197,7 +197,7 @@ jobs:
           sudo apt-get install -y lftp
 
       - name: Download application artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.ci.outputs.artifact-name }}
           path: build/deploy
