@@ -6,8 +6,6 @@ remote_dir="${2:?remote directory required}"
 : "${FTP_SERVER:?FTP_SERVER is required}" "${FTP_PORT:?FTP_PORT is required}" \
   "${FTP_USERNAME:?FTP_USERNAME is required}" "${FTP_PASSWORD:?FTP_PASSWORD is required}"
 
-echo "FTPS upload wrapper v2: preflighting ${FTP_SERVER}:${FTP_PORT}."
-
 [[ "$FTP_SERVER" =~ ^[A-Za-z0-9.-]+$ ]] || { echo 'Invalid FTP_SERVER' >&2; exit 2; }
 [[ "$FTP_PORT" =~ ^[0-9]{1,5}$ ]] || { echo 'Invalid FTP_PORT' >&2; exit 2; }
 [[ "$remote_dir" =~ ^[A-Za-z0-9_./-]+$ ]] || { echo 'Invalid remote directory' >&2; exit 2; }
@@ -15,6 +13,17 @@ echo "FTPS upload wrapper v2: preflighting ${FTP_SERVER}:${FTP_PORT}."
   || { echo 'FTP_USERNAME must not contain line breaks.' >&2; exit 2; }
 [[ "$FTP_PASSWORD" != *$'\n'* && "$FTP_PASSWORD" != *$'\r'* ]] \
   || { echo 'FTP_PASSWORD must not contain line breaks; recreate the GitHub secret.' >&2; exit 2; }
+
+# Aruba's Linux FTP endpoint presents a certificate for its canonical host,
+# while the customer-domain alias resolves to the same server without matching
+# that certificate. Keep verification enabled and connect using the verified
+# certificate identity for this known alias.
+if [[ "$FTP_SERVER" == 'ftp.competizionijudo.it' ]]; then
+  echo 'Using Aruba certificate hostname ftplnx02.aruba.it for the configured FTP alias.'
+  FTP_SERVER='ftplnx02.aruba.it'
+fi
+
+echo "FTPS upload wrapper v3: preflighting ${FTP_SERVER}:${FTP_PORT}."
 
 lftp_quote() {
   local value="$1"
@@ -36,7 +45,7 @@ esac
 connection_settings="set cmd:fail-exit true; set net:max-retries 2; set net:timeout 30; set ftp:ssl-allow true; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate true;"
 open_command="open -p $(lftp_quote "$FTP_PORT") -u $(lftp_quote "$FTP_USERNAME"),$(lftp_quote "$FTP_PASSWORD") $(lftp_quote "$FTP_SERVER");"
 
-if ! lftp -c "${connection_settings} ${open_command} pwd;"; then
+if ! lftp -c "${connection_settings} ${open_command} quote PWD;"; then
   echo "FTPS connection, certificate, or authentication failed for ${FTP_SERVER}:${FTP_PORT}." >&2
   exit 1
 fi

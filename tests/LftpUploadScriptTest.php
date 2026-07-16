@@ -12,11 +12,12 @@ final class LftpUploadScriptTest extends TestCase
     {
         $script = (string) file_get_contents(dirname(__DIR__) . '/scripts/lftp-upload.sh');
 
-        self::assertStringContainsString('FTPS upload wrapper v2:', $script);
+        self::assertStringContainsString('FTPS upload wrapper v3:', $script);
         self::assertStringContainsString('FTP_PASSWORD must not contain line breaks', $script);
         self::assertStringContainsString('set cmd:fail-exit true', $script);
         self::assertStringContainsString('set ftp:ssl-force true', $script);
-        self::assertStringContainsString(' ${open_command} pwd;', $script);
+        self::assertStringContainsString("FTP_SERVER='ftplnx02.aruba.it'", $script);
+        self::assertStringContainsString(' ${open_command} quote PWD;', $script);
         self::assertStringContainsString('FTPS connection, certificate, or authentication failed', $script);
         self::assertStringContainsString('FTPS preflight succeeded; starting ${operation} upload.', $script);
         self::assertStringContainsString('FTPS upload failed after a successful preflight', $script);
@@ -52,7 +53,7 @@ final class LftpUploadScriptTest extends TestCase
             fclose($pipes[2]);
 
             self::assertSame(0, proc_close($process), $output);
-            self::assertStringContainsString('FTPS upload wrapper v2:', $output);
+            self::assertStringContainsString('FTPS upload wrapper v3:', $output);
             self::assertStringContainsString('FTPS preflight succeeded; starting deploy upload.', $output);
         } finally {
             unlink($fakeLftp);

@@ -23,7 +23,10 @@ repository/hosting operator must:
     environment-specific subdirectories (e.g. `prod/` and `dev/`). The
     workflow combines them as `FTP_BASE_DIR/FTP_PROD_DIR` and
     `FTP_BASE_DIR/FTP_DEV_DIR`. Do not use `/`, `./`, or absolute-looking
-    values such as `/prod/`.
+    values such as `/prod/`. For this Aruba Linux hosting account, the upload
+    wrapper translates `ftp.competizionijudo.it` to the certificate-covered
+    canonical endpoint `ftplnx02.aruba.it`; TLS certificate verification must
+    remain enabled.
 3. Set `APP_URL` to the canonical HTTPS base URL for the target environment.
    The workflow sets `APP_ENV=production` on `main`, `APP_ENV=development` on
    `dev`, and `APP_DEBUG=false` in both environments. Production and
