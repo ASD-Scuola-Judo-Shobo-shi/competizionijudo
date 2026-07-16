@@ -18,7 +18,9 @@ echo "FTPS upload wrapper v2: preflighting ${FTP_SERVER}:${FTP_PORT}."
 
 lftp_quote() {
   local value="$1"
-  [[ "$value" != *$'\n'* && "$value" != *$'\r'* && "$value" != *$'\0'* ]] || return 1
+  # Bash variables cannot contain NUL bytes; reject the representable control
+  # characters here before quoting the value for lftp's command language.
+  [[ "$value" != *$'\n'* && "$value" != *$'\r'* ]] || return 1
   value="${value//\\/\\\\}"
   value="${value//\"/\\\"}"
   printf '"%s"' "$value"
