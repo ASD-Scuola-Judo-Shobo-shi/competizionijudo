@@ -25,4 +25,16 @@ case "$operation" in
   *) echo 'Unknown upload operation' >&2; exit 2 ;;
 esac
 
-lftp -c "set ftp:ssl-allow true; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate true; open -p $(lftp_quote "$FTP_PORT") -u $(lftp_quote "$FTP_USERNAME"),$(lftp_quote "$FTP_PASSWORD") $(lftp_quote "$FTP_SERVER"); ${commands}"
+connection_settings="set cmd:fail-exit true; set net:max-retries 2; set net:timeout 30; set ftp:ssl-allow true; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate true;"
+open_command="open -p $(lftp_quote "$FTP_PORT") -u $(lftp_quote "$FTP_USERNAME"),$(lftp_quote "$FTP_PASSWORD") $(lftp_quote "$FTP_SERVER");"
+
+if ! lftp -c "${connection_settings} ${open_command} pwd;"; then
+  echo "FTPS connection, certificate, or authentication failed for ${FTP_SERVER}:${FTP_PORT}." >&2
+  exit 1
+fi
+
+echo "FTPS preflight succeeded; starting ${operation} upload."
+if ! lftp -c "${connection_settings} ${open_command} ${commands}"; then
+  echo "FTPS upload failed after a successful preflight; inspect remote directory permissions and available quota." >&2
+  exit 1
+fi
