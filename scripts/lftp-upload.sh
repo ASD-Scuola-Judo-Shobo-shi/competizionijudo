@@ -23,7 +23,7 @@ if [[ "$FTP_SERVER" == 'ftp.competizionijudo.it' ]]; then
   FTP_SERVER='ftplnx02.aruba.it'
 fi
 
-echo "FTPS upload wrapper v3: preflighting ${FTP_SERVER}:${FTP_PORT}."
+echo "FTPS upload wrapper v4: preflighting ${FTP_SERVER}:${FTP_PORT}."
 
 lftp_quote() {
   local value="$1"
@@ -36,8 +36,8 @@ lftp_quote() {
 }
 
 case "$operation" in
-  deploy) commands="mkdir -p $(lftp_quote "$remote_dir"); cd $(lftp_quote "$remote_dir"); rm -rf vendor/; mirror -R --exclude-glob .git* --exclude-glob .env* --exclude-glob legacy/ build/deploy/ .;" ;;
-  env) commands="mkdir -p $(lftp_quote "$remote_dir"); cd $(lftp_quote "$remote_dir"); mirror -R build/runtime-env/ .;" ;;
+  deploy) commands="mkdir -pf $(lftp_quote "$remote_dir"); cd $(lftp_quote "$remote_dir"); rm -rf vendor/; mirror -R --exclude-glob .git* --exclude-glob .env* --exclude-glob legacy/ build/deploy/ .;" ;;
+  env) commands="mkdir -pf $(lftp_quote "$remote_dir"); cd $(lftp_quote "$remote_dir"); mirror -R build/runtime-env/ .;" ;;
   root) commands="mirror -R --no-perms build/root-router/ $(lftp_quote "$remote_dir");" ;;
   *) echo 'Unknown upload operation' >&2; exit 2 ;;
 esac
