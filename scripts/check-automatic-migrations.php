@@ -6,7 +6,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/src/helpers.php';
 
 try {
-    App\Service\AutomaticMigrationSafety::assertSafe($argv[1] ?? null);
+    (new App\Service\AutomaticMigrationSafety())->assertSafe($argv[1] ?? null);
 } catch (Throwable $exception) {
     fwrite(STDERR, $exception->getMessage() . "\n");
     exit(1);

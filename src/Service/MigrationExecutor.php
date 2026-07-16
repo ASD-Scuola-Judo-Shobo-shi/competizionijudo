@@ -9,15 +9,15 @@ use App\Model\MigrationException;
 use App\Model\MigrationRunner;
 use Throwable;
 
-final class MigrationExecutor
+class MigrationExecutor
 {
-    public static function run(): void
+    public function run(): void
     {
         $pdo = Database::connection();
         (new MigrationRunner($pdo))->run();
     }
 
-    public static function failureDetail(Throwable $exception): string
+    public function failureDetail(Throwable $exception): string
     {
         $cause = $exception;
         while ($cause instanceof MigrationException && $cause->getPrevious() instanceof Throwable) {

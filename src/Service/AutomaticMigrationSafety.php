@@ -6,11 +6,11 @@ namespace App\Service;
 
 use RuntimeException;
 
-final class AutomaticMigrationSafety
+class AutomaticMigrationSafety
 {
     private const CONSOLIDATED_BASELINE = '20260630_000000_create_schema.sql';
 
-    public static function assertSafe(?string $directory = null): void
+    public function assertSafe(?string $directory = null): void
     {
         $directory ??= base_path('migrations');
         if (!is_dir($directory)) {

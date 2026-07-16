@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Core\Controller;
+use App\Core\Logger;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\View;
 use App\Model\MigrationException;
 use App\Service\AutomaticMigrationSafety;
 use App\Service\MigrationExecutor;
@@ -14,6 +16,21 @@ use App\Service\MigrationWebhookAuthenticator;
 
 final class MigrationWebhookController extends Controller
 {
+    private readonly AutomaticMigrationSafety $safety;
+    private readonly MigrationExecutor $executor;
+
+    public function __construct(
+        View $view,
+        Request $request,
+        ?AutomaticMigrationSafety $safety = null,
+        ?MigrationExecutor $executor = null,
+        ?Logger $logger = null
+    ) {
+        parent::__construct($view, $request, $logger);
+        $this->safety = $safety ?? new AutomaticMigrationSafety();
+        $this->executor = $executor ?? new MigrationExecutor();
+    }
+
     public function run(Request $request): Response
     {
         $secret = trim((string) env('MIGRATION_WEBHOOK_SECRET', ''));
@@ -22,8 +39,8 @@ final class MigrationWebhookController extends Controller
         }
 
         try {
-            AutomaticMigrationSafety::assertSafe();
-            MigrationExecutor::run();
+            $this->safety->assertSafe();
+            $this->executor->run();
 
             return $this->json(['status' => 'ok']);
         } catch (MigrationException $exception) {
@@ -32,14 +49,14 @@ final class MigrationWebhookController extends Controller
             return $this->json([
                 'status' => 'failed',
                 'migration' => $exception->version(),
-                'diagnostic' => MigrationExecutor::failureDetail($exception),
+                'diagnostic' => $this->executor->failureDetail($exception),
             ], 500);
         } catch (\Throwable $exception) {
             $this->reportFailure('migration.webhook_failed', $exception, $request);
 
             return $this->json([
                 'status' => 'failed',
-                'diagnostic' => MigrationExecutor::failureDetail($exception),
+                'diagnostic' => $this->executor->failureDetail($exception),
             ], 500);
         }
     }
