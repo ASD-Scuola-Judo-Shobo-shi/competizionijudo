@@ -169,8 +169,8 @@ final class EventLifecycleTest extends TestCase
             . bin2hex(random_bytes(8)) . '.log';
         $post = new Request(
             'POST',
-            '/events/register?id=101',
-            ['id' => '101'],
+            '/events/register?event=101',
+            ['event' => '101'],
             [
                 'csrf_token' => csrf_token(),
                 'athletes' => ['301', '302', '301', '303', 'invalid'],
@@ -182,7 +182,7 @@ final class EventLifecycleTest extends TestCase
             $post,
             new FileLogger($this->logPath)
         ))->register($post);
-        $get = new Request('GET', '/events/register?id=101', ['id' => '101']);
+        $get = new Request('GET', '/events/register?event=101', ['event' => '101']);
         $firstGet = (new EventController($this->view, $get))->register($get);
         $secondGet = (new EventController($this->view, $get))->register($get);
 

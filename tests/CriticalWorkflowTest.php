@@ -270,7 +270,7 @@ final class CriticalWorkflowTest extends TestCase
         ], ['REMOTE_ADDR' => '192.0.2.30']);
         self::assertSame(302, $clubLogin->status());
 
-        $register = $this->request('POST', '/events/register', ['id' => (string) $eventId], [
+        $register = $this->request('POST', '/events/register', ['event' => (string) $eventId], [
             'csrf_token' => csrf_token(),
             'athletes' => [(string) $athleteId, (string) $foreignAthleteId],
         ]);
@@ -278,7 +278,7 @@ final class CriticalWorkflowTest extends TestCase
         self::assertSame(1, (int) $this->database->query(
             'SELECT COUNT(*) FROM entries WHERE club_id = ' . $clubId
         )->fetchColumn());
-        $feedback = $this->request('GET', '/events/register', ['id' => (string) $eventId]);
+        $feedback = $this->request('GET', '/events/register', ['event' => (string) $eventId]);
         self::assertStringContainsString(__('events.registration_added', ['count' => '1']), $feedback->content());
         self::assertStringContainsString(__('events.registration_rejected', ['count' => '1']), $feedback->content());
 

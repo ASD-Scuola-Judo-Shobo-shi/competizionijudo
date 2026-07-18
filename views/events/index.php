@@ -67,7 +67,7 @@
                     <a class="btn" href="<?= e(base_url('/events/entries?event=' . (string) $ev->id)) ?>"><?= e(__('events.entries')) ?></a>
                     <?php $hasException = $loggedInClubId !== null && ($eventExceptions[$ev->id] ?? false); ?>
                     <?php if (!$ev->closed || $hasException) : ?>
-                        <a class="btn green" href="<?= e(base_url('/events/register?id=' . (string) $ev->id)) ?>"><?= e(__('events.registration')) ?></a>
+                        <a class="btn green" href="<?= e(base_url('/events/register?event=' . (string) $ev->id)) ?>"><?= e(__('events.registration')) ?></a>
                     <?php endif; ?>
                 </div>
             </div>

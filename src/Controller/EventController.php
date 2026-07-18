@@ -99,11 +99,11 @@ final class EventController extends Controller
         }
         $clubId = (int) $clubId;
 
-        $id = (int) ($request->input('id') ?? $request->query('id'));
+        $eventId = (int) ($request->input('event') ?? $request->query('event'));
         $limit = max(1, (int) config('app.events_upcoming_limit'));
         $registrationDate = date('Y-m-d');
 
-        if ($id <= 0) {
+        if ($eventId <= 0) {
             $upcomingEvents = Event::upcomingPublished($registrationDate, $limit);
 
             return $this->view('events/register', [
@@ -119,7 +119,7 @@ final class EventController extends Controller
         }
 
         // Use club-specific eligibility check to allow exceptions for closed events
-        $event = Event::findRegistrationEligibleByIdForClub($id, $registrationDate, $clubId);
+        $event = Event::findRegistrationEligibleByIdForClub($eventId, $registrationDate, $clubId);
         if ($event === null) {
             $upcomingEvents = Event::upcomingPublished($registrationDate, $limit);
 
@@ -145,7 +145,7 @@ final class EventController extends Controller
             }
             
             // Get currently registered athletes for comparison
-            $currentlyRegistered = Entry::findByClubEvent($id, $clubId);
+            $currentlyRegistered = Entry::findByClubEvent($eventId, $clubId);
             
             // Validate and filter athlete IDs - count invalid ones as rejected
             $validAthleteIds = [];
@@ -174,7 +174,7 @@ final class EventController extends Controller
             // Handle unregistrations first (removals take priority)
             foreach ($toUnregister as $athleteId) {
                 try {
-                    $result = Entry::unregister($id, $clubId, $athleteId, $registrationDate);
+                    $result = Entry::unregister($eventId, $clubId, $athleteId, $registrationDate);
                     if ($result === EntryRegistrationResult::Unsubscribed) {
                         $feedback['removed']++;
                     } else {
@@ -189,7 +189,7 @@ final class EventController extends Controller
             // Handle registrations
             foreach ($toRegister as $athleteId) {
                 try {
-                    $result = Entry::register($id, $clubId, $athleteId, $registrationDate);
+                    $result = Entry::register($eventId, $clubId, $athleteId, $registrationDate);
                     match ($result) {
                         EntryRegistrationResult::Registered => $feedback['added']++,
                         EntryRegistrationResult::AlreadyRegistered => $feedback['already_registered']++,
@@ -227,15 +227,15 @@ final class EventController extends Controller
                 $flashFeedback['failed'] = $feedback['failed'];
             }
 
-            Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $id, $flashFeedback);
+            Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $eventId, $flashFeedback);
 
-            return $this->redirect('/events/register?id=' . $id);
+            return $this->redirect('/events/register?event=' . $eventId);
         }
 
         $athletes = Athlete::findByClub($clubId);
-        $registered = Entry::findByClubEvent($id, $clubId);
-        $nextEvents = Event::nextUpcomingPublished($id, $registrationDate, $limit);
-        $registrationFeedback = $this->registrationFeedback($id);
+        $registered = Entry::findByClubEvent($eventId, $clubId);
+        $nextEvents = Event::nextUpcomingPublished($eventId, $registrationDate, $limit);
+        $registrationFeedback = $this->registrationFeedback($eventId);
 
         return $this->view('events/register', [
             'title' => __('events.registration') . ' - ' . $event->name,

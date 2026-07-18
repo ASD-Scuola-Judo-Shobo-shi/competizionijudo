@@ -75,7 +75,7 @@ $eventsList = $event !== null ? $nextEvents : $upcomingEvents;
             <div class="event-details-actions">
                 <a class="btn" href="<?= e(base_url('/events/entries?event=' . (string) $event->id)) ?>"><?= e(__('events.entries')) ?></a>
                 <?php if (!$event->closed || $hasRegistrationException) : ?>
-                    <a class="btn green" href="<?= e(base_url('/events/register?id=' . (string) $event->id)) ?>"><?= e(__('events.registration')) ?></a>
+                    <a class="btn green" href="<?= e(base_url('/events/register?event=' . (string) $event->id)) ?>"><?= e(__('events.registration')) ?></a>
                 <?php endif; ?>
             </div>
         </div>

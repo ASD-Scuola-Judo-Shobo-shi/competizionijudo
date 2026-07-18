@@ -344,7 +344,7 @@
         <p>
             <a class="btn" href="<?= e(base_url('/events/details?event=' . (string) $event->id)) ?>"><?= e(__('events.details')) ?></a>
             <?php if (!$event->closed || $hasRegistrationException) : ?>
-            <a class="btn green" href="<?= e(base_url('/events/register?id=' . (string) $event->id)) ?>"><?= e(__('events.registration')) ?></a>
+            <a class="btn green" href="<?= e(base_url('/events/register?event=' . (string) $event->id)) ?>"><?= e(__('events.registration')) ?></a>
             <?php endif; ?>
         </p>
     </div>
@@ -496,7 +496,7 @@
     <?php if (!empty($eventsList)) : ?>
         <?php foreach ($eventsList as $next) : ?>
             <div class="event-line">
-                <a class="btn green btn-sm event-details-btn" href="<?= e(base_url('/events/register?id=' . (string) $next->id)) ?>"><?= e(__('events.registration')) ?></a>
+                <a class="btn green btn-sm event-details-btn" href="<?= e(base_url('/events/register?event=' . (string) $next->id)) ?>"><?= e(__('events.registration')) ?></a>
                 <?= e($next->date) ?>
                 - <?= e($next->name) ?>
                 - <?= e($next->location) ?>
