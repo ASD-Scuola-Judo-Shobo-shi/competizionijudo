@@ -251,7 +251,7 @@ return [
     'buttons' => [
         'back_to_login' => 'Torna all\'accesso società',
     ],
-     'events' => [
+    'events' => [
         'published_heading' => 'Competizioni pubblicate',
         'upcoming_heading' => 'Prossime competizioni',
         'none' => 'Nessuna competizione pubblicata al momento.',
@@ -311,6 +311,8 @@ return [
         'view_current_info' => 'Vedi informativa attuale',
         'select_event' => 'Seleziona una delle competizioni qui sotto',
         'view_uploaded_file' => 'Vedi file caricato',
+        'max_participants' => 'Massimo partecipanti',
+        'max_participants_placeholder' => 'Lascia vuoto per illimitato',
     ],
     'admin' => [
         'events' => [
@@ -503,5 +505,20 @@ return [
     'pagination' => [
         'prev' => 'Prec',
         'next' => 'Succ',
+    ],
+    'analytics' => [
+        'total_athletes' => 'Totale Atleti',
+        'max_participants' => 'Massimo Partecipanti',
+        'remaining' => 'Posti Liberi Rimanenti',
+        'category_distribution' => 'Distribuzione Categorie',
+        'weight_distribution' => 'Distribuzione Pesi',
+        'gender_distribution' => 'Distribuzione Genere',
+        'distribution' => 'Distribuzione',
+    ],
+    'registration' => [
+        'removed' => 'Eliminati: {count}',
+        'save_changes' => 'Salva modifiche',
+        'unsaved_changes' => '(modifiche non salvate)',
+        'your_club' => 'La tua società',
     ],
 ];

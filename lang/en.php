@@ -61,7 +61,7 @@ return [
             'affiliation_placeholder' => 'Select affiliations',
             'password' => 'Password',
             'confirm_password' => 'Confirm password',
-            'athlete_data_rights_declaration' => 'I declare that I am authorized, on behalf of the club, to provide and process its athletes’ personal data, including data concerning minors, and that the club holds any required permissions.',
+            'athlete_data_rights_declaration' => 'I declare that I am authorized, on behalf of the club, to provide and process its athletes\' personal data, including data concerning minors, and that the club holds any required permissions.',
             'privacy_notice' => 'Read the privacy notice',
             'register_button' => 'Register',
             'confirmation_sent' => 'Check your email and open the confirmation link to complete registration.',
@@ -229,11 +229,11 @@ return [
         'club_address_line_required' => 'Please enter the club address.',
         'club_postal_code_required' => 'Please enter the postal code.',
         'club_email_invalid' => 'Please enter a valid club email address.',
-        'club_athlete_data_rights_required' => 'You must confirm that the club is authorized to process its athletes’ personal data.',
+        'club_athlete_data_rights_required' => 'You must confirm that the club is authorized to process its athletes\' personal data.',
         'club_province_invalid' => 'Please select a Sardinian province.',
         'club_city_invalid' => 'Please select a municipality in the selected province.',
-        'athlete_last_name_required' => 'Please enter the athlete’s last name.',
-        'athlete_first_name_required' => 'Please enter the athlete’s first name.',
+        'athlete_last_name_required' => 'Please enter the athlete\'s last name.',
+        'athlete_first_name_required' => 'Please enter the athlete\'s first name.',
         'athlete_gender_invalid' => 'Please select a valid gender.',
         'athlete_birth_date_invalid' => 'Please enter a valid birth date that is not in the future.',
         'athlete_weight_invalid' => 'Please enter a weight greater than zero.',
@@ -251,7 +251,7 @@ return [
     'buttons' => [
         'back_to_login' => 'Back to club login',
     ],
-     'events' => [
+    'events' => [
         'published_heading' => 'Published events',
         'upcoming_heading' => 'Upcoming events',
         'none' => 'No published events at the moment.',
@@ -311,6 +311,8 @@ return [
         'view_current_info' => 'View current info file',
         'select_event' => 'Please select one of the events below',
         'view_uploaded_file' => 'View uploaded file',
+        'max_participants' => 'Max participants',
+        'max_participants_placeholder' => 'Leave empty for unlimited',
     ],
     'admin' => [
         'events' => [
@@ -452,11 +454,11 @@ return [
         'athlete_legal_basis' => 'The legitimate interests of the controller, organizers, and participating clubs in administering events (Article 6(1)(f) GDPR), subject to a documented balancing assessment that gives particular weight to the rights of minors.',
         'legal_basis' => 'Legal basis',
         'special_categories' => 'Information that qualifies as health data or another special category must not be entered unless an applicable Article 9(2) GDPR condition also exists.',
-        'club_declaration' => 'The required registration checkbox is the club representative’s declaration of authority. It is not consent from the athlete and does not replace the club’s obligation to identify and document its own applicable legal basis and any required authority for minors.',
+        'club_declaration' => 'The required registration checkbox is the club representative\'s declaration of authority. It is not consent from the athlete and does not replace the club\'s obligation to identify and document its own applicable legal basis and any required authority for minors.',
         'provision' => 'Clubs provide the account and athlete data. Required fields are necessary to create an account or register an athlete; without them the requested service cannot be provided. The club must be authorized to provide athlete data and, where applicable, act for minors.',
         'recipients_title' => 'Recipients, processors, and transfers',
         'hosting' => 'The service is hosted by {provider} in {location}. Authorized event personnel and participating clubs receive only the information required for their role.',
-        'transfers' => 'The application is not designed to transfer personal data outside the European Economic Area during normal operation. Any provider subprocessors and associated safeguards remain governed by the controller’s agreement with the hosting provider.',
+        'transfers' => 'The application is not designed to transfer personal data outside the European Economic Area during normal operation. Any provider subprocessors and associated safeguards remain governed by the controller\'s agreement with the hosting provider.',
         'retention_title' => 'Retention',
         'live_retention' => 'Live athlete records are retained until the club or an administrator deletes them; administrators are warned to arrange an export before deleting a club.',
         'snapshot_retention' => 'Closed-event athlete snapshots are retained for no more than one year and are then deleted by the scheduled retention job.',
@@ -503,5 +505,20 @@ return [
     'pagination' => [
         'prev' => 'Prev',
         'next' => 'Next',
+    ],
+    'analytics' => [
+        'total_athletes' => 'Total Athletes',
+        'max_participants' => 'Max Participants',
+        'remaining' => 'Remaining Spots',
+        'category_distribution' => 'Category Distribution',
+        'weight_distribution' => 'Weight Distribution',
+        'gender_distribution' => 'Gender Distribution',
+        'distribution' => 'Distribution',
+    ],
+    'registration' => [
+        'removed' => 'Removed: {count}',
+        'save_changes' => 'Save Changes',
+        'unsaved_changes' => '(unsaved changes)',
+        'your_club' => 'Your club',
     ],
 ];

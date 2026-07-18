@@ -22,6 +22,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20260716_000002_rename_club_organization_to_affiliation.sql',
                 dirname(__DIR__) . '/migrations/20260717_000001_make_club_affiliation_nullable_and_multiple.sql',
                 dirname(__DIR__) . '/migrations/20260717_000002_create_club_registration_confirmations.sql',
+                dirname(__DIR__) . '/migrations/20260718_000001_create_event_registration_exceptions.sql',
             ],
             array_values($migrations)
         );
