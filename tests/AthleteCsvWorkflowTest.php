@@ -58,7 +58,7 @@ final class AthleteCsvWorkflowTest extends TestCase
 
     public function testExportIsClubScopedDownloadAndRoundTripsSpreadsheetFormulaValues(): void
     {
-        $request = new Request('GET', '/club_athletes_export.csv');
+        $request = new Request('GET', '/clubs/athletes-export');
         $response = (new ClubAreaController($this->view, $request))->exportAthletes($request);
 
         self::assertSame(200, $response->status());
@@ -106,7 +106,7 @@ final class AthleteCsvWorkflowTest extends TestCase
         $response = (new ClubAreaController($this->view, $request))->importAthletes($request);
 
         self::assertSame(302, $response->status());
-        self::assertSame('/club_area.php?view=list', $response->headers()['Location']);
+        self::assertSame('/clubs/area?view=list', $response->headers()['Location']);
         self::assertSame('UpdatedOwn', $this->database->query(
             'SELECT last_name FROM athletes WHERE id = 301'
         )->fetchColumn());
@@ -159,7 +159,7 @@ final class AthleteCsvWorkflowTest extends TestCase
         );
         $request = new Request(
             'POST',
-            '/club_athletes_import.php',
+            '/clubs/athletes-import',
             [],
             [],
             [],
@@ -174,21 +174,21 @@ final class AthleteCsvWorkflowTest extends TestCase
     public function testCsvEndpointsRedirectAnonymousClubsToLogin(): void
     {
         $this->destroySession();
-        $exportRequest = new Request('GET', '/club_athletes_export.csv');
-        $importRequest = new Request('POST', '/club_athletes_import.php');
+        $exportRequest = new Request('GET', '/clubs/athletes-export');
+        $importRequest = new Request('POST', '/clubs/athletes-import');
 
         $export = (new ClubAreaController($this->view, $exportRequest))->exportAthletes($exportRequest);
         $import = (new ClubAreaController($this->view, $importRequest))->importAthletes($importRequest);
 
-        self::assertSame('/club_login.php', $export->headers()['Location']);
-        self::assertSame('/club_login.php', $import->headers()['Location']);
+        self::assertSame('/clubs/login', $export->headers()['Location']);
+        self::assertSame('/clubs/login', $import->headers()['Location']);
     }
 
     private function importRequest(string $path): Request
     {
         return new Request(
             'POST',
-            '/club_athletes_import.php',
+            '/clubs/athletes-import',
             [],
             [
                 'csrf_token' => csrf_token(),

@@ -1,9 +1,22 @@
 <?php
+
 /** @var array $events */
 /** @var bool $canViewEntries */
 ?>
 <div class="card">
     <?php if (!$events) : ?>
+        <div class="landing-copy">
+            <img
+                class="landing-logo"
+                src="<?= e(asset_url('assets/competizioni-judo-logo-optim.svgz')) ?>"
+                alt="<?= e(__('app.logo_alt')) ?>">
+            <div>
+                <h2><?= translate('header.title') ?></h2>
+                <p>
+                    <?= translate('home.description') ?>
+                </p>
+            </div>
+        </div>
         <p><?= e(__('events.none')) ?></p>
     <?php endif; ?>
 
@@ -24,10 +37,10 @@
                     <?php endif; ?>
                 <?php else : ?>
                     <div class="poster-placeholder" style="background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('<?= e(asset_url('assets/judo-bg-1280.webp')) ?>') center center / cover no-repeat;">
-    <span style="background: rgba(255,255,255,0.75); padding: 8px 14px; border-radius: 0.75em; display: inline-block;">
-        <strong><?= e(__('events.poster_not_available')) ?></strong>
-    </span>
-</div>
+                        <span style="background: rgba(255,255,255,0.75); padding: 8px 14px; border-radius: 0.75em; display: inline-block;">
+                            <strong><?= e(__('events.poster_not_available')) ?></strong>
+                        </span>
+                    </div>
                 <?php endif; ?>
             </div>
 
@@ -51,7 +64,7 @@
                     } else {
                         $truncated = $ev->description;
                     }
-                    ?>
+                ?>
                     <p><?= nl2br(e($truncated)) ?></p>
                 <?php endif; ?>
 
@@ -59,11 +72,11 @@
                     <?php if ($ev->info_file) : ?>
                         <a class="btn orange" href="<?= e(base_url((string) $ev->info_file)) ?>" target="_blank" download><?= e(__('events.download_info')) ?></a>
                     <?php endif; ?>
-                    <a class="btn" href="<?= e(base_url('/event_details.php?event=' . (string) $ev->id)) ?>"><?= e(__('events.details')) ?></a>
+                    <a class="btn" href="<?= e(base_url('/events/details?event=' . (string) $ev->id)) ?>"><?= e(__('events.details')) ?></a>
                     <?php if ($canViewEntries) : ?>
-                        <a class="btn" href="<?= e(base_url('/event_entries.php?event=' . (string) $ev->id)) ?>"><?= e(__('events.entries')) ?></a>
+                        <a class="btn" href="<?= e(base_url('/events/entries?event=' . (string) $ev->id)) ?>"><?= e(__('events.entries')) ?></a>
                     <?php endif; ?>
-                    <a class="btn green" href="<?= e(base_url('/event_register.php?id=' . (string) $ev->id)) ?>"><?= e(__('events.registration')) ?></a>
+                    <a class="btn green" href="<?= e(base_url('/events/register?id=' . (string) $ev->id)) ?>"><?= e(__('events.registration')) ?></a>
                 </div>
             </div>
         </div>

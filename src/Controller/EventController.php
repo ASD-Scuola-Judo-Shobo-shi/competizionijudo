@@ -41,7 +41,7 @@ final class EventController extends Controller
         if ($id > 0) {
             $event = Event::findPublishedById($id);
             if ($event === null) {
-                return $this->redirect('/events.php');
+                return $this->redirect('/events');
             }
 
             $nextEvents = Event::nextUpcomingPublished($id, date('Y-m-d'), $limit);
@@ -72,7 +72,7 @@ final class EventController extends Controller
         $clubId = AuthContext::clubId();
 
         if (!is_numeric($clubId) || (int) $clubId <= 0) {
-            return $this->redirect('/club_login.php');
+            return $this->redirect('/clubs/login');
         }
         $clubId = (int) $clubId;
 
@@ -146,7 +146,7 @@ final class EventController extends Controller
 
             Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $id, $feedback);
 
-            return $this->redirect('/event_register.php?id=' . $id);
+            return $this->redirect('/events/register?id=' . $id);
         }
 
         $athletes = Athlete::findByClub($clubId);
@@ -174,7 +174,7 @@ final class EventController extends Controller
         $limit = max(1, (int) config('app.events_upcoming_limit'));
 
         if (!$isAdmin && (!is_numeric($clubId) || (int) $clubId <= 0)) {
-            return $this->redirect('/club_login.php');
+            return $this->redirect('/clubs/login');
         }
 
         $eventId = (int) ($request->input('event') ?? $request->query('event') ?? $request->query('id'));
@@ -196,7 +196,7 @@ final class EventController extends Controller
 
         $event = $isAdmin ? Event::findById($eventId) : Event::findPublishedById($eventId);
         if ($event === null) {
-            return $this->redirect('/events.php');
+            return $this->redirect('/events');
         }
 
         $requestedClubId = (int) ($request->query('club') ?? 0);

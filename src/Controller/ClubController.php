@@ -133,7 +133,7 @@ final class ClubController extends Controller
                             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                         ]);
                         $confirmationUrl = sprintf(
-                            '%s/club_confirm_registration.php?token=%s',
+                            '%s/clubs/confirm-registration?token=%s',
                             rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
                             $token
                         );
@@ -224,7 +224,7 @@ final class ClubController extends Controller
                             $throttle->clear('club-login', $email, $networkSignal);
                             Session::authenticateClub($club->id);
 
-                            return $this->redirect('/club_area.php?view=list');
+                            return $this->redirect('/clubs/area?view=list');
                         }
                     }
                 } catch (\Throwable $exception) {
@@ -258,7 +258,7 @@ final class ClubController extends Controller
         validate_csrf((string) $request->post('csrf_token'));
         Session::destroy();
 
-        return $this->redirect('/club_login.php');
+        return $this->redirect('/clubs/login');
     }
 
     public function forgotPassword(Request $request): Response
@@ -288,7 +288,7 @@ final class ClubController extends Controller
                         $rawToken = $this->passwordResetTokens->issueForEmail($email);
                         if ($rawToken !== null) {
                             $resetUrl = sprintf(
-                                '%s/club_reset_password.php?token=%s',
+                                '%s/clubs/reset-password?token=%s',
                                 rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
                                 $rawToken
                             );
@@ -384,7 +384,7 @@ final class ClubController extends Controller
                                 password_hash($password, PASSWORD_DEFAULT)
                             )
                         ) {
-                            return $this->redirect('/club_login.php');
+                            return $this->redirect('/clubs/login');
                         }
 
                         $valid = false;

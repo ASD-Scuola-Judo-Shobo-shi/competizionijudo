@@ -9,17 +9,17 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 
 | Capability | Routes | Access |
 | --- | --- | --- |
-| Home, public events, and event details | `/`, `/events.php`, `/event_details.php` | Public |
-| Event entries | `/event_entries.php` | Authenticated club or administrator |
+| Public events and event details | `/events`, `/events/details` | Public |
+| Event entries | `/events/entries` | Authenticated club or administrator |
 | Privacy notice and language switch | `/privacy`, `/language/switch` | Public |
 | Deployment health and build revision | `/health` | Public, minimal JSON |
-| Club registration and login | `/club_register.php`, `/club_login.php` | Public |
-| Password recovery by email | `/club_forgot_password.php`, `/club_reset_password.php` | Public |
-| Club athlete archive and event registration | `/club_area.php`, `/event_register.php` | Authenticated club |
-| Athlete CSV import and export | `/club_athletes_import.php`, `/club_athletes_export.csv` | Authenticated club; import is POST + CSRF |
-| Athlete deletion | `/club_delete_athlete.php` | Authenticated club, POST + CSRF |
-| Event and club administration | `/admin_manage_events.php`, `/admin_add_event.php`, `/admin_manage_clubs.php`, `/admin_edit_club.php` | Administrator |
-| Event and club deletion | `/admin_delete_event.php`, `/admin_delete_club.php` | Administrator, POST + CSRF |
+| Club registration and login | `/clubs/register`, `/clubs/login` | Public |
+| Password recovery by email | `/clubs/forgot-password`, `/clubs/reset-password` | Public |
+| Club athlete archive and event registration | `/clubs/area`, `/events/register` | Authenticated club |
+| Athlete CSV import and export | `/clubs/athletes-import`, `/clubs/athletes-export` | Authenticated club; import is POST + CSRF |
+| Athlete deletion | `/clubs/delete-athlete` | Authenticated club, POST + CSRF |
+| Event and club administration | `/admin/events`, `/admin/events/add`, `/admin/clubs`, `/admin/clubs/edit` | Administrator |
+| Event and club deletion | `/admin/events/delete`, `/admin/clubs/delete` | Administrator, POST + CSRF |
 
 ## Requirements
 

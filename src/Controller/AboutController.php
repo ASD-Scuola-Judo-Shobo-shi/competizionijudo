@@ -8,23 +8,23 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 
-final class HomeController extends Controller
+final class AboutController extends Controller
 {
     public function index(Request $request): Response
     {
-        return $this->view('home/index', ['title' => __('nav.home')]);
+        return $this->redirect('/events');
     }
 
     public function about(Request $request): Response
     {
-        return $this->view('home/about', [
+        return $this->view('static/about', [
             'title' => __('about.title'),
         ]);
     }
 
     public function privacy(Request $request): Response
     {
-        return $this->view('home/privacy', [
+        return $this->view('static/privacy', [
             'title' => __('privacy.title'),
             'privacy' => config('privacy', []),
         ]);

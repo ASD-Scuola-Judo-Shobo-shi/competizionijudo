@@ -24,7 +24,7 @@ final class ClubAreaController extends Controller
         $clubId = AuthContext::clubId();
 
         if ($clubId === null) {
-            return $this->redirect('/club_login.php');
+            return $this->redirect('/clubs/login');
         }
 
         if ($request->method() === 'POST') {
@@ -34,7 +34,7 @@ final class ClubAreaController extends Controller
         $club = Club::findById((int) $clubId);
         if ($club === null) {
             Session::destroy();
-            return $this->redirect('/club_login.php');
+            return $this->redirect('/clubs/login');
         }
 
         $athleteCsvFeedback = Session::pullFlash('athlete_csv_feedback');
@@ -89,7 +89,7 @@ final class ClubAreaController extends Controller
                     }
 
                     if ($errors === []) {
-                        return $this->redirect('/club_area.php?view=add');
+                        return $this->redirect('/clubs/area?view=add');
                     }
                 } elseif ((string) $request->input('athlete_id') !== '') {
                     $edit = Athlete::findById((int) $request->input('athlete_id'), $club->id);
@@ -170,7 +170,7 @@ final class ClubAreaController extends Controller
         Session::start();
         $clubId = AuthContext::clubId();
         if ($clubId === null) {
-            return $this->redirect('/club_login.php');
+            return $this->redirect('/clubs/login');
         }
 
         validate_csrf((string) $request->post('csrf_token'));
@@ -179,7 +179,7 @@ final class ClubAreaController extends Controller
             Athlete::remove($athleteId, (int) $clubId);
         }
 
-        return $this->redirect('/club_area.php?view=add');
+        return $this->redirect('/clubs/area?view=add');
     }
 
     public function exportAthletes(Request $request): Response
@@ -187,7 +187,7 @@ final class ClubAreaController extends Controller
         Session::start();
         $clubId = AuthContext::clubId();
         if ($clubId === null || Club::findById((int) $clubId) === null) {
-            return $this->redirect('/club_login.php');
+            return $this->redirect('/clubs/login');
         }
 
         $csv = (new AthleteCsvTransfer())->export((int) $clubId);
@@ -205,12 +205,12 @@ final class ClubAreaController extends Controller
         Session::start();
         $clubId = AuthContext::clubId();
         if ($clubId === null || Club::findById((int) $clubId) === null) {
-            return $this->redirect('/club_login.php');
+            return $this->redirect('/clubs/login');
         }
 
         validate_csrf((string) $request->post('csrf_token'));
         $returnView = $request->post('return_view') === 'add' ? 'add' : 'list';
-        $redirect = '/club_area.php?view=' . $returnView;
+        $redirect = '/clubs/area?view=' . $returnView;
         $file = $request->file('athletes_csv');
         $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
 

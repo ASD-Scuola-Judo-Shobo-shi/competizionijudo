@@ -1,10 +1,11 @@
 <?php
+
 /** @var string $appName */
 /** @var string $favicon */
 /** @var string $locale */
 /** @var bool $isLoggedIn */
 /** @var string|null $clubEmail */
-/** @var bool $homeActive */
+/** @var bool $aboutActive */
 /** @var bool $eventsActive */
 /** @var string $clubUrl */
 /** @var bool $clubsActive */
@@ -73,7 +74,7 @@
         </div>
         <div class="main-title">
             <div class="main-title-heading">
-                <a href="<?= e(base_url('/')) ?>" class="site-logo-link" aria-label="<?= e(__('nav.home')) ?>">
+                <a href="<?= e(base_url('/')) ?>" class="site-logo-link" aria-label="<?= e(__('nav.about')) ?>">
                     <img
                         class="site-heading-logo"
                         src="<?= e(asset_url('assets/competizioni-judo-logo-optim.svgz')) ?>"
@@ -94,24 +95,24 @@
             <?php if ($isLoggedIn) : ?>
                 <div class="club-login-info">
                     <span><?= e($clubEmail) ?></span>
-                    <form method="post" action="<?= e(base_url('/club_logout.php')) ?>" class="logout-form">
+                    <form method="post" action="<?= e(base_url('/clubs/logout')) ?>" class="logout-form">
                         <?= csrf_field() ?>
                         <button type="submit" class="logout-link"><?= translate('club.area.submenu.logout') ?></button>
                     </form>
                 </div>
             <?php else : ?>
                 <div class="club-login-info">
-                    <a href="<?= e(base_url('/club_login.php')) ?>"><?= translate('nav.login') ?></a> | <a href="<?= e(base_url('/club_register.php')) ?>"><?= translate('nav.register') ?></a>
+                    <a href="<?= e(base_url('/clubs/login')) ?>"><?= translate('nav.login') ?></a> | <a href="<?= e(base_url('/clubs/register')) ?>"><?= translate('nav.register') ?></a>
                 </div>
             <?php endif; ?>
         </div>
     </header>
 
     <nav class="main-nav" aria-label="<?= e(translate('a11y.main_navigation')) ?>">
-        <a href="<?= e(base_url('/')) ?>" class="<?= $homeActive ? 'active' : '' ?>"><?= translate('nav.home') ?></a>
-        <a href="<?= e(base_url('/events.php')) ?>" class="<?= $eventsActive ? 'active' : '' ?>"><?= translate('nav.events') ?></a>
+        <a href="<?= e(base_url('/events')) ?>" class="<?= $eventsActive ? 'active' : '' ?>"><?= translate('nav.events') ?></a>
         <a href="<?= e($clubUrl) ?>" class="<?= $clubsActive ? 'active' : '' ?>"><?= translate('nav.clubs') ?></a>
-        <a href="<?= e(base_url('/admin_manage_events.php')) ?>" class="<?= $adminActive ? 'active' : '' ?>"><?= translate('nav.admin') ?></a>
+        <a href="<?= e(base_url('/about')) ?>" class="<?= $aboutActive ? 'active' : '' ?>"><?= translate('nav.about') ?></a>
+        <a href="<?= e(base_url('/admin/events')) ?>" class="<?= $adminActive ? 'active' : '' ?>"><?= translate('nav.admin') ?></a>
     </nav>
 
     <?php if ($submenuItems) : ?>

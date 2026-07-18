@@ -18,7 +18,7 @@
             <ul class="next-events-list">
                 <?php foreach ($events as $ev) : ?>
                     <li class="next-event-item">
-                        <a href="<?= e(base_url('/event_entries.php?' . http_build_query(['event' => $ev->id]))) ?>">
+                        <a href="<?= e(base_url('/events/entries?' . http_build_query(['event' => $ev->id]))) ?>">
                             <strong><?= e($ev->name) ?></strong><br>
                             <span class="location"><?= e($ev->location) ?> — <?= e($ev->date) ?></span>
                         </a>
@@ -62,7 +62,7 @@
                         <td><strong><?= e($club['club_name']) ?></strong></td>
                         <td><?= e($club['federal_code']) ?></td>
                         <td>
-                            <a class="btn green" href="<?= e(base_url('/event_entries.php?' . http_build_query([
+                            <a class="btn green" href="<?= e(base_url('/events/entries?' . http_build_query([
                                 'event' => $event->id,
                                 'club' => $club['id'],
                             ]))) ?>">

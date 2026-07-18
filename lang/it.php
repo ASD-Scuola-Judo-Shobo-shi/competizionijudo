@@ -13,8 +13,7 @@ return [
     ],
     'nav' => [
         'dashboard' => 'Dashboard',
-        'about' => 'Informazioni',
-        'home' => 'Home',
+        'about' => 'Info',
         'events' => 'Competizioni',
         'clubs' => 'Società',
         'admin' => 'Amministrazione',
@@ -263,7 +262,7 @@ return [
         'type' => [
             'only_precompetitive' => 'Solo pre-agonistico',
             'only_competitive' => 'Solo agonistico',
-            'precompetitive_and_competitive' => 'Pre-agonistico e agonistico',
+            'precompetitive_and_competitive' => 'Pre- e agonistico',
         ],
         'submenu' => [
             'list' => 'Elenco',

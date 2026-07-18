@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Controller\HomeController;
+use App\Controller\AboutController;
 use App\Core\Request;
 use App\Core\Router;
 use App\Core\View;
@@ -44,7 +44,7 @@ final class PrivacyNoticeTest extends TestCase
 
         foreach (['en', 'it'] as $locale) {
             Localization::setLocale($locale);
-            $html = $view->render('home/privacy', [
+            $html = $view->render('static/privacy', [
                 'title' => __('privacy.title'),
                 'privacy' => $privacy,
             ], 'layouts/error');
@@ -84,12 +84,12 @@ final class PrivacyNoticeTest extends TestCase
 
     public function testHomepageNoLongerLoadsHardCodedLegacyEventData(): void
     {
-        $controller = new HomeController(
+        $controller = new AboutController(
             new View(dirname(__DIR__) . '/views'),
             new Request('GET', '/')
         );
 
-        self::assertSame(200, $controller->index(new Request('GET', '/'))->status());
+        self::assertSame(302, $controller->index(new Request('GET', '/'))->status());
         self::assertFileDoesNotExist(dirname(__DIR__) . '/src/Model/Competition.php');
     }
 }

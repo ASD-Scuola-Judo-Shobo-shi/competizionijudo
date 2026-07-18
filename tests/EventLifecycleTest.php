@@ -62,7 +62,7 @@ final class EventLifecycleTest extends TestCase
 
         self::assertNull(Event::findPublishedById(101));
 
-        $request = new Request('GET', '/event_details.php?event=101', ['event' => '101']);
+        $request = new Request('GET', '/events/details?event=101', ['event' => '101']);
         $response = (new EventController($this->view, $request))->show($request);
 
         self::assertSame(302, $response->status());
@@ -166,7 +166,7 @@ final class EventLifecycleTest extends TestCase
         $response = $this->dispatchEntries(['event' => '101']);
 
         self::assertSame(302, $response->status());
-        self::assertSame('/events.php', $response->headers()['Location']);
+        self::assertSame('/events', $response->headers()['Location']);
         self::assertStringNotContainsString('UNPUBLISHED-ENTRY-METADATA', $response->content());
     }
 
@@ -186,7 +186,7 @@ final class EventLifecycleTest extends TestCase
             . bin2hex(random_bytes(8)) . '.log';
         $post = new Request(
             'POST',
-            '/event_register.php?id=101',
+            '/events/register?id=101',
             ['id' => '101'],
             [
                 'csrf_token' => csrf_token(),
@@ -199,7 +199,7 @@ final class EventLifecycleTest extends TestCase
             $post,
             new FileLogger($this->logPath)
         ))->register($post);
-        $get = new Request('GET', '/event_register.php?id=101', ['id' => '101']);
+        $get = new Request('GET', '/events/register?id=101', ['id' => '101']);
         $firstGet = (new EventController($this->view, $get))->register($get);
         $secondGet = (new EventController($this->view, $get))->register($get);
 
@@ -425,7 +425,7 @@ final class EventLifecycleTest extends TestCase
         $application = new Application(dirname(__DIR__));
         (require dirname(__DIR__) . '/routes/web.php')($application->router());
 
-        return $application->handle(new Request('GET', '/event_entries.php', $query));
+        return $application->handle(new Request('GET', '/events/entries', $query));
     }
 
     private function startCleanSession(): void

@@ -70,13 +70,14 @@ final class CriticalWorkflowTest extends TestCase
 
     public function testCriticalAccountAthleteEventRegistrationAndPrivacyWorkflow(): void
     {
-        foreach (['/', '/privacy', '/events.php', '/club_register.php', '/club_login.php'] as $path) {
+        self::assertSame(302, $this->request('GET', '/')->status(), '/');
+        foreach (['/privacy', '/events', '/clubs/register', '/clubs/login'] as $path) {
             self::assertSame(200, $this->request('GET', $path)->status(), $path);
         }
 
         $accountPassword = 'OriginalPassword123!';
         $updatedPassword = 'UpdatedPassword123!';
-        $registration = $this->request('POST', '/club_register.php', [], [
+        $registration = $this->request('POST', '/clubs/register', [], [
             'csrf_token' => csrf_token(),
             'name' => 'Synthetic Club One',
             'federal_code' => 'SYN001',
@@ -98,13 +99,13 @@ final class CriticalWorkflowTest extends TestCase
         self::assertStringContainsString(e(__('club.register.confirmation_sent')), $registration->content());
         self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM clubs')->fetchColumn());
         self::assertMatchesRegularExpression(
-            '#/club_confirm_registration\.php\?token=([a-f0-9]{64})#',
+            '#/clubs/confirm-registration\?token=([a-f0-9]{64})#',
             $registration->content()
         );
-        preg_match('#/club_confirm_registration\.php\?token=([a-f0-9]{64})#', $registration->content(), $match);
+        preg_match('#/clubs/confirm-registration\?token=([a-f0-9]{64})#', $registration->content(), $match);
         self::assertSame(200, $this->request(
             'GET',
-            '/club_confirm_registration.php',
+            '/clubs/confirm-registration',
             ['token' => $match[1]]
         )->status());
         $clubId = (int) $this->database->query(
@@ -127,10 +128,10 @@ final class CriticalWorkflowTest extends TestCase
         $token->execute([$clubId, hash('sha256', $rawToken), '2099-01-01 00:00:00']);
         self::assertSame(200, $this->request(
             'GET',
-            '/club_reset_password.php',
+            '/clubs/reset-password',
             ['token' => $rawToken]
         )->status());
-        $reset = $this->request('POST', '/club_reset_password.php', [], [
+        $reset = $this->request('POST', '/clubs/reset-password', [], [
             'csrf_token' => csrf_token(),
             'token' => $rawToken,
             'password' => $updatedPassword,
@@ -138,7 +139,7 @@ final class CriticalWorkflowTest extends TestCase
         ]);
 
         self::assertSame(302, $reset->status());
-        self::assertSame('/club_login.php', $reset->headers()['Location']);
+        self::assertSame('/clubs/login', $reset->headers()['Location']);
         self::assertSame(1, (int) $this->database->query(
             'SELECT used FROM password_reset_tokens'
         )->fetchColumn());
@@ -147,7 +148,7 @@ final class CriticalWorkflowTest extends TestCase
             (string) $this->database->query('SELECT password_hash FROM clubs')->fetchColumn()
         ));
 
-        $login = $this->request('POST', '/club_login.php', [], [
+        $login = $this->request('POST', '/clubs/login', [], [
             'csrf_token' => csrf_token(),
             'email' => 'CLUB.ONE@EXAMPLE.TEST',
             'password' => $updatedPassword,
@@ -155,7 +156,7 @@ final class CriticalWorkflowTest extends TestCase
         self::assertSame(302, $login->status());
         self::assertSame($clubId, Session::get('club_id'));
 
-        $createAthlete = $this->request('POST', '/club_area.php', ['view' => 'add'], [
+        $createAthlete = $this->request('POST', '/clubs/area', ['view' => 'add'], [
             'csrf_token' => csrf_token(),
             'athlete_id' => '',
             'last_name' => 'VisibleOwn',
@@ -172,7 +173,7 @@ final class CriticalWorkflowTest extends TestCase
             "SELECT id FROM athletes WHERE membership_number = 'OWN-001'"
         )->fetchColumn();
 
-        $updateAthlete = $this->request('POST', '/club_area.php', ['view' => 'add'], [
+        $updateAthlete = $this->request('POST', '/clubs/area', ['view' => 'add'], [
             'csrf_token' => csrf_token(),
             'athlete_id' => (string) $athleteId,
             'last_name' => 'VisibleOwnUpdated',
@@ -190,17 +191,17 @@ final class CriticalWorkflowTest extends TestCase
         )->fetchColumn());
         self::assertSame(200, $this->request(
             'GET',
-            '/club_area.php',
+            '/clubs/area',
             ['view' => 'list']
         )->status());
         self::assertSame(200, $this->request(
             'GET',
-            '/club_area.php',
+            '/clubs/area',
             ['view' => 'add']
         )->status());
 
         $this->resetSession();
-        $adminLogin = $this->request('POST', '/admin_login.php', [], [
+        $adminLogin = $this->request('POST', '/admin/login', [], [
             'csrf_token' => csrf_token(),
             'user' => 'synthetic-admin',
             'pass' => 'AdminPassword123!',
@@ -209,7 +210,7 @@ final class CriticalWorkflowTest extends TestCase
         self::assertTrue((bool) Session::get('is_admin'));
 
         $eventDate = '2098-07-01';
-        $createEvent = $this->request('POST', '/admin_add_event.php', [], [
+        $createEvent = $this->request('POST', '/admin/events/add', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '',
             'name' => 'Synthetic Event',
@@ -228,7 +229,7 @@ final class CriticalWorkflowTest extends TestCase
             "SELECT id FROM events WHERE name = 'Synthetic Event'"
         )->fetchColumn();
 
-        $updateEvent = $this->request('POST', '/admin_add_event.php', [], [
+        $updateEvent = $this->request('POST', '/admin/events/add', [], [
             'csrf_token' => csrf_token(),
             'event_id' => (string) $eventId,
             'name' => 'Synthetic Event Updated',
@@ -248,12 +249,12 @@ final class CriticalWorkflowTest extends TestCase
         )->fetchColumn());
         foreach (
             [
-                ['/admin_manage_events.php', []],
-                ['/admin_add_event.php', ['event_id' => (string) $eventId]],
-                ['/admin_manage_clubs.php', []],
-                ['/admin_edit_club.php', ['id' => (string) $clubId]],
-                ['/events.php', []],
-                ['/event_details.php', ['event' => (string) $eventId]],
+                ['/admin/events', []],
+                ['/admin/events/add', ['event_id' => (string) $eventId]],
+                ['/admin/clubs', []],
+                ['/admin/clubs/edit', ['id' => (string) $clubId]],
+                ['/events', []],
+                ['/events/details', ['event' => (string) $eventId]],
             ] as [$path, $query]
         ) {
             self::assertSame(200, $this->request('GET', $path, $query)->status(), $path);
@@ -265,14 +266,14 @@ final class CriticalWorkflowTest extends TestCase
         )->fetchColumn();
 
         $this->resetSession();
-        $clubLogin = $this->request('POST', '/club_login.php', [], [
+        $clubLogin = $this->request('POST', '/clubs/login', [], [
             'csrf_token' => csrf_token(),
             'email' => 'club.one@example.test',
             'password' => $updatedPassword,
         ], ['REMOTE_ADDR' => '192.0.2.30']);
         self::assertSame(302, $clubLogin->status());
 
-        $register = $this->request('POST', '/event_register.php', ['id' => (string) $eventId], [
+        $register = $this->request('POST', '/events/register', ['id' => (string) $eventId], [
             'csrf_token' => csrf_token(),
             'athletes' => [(string) $athleteId, (string) $foreignAthleteId],
         ]);
@@ -280,7 +281,7 @@ final class CriticalWorkflowTest extends TestCase
         self::assertSame(1, (int) $this->database->query(
             'SELECT COUNT(*) FROM entries WHERE club_id = ' . $clubId
         )->fetchColumn());
-        $feedback = $this->request('GET', '/event_register.php', ['id' => (string) $eventId]);
+        $feedback = $this->request('GET', '/events/register', ['id' => (string) $eventId]);
         self::assertStringContainsString(__('events.registration_added', ['count' => '1']), $feedback->content());
         self::assertStringContainsString(__('events.registration_rejected', ['count' => '1']), $feedback->content());
 
@@ -289,7 +290,7 @@ final class CriticalWorkflowTest extends TestCase
         );
         $foreignEntry->execute([$eventId, $foreignClubId, $foreignAthleteId]);
 
-        $clubEntries = $this->request('GET', '/event_entries.php', [
+        $clubEntries = $this->request('GET', '/events/entries', [
             'event' => (string) $eventId,
             'club' => (string) $foreignClubId,
         ]);
@@ -299,7 +300,7 @@ final class CriticalWorkflowTest extends TestCase
 
         $this->resetSession();
         Session::set('is_admin', true);
-        $adminEntries = $this->request('GET', '/event_entries.php', [
+        $adminEntries = $this->request('GET', '/events/entries', [
             'event' => (string) $eventId,
             'club' => (string) $foreignClubId,
         ]);
@@ -309,7 +310,7 @@ final class CriticalWorkflowTest extends TestCase
 
         $this->resetSession();
         Session::set('club_id', $clubId);
-        $deleteAthlete = $this->request('POST', '/club_delete_athlete.php', [], [
+        $deleteAthlete = $this->request('POST', '/clubs/delete-athlete', [], [
             'csrf_token' => csrf_token(),
             'athlete_id' => (string) $athleteId,
         ]);
@@ -320,7 +321,7 @@ final class CriticalWorkflowTest extends TestCase
 
         $this->resetSession();
         Session::set('is_admin', true);
-        $deleteEvent = $this->request('POST', '/admin_delete_event.php', [], [
+        $deleteEvent = $this->request('POST', '/admin/events/delete', [], [
             'csrf_token' => csrf_token(),
             'event_id' => (string) $eventId,
         ]);

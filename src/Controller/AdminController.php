@@ -73,7 +73,7 @@ final class AdminController extends Controller
                     $throttle->clear('admin-login', $user, $networkSignal);
                     Session::authenticateAdministrator();
 
-                    return $this->redirect('/admin_manage_events.php');
+                    return $this->redirect('/admin/events');
                 } else {
                     $throttle->recordAttempt('admin-login', $user, $networkSignal);
                     $errors[] = __('admin.login.errors.invalid_credentials');
@@ -101,17 +101,17 @@ final class AdminController extends Controller
     {
         Session::start();
         if (!AuthContext::isAdministrator()) {
-            return $this->redirect('/admin_login.php');
+            return $this->redirect('/admin/login');
         }
 
-        return $this->redirect('/admin_manage_events.php');
+        return $this->redirect('/admin/events');
     }
 
     public function manageClubs(Request $request): Response
     {
         Session::start();
         if (!AuthContext::isAdministrator()) {
-            return $this->redirect('/admin_login.php');
+            return $this->redirect('/admin/login');
         }
 
         $db = \App\Model\Database::connection();
@@ -137,7 +137,7 @@ final class AdminController extends Controller
     {
         Session::start();
         if (!AuthContext::isAdministrator()) {
-            return $this->redirect('/admin_login.php');
+            return $this->redirect('/admin/login');
         }
 
         validate_csrf((string) $request->post('csrf_token'));
@@ -146,14 +146,14 @@ final class AdminController extends Controller
             Club::remove($clubId);
         }
 
-        return $this->redirect('/admin_manage_clubs.php');
+        return $this->redirect('/admin/clubs');
     }
 
     public function manageEvents(Request $request): Response
     {
         Session::start();
         if (!AuthContext::isAdministrator()) {
-            return $this->redirect('/admin_login.php');
+            return $this->redirect('/admin/login');
         }
 
         $db = \App\Model\Database::connection();
@@ -187,7 +187,7 @@ final class AdminController extends Controller
     {
         Session::start();
         if (!AuthContext::isAdministrator()) {
-            return $this->redirect('/admin_login.php');
+            return $this->redirect('/admin/login');
         }
 
         validate_csrf((string) $request->post('csrf_token'));
@@ -204,14 +204,14 @@ final class AdminController extends Controller
             }
         }
 
-        return $this->redirect('/admin_manage_events.php');
+        return $this->redirect('/admin/events');
     }
 
     public function addEvent(Request $request): Response
     {
         Session::start();
         if (!AuthContext::isAdministrator()) {
-            return $this->redirect('/admin_login.php');
+            return $this->redirect('/admin/login');
         }
 
         $db = \App\Model\Database::connection();
@@ -345,7 +345,7 @@ final class AdminController extends Controller
                         $this->eventUploadStorage->purgeMany($replacedUploads);
                     }
 
-                    return $this->redirect('/admin_manage_events.php');
+                    return $this->redirect('/admin/events');
                 } catch (\Throwable $exception) {
                     if ($db->inTransaction()) {
                         $db->rollBack();
@@ -403,17 +403,17 @@ final class AdminController extends Controller
     {
         Session::start();
         if (!AuthContext::isAdministrator()) {
-            return $this->redirect('/admin_login.php');
+            return $this->redirect('/admin/login');
         }
 
         $id = (int) ($request->input('id') ?? $request->query('id'));
         if ($id <= 0) {
-            return $this->redirect('/admin_manage_clubs.php');
+            return $this->redirect('/admin/clubs');
         }
 
         $club = Club::findById($id);
         if (!$club) {
-            return $this->redirect('/admin_manage_clubs.php');
+            return $this->redirect('/admin/clubs');
         }
 
         $error = '';
@@ -461,7 +461,7 @@ final class AdminController extends Controller
                         );
                     }
 
-                    return $this->redirect('/admin_manage_clubs.php');
+                    return $this->redirect('/admin/clubs');
                 }
             } catch (\Throwable $exception) {
                 $this->reportFailure('admin.club_save_failed', $exception, $request);
@@ -491,21 +491,21 @@ final class AdminController extends Controller
         validate_csrf((string) $request->post('csrf_token'));
         Session::destroy();
 
-        return $this->redirect('/admin_login.php');
+        return $this->redirect('/admin/login');
     }
 
     public function editEvent(Request $request): Response
     {
         Session::start();
         if (!AuthContext::isAdministrator()) {
-            return $this->redirect('/admin_login.php');
+            return $this->redirect('/admin/login');
         }
 
         $id = (int) ($request->input('id') ?? $request->query('id'));
         if ($id <= 0) {
-            return $this->redirect('/admin_manage_events.php');
+            return $this->redirect('/admin/events');
         }
 
-        return $this->redirect('/admin_add_event.php?event_id=' . $id);
+        return $this->redirect('/admin/events/add?event_id=' . $id);
     }
 }

@@ -14,7 +14,6 @@ return [
     'nav' => [
         'dashboard' => 'Dashboard',
         'about' => 'About',
-        'home' => 'Home',
         'events' => 'Events',
         'clubs' => 'Clubs',
         'admin' => 'Administration',
@@ -263,7 +262,7 @@ return [
         'type' => [
             'only_precompetitive' => 'Pre-competitive only',
             'only_competitive' => 'Competitive only',
-            'precompetitive_and_competitive' => 'Pre-competitive and competitive',
+            'precompetitive_and_competitive' => 'Pre- and competitive',
         ],
         'submenu' => [
             'list' => 'List',

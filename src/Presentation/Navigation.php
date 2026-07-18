@@ -6,29 +6,34 @@ namespace App\Presentation;
 
 final class Navigation
 {
+    private const STATIC_PATHS = [
+        '/',
+        '/about',
+        '/privacy',
+    ];
     private const EVENT_PATHS = [
-        '/events.php',
-        '/event_details.php',
-        '/event_entries.php',
-        '/event_register.php',
+        '/events',
+        '/events/details',
+        '/events/entries',
+        '/events/register',
     ];
     private const CLUB_PATHS = [
-        '/club_register.php',
-        '/club_login.php',
-        '/club_forgot_password.php',
-        '/club_reset_password.php',
-        '/club_area.php',
-        '/clubs.php',
+        '/clubs/register',
+        '/clubs/login',
+        '/clubs/forgot-password',
+        '/clubs/reset-password',
+        '/clubs/area',
+        '/clubs',
     ];
     private const ADMIN_PATHS = [
-        '/admin_login.php',
-        '/admin.php',
-        '/admin_manage_clubs.php',
-        '/admin_manage_events.php',
-        '/admin_add_event.php',
-        '/admin_edit_club.php',
-        '/admin_edit_event.php',
-        '/admin_logout.php',
+        '/admin/login',
+        '/admin',
+        '/admin/clubs',
+        '/admin/events',
+        '/admin/events/add',
+        '/admin/clubs/edit',
+        '/admin/events/edit',
+        '/admin/logout',
     ];
 
     /** @return array<string, mixed> */
@@ -37,11 +42,11 @@ final class Navigation
         return [
             'currentPath' => $currentPath,
             'clubView' => $clubView,
-            'homeActive' => in_array($currentPath, ['/', '/index.php'], true),
+            'aboutActive' => in_array($currentPath, self::STATIC_PATHS, true),
             'eventsActive' => in_array($currentPath, self::EVENT_PATHS, true),
             'clubsActive' => in_array($currentPath, self::CLUB_PATHS, true),
             'adminActive' => in_array($currentPath, self::ADMIN_PATHS, true),
-            'clubUrl' => base_url($isLoggedIn ? '/club_area.php' : '/club_login.php'),
+            'clubUrl' => base_url($isLoggedIn ? '/clubs/area' : '/clubs/login'),
             'submenuItems' => self::submenu($currentPath, $isAdmin, $isLoggedIn),
         ];
     }
@@ -58,42 +63,41 @@ final class Navigation
 
         if (in_array($currentPath, self::EVENT_PATHS, true)) {
             $items = [
-                ['label' => translate('events.submenu.list'), 'url' => base_url('/events.php'), 'paths' => ['/events.php']],
-                ['label' => translate('events.submenu.details'), 'url' => base_url('/event_details.php'), 'paths' => ['/event_details.php']],
+                ['label' => translate('events.submenu.list'), 'url' => base_url('/events'), 'paths' => ['/events']],
+                ['label' => translate('events.submenu.details'), 'url' => base_url('/events/details'), 'paths' => ['/events/details']],
             ];
-            if ($isAdmin || $isLoggedIn) {
-                $items[] = ['label' => translate('events.submenu.entries'), 'url' => base_url('/event_entries.php'), 'paths' => ['/event_entries.php']];
-            }
-            $items[] = ['label' => translate('events.submenu.registration'), 'url' => base_url('/event_register.php'), 'paths' => ['/event_register.php']];
+            // Entries link is now visible to all visitors
+            $items[] = ['label' => translate('events.submenu.entries'), 'url' => base_url('/events/entries'), 'paths' => ['/events/entries']];
+            $items[] = ['label' => translate('events.submenu.registration'), 'url' => base_url('/events/register'), 'paths' => ['/events/register']];
 
             return $items;
         }
 
         if (in_array($currentPath, self::ADMIN_PATHS, true)) {
             if (!$isAdmin) {
-                return [['label' => translate('nav.login'), 'url' => base_url('/admin_login.php'), 'paths' => ['/admin_login.php']]];
+                return [['label' => translate('nav.login'), 'url' => base_url('/admin/login'), 'paths' => ['/admin/login']]];
             }
 
             return [
-                ['label' => translate('admin.submenu.manage_clubs'), 'url' => base_url('/admin_manage_clubs.php'), 'paths' => ['/admin_manage_clubs.php', '/admin_edit_club.php']],
-                ['label' => translate('admin.submenu.manage_events'), 'url' => base_url('/admin_manage_events.php'), 'paths' => ['/admin_manage_events.php']],
-                ['label' => translate('admin.submenu.add_event'), 'url' => base_url('/admin_add_event.php'), 'paths' => ['/admin_add_event.php']],
-                ['label' => translate('admin.submenu.logout'), 'url' => base_url('/admin_logout.php'), 'paths' => ['/admin_logout.php'], 'method' => 'post'],
+                ['label' => translate('admin.submenu.manage_clubs'), 'url' => base_url('/admin/clubs'), 'paths' => ['/admin/clubs', '/admin/clubs/edit']],
+                ['label' => translate('admin.submenu.manage_events'), 'url' => base_url('/admin/events'), 'paths' => ['/admin/events']],
+                ['label' => translate('admin.submenu.add_event'), 'url' => base_url('/admin/events/add'), 'paths' => ['/admin/events/add']],
+                ['label' => translate('admin.submenu.logout'), 'url' => base_url('/admin/logout'), 'paths' => ['/admin/logout'], 'method' => 'post'],
             ];
         }
 
         $items = [
-            ['label' => translate('club.list'), 'url' => base_url('/clubs.php'), 'paths' => ['/clubs.php']],
+            ['label' => translate('club.list'), 'url' => base_url('/clubs'), 'paths' => ['/clubs']],
         ];
         if (!$isLoggedIn) {
-            $items[] = ['label' => translate('nav.login'), 'url' => base_url('/club_login.php'), 'paths' => ['/club_login.php']];
-            $items[] = ['label' => translate('nav.register'), 'url' => base_url('/club_register.php'), 'paths' => ['/club_register.php']];
+            $items[] = ['label' => translate('nav.login'), 'url' => base_url('/clubs/login'), 'paths' => ['/clubs/login']];
+            $items[] = ['label' => translate('nav.register'), 'url' => base_url('/clubs/register'), 'paths' => ['/clubs/register']];
             return $items;
         }
 
-        $items[] = ['label' => translate('club.area.submenu.manage'), 'url' => base_url('/club_area.php'), 'paths' => ['/club_area.php'], 'query' => ['view' => ['', 'list']]];
-        $items[] = ['label' => translate('club.area.submenu.add'), 'url' => base_url('/club_area.php?view=add'), 'paths' => ['/club_area.php'], 'query' => ['view' => ['add']]];
-        $items[] = ['label' => translate('club.area.submenu.logout'), 'url' => base_url('/club_logout.php'), 'paths' => ['/club_logout.php'], 'method' => 'post'];
+        $items[] = ['label' => translate('club.area.submenu.manage'), 'url' => base_url('/clubs/area'), 'paths' => ['/clubs/area'], 'query' => ['view' => ['', 'list']]];
+        $items[] = ['label' => translate('club.area.submenu.add'), 'url' => base_url('/clubs/area?view=add'), 'paths' => ['/clubs/area'], 'query' => ['view' => ['add']]];
+        $items[] = ['label' => translate('club.area.submenu.logout'), 'url' => base_url('/clubs/logout'), 'paths' => ['/clubs/logout'], 'method' => 'post'];
 
         return $items;
     }

@@ -76,6 +76,6 @@ final class AuthContext
 
     public static function loginPath(string $policy): string
     {
-        return $policy === self::ADMINISTRATOR ? '/admin_login.php' : '/club_login.php';
+        return $policy === self::ADMINISTRATOR ? "/admin/login" : "/clubs/login";
     }
 }
