@@ -91,6 +91,7 @@ $lastNames = ['Santoro', 'Bianchi', 'Rossi', 'Ferrari', 'Roma', 'Leonardo', 'Mar
 $clubPrefixes = ['Judo Club', 'Associazione Judo', 'Aquanera Judo', 'Shobu Kan', 'Seiryu Kan', 'Kiai', 'Spirito', 'Draghi', 'Leonesse', 'Campioni', 'Giovani', 'Speranza', 'Forza', 'Passione', 'Arte', 'Druido', 'Fucina', 'Fiamma', 'Eclisse'];
 $clubSuffixes = ['Cagliari', 'Sassari', 'Nuoro', 'Oristano', 'Olbia', 'Alghero', 'Pula', 'Sestu', 'Villaspeciosa', 'Lanusei', 'Arzana', 'Alghero', 'Porto Torres', 'Iglesias', 'Ortauro', 'Tortolì', 'Tempio', 'Bosa', 'Guspini', 'Serramanna'];
 
+/** @param non-empty-array<mixed> $arr */
 function randomElement(array $arr): mixed
 {
     return $arr[array_rand($arr)];
@@ -125,11 +126,16 @@ function randomBelt(): string
     return randomElement($belts);
 }
 
+/** @return array{province: string, city: string, postal_code: string} */
 function randomSardinianLocation(): array
 {
     $locations = SardinianLocation::all();
-    $province = randomElement(array_keys($locations));
-    $city = randomElement($locations[$province]);
+    $keys = array_keys($locations);
+    assert(count($keys) > 0, 'Sardinian locations must not be empty');
+    $province = randomElement($keys);
+    $cities = $locations[$province];
+    assert(is_array($cities) && count($cities) > 0, 'Cities must not be empty');
+    $city = randomElement($cities);
     $postalCode = SardinianLocation::postalCode($province, $city);
 
     return [
@@ -148,6 +154,7 @@ function randomAffiliation(): ?string
     }
     // Otherwise, pick 1-3 affiliations
     $count = random_int(1, 3);
+    assert(count($options) > 0, 'Affiliation options must not be empty');
     $selected = [];
     for ($i = 0; $i < $count; $i++) {
         $selected[] = randomElement($options);
@@ -155,15 +162,26 @@ function randomAffiliation(): ?string
     return json_encode(array_unique($selected), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 }
 
+/**
+ * @param array<string, list<int>> $ageClassBirthYears
+ * @param array<string, array<string, array{int, int}>> $weightRanges
+ * @param non-empty-array<string> $maleFirstNames
+ * @param non-empty-array<string> $femaleFirstNames
+ * @param non-empty-array<string> $lastNames
+ * @return array{gender: string, first_name: string, last_name: string, date_of_birth: string, weight_kg: float, belt: string}
+ */
 function generateAthlete(array $ageClassBirthYears, array $weightRanges, array $maleFirstNames, array $femaleFirstNames, array $lastNames): array
 {
     $gender = randomElement(['M', 'F']);
     $firstNames = $gender === 'M' ? $maleFirstNames : $femaleFirstNames;
 
     // Pick a random age class and get appropriate birth year
-    $classKey = randomElement(array_keys($ageClassBirthYears));
+    $classKeys = array_keys($ageClassBirthYears);
+    assert(count($classKeys) > 0, 'Age class birth years must not be empty');
+    $classKey = randomElement($classKeys);
     $birthYears = $ageClassBirthYears[$classKey];
-    $birthYear = is_array($birthYears) ? randomElement($birthYears) : $birthYears;
+    assert(is_array($birthYears) && count($birthYears) > 0, 'Birth years must be a non-empty array');
+    $birthYear = randomElement($birthYears);
 
     return [
         'gender' => $gender,
@@ -292,7 +310,6 @@ try {
     echo "Total athletes: {$totalAthletes}\n";
 
     $pdo->commit();
-
 } catch (Exception $e) {
     $pdo->rollBack();
     echo "Error: " . $e->getMessage() . "\n";

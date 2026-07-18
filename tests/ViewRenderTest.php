@@ -63,10 +63,14 @@ final class ViewRenderTest extends TestCase
         $authorized = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => true,
+            'loggedInClubId' => null,
+            'eventExceptions' => [],
         ], $this->layoutData('/events')));
         $anonymous = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => false,
+            'loggedInClubId' => null,
+            'eventExceptions' => [],
         ], $this->layoutData('/events')));
 
         self::assertStringContainsString('/events/details?event=101', $authorized);

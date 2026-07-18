@@ -32,13 +32,13 @@ final class Entry
     {
         $sql = 'SELECT en.id AS entry_id, c.id AS club_id,
                 c.name AS club_name, c.federal_code AS federal_code,
-                CASE WHEN e.closed = 1 THEN en.snapshot_last_name ELSE a.last_name END AS last_name,
-                CASE WHEN e.closed = 1 THEN en.snapshot_first_name ELSE a.first_name END AS first_name,
-                CASE WHEN e.closed = 1 THEN en.snapshot_gender ELSE a.gender END AS gender,
-                CASE WHEN e.closed = 1 THEN en.snapshot_weight_kg ELSE a.weight_kg END AS weight_kg,
-                CASE WHEN e.closed = 1 THEN en.snapshot_belt ELSE a.belt END AS belt,
-                CASE WHEN e.closed = 1 THEN en.snapshot_membership_number ELSE a.membership_number END AS membership_number,
-                CASE WHEN e.closed = 1 THEN en.snapshot_date_of_birth ELSE a.date_of_birth END AS date_of_birth,
+                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_last_name, a.last_name) ELSE a.last_name END AS last_name,
+                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_first_name, a.first_name) ELSE a.first_name END AS first_name,
+                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_gender, a.gender) ELSE a.gender END AS gender,
+                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_weight_kg, a.weight_kg) ELSE a.weight_kg END AS weight_kg,
+                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_belt, a.belt) ELSE a.belt END AS belt,
+                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_membership_number, a.membership_number) ELSE a.membership_number END AS membership_number,
+                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_date_of_birth, a.date_of_birth) ELSE a.date_of_birth END AS date_of_birth,
                 CASE WHEN e.closed = 1 THEN en.snapshot_program ELSE \'\' END AS program,
                 CASE WHEN e.closed = 1 THEN en.snapshot_weight_category ELSE \'\' END AS weight_category,
                 e.name AS event_name, e.date AS event_date, e.closed AS event_closed
@@ -60,7 +60,7 @@ final class Entry
         $stmt->execute($params);
         $rows = $stmt->fetchAll() ?: [];
         foreach ($rows as &$row) {
-            if (empty($row['event_closed'])) {
+            if (empty($row['event_closed']) || empty($row['weight_category'])) {
                 $category = JudoCategory::calculate(
                     (string) ($row['date_of_birth'] ?? ''),
                     (string) ($row['gender'] ?? ''),

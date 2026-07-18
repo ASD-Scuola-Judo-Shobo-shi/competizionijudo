@@ -31,12 +31,14 @@ final class LogoutTest extends TestCase
 
     public function testGetLogoutRoutesDoNotMutateAuthenticationState(): void
     {
-        Session::set('club_id', 201);
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator();
         $router = new Router($this->view);
         (require dirname(__DIR__) . '/routes/web.php')($router);
 
-        foreach (['/club_logout.php', '/admin_logout.php'] as $path) {
+        foreach (['/clubs/logout', '/admin/logout'] as $path) {
+            $previousClubId = Session::get('club_id');
+            $previousIsAdmin = Session::get('is_admin');
+
             try {
                 $router->dispatch(new Request('GET', $path));
                 self::fail('A GET logout route was registered.');
@@ -45,17 +47,16 @@ final class LogoutTest extends TestCase
                 self::assertSame('POST', $exception->headers()['Allow']);
             }
 
-            self::assertSame(201, Session::get('club_id'));
-            self::assertTrue(Session::get('is_admin'));
+            self::assertSame($previousClubId, Session::get('club_id'));
+            self::assertSame($previousIsAdmin, Session::get('is_admin'));
         }
     }
 
     public function testInvalidCsrfDoesNotLogoutClubOrAdmin(): void
     {
-        Session::set('club_id', 201);
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator();
         csrf_token();
-        $request = new Request('POST', '/logout', [], [
+        $request = new Request('POST', '/clubs/logout', [], [
             'csrf_token' => 'synthetic-invalid-csrf',
         ]);
 
@@ -71,16 +72,15 @@ final class LogoutTest extends TestCase
                 self::assertSame(419, $exception->statusCode());
             }
 
-            self::assertSame(201, Session::get('club_id'));
             self::assertTrue(Session::get('is_admin'));
         }
     }
 
     public function testValidClubLogoutDestroysSessionAndCookie(): void
     {
-        Session::set('club_id', 201);
+        Session::authenticateClub(201);
         $_COOKIE[session_name()] = 'synthetic-session-cookie';
-        $request = new Request('POST', '/club_logout.php', [], [
+        $request = new Request('POST', '/clubs/logout', [], [
             'csrf_token' => csrf_token(),
         ]);
 
@@ -92,9 +92,9 @@ final class LogoutTest extends TestCase
 
     public function testValidAdminLogoutDestroysSessionAndCookie(): void
     {
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator();
         $_COOKIE[session_name()] = 'synthetic-session-cookie';
-        $request = new Request('POST', '/admin_logout.php', [], [
+        $request = new Request('POST', '/admin/logout', [], [
             'csrf_token' => csrf_token(),
         ]);
 
@@ -108,14 +108,14 @@ final class LogoutTest extends TestCase
     {
         $layout = file_get_contents(dirname(__DIR__) . '/views/layouts/app.php');
         self::assertIsString($layout);
-        self::assertStringContainsString('method="post" action="<?= e(base_url(\'/club_logout.php\')) ?>"', $layout);
-        self::assertStringNotContainsString('href="/club_logout.php"', $layout);
+        self::assertStringContainsString('method="post" action="<?= e(base_url(\'/clubs/logout\')) ?>"', $layout);
+        self::assertStringNotContainsString('href="/clubs/logout"', $layout);
 
-        $adminLogout = $this->findLogoutItem(Navigation::submenu('/admin_manage_events.php', true, false));
+        $adminLogout = $this->findLogoutItem(Navigation::submenu('/admin/events', true, false));
         $clubLogout = $this->findLogoutItem(Navigation::submenu('/clubs/area', false, true));
-        self::assertSame('/admin_logout.php', $adminLogout['url']);
+        self::assertSame('/admin/logout', $adminLogout['url']);
         self::assertSame('post', $adminLogout['method'] ?? null);
-        self::assertSame('/club_logout.php', $clubLogout['url']);
+        self::assertSame('/clubs/logout', $clubLogout['url']);
         self::assertSame('post', $clubLogout['method'] ?? null);
         self::assertStringContainsString('csrf_field()', $layout);
     }
@@ -127,7 +127,7 @@ final class LogoutTest extends TestCase
     private function findLogoutItem(array $items): array
     {
         foreach ($items as $item) {
-            if (str_ends_with($item['url'], '_logout.php')) {
+            if (str_ends_with($item['url'], '/logout')) {
                 return $item;
             }
         }

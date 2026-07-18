@@ -72,11 +72,11 @@
                     'seniors' => '#4a148c',
                     'masters' => '#311b92',
                 ];
-                
+
                 // Calculate category pie chart data (by age class only)
                 $categoryTotal = array_sum($categoryCounts);
                 $categorySegments = [];
-                
+
                 // Sort categorySegments by age class
                 $sortedCategoryCounts = [];
                 foreach ($categoryCounts as $category => $count) {
@@ -91,10 +91,10 @@
                     }
                     $sortedCategoryCounts[] = ['category' => $category, 'count' => $count, 'ageMin' => $ageMin, 'ageClassKey' => $ageClassKey];
                 }
-                usort($sortedCategoryCounts, function($a, $b) {
+                usort($sortedCategoryCounts, function ($a, $b) {
                     return $a['ageMin'] <=> $b['ageMin'];
                 });
-                
+
                 foreach ($sortedCategoryCounts as $item) {
                     $percentage = ($categoryTotal > 0) ? ($item['count'] / $categoryTotal) * 100 : 0;
                     $color = $ageClassColors[$item['ageClassKey'] ?? ''] ?? '#b39ddb';
@@ -132,7 +132,7 @@
                     '96-100kg' => '#520004',
                     '100+kg' => '#400000',
                 ];
-                
+
                 // Sort weight segments by lower bound
                 $weightSortOrder = [
                     'under-12kg' => 0,
@@ -142,13 +142,13 @@
                     '72-76kg' => 16, '76-80kg' => 17, '80-84kg' => 18, '84-88kg' => 19, '88-92kg' => 20,
                     '92-96kg' => 21, '96-100kg' => 22, '100+kg' => 23,
                 ];
-                
+
                 $weightGroupKeys = array_keys($weightSortOrder);
                 foreach ($weightGroupKeys as $weightGroup) {
                     $count = $weightCounts[$weightGroup] ?? 0;
                     if ($count > 0) {
                         $percentage = ($weightTotal > 0) ? ($count / $weightTotal) * 100 : 0;
-                        $weightSegments[] = ['label' => $weightGroup, 'count' => $count, 'percentage' => $percentage, 'color' => $weightColors[$weightGroup] ?? '#b39ddb'];
+                         $weightSegments[] = ['label' => $weightGroup, 'count' => $count, 'percentage' => $percentage, 'color' => $weightColors[$weightGroup]];
                     }
                 }
                 // Handle unspecified/empty weights that may not be in the sort order
@@ -165,10 +165,10 @@
                 // Calculate belt pie chart data
                 $beltTotal = array_sum($beltCounts);
                 $beltSegments = [];
-                
+
                 foreach ($beltCounts as $belt => $count) {
                     $percentage = ($beltTotal > 0) ? ($count / $beltTotal) * 100 : 0;
-                    $beltEnum = \App\Model\Belt::tryFromValue($belt ?? '');
+                    $beltEnum = \App\Model\Belt::tryFromValue($belt);
                     $color = '#6c757d';
                     if ($beltEnum !== null) {
                         $components = $beltEnum->components();
@@ -178,7 +178,7 @@
                 }
                 // Sort beltSegments by belt rank (enum order)
                 $beltRankOrder = array_flip(array_map(fn($case) => $case->value, \App\Model\Belt::cases()));
-                usort($beltSegments, function($a, $b) use ($beltRankOrder) {
+                usort($beltSegments, function ($a, $b) use ($beltRankOrder) {
                     $aRank = $beltRankOrder[$a['label']] ?? PHP_INT_MAX;
                     $bRank = $beltRankOrder[$b['label']] ?? PHP_INT_MAX;
                     return $aRank <=> $bRank;
@@ -195,7 +195,7 @@
                 }
                 // Sort genderSegments: Female first, then Male
                 $genderOrder = ['F' => 0, 'M' => 1];
-                usort($genderSegments, function($a, $b) use ($genderOrder) {
+                usort($genderSegments, function ($a, $b) use ($genderOrder) {
                     $aOrder = $genderOrder[$a['label']] ?? PHP_INT_MAX;
                     $bOrder = $genderOrder[$b['label']] ?? PHP_INT_MAX;
                     return $aOrder <=> $bOrder;
@@ -206,10 +206,18 @@
                 <div style="display: flex; flex-direction: column; margin-bottom: 1rem; width: 100%;">
                     <?php
                     $chartCount = 0;
-                    if (!empty($categorySegments)) $chartCount++;
-                    if (!empty($weightSegments)) $chartCount++;
-                    if (!empty($beltSegments)) $chartCount++;
-                    if (!empty($genderSegments)) $chartCount++;
+                    if (!empty($categorySegments)) {
+                        $chartCount++;
+                    }
+                    if (!empty($weightSegments)) {
+                        $chartCount++;
+                    }
+                    if (!empty($beltSegments)) {
+                        $chartCount++;
+                    }
+                    if (!empty($genderSegments)) {
+                        $chartCount++;
+                    }
                     $chartWidth = $chartCount > 0 ? (100 / ($chartCount + 1)) : 100;
                     ?>
                     <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px; margin-bottom: 1rem; width: 100%;">
@@ -217,7 +225,7 @@
                         <svg viewBox="0 0 100 100" style="width: <?= e((string) $chartWidth) ?>%; max-width: 240px; height: auto; aspect-ratio: 1 / 1;">
                             <?php $startAngle = 0; ?>
                             <?php foreach ($categorySegments as $segment) : ?>
-                                <?php 
+                                <?php
                                 $endAngle = $startAngle + ($segment['percentage'] / 100) * 360;
                                 $largeArc = ($endAngle - $startAngle) > 180 ? 1 : 0;
                                 $startX = 50 + 40 * cos(deg2rad($startAngle - 90));
@@ -235,7 +243,7 @@
                         <svg viewBox="0 0 100 100" style="width: <?= e((string) $chartWidth) ?>%; max-width: 240px; height: auto; aspect-ratio: 1 / 1;">
                             <?php $startAngle = 0; ?>
                             <?php foreach ($weightSegments as $segment) : ?>
-                                <?php 
+                                <?php
                                 $endAngle = $startAngle + ($segment['percentage'] / 100) * 360;
                                 $largeArc = ($endAngle - $startAngle) > 180 ? 1 : 0;
                                 $startX = 50 + 40 * cos(deg2rad($startAngle - 90));
@@ -253,7 +261,7 @@
                         <svg viewBox="0 0 100 100" style="width: <?= e((string) $chartWidth) ?>%; max-width: 240px; height: auto; aspect-ratio: 1 / 1;">
                             <?php $startAngle = 0; ?>
                             <?php foreach ($beltSegments as $segment) : ?>
-                                <?php 
+                                <?php
                                 $endAngle = $startAngle + ($segment['percentage'] / 100) * 360;
                                 $largeArc = ($endAngle - $startAngle) > 180 ? 1 : 0;
                                 $startX = 50 + 40 * cos(deg2rad($startAngle - 90));
@@ -271,7 +279,7 @@
                         <svg viewBox="0 0 100 100" style="width: <?= e((string) $chartWidth) ?>%; max-width: 240px; height: auto; aspect-ratio: 1 / 1;">
                             <?php $startAngle = 0; ?>
                             <?php foreach ($genderSegments as $segment) : ?>
-                                <?php 
+                                <?php
                                 $endAngle = $startAngle + ($segment['percentage'] / 100) * 360;
                                 $largeArc = ($endAngle - $startAngle) > 180 ? 1 : 0;
                                 $startX = 50 + 40 * cos(deg2rad($startAngle - 90));
@@ -319,7 +327,7 @@
                             <?php foreach ($beltSegments as $segment) : ?>
                                 <span style="display: flex; align-items: center; gap: 4px;">
                                     <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #ccc; background: <?= e($segment['color']) ?>; border-radius: 2px;"></span>
-                                    <?= e(\App\Model\Belt::tryFromValue($segment['label'] ?? '')?->label(\App\Localization::getLocale()) ?? ($segment['label'] ?? '')) ?>: <?= e((string) $segment['count']) ?>
+                                    <?= e(\App\Model\Belt::tryFromValue($segment['label'])?->label(\App\Localization::getLocale()) ?? ($segment['label'])) ?>: <?= e((string) $segment['count']) ?>
                                 </span>
                             <?php endforeach; ?>
                         </div>
@@ -365,7 +373,7 @@
                     <th><?= e(__('events.entries_club_breakdown')) ?></th>
                 </tr>
                 <?php foreach ($clubs as $i => $club) : ?>
-                    <?php 
+                    <?php
                     $clubTotal = $clubAthleteCounts[$club['id']] ?? 0;
                     $clubCats = $clubCategoryCounts[$club['id']] ?? [];
                     $clubWeights = $clubWeightCounts[$club['id']] ?? [];
@@ -374,7 +382,9 @@
                     ?>
                     <tr<?= $loggedInClubId !== null && (int) $club['id'] === $loggedInClubId ? ' class="club-row--current"' : '' ?>>
                         <td><?= (int) $i + 1 ?></td>
-                        <td><strong><?= e($club['club_name']) ?></strong><?php if ($loggedInClubId !== null && (int) $club['id'] === $loggedInClubId) : ?> <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span><?php endif; ?></td>
+                        <td><strong><?= e($club['club_name']) ?></strong><?php if ($loggedInClubId !== null && (int) $club['id'] === $loggedInClubId) :
+                            ?> <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span><?php
+                                    endif; ?></td>
                         <td><?= e($club['federal_code']) ?></td>
                         <td><?= e((string) $clubTotal) ?></td>
                         <td>
@@ -383,28 +393,28 @@
                                     <div style="display: flex; height: 6px;">
                                         <?php foreach ($categorySegments ?? [] as $segment) : ?>
                                             <?php $count = $clubCats[$segment['label']] ?? 0; ?>
-                                            <?php $width = ($clubTotal > 0) ? ($count / $clubTotal) * 100 : 0; ?>
+                                            <?php $width = ($count / $clubTotal) * 100; ?>
                                             <div title="<?= e($segment['label'] . ': ' . $count) ?>" style="background: <?= e($segment['color']) ?>; width: <?= e((string) $width) ?>%; height: 100%;"></div>
                                         <?php endforeach; ?>
                                     </div>
                                     <div style="display: flex; height: 6px;">
                                         <?php foreach ($weightSegments ?? [] as $segment) : ?>
                                             <?php $count = $clubWeights[$segment['label']] ?? 0; ?>
-                                            <?php $width = ($clubTotal > 0) ? ($count / $clubTotal) * 100 : 0; ?>
+                                            <?php $width = ($count / $clubTotal) * 100; ?>
                                             <div title="<?= e($segment['label'] . ': ' . $count) ?>" style="background: <?= e($segment['color']) ?>; width: <?= e((string) $width) ?>%; height: 100%;"></div>
                                         <?php endforeach; ?>
                                     </div>
                                     <div style="display: flex; height: 6px;">
                                         <?php foreach ($beltSegments ?? [] as $segment) : ?>
                                             <?php $count = $clubBelts[$segment['label']] ?? 0; ?>
-                                            <?php $width = ($clubTotal > 0) ? ($count / $clubTotal) * 100 : 0; ?>
-                                            <div title="<?= e(\App\Model\Belt::tryFromValue($segment['label'] ?? '')?->label(\App\Localization::getLocale()) ?? ($segment['label'] ?? '') . ': ' . $count) ?>" style="background: <?= e($segment['color']) ?>; border: 1px solid #ccc; width: <?= e((string) $width) ?>%; height: 100%;"></div>
+                                            <?php $width = ($count / $clubTotal) * 100; ?>
+                                            <div title="<?= e(\App\Model\Belt::tryFromValue($segment['label'])?->label(\App\Localization::getLocale()) ?? ($segment['label']) . ': ' . $count) ?>" style="background: <?= e($segment['color']) ?>; border: 1px solid #ccc; width: <?= e((string) $width) ?>%; height: 100%;"></div>
                                         <?php endforeach; ?>
                                     </div>
                                     <div style="display: flex; height: 6px;">
                                         <?php foreach ($genderSegments ?? [] as $segment) : ?>
                                             <?php $count = $clubGenders[$segment['label']] ?? 0; ?>
-                                            <?php $width = ($clubTotal > 0) ? ($count / $clubTotal) * 100 : 0; ?>
+                                            <?php $width = ($count / $clubTotal) * 100; ?>
                                             <div title="<?= e(__('gender.' . $segment['label']) . ': ' . $count) ?>" style="background: <?= e($segment['color']) ?>; width: <?= e((string) $width) ?>%; height: 100%;"></div>
                                         <?php endforeach; ?>
                                     </div>
@@ -417,7 +427,7 @@
         <?php endif; ?>
     </div>
 
-    <?php if ($event->closed) : ?>
+    <?php if ($event->closed && ($loggedInClubId === null || !$hasRegistrationException)) : ?>
     <div class="card">
         <h2><?= e(__('events.entries_athletes_heading')) ?></h2>
         <?php if (empty($grouped)) : ?>
@@ -430,7 +440,7 @@
                 $parts = explode(' | ', $key, 2);
                 $category = $parts[0] ?? '';
                 $weight = $parts[1] ?? '';
-                
+
                 // Get ageMin for category sorting
                 $ageMin = PHP_INT_MAX;
                 foreach (\App\Model\AgeClass::all() as $ac) {
@@ -439,10 +449,10 @@
                         break;
                     }
                 }
-                
+
                 $sortedKeys[] = ['key' => $key, 'category' => $category, 'weight' => $weight, 'ageMin' => $ageMin];
             }
-            usort($sortedKeys, function($a, $b) {
+            usort($sortedKeys, function ($a, $b) {
                 if ($a['ageMin'] !== $b['ageMin']) {
                     return $a['ageMin'] <=> $b['ageMin'];
                 }
@@ -460,7 +470,7 @@
                     <th><?= e(__('club.area.belt')) ?></th>
                 </tr>
                 <?php foreach ($sortedKeys as $groupInfo) : ?>
-                    <?php 
+                    <?php
                     $groupKey = $groupInfo['key'];
                     $athletes = $grouped[$groupKey];
                     $parts = explode(' | ', $groupKey, 2);
@@ -468,14 +478,16 @@
                     $weightLabel = $parts[1] ?? '';
                     ?>
                     <?php foreach ($athletes as $athlete) : ?>
-                        <?php $athleteClubId = (int) ($athlete['club_id'] ?? 0); ?>
+                        <?php $athleteClubId = (int) $athlete['club_id']; ?>
                         <tr<?= $loggedInClubId !== null && $athleteClubId === $loggedInClubId ? ' class="club-row--current"' : '' ?>>
                             <td><?= e($categoryLabel) ?></td>
                             <td><?= e($weightLabel) ?></td>
                             <td><?= e($athlete['last_name'] . ' ' . $athlete['first_name']) ?></td>
-                            <td><?= e($athlete['club_name'] ?? '') ?><?php if ($loggedInClubId !== null && $athleteClubId === $loggedInClubId) : ?> <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span><?php endif; ?></td>
-                            <td><?= e(__('gender.' . ($athlete['gender'] ?? ''))) ?></td>
-                            <td><?= e(\App\Model\Belt::tryFromValue($athlete['belt'] ?? '')?->label(\App\Localization::getLocale()) ?? ($athlete['belt'] ?? '')) ?></td>
+                            <td><?= e($athlete['club_name']) ?><?php if ($loggedInClubId !== null && $athleteClubId === $loggedInClubId) :
+                                ?> <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span><?php
+                                endif; ?></td>
+                            <td><?= e(__('gender.' . $athlete['gender'])) ?></td>
+                            <td><?= e(\App\Model\Belt::tryFromValue($athlete['belt'])?->label(\App\Localization::getLocale()) ?? $athlete['belt']) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endforeach; ?>
@@ -483,10 +495,6 @@
         <?php endif; ?>
     </div>
     <?php endif; ?>
-<?php endif; ?>
-
-<?php if ($event === null) : ?>
-    <p><?= e(__('events.select_event')) ?></p>
 <?php endif; ?>
 <div class="card">
     <h3><?= e($event !== null ? __('events.upcoming_events') : __('events.upcoming_heading')) ?></h3>

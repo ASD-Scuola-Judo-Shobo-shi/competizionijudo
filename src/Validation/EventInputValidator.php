@@ -87,7 +87,12 @@ final class EventInputValidator
             return null;
         }
 
-        $mime = (new finfo(FILEINFO_MIME_TYPE))->file((string) ($upload['tmp_name'] ?? ''));
+        $tmpName = (string) ($upload['tmp_name'] ?? '');
+        if ($tmpName === '' || !is_file($tmpName)) {
+            return null;
+        }
+
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmpName);
 
         return match ($mime) {
             'application/pdf' => 'pdf',

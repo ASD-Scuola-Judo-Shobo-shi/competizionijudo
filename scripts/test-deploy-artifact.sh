@@ -31,15 +31,15 @@ for route in \
   /about \
   /privacy \
   /health \
-  /club_register.php \
-  /club_login.php \
-  /club_forgot_password.php \
-  /club_reset_password.php \
-  /clubs.php \
-  /club_athletes_export.csv \
-  /events.php \
-  /event_details.php \
-  /event_entries.php \
+  /clubs/register \
+  /clubs/login \
+  /clubs/forgot-password \
+  /clubs/reset-password \
+  /clubs \
+  /clubs/athletes-export \
+  /events \
+  /events/details \
+  /events/entries \
   /events/register \
   /language/switch; do
   if ! grep -Fq "\$router->get('${route}'" "$ARTIFACT_DIR/routes/web.php"; then
@@ -49,7 +49,7 @@ for route in \
 done
 
 for route in \
-  /club_athletes_import.php; do
+  /clubs/athletes-import; do
   if ! grep -Fq "\$router->post('${route}'" "$ARTIFACT_DIR/routes/web.php"; then
     echo "Missing expected protected POST route: $route" >&2
     exit 1
@@ -165,7 +165,7 @@ boot_and_request() {
   stop_server "$server_pid"
 }
 
-boot_and_request it "$BASE_PORT" 'Una compatta applicazione PHP MVC' 'Origine dei dati'
-boot_and_request en "$((BASE_PORT + 1))" 'A compact PHP MVC application' 'Source of the data'
+boot_and_request it "$BASE_PORT" 'COMPETIZIONI JUDO' 'Origine dei dati'
+boot_and_request en "$((BASE_PORT + 1))" 'JUDO EVENTS' 'Source of the data'
 
 echo "Deployment artifact boot verified for Italian and English."

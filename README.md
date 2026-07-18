@@ -107,13 +107,18 @@ the Composer security audit. `composer test:migrations` needs an isolated MySQL
 test account. Copy `dev.env.example` to `dev.env`, fill the local MySQL
 administrator and test-account values, then run `composer test:migrations:prepare`
 once to create the dedicated test user and grants. `composer test:migrations`
-and `composer ci` read `dev.env` when present. `composer ci` also builds and
-verifies the exact production-only artifact. The build includes only runtime
+and `composer ci` read `dev.env` when present. `composer ci` also validates the
+workflow definitions, enforces the changed-source coverage policy, and builds
+and verifies the exact production-only artifact. The build includes only runtime
 directories and access-control marker files, never `.env`, tests, development
 dependencies, logs, or uploaded files.
 
-The pre-commit hook validates Composer metadata and staged PHP syntax. The
-pre-push hook runs the GitHub Actions guardrail tests first, then `composer ci`.
+The pre-commit hook validates staged Composer metadata and PHP syntax only when
+those files are staged. The pre-push hook runs `composer ci`; it reuses the
+installed dependencies instead of reinstalling them. Run `composer install`
+after changing `composer.lock` or when the hook reports that dependencies are
+missing. Workflow validation uses Go to install the pinned `actionlint` version
+once, then reuses that binary.
 
 Project remediation evidence and sequencing live in
 [audit.md](docs/audit.md), [roadmap.md](docs/roadmap.md), and

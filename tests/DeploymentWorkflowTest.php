@@ -8,47 +8,40 @@ use PHPUnit\Framework\TestCase;
 
 final class DeploymentWorkflowTest extends TestCase
 {
-    public function testEveryExternalWorkflowActionHasAReviewedImmutableLock(): void
+    public function testEveryExternalWorkflowActionIsPinnedToAnImmutableCommit(): void
     {
-        $lock = json_decode(
-            (string) file_get_contents(dirname(__DIR__) . '/config/workflow-action-lock.json'),
-            true,
-            512,
-            JSON_THROW_ON_ERROR
-        );
-        self::assertIsArray($lock);
-
         foreach (['ci.yml', 'deploy.yml'] as $workflowName) {
             $workflow = $this->workflow($workflowName);
 
-            preg_match_all('/^\s*uses:\s*([^@\s]+@(v\d+(?:\.\d+\.\d+)?))\b/m', $workflow, $matches);
+            preg_match_all('/^\s*uses:\s*([^@\s]+)@([^\s#]+)(?:\s+#\s*(\S+))?\s*$/m', $workflow, $matches);
 
-            foreach ($matches[1] as $reference) {
-                self::assertArrayHasKey(
-                    $reference,
-                    $lock,
-                    "Workflow '{$workflowName}' action '{$reference}' has no reviewed immutable lock."
+            foreach ($matches[1] as $index => $action) {
+                if (str_starts_with($action, './')) {
+                    continue;
+                }
+
+                self::assertMatchesRegularExpression(
+                    '/\A[a-f0-9]{40}\z/i',
+                    $matches[2][$index],
+                    "Workflow '{$workflowName}' action '{$action}' is not pinned to a full commit SHA."
                 );
-                self::assertMatchesRegularExpression('/\A[a-f0-9]{40}\z/i', (string) $lock[$reference]);
+                self::assertNotSame(
+                    '',
+                    $matches[3][$index],
+                    "Workflow '{$workflowName}' action '{$action}' must retain its reviewed version comment."
+                );
             }
         }
     }
 
-    public function testNamedWorkflowActionsHaveReviewedImmutableLockEntries(): void
+    public function testNamedWorkflowActionsRetainTheirReviewedVersionComments(): void
     {
-        $lock = json_decode(
-            (string) file_get_contents(dirname(__DIR__) . '/config/workflow-action-lock.json'),
-            true,
-            512,
-            JSON_THROW_ON_ERROR
-        );
-        self::assertIsArray($lock);
-
         foreach (['ci.yml', 'deploy.yml'] as $workflowName) {
-            preg_match_all('/^\s*uses:\s*([^@\s]+@(v\d+(?:\.\d+\.\d+)?))\b/m', $this->workflow($workflowName), $matches);
-            foreach ($matches[1] as $reference) {
-                self::assertArrayHasKey($reference, $lock);
-                self::assertMatchesRegularExpression('/\A[a-f0-9]{40}\z/i', (string) $lock[$reference]);
+            preg_match_all('/^\s*uses:\s*([^@\s]+)@[a-f0-9]{40}\s+#\s*(v\d+)\s*$/mi', $this->workflow($workflowName), $matches);
+            self::assertNotEmpty($matches[1]);
+
+            foreach ($matches[2] as $version) {
+                self::assertMatchesRegularExpression('/\Av\d+\z/', $version);
             }
         }
     }

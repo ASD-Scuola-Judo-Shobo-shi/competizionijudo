@@ -143,10 +143,10 @@ final class EventController extends Controller
             if (!is_array($athleteIds)) {
                 $athleteIds = [$athleteIds];
             }
-            
+
             // Get currently registered athletes for comparison
             $currentlyRegistered = Entry::findByClubEvent($eventId, $clubId);
-            
+
             // Validate and filter athlete IDs - count invalid ones as rejected
             $validAthleteIds = [];
             $rejectedCount = 0;
@@ -157,7 +157,7 @@ final class EventController extends Controller
                     $rejectedCount++;
                 }
             }
-            
+
             // Determine which athletes to register and which to unregister
             $toRegister = array_values(array_diff($validAthleteIds, $currentlyRegistered));
             $toUnregister = array_values(array_diff($currentlyRegistered, $validAthleteIds));
@@ -201,7 +201,7 @@ final class EventController extends Controller
                     $this->reportFailure('event.registration_failed', $exception, $request);
                 }
             }
-            
+
             // Count athletes that were already registered and still checked (no change)
             $stillChecked = array_intersect($currentlyRegistered, $validAthleteIds);
             $feedback['already_registered'] += count($stillChecked);
@@ -304,7 +304,7 @@ final class EventController extends Controller
         $clubWeightCounts = [];
         $clubBeltCounts = [];
         $clubGenderCounts = [];
-        
+
         foreach ($rows as $row) {
             $birthDate = $row['date_of_birth'] ?? '';
             $eventDate = $row['event_date'] ?? '';
@@ -337,7 +337,7 @@ final class EventController extends Controller
             $weightCounts[$weightGroup] = ($weightCounts[$weightGroup] ?? 0) + 1;
             $beltCounts[$belt] = ($beltCounts[$belt] ?? 0) + 1;
             $genderCounts[$gender] = ($genderCounts[$gender] ?? 0) + 1;
-            
+
             if ($rowClubId > 0) {
                 $clubCategoryCounts[$rowClubId][$category] = ($clubCategoryCounts[$rowClubId][$category] ?? 0) + 1;
                 $clubWeightCounts[$rowClubId][$weightGroup] = ($clubWeightCounts[$rowClubId][$weightGroup] ?? 0) + 1;
@@ -409,15 +409,15 @@ final class EventController extends Controller
     private static function groupWeight(string $weight): string
     {
         $weight = trim($weight, ' kg');
-        
+
         // Strip leading -/+ signs used in weight categories (e.g., "-16 kg", "+100 kg")
         $weight = ltrim($weight, '-+');
-        
+
         if (!is_numeric($weight)) {
             return 'unspecified';
         }
         $w = (int) $weight;
-        
+
         // Group from 12kg in 4kg increments
         // Weights 12-15 go to 12-16kg, 16-19 go to 16-20kg, etc.
         $lowerBound = 12;
@@ -425,17 +425,17 @@ final class EventController extends Controller
             $lowerBound += 4;
         }
         $upperBound = $lowerBound + 4;
-        
+
         // Handle weights below 12kg
         if ($w < 12) {
             return 'under-12kg';
         }
-        
+
         // Handle above 100kg
         if ($lowerBound >= 100) {
             return '100+kg';
         }
-        
+
         return $lowerBound . '-' . $upperBound . 'kg';
     }
 

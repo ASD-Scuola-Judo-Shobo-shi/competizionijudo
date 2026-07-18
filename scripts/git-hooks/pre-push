@@ -1,25 +1,14 @@
 #!/usr/bin/env sh
 set -eu
 
-export COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-$(pwd)/.cache/composer}"
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+export COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-$ROOT_DIR/.cache/composer}"
 
-echo "pre-push: verifying GitHub Actions action versions"
-php scripts/check-workflow-action-lock.php
-
-echo "pre-push: installing GitHub Actions workflow linter"
-go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-
-echo "pre-push: linting GitHub Actions workflows"
-actionlint_path="$(go env GOPATH)/bin/actionlint"
-"$actionlint_path"
-
-echo "pre-push: installing Composer dependencies"
-composer install --prefer-dist --no-interaction --no-progress
+if [ ! -f vendor/autoload.php ]; then
+  echo "pre-push: Composer dependencies are missing; run composer install first." >&2
+  exit 1
+fi
 
 echo "pre-push: running full local CI"
 composer ci
-
-echo "pre-push: enforcing changed-code coverage"
-mkdir -p build
-php vendor/bin/phpunit --coverage-clover build/coverage.xml
-php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70

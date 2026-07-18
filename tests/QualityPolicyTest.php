@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 final class QualityPolicyTest extends TestCase
 {
-    public function testComposerCiIncludesSchemaQualityArtifactAndBootGates(): void
+    public function testComposerCiIsTheCompleteSchemaQualityCoverageArtifactAndBootGate(): void
     {
         $composer = json_decode(
             (string) file_get_contents(dirname(__DIR__) . '/composer.json'),
@@ -19,12 +19,26 @@ final class QualityPolicyTest extends TestCase
 
         self::assertSame(
             [
+                '@workflow:check',
                 '@test:migrations',
-                '@check',
+                '@quality',
+                '@test:coverage:changed',
                 'bash scripts/build-deploy.sh',
                 'bash scripts/test-deploy-artifact.sh build/deploy',
             ],
             $composer['scripts']['ci']
+        );
+        self::assertSame(['@quality', '@test'], $composer['scripts']['check']);
+        self::assertSame(
+            ['@metadata', '@syntax', '@cs', '@analyse', '@security:audit'],
+            $composer['scripts']['quality']
+        );
+        self::assertSame(
+            [
+                '@test:coverage',
+                'php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70',
+            ],
+            $composer['scripts']['test:coverage:changed']
         );
         self::assertSame(
             'git config core.hooksPath scripts/git-hooks',
@@ -39,13 +53,19 @@ final class QualityPolicyTest extends TestCase
     public function testCiEnforcesChangedSourceCoverageAndDeployReusesCi(): void
     {
         $ci = (string) file_get_contents(dirname(__DIR__) . '/.github/workflows/ci.yml');
-        self::assertStringContainsString('--coverage-clover build/coverage.xml', $ci);
+        $composer = (string) file_get_contents(dirname(__DIR__) . '/composer.json');
+
+        self::assertStringContainsString('"@test:coverage:changed"', $composer);
+        self::assertStringContainsString('--coverage-clover build/coverage.xml', $composer);
+        self::assertStringContainsString('php scripts/check-changed-coverage.php build/coverage.xml', $composer);
+        self::assertStringContainsString('run: composer ci', $ci);
+        self::assertStringContainsString('fetch-depth: 0', $ci);
         self::assertStringContainsString(
-            'php scripts/check-changed-coverage.php build/coverage.xml',
+            'COMPOSER_CACHE_DIR: ${{ github.workspace }}/.cache/composer',
             $ci
         );
-        self::assertStringContainsString(' 70', $ci);
-        self::assertStringContainsString('fetch-depth: 0', $ci);
+        self::assertSame(2, substr_count($ci, 'path: ${{ env.COMPOSER_CACHE_DIR }}/files'));
+        self::assertStringNotContainsString('composer install --no-dev --', $ci);
 
         $deploy = (string) file_get_contents(dirname(__DIR__) . '/.github/workflows/deploy.yml');
         self::assertStringContainsString('uses: ./.github/workflows/ci.yml', $deploy);
@@ -104,36 +124,45 @@ final class QualityPolicyTest extends TestCase
         );
     }
 
-    public function testCiLocksAndLintsWorkflowDefinitions(): void
+    public function testCiPinsAndLintsWorkflowDefinitions(): void
     {
         $workflow = (string) file_get_contents(dirname(__DIR__) . '/.github/workflows/ci.yml');
+        $workflowCheck = (string) file_get_contents(dirname(__DIR__) . '/scripts/check-workflows.sh');
 
-        self::assertStringContainsString('php scripts/check-workflow-action-lock.php', $workflow);
         self::assertStringContainsString(
-            'go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7',
+            'uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4',
             $workflow
         );
-        self::assertStringContainsString('actionlint_path="$(go env GOPATH)/bin/actionlint"', $workflow);
-        self::assertStringContainsString('"$actionlint_path"', $workflow);
+        self::assertStringContainsString(
+            'uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2',
+            $workflow
+        );
+        self::assertStringContainsString('ACTIONLINT_VERSION="1.7.7"', $workflowCheck);
+        self::assertStringContainsString('go install', $workflowCheck);
+        self::assertStringContainsString('"$actionlint_path"', $workflowCheck);
     }
 
-    public function testPrePushMirrorsTheExecutableGithubActionsQualityGates(): void
+    public function testPrePushDelegatesToTheExecutableGithubActionsQualityGate(): void
     {
         $hook = (string) file_get_contents(dirname(__DIR__) . '/scripts/git-hooks/pre-push');
 
-        foreach (
-            [
-                'php scripts/check-workflow-action-lock.php',
-                'go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7',
-                'actionlint_path="$(go env GOPATH)/bin/actionlint"',
-                '"$actionlint_path"',
-                'composer install --prefer-dist --no-interaction --no-progress',
-                'composer ci',
-                'php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70',
-            ] as $command
-        ) {
-            self::assertStringContainsString($command, $hook);
-        }
+        self::assertStringContainsString('git rev-parse --show-toplevel', $hook);
+        self::assertStringContainsString('vendor/autoload.php', $hook);
+        self::assertStringContainsString('composer ci', $hook);
+        self::assertStringNotContainsString('composer install --', $hook);
+    }
+
+    public function testPreCommitChecksOnlyRelevantStagedFilesAcrossQualityBoundaries(): void
+    {
+        $hook = (string) file_get_contents(dirname(__DIR__) . '/scripts/git-hooks/pre-commit');
+
+        self::assertStringContainsString('git rev-parse --show-toplevel', $hook);
+        self::assertStringContainsString("grep -Fx 'composer.json'", $hook);
+        self::assertStringContainsString(
+            '^(config|lang|public|routes|scripts|src|tests|views)/.*\\.php$',
+            $hook
+        );
+        self::assertStringContainsString('if [ -z "$staged_files" ]; then', $hook);
     }
 
     public function testTemplatesContainNoEditorInstructionArtifacts(): void

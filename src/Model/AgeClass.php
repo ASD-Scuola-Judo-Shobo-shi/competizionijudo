@@ -31,7 +31,8 @@ final class AgeClass
         public readonly ?int $ageBelow,
         public readonly int $ageMin,
         public readonly ?int $ageMax,
-    ) {}
+    ) {
+    }
 
     /**
      * Returns all age classes definition in the given locale.

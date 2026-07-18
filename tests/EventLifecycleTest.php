@@ -15,6 +15,7 @@ use App\Localization;
 use App\Model\Database;
 use App\Model\EntryRegistrationRepository;
 use App\Model\EntryRegistrationResult;
+use App\Model\EventRegistrationException;
 use App\Model\Event;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -62,7 +63,7 @@ final class EventLifecycleTest extends TestCase
 
         self::assertNull(Event::findPublishedById(101));
 
-        $request = new Request('GET', '/event_details.php?event=101', ['event' => '101']);
+        $request = new Request('GET', '/events/details?event=101', ['event' => '101']);
         $response = (new EventController($this->view, $request))->show($request);
 
         self::assertSame(302, $response->status());
@@ -135,6 +136,7 @@ final class EventLifecycleTest extends TestCase
     public function testAnonymousCanonicalEntryRouteShowsEntriesForPublishedEvent(): void
     {
         $this->seedEntriesForTwoClubs();
+        Session::set('is_admin', true);
 
         $response = $this->dispatchEntries(['event' => '101', 'club' => '202']);
 
@@ -149,7 +151,7 @@ final class EventLifecycleTest extends TestCase
         $response = $this->dispatchEntries(['event' => '101']);
 
         self::assertSame(302, $response->status());
-        self::assertSame('/events.php', $response->headers()['Location']);
+        self::assertSame('/events', $response->headers()['Location']);
         self::assertStringNotContainsString('UNPUBLISHED-ENTRY-METADATA', $response->content());
     }
 
@@ -208,6 +210,49 @@ final class EventLifecycleTest extends TestCase
         self::assertSame(200, $response->status());
         self::assertStringContainsString(__('events.entries'), $response->content());
         self::assertStringContainsString('Synthetic Event', $response->content());
+    }
+
+    public function testClosedEntriesWithMissingSnapshotsUseTheCurrentAthleteData(): void
+    {
+        $this->insertEvent(closed: true);
+        $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        )->execute([101, 201, 301]);
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('OwnFamily', $response->content());
+        self::assertStringContainsString('Bianca', $response->content());
+        self::assertStringContainsString('-42 kg', $response->content());
+    }
+
+    public function testClosedEventExceptionRegistrationCreatesAnEntrySnapshot(): void
+    {
+        $this->insertEvent(closed: true);
+        EventRegistrationException::setForEvent(101, [201]);
+
+        $result = (new EntryRegistrationRepository($this->database))->register(
+            101,
+            201,
+            301,
+            '2026-06-28'
+        );
+
+        self::assertSame(EntryRegistrationResult::Registered, $result);
+        self::assertSame(
+            [
+                'OwnFamily',
+                'OwnGiven',
+                'M',
+                'white',
+                '-42 kg',
+            ],
+            $this->database->query(
+                'SELECT snapshot_last_name, snapshot_first_name, snapshot_gender, snapshot_belt, snapshot_weight_category
+                 FROM entries WHERE event_id = 101 AND club_id = 201 AND athlete_id = 301'
+            )->fetch(PDO::FETCH_NUM)
+        );
     }
 
     private function createSchemaAndActors(): void
@@ -429,7 +474,7 @@ final class EventLifecycleTest extends TestCase
         $application = new Application(dirname(__DIR__));
         (require dirname(__DIR__) . '/routes/web.php')($application->router());
 
-        return $application->handle(new Request('GET', '/event_entries.php', $query));
+        return $application->handle(new Request('GET', '/events/entries', $query));
     }
 
     private function startCleanSession(): void

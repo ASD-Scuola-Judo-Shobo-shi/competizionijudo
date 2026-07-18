@@ -99,7 +99,7 @@ final class ForgotPasswordControllerTest extends TestCase
 
         self::assertSame(200, $response->status());
         self::assertStringContainsString(e(__('club.forgot_password.success_message')), $response->content());
-        self::assertStringContainsString('/club_reset_password.php?token=', $response->content());
+        self::assertStringContainsString('/clubs/reset-password?token=', $response->content());
         self::assertSame(['known@example.test'], $issuer->requestedEmails);
         self::assertSame([], $mailer->sent);
     }

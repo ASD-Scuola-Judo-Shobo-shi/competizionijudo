@@ -1,14 +1,24 @@
 #!/usr/bin/env sh
 set -eu
 
-export COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-$(pwd)/.cache/composer}"
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+export COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-$ROOT_DIR/.cache/composer}"
 
-echo "pre-commit: validating Composer metadata"
-composer metadata
+staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+if [ -z "$staged_files" ]; then
+  exit 0
+fi
+
+if printf '%s\n' "$staged_files" | grep -Fx 'composer.json' >/dev/null; then
+  echo "pre-commit: validating staged Composer metadata"
+  composer metadata
+fi
 
 staged_php_files=$(
-  git diff --cached --name-only --diff-filter=ACMR |
-    grep -E '^(config|public|routes|src|tests|views)/.*\.php$' || true
+  printf '%s\n' "$staged_files" |
+    grep -E '^(config|lang|public|routes|scripts|src|tests|views)/.*\.php$' || true
 )
 
 if [ -z "$staged_php_files" ]; then

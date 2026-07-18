@@ -165,7 +165,7 @@ return [
             'athlete' => 'Athlete',
             'birth' => 'Birth',
             'club' => 'Club',
-        'age_class' => 'Age class',
+            'age_class' => 'Age class',
             'weight' => 'Weight',
             'weight_category' => 'Weight category',
             'actions' => 'Actions',

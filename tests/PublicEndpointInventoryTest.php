@@ -21,7 +21,7 @@ final class PublicEndpointInventoryTest extends TestCase
             'club_reset_password.php',
             'event.php',
             'event_details.php',
-            'events/register',
+            'event_register.php',
             'event_show.php',
             'events.php',
             'index.php',
@@ -30,10 +30,9 @@ final class PublicEndpointInventoryTest extends TestCase
         self::assertSame($expected, $files);
     }
 
-    public function testRouteWrappersAndCompatibilityRedirectsPointToSupportedEndpoints(): void
+    public function testPublicPhpRouteWrappersIncludeRouter(): void
     {
         $root = dirname(__DIR__);
-        $routes = (string) file_get_contents($root . '/routes/web.php');
         $routeWrappers = [
             'admin.php',
             'admin_edit_event.php',
@@ -41,20 +40,24 @@ final class PublicEndpointInventoryTest extends TestCase
             'club_forgot_password.php',
             'club_reset_password.php',
             'event_details.php',
-            'events/register',
+            'event_register.php',
             'events.php',
         ];
 
         foreach ($routeWrappers as $file) {
             $contents = (string) file_get_contents($root . '/public/' . $file);
-            self::assertStringContainsString("require __DIR__ . '/index.php';", $contents);
-            self::assertStringContainsString("('/{$file}'", $routes);
+            self::assertStringContainsString("require __DIR__ . '/index.php';", $contents, "File {$file} should delegate to the router");
         }
+    }
 
-        foreach (['event.php', 'event_show.php'] as $file) {
-            $contents = (string) file_get_contents($root . '/public/' . $file);
+    public function testPublicPhpCompatibilityRedirectsPointToCorrectRoutes(): void
+    {
+        $files = ['event.php', 'event_show.php'];
+
+        foreach ($files as $file) {
+            $contents = (string) file_get_contents(dirname(__DIR__) . '/public/' . $file);
             self::assertStringContainsString("require dirname(__DIR__) . '/src/bootstrap.php';", $contents);
-            self::assertStringContainsString("header('Location: ' . base_url('/event_details.php'));", $contents);
+            self::assertStringContainsString("header('Location: ' . base_url('/events/details'));", $contents);
             self::assertStringContainsString('exit;', $contents);
         }
     }

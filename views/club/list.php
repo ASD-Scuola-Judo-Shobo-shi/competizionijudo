@@ -17,7 +17,9 @@
                 <?php foreach ($clubs as $i => $club) : ?>
                     <tr<?= $loggedInClubId !== null && $club->id === $loggedInClubId ? ' class="club-row--current"' : '' ?>>
                         <td><?= $pagination['offset'] + $i + 1 ?></td>
-                        <td><?= e($club->name) ?><?php if ($loggedInClubId !== null && $club->id === $loggedInClubId) : ?> <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span><?php endif; ?></td>
+                        <td><?= e($club->name) ?><?php if ($loggedInClubId !== null && $club->id === $loggedInClubId) :
+                            ?> <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span><?php
+                            endif; ?></td>
                         <td><?= e($club->federal_code) ?></td>
                     </tr>
                 <?php endforeach; ?>

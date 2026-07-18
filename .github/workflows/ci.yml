@@ -49,6 +49,7 @@ jobs:
           --health-retries=20
 
     env:
+      COMPOSER_CACHE_DIR: ${{ github.workspace }}/.cache/composer
       MIGRATION_TEST_DATABASE_PREFIX: competizionijudo_test_ci
       MIGRATION_TEST_HOST: 127.0.0.1
       MIGRATION_TEST_PORT: 3306
@@ -56,37 +57,23 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
 
-      - name: Verify action version lock
-        run: php scripts/check-workflow-action-lock.php
-
-      - name: Install actionlint
-        run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-
-      - name: Lint GitHub Actions workflows
-        run: |
-          actionlint_path="$(go env GOPATH)/bin/actionlint"
-          "$actionlint_path"
-
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
         with:
           php-version: "8.4"
           extensions: dom, simplexml, pdo_mysql, pcov
           coverage: pcov
           tools: composer:v2
 
-      - name: Validate Composer metadata
-        run: composer validate --strict --no-check-lock
-
       - name: Cache Composer dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: ~/.composer/cache/files
+          path: ${{ env.COMPOSER_CACHE_DIR }}/files
           key: composer-${{ runner.os }}-php-8.4-${{ hashFiles('composer.lock') }}
           restore-keys: |
             composer-${{ runner.os }}-php-8.4-
@@ -95,33 +82,24 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      - name: Run migration smoke tests
-        run: composer test:migrations
-
-      - name: Run quality suite
-        run: composer check
-
-      - name: Generate coverage for changed source
-        run: |
-          mkdir -p build
-          vendor/bin/phpunit --coverage-clover build/coverage.xml
-
-      - name: Enforce changed-code coverage
+      - name: Run local CI gate
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70
+        run: composer ci
 
   deploy-artifact:
     name: Deployment artifact smoke test
     runs-on: ubuntu-latest
     needs: quality
+    env:
+      COMPOSER_CACHE_DIR: ${{ github.workspace }}/.cache/composer
     outputs:
       revision: ${{ steps.revision.outputs.sha }}
       artifact-name: ${{ steps.artifact.outputs.name }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ inputs.ref || github.sha }}
 
@@ -130,15 +108,21 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
         with:
           php-version: "8.4"
           extensions: dom, simplexml
           coverage: none
           tools: composer:v2
 
-      - name: Install production dependencies
-        run: composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+      - name: Cache Composer dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ env.COMPOSER_CACHE_DIR }}/files
+          key: composer-${{ runner.os }}-php-8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php-8.4-
+            composer-${{ runner.os }}-
 
       - name: Build deploy artifact
         env:
@@ -158,7 +142,7 @@ jobs:
         run: echo "name=${ARTIFACT_NAME:-app-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}}" >> "$GITHUB_OUTPUT"
 
       - name: Upload application artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.artifact.outputs.name }}
           path: build/deploy
