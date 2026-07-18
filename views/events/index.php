@@ -64,7 +64,7 @@
                     } else {
                         $truncated = $ev->description;
                     }
-                ?>
+                    ?>
                     <p><?= nl2br(e($truncated)) ?></p>
                 <?php endif; ?>
 
