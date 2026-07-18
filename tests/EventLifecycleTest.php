@@ -64,7 +64,7 @@ final class EventLifecycleTest extends TestCase
         self::assertNull(Event::findPublishedById(101));
 
         $request = new Request('GET', '/events/details?event=101', ['event' => '101']);
-        $response = (new EventController($this->view, $request))->show($request);
+        $response = (new EventController($this->view, $request))->details($request);
 
         self::assertSame(302, $response->status());
         self::assertStringNotContainsString('UNPUBLISHED-EVENT-DATA', $response->content());

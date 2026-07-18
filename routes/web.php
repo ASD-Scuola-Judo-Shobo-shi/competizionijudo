@@ -46,7 +46,7 @@ return static function (App\Core\Router $router): void {
 
     // Events managed by MVC
     $router->get('/events', [EventController::class, 'index']);
-    $router->get('/events/details', [EventController::class, 'show']);
+    $router->get('/events/details', [EventController::class, 'details']);
     $router->get('/events/entries', [EventController::class, 'entries']);
     $router->get('/events/register', [EventController::class, 'register'], AuthContext::CLUB);
     $router->post('/events/register', [EventController::class, 'register'], AuthContext::CLUB);

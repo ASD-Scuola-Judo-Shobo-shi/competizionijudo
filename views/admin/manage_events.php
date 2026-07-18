@@ -34,7 +34,7 @@
                             <span class="badge gray"><?= e(__('admin.events.hidden')) ?></span>
                         <?php endif; ?>
                         <?php if ($event->closed) : ?>
-                            <span class="badge red"><?= e(__('admin.events.closed')) ?></span>
+                            <span class="badge red"><?= e(__('events.closed')) ?></span>
                         <?php else : ?>
                             <span class="badge blue"><?= e(__('admin.events.open')) ?></span>
                         <?php endif; ?>

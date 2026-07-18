@@ -325,6 +325,7 @@ return [
         'view_current_info' => 'Vedi informativa attuale',
         'select_event' => 'Seleziona una delle competizioni qui sotto',
         'view_uploaded_file' => 'Vedi file caricato',
+        'closed' => 'Chiuso',
     ],
     'admin' => [
         'events' => [
@@ -345,7 +346,6 @@ return [
             'published' => 'Pubblicato',
             'hidden' => 'Nascosto',
             'open' => 'Aperto',
-            'closed' => 'Chiuso',
         ],
         'login' => [
             'title' => 'Login amministratore',

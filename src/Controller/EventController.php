@@ -15,6 +15,7 @@ use App\Model\Database;
 use App\Model\Entry;
 use App\Model\EntryRegistrationResult;
 use App\Model\Event;
+use App\Model\EventRegistrationException;
 use App\Model\JudoCategory;
 use Throwable;
 
@@ -27,36 +28,28 @@ final class EventController extends Controller
         $limit = max(1, (int) config('app.events_upcoming_limit'));
         $events = Event::allPublishedIncludingClosed(date('Y-m-d'), $limit);
 
-        // Check which events have registration exceptions for the logged-in club
         $loggedInClubId = AuthContext::clubId();
-        $eventExceptions = [];
-        if ($loggedInClubId !== null && !AuthContext::isAdministrator()) {
-            foreach ($events as $ev) {
-                if ($ev->closed) {
-                    $eventExceptions[$ev->id] = \App\Model\EventRegistrationException::exists($ev->id, (int) $loggedInClubId);
-                }
-            }
-        }
 
         return $this->view('events/index', [
             'title' => __('nav.events'),
             'events' => $events,
             'canViewEntries' => $this->canViewEntries(),
             'loggedInClubId' => $loggedInClubId !== null ? (int) $loggedInClubId : null,
-            'eventExceptions' => $eventExceptions,
+            'eventExceptions' => $this->resolveEventExceptions($events),
         ]);
     }
 
-    public function show(Request $request): Response
+    public function details(Request $request): Response
     {
         $limit = max(1, (int) config('app.events_upcoming_limit'));
         $id = (int) ($request->input('id') ?? $request->query('id') ?? $request->query('event') ?? 0);
+        $date = date('Y-m-d');
 
-        // Check if logged-in club has registration exception for this closed event
+        // Check if logged-in club has registration exception for this specific event
         $clubId = AuthContext::clubId();
         $hasRegistrationException = false;
         if ($id > 0 && $clubId !== null && !AuthContext::isAdministrator()) {
-            $hasRegistrationException = \App\Model\EventRegistrationException::exists($id, (int) $clubId);
+            $hasRegistrationException = EventRegistrationException::exists($id, (int) $clubId);
         }
 
         if ($id > 0) {
@@ -65,25 +58,25 @@ final class EventController extends Controller
                 return $this->redirect('/events');
             }
 
-            $nextEvents = Event::nextUpcomingPublished($id, date('Y-m-d'), $limit);
+            $upcomingEvents = $this->resolveUpcomingEvents($event->id, $date, $limit);
 
-            return $this->view('events/show', [
+            return $this->view('events/details', [
                 'title' => $event->name,
                 'event' => $event,
-                'nextEvents' => $nextEvents,
-                'upcomingEvents' => [],
+                'upcomingEvents' => $upcomingEvents,
+                'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
                 'canViewEntries' => $this->canViewEntries(),
                 'hasRegistrationException' => $hasRegistrationException,
             ]);
         }
 
-        $upcomingEvents = Event::upcomingPublished(date('Y-m-d'), $limit);
+        $upcomingEvents = $this->resolveUpcomingEvents(null, $date, $limit);
 
-        return $this->view('events/show', [
+        return $this->view('events/details', [
             'title' => __('nav.events'),
             'event' => null,
-            'nextEvents' => [],
             'upcomingEvents' => $upcomingEvents,
+            'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
             'canViewEntries' => $this->canViewEntries(),
             'hasRegistrationException' => false,
         ]);
@@ -104,15 +97,15 @@ final class EventController extends Controller
         $registrationDate = date('Y-m-d');
 
         if ($eventId <= 0) {
-            $upcomingEvents = Event::upcomingPublished($registrationDate, $limit);
+            $upcomingEvents = $this->resolveUpcomingEvents(null, $registrationDate, $limit);
 
             return $this->view('events/register', [
                 'title' => __('events.registration'),
                 'event' => null,
                 'athletes' => [],
                 'registered' => [],
-                'nextEvents' => [],
                 'upcomingEvents' => $upcomingEvents,
+                'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
                 'registrationFeedback' => null,
                 'athleteCategories' => [],
             ]);
@@ -121,15 +114,15 @@ final class EventController extends Controller
         // Use club-specific eligibility check to allow exceptions for closed events
         $event = Event::findRegistrationEligibleByIdForClub($eventId, $registrationDate, $clubId);
         if ($event === null) {
-            $upcomingEvents = Event::upcomingPublished($registrationDate, $limit);
+            $upcomingEvents = $this->resolveUpcomingEvents(null, $registrationDate, $limit);
 
             return $this->view('events/register', [
                 'title' => __('events.registration'),
                 'event' => null,
                 'athletes' => [],
                 'registered' => [],
-                'nextEvents' => [],
                 'upcomingEvents' => $upcomingEvents,
+                'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
                 'registrationFeedback' => null,
                 'athleteCategories' => [],
             ]);
@@ -207,25 +200,14 @@ final class EventController extends Controller
             $feedback['already_registered'] += count($stillChecked);
 
             // Build feedback message
-            $flashFeedback = [];
-            if ($feedback['added'] > 0) {
-                $flashFeedback['added'] = $feedback['added'];
-            }
-            if ($feedback['already_registered'] > 0) {
-                $flashFeedback['already_registered'] = $feedback['already_registered'];
-            }
-            if ($feedback['removed'] > 0) {
-                $flashFeedback['removed'] = $feedback['removed'];
-            }
-            if ($feedback['rejected'] > 0) {
-                $flashFeedback['rejected'] = $feedback['rejected'];
-            }
-            if ($feedback['capacity_exceeded'] > 0) {
-                $flashFeedback['capacity_exceeded'] = $feedback['capacity_exceeded'];
-            }
-            if ($feedback['failed'] > 0) {
-                $flashFeedback['failed'] = $feedback['failed'];
-            }
+            $flashFeedback = array_filter([
+                'added' => $feedback['added'],
+                'already_registered' => $feedback['already_registered'],
+                'removed' => $feedback['removed'],
+                'rejected' => $feedback['rejected'],
+                'capacity_exceeded' => $feedback['capacity_exceeded'],
+                'failed' => $feedback['failed'],
+            ]);
 
             Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $eventId, $flashFeedback);
 
@@ -234,16 +216,16 @@ final class EventController extends Controller
 
         $athletes = Athlete::findByClub($clubId);
         $registered = Entry::findByClubEvent($eventId, $clubId);
-        $nextEvents = Event::nextUpcomingPublished($eventId, $registrationDate, $limit);
         $registrationFeedback = $this->registrationFeedback($eventId);
+        $upcomingEvents = $this->resolveUpcomingEvents($eventId, $registrationDate, $limit);
 
         return $this->view('events/register', [
             'title' => __('events.registration') . ' - ' . $event->name,
             'event' => $event,
             'athletes' => $athletes,
             'registered' => $registered,
-            'nextEvents' => $nextEvents,
-            'upcomingEvents' => [],
+            'upcomingEvents' => $upcomingEvents,
+            'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
             'registrationFeedback' => $registrationFeedback,
             'athleteCategories' => $this->athleteCategories($athletes, $event->date),
         ]);
@@ -254,11 +236,11 @@ final class EventController extends Controller
         Session::start();
         $isAdmin = AuthContext::isAdministrator();
         $limit = max(1, (int) config('app.events_upcoming_limit'));
+        $date = date('Y-m-d');
 
         $eventId = (int) ($request->input('event') ?? $request->query('event') ?? $request->query('id'));
         if ($eventId <= 0) {
-            // Show all published events (including closed ones) for selection
-            $events = Event::allPublishedIncludingClosed(date('Y-m-d'), $limit);
+            $upcomingEvents = $this->resolveUpcomingEvents(null, $date, $limit);
 
             return $this->view('events/entries', [
                 'title' => __('events.entries'),
@@ -266,32 +248,40 @@ final class EventController extends Controller
                 'clubs' => [],
                 'rows' => [],
                 'isAdmin' => $isAdmin,
-                'events' => $events,
-                'nextEvents' => [],
-                'upcomingEvents' => [],
+                'loggedInClubId' => null,
+                'hasRegistrationException' => false,
+                'grouped' => [],
+                'categoryCounts' => [],
+                'weightCounts' => [],
+                'beltCounts' => [],
+                'genderCounts' => [],
+                'clubAthleteCounts' => [],
+                'clubCategoryCounts' => [],
+                'clubWeightCounts' => [],
+                'clubBeltCounts' => [],
+                'clubGenderCounts' => [],
+                'upcomingEvents' => $upcomingEvents,
+                'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
             ]);
         }
 
-        // For admins, can view any published event (including closed)
-        // For clubs, can view open published events OR closed events they have entries in OR closed events with registration exceptions
         $clubId = AuthContext::clubId();
         $hasRegistrationException = false;
         if ($isAdmin) {
             $event = Event::findById($eventId);
         } elseif ($clubId !== null) {
             $event = Event::findPublishedByIdOrClosedWithEntries($eventId, (int) $clubId);
-            // Check if club has registration exception for this closed event (needed for showing registration link)
             if ($event !== null && $event->closed) {
-                $hasRegistrationException = \App\Model\EventRegistrationException::exists($eventId, (int) $clubId);
+                $hasRegistrationException = EventRegistrationException::exists($eventId, (int) $clubId);
             }
         } else {
             $event = Event::findPublishedByIdIncludingClosed($eventId);
         }
+
         if ($event === null) {
             return $this->redirect('/events');
         }
 
-        // The club parameter is now ignored - always show all entries globally
         $clubs = Entry::findClubsByEvent($eventId, null);
         $rows = Entry::findByEvent($eventId, null);
 
@@ -310,12 +300,7 @@ final class EventController extends Controller
             $eventDate = $row['event_date'] ?? '';
             $birthYear = JudoCategory::extractBirthYear($birthDate);
             $eventYear = $eventDate !== '' ? (int) substr($eventDate, 0, 4) : (int) date('Y');
-            if ($birthYear !== null) {
-                $acResult = AgeClass::calculate($birthYear, $eventYear);
-                $category = $acResult['label'];
-            } else {
-                $category = '';
-            }
+            $category = $birthYear !== null ? AgeClass::calculate($birthYear, $eventYear)['label'] : '';
             $weight = $row['weight_category'] ?? '';
             $belt = $row['belt'] ?? '';
             $gender = $row['gender'] ?? '';
@@ -330,9 +315,8 @@ final class EventController extends Controller
 
             $groupedKey = $category . ' | ' . $weight;
             $grouped[$groupedKey][] = $row;
-            // Count by category (age class) only - for pie chart
+
             $categoryCounts[$category] = ($categoryCounts[$category] ?? 0) + 1;
-            // Count by weight with 4kg grouping - for pie chart
             $weightGroup = self::groupWeight($weight);
             $weightCounts[$weightGroup] = ($weightCounts[$weightGroup] ?? 0) + 1;
             $beltCounts[$belt] = ($beltCounts[$belt] ?? 0) + 1;
@@ -346,7 +330,6 @@ final class EventController extends Controller
             }
         }
 
-        // Get athlete counts per club
         $clubAthleteCounts = [];
         foreach ($clubs as $club) {
             $stmt = Database::connection()->prepare(
@@ -356,9 +339,8 @@ final class EventController extends Controller
             $clubAthleteCounts[$club['id']] = (int) $stmt->fetchColumn();
         }
 
-        $nextEvents = Event::nextUpcomingPublished($eventId, date('Y-m-d'), $limit);
+        $upcomingEvents = $this->resolveUpcomingEvents($eventId, $date, $limit);
 
-        $loggedInClubId = $clubId !== null ? (int) $clubId : null;
         return $this->view('events/entries', [
             'title' => __('events.entries') . ' - ' . $event->name,
             'event' => $event,
@@ -375,11 +357,48 @@ final class EventController extends Controller
             'beltCounts' => $beltCounts,
             'genderCounts' => $genderCounts,
             'isAdmin' => $isAdmin,
-            'loggedInClubId' => $loggedInClubId,
+            'loggedInClubId' => $clubId !== null ? (int) $clubId : null,
             'hasRegistrationException' => $hasRegistrationException,
-            'nextEvents' => $nextEvents,
-            'upcomingEvents' => [],
+            'upcomingEvents' => $upcomingEvents,
+            'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
         ]);
+    }
+
+    /**
+     * Resolves upcoming/next published events (including closed ones) into a single array contract.
+     *
+     * @return list<Event>
+     */
+    private function resolveUpcomingEvents(?int $eventId, string $date, int $limit): array
+    {
+        if ($eventId !== null && $eventId > 0) {
+            return Event::nextUpcomingPublishedIncludingClosed($eventId, $date, $limit);
+        }
+
+        return Event::upcomingPublishedIncludingClosed($date, $limit);
+    }
+
+    /**
+     * Resolves registration exception states for a list of events for the logged-in club.
+     *
+     * @param list<Event> $events
+     * @return array<int, bool>
+     */
+    private function resolveEventExceptions(array $events): array
+    {
+        $clubId = AuthContext::clubId();
+        if ($clubId === null || AuthContext::isAdministrator()) {
+            return [];
+        }
+
+        $exceptions = [];
+        foreach ($events as $ev) {
+            if ($ev->closed) {
+                $exceptions[$ev->id] = EventRegistrationException::exists($ev->id, (int) $clubId);
+            }
+        }
+
+        return $exceptions;
     }
 
     private function canViewEntries(): bool
@@ -401,42 +420,29 @@ final class EventController extends Controller
         return $categories;
     }
 
-    /**
-     * Groups weight category into 4kg increments starting from 12kg.
-     * Returns format like "12-16kg", "16-20kg", ..., "100+kg".
-     * Handles weight categories like "-16 kg" or "+100 kg".
-     */
     private static function groupWeight(string $weight): string
     {
-        $weight = trim($weight, ' kg');
-
-        // Strip leading -/+ signs used in weight categories (e.g., "-16 kg", "+100 kg")
-        $weight = ltrim($weight, '-+');
+        $weight = ltrim(trim($weight, ' kg'), '-+');
 
         if (!is_numeric($weight)) {
             return 'unspecified';
         }
         $w = (int) $weight;
 
-        // Group from 12kg in 4kg increments
-        // Weights 12-15 go to 12-16kg, 16-19 go to 16-20kg, etc.
-        $lowerBound = 12;
-        while ($lowerBound + 4 <= $w) {
-            $lowerBound += 4;
-        }
-        $upperBound = $lowerBound + 4;
-
-        // Handle weights below 12kg
         if ($w < 12) {
             return 'under-12kg';
         }
 
-        // Handle above 100kg
+        $lowerBound = 12;
+        while ($lowerBound + 4 <= $w) {
+            $lowerBound += 4;
+        }
+
         if ($lowerBound >= 100) {
             return '100+kg';
         }
 
-        return $lowerBound . '-' . $upperBound . 'kg';
+        return $lowerBound . '-' . ($lowerBound + 4) . 'kg';
     }
 
     /** @return array{added?: int, already_registered?: int, rejected?: int, capacity_exceeded?: int, failed?: int, removed?: int, unsubscribed_failed?: int}|null */

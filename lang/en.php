@@ -325,6 +325,7 @@ return [
         'view_current_info' => 'View current info file',
         'select_event' => 'Please select one of the events below',
         'view_uploaded_file' => 'View uploaded file',
+        'closed' => 'Closed',
     ],
     'admin' => [
         'events' => [
@@ -345,7 +346,6 @@ return [
             'published' => 'Published',
             'hidden' => 'Hidden',
             'open' => 'Open',
-            'closed' => 'Closed',
         ],
         'login' => [
             'title' => 'Administrator login',
