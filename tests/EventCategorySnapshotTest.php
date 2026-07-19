@@ -126,7 +126,7 @@ final class EventCategorySnapshotTest extends TestCase
             'CREATE TABLE events (
                 id INTEGER PRIMARY KEY, name TEXT NOT NULL, date TEXT NOT NULL,
                 location TEXT NOT NULL, organizer TEXT, registration_deadline TEXT, type TEXT,
-                description TEXT, notes TEXT, poster_file TEXT, info_file TEXT,
+                description TEXT, notes TEXT, max_participants INTEGER, poster_file TEXT, info_file TEXT,
                 published INTEGER NOT NULL, closed INTEGER NOT NULL
             )'
         );
@@ -147,6 +147,15 @@ final class EventCategorySnapshotTest extends TestCase
             )'
         );
         $this->database->exec(
+            'CREATE TABLE event_registration_exceptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                club_id INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (event_id, club_id)
+            )'
+        );
+        $this->database->exec(
             "INSERT INTO clubs VALUES (
                 201, 'SYN-201', 'Synthetic Club', 'club@example.test', '', 'Synthetic',
                 'Contact', '', NULL, 'SYNTHETIC', 'recovery@example.test', 'synthetic-hash'
@@ -158,15 +167,15 @@ final class EventCategorySnapshotTest extends TestCase
             )"
         );
         $event = $this->database->prepare(
-            'INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO events (id, name, date, location, organizer, registration_deadline, type, description, notes, max_participants, poster_file, info_file, published, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $event->execute([
             101, '2026 Event', '2026-07-01', 'Synthetic Venue', 'Synthetic Organizer',
-            '2026-06-30', 'only_competitive', '', '', null, null, 1, 0,
+            '2026-06-30', 'only_competitive', '', '', null, null, null, 1, 0
         ]);
         $event->execute([
             102, '2027 Event', '2027-07-01', 'Synthetic Venue', 'Synthetic Organizer',
-            '2027-06-30', 'only_competitive', '', '', null, null, 1, 0,
+            '2027-06-30', 'only_competitive', '', '', null, null, null, 1, 0
         ]);
         $this->database->exec(
             'INSERT INTO entries (id, event_id, club_id, athlete_id) VALUES

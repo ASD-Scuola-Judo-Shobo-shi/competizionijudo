@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Controller\AboutController;
+use App\Controller\HomeController;
 use App\Core\Request;
 use App\Core\Router;
 use App\Core\View;
@@ -84,12 +84,12 @@ final class PrivacyNoticeTest extends TestCase
 
     public function testHomepageNoLongerLoadsHardCodedLegacyEventData(): void
     {
-        $controller = new AboutController(
+        $controller = new HomeController(
             new View(dirname(__DIR__) . '/views'),
             new Request('GET', '/')
         );
 
-        self::assertSame(302, $controller->index(new Request('GET', '/'))->status());
+        self::assertSame(200, $controller->index(new Request('GET', '/'))->status());
         self::assertFileDoesNotExist(dirname(__DIR__) . '/src/Model/Competition.php');
     }
 }

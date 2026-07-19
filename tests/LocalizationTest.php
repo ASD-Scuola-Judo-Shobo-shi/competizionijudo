@@ -26,7 +26,7 @@ final class LocalizationTest extends TestCase
 
     public function testTransWithSimpleKey(): void
     {
-        $result = Localization::trans('nav.about');
+        $result = Localization::trans('nav.home');
         self::assertIsString($result);
         self::assertNotEmpty($result);
     }
@@ -46,16 +46,16 @@ final class LocalizationTest extends TestCase
     public function testTransReturnsEnglishWhenLocaleSet(): void
     {
         Localization::setLocale('en');
-        $result = Localization::trans('nav.about');
-        self::assertSame('About', $result);
+        $result = Localization::trans('nav.home');
+        self::assertSame('Home', $result);
         Localization::setLocale('it');
     }
 
     public function testTransForDoesNotChangeActiveLocale(): void
     {
-        self::assertSame('About', Localization::transFor('en', 'nav.about'));
+        self::assertSame('Home', Localization::transFor('en', 'nav.home'));
         self::assertSame('it', Localization::getLocale());
-        self::assertSame('About', Localization::transFor('en', 'nav.about'));
+        self::assertSame('Home', Localization::transFor('en', 'nav.home'));
     }
 
     public function testTransWithNestedKey(): void

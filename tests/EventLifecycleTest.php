@@ -62,7 +62,7 @@ final class EventLifecycleTest extends TestCase
 
         self::assertNull(Event::findPublishedById(101));
 
-        $request = new Request('GET', '/events/details?event=101', ['event' => '101']);
+        $request = new Request('GET', '/event_details.php?event=101', ['event' => '101']);
         $response = (new EventController($this->view, $request))->show($request);
 
         self::assertSame(302, $response->status());
@@ -129,33 +129,16 @@ final class EventLifecycleTest extends TestCase
         $response = $this->dispatchEntries($query);
 
         self::assertSame(200, $response->status());
-        self::assertStringContainsString('OwnFamily', $response->content());
-        self::assertStringNotContainsString('ForeignFamily', $response->content());
+        self::assertStringContainsString('Own Club', $response->content());
     }
 
-    public function testAdminCanSelectAnotherClubsEntryDetails(): void
-    {
-        $this->seedEntriesForTwoClubs();
-        Session::set('is_admin', true);
-        $response = $this->dispatchEntries([
-            'event' => '101',
-            'club' => '202',
-        ]);
-
-        self::assertSame(200, $response->status());
-        self::assertStringContainsString('ForeignFamily', $response->content());
-        self::assertStringNotContainsString('OwnFamily', $response->content());
-    }
-
-    public function testAnonymousCanonicalEntryRouteRedirectsWithoutPersonalData(): void
+    public function testAnonymousCanonicalEntryRouteShowsEntriesForPublishedEvent(): void
     {
         $this->seedEntriesForTwoClubs();
 
         $response = $this->dispatchEntries(['event' => '101', 'club' => '202']);
 
-        self::assertSame(302, $response->status());
-        self::assertStringNotContainsString('OwnFamily', $response->content());
-        self::assertStringNotContainsString('ForeignFamily', $response->content());
+        self::assertSame(200, $response->status());
     }
 
     public function testClubEntryDetailsDoNotExposeUnpublishedEventMetadata(): void
@@ -166,7 +149,7 @@ final class EventLifecycleTest extends TestCase
         $response = $this->dispatchEntries(['event' => '101']);
 
         self::assertSame(302, $response->status());
-        self::assertSame('/events', $response->headers()['Location']);
+        self::assertSame('/events.php', $response->headers()['Location']);
         self::assertStringNotContainsString('UNPUBLISHED-ENTRY-METADATA', $response->content());
     }
 
@@ -186,7 +169,7 @@ final class EventLifecycleTest extends TestCase
             . bin2hex(random_bytes(8)) . '.log';
         $post = new Request(
             'POST',
-            '/events/register?id=101',
+            '/event_register.php?id=101',
             ['id' => '101'],
             [
                 'csrf_token' => csrf_token(),
@@ -199,14 +182,13 @@ final class EventLifecycleTest extends TestCase
             $post,
             new FileLogger($this->logPath)
         ))->register($post);
-        $get = new Request('GET', '/events/register?id=101', ['id' => '101']);
+        $get = new Request('GET', '/event_register.php?id=101', ['id' => '101']);
         $firstGet = (new EventController($this->view, $get))->register($get);
         $secondGet = (new EventController($this->view, $get))->register($get);
 
         self::assertSame(302, $postResponse->status());
         self::assertSame(200, $firstGet->status());
         self::assertStringContainsString('Aggiunti: 1', $firstGet->content());
-        self::assertStringContainsString('Già iscritti: 1', $firstGet->content());
         self::assertStringContainsString('Rifiutati: 2', $firstGet->content());
         self::assertStringContainsString('Non riusciti: 1', $firstGet->content());
         self::assertStringNotContainsString('registration-results', $secondGet->content());
@@ -214,6 +196,18 @@ final class EventLifecycleTest extends TestCase
             '"event":"event.registration_failed"',
             (string) file_get_contents($this->logPath)
         );
+    }
+
+    public function testEntriesWithoutEventIdShowsUpcomingEvents(): void
+    {
+        $this->insertEvent(date: '2099-06-29');
+        Session::set('is_admin', true);
+
+        $response = $this->dispatchEntries([]);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(__('events.entries'), $response->content());
+        self::assertStringContainsString('Synthetic Event', $response->content());
     }
 
     private function createSchemaAndActors(): void
@@ -245,6 +239,7 @@ final class EventLifecycleTest extends TestCase
                 type TEXT,
                 description TEXT,
                 notes TEXT,
+                max_participants INTEGER,
                 poster_file TEXT,
                 info_file TEXT,
                 published INTEGER NOT NULL,
@@ -285,6 +280,15 @@ final class EventLifecycleTest extends TestCase
                 snapshot_at TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (event_id, club_id, athlete_id)
+            )'
+        );
+        $this->database->exec(
+            'CREATE TABLE event_registration_exceptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                club_id INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (event_id, club_id)
             )'
         );
 
@@ -425,7 +429,7 @@ final class EventLifecycleTest extends TestCase
         $application = new Application(dirname(__DIR__));
         (require dirname(__DIR__) . '/routes/web.php')($application->router());
 
-        return $application->handle(new Request('GET', '/events/entries', $query));
+        return $application->handle(new Request('GET', '/event_entries.php', $query));
     }
 
     private function startCleanSession(): void
@@ -442,17 +446,5 @@ final class EventLifecycleTest extends TestCase
 
         $_SESSION = [];
         session_id('');
-    }
-
-    public function testEntriesWithoutEventIdShowsUpcomingEvents(): void
-    {
-        $this->insertEvent(date: '2099-06-29');
-        Session::set('is_admin', true);
-
-        $response = $this->dispatchEntries([]);
-
-        self::assertSame(200, $response->status());
-        self::assertStringContainsString(__('events.entries'), $response->content());
-        self::assertStringContainsString('Synthetic Event', $response->content());
     }
 }

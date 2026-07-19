@@ -39,8 +39,10 @@ final class MigrationRunnerTest extends TestCase
             }
         );
         $database->method('exec')->willReturnCallback(
-            static function () use (&$transactionActive): int {
-                $transactionActive = false;
+            static function (string $sql) use (&$transactionActive): int|false {
+                if ($transactionActive && preg_match('/^\s*(CREATE|ALTER)\b/i', $sql) === 1) {
+                    $transactionActive = false;
+                }
 
                 return 0;
             }
@@ -67,7 +69,7 @@ final class MigrationRunnerTest extends TestCase
             '20260630_000000_create_schema.sql',
             $recordedVersions
         );
-        self::assertCount(7, $recordedVersions);
+        self::assertCount(count(glob(base_path('migrations/*.sql')) ?: []), $recordedVersions);
     }
 
     public function testCompleteHistoricalChainAdoptsTheConsolidatedBaseline(): void
@@ -88,7 +90,7 @@ final class MigrationRunnerTest extends TestCase
         $migrationQuery->method('fetchAll')->willReturn($historicalVersions);
         $recordedVersions = [];
         $recordStatement = $this->createMock(PDOStatement::class);
-        $recordStatement->expects(self::exactly(7))
+        $recordStatement->expects(self::exactly(8))
             ->method('execute')
             ->willReturnCallback(
                 static function (?array $parameters = null) use (&$recordedVersions): bool {
@@ -104,7 +106,7 @@ final class MigrationRunnerTest extends TestCase
             ->willReturn(true);
         $database = $this->createMock(PDO::class);
         $database->expects(self::once())->method('query')->willReturn($migrationQuery);
-        $database->expects(self::exactly(8))
+        $database->expects(self::exactly(9))
             ->method('prepare')
             ->willReturnOnConsecutiveCalls(
                 $recordStatement,
@@ -114,18 +116,14 @@ final class MigrationRunnerTest extends TestCase
                 $recordStatement,
                 $recordStatement,
                 $recordStatement,
+                $recordStatement,
                 $recordStatement
             );
-        $database->method('exec')->willReturn(0);
-        $database->expects(self::exactly(7))->method('beginTransaction')->willReturn(true);
-        $database->method('inTransaction')->willReturnCallback(
-            static function () use (&$transactionActive): bool {
-                return $transactionActive;
-            }
-        );
-        $database->expects(self::exactly(7))->method('commit')->willReturn(true);
+        $database->expects(self::exactly(10))->method('exec');
+        $database->expects(self::exactly(8))->method('beginTransaction')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true);
+        $database->expects(self::exactly(7))->method('inTransaction')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true);
+        $database->expects(self::exactly(8))->method('commit')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true);
 
-        $transactionActive = true;
         (new MigrationRunner($database))->run();
 
         self::assertSame([
@@ -135,6 +133,7 @@ final class MigrationRunnerTest extends TestCase
             '20260716_000002_rename_club_organization_to_affiliation.sql',
             '20260717_000001_make_club_affiliation_nullable_and_multiple.sql',
             '20260717_000002_create_club_registration_confirmations.sql',
+            '20260717_000003_add_max_participants_to_events.sql',
             '20260718_000001_create_event_registration_exceptions.sql',
         ], $recordedVersions);
     }

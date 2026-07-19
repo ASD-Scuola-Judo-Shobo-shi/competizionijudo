@@ -35,24 +35,26 @@ final class PublicEndpointInventoryTest extends TestCase
         $root = dirname(__DIR__);
         $routes = (string) file_get_contents($root . '/routes/web.php');
         $routeWrappers = [
-            '/admin',
-            '/admin/events/edit',
-            '/admin/login',
-            '/clubs/forgot-password',
-            '/clubs/reset-password',
-            '/events/details',
-            '/events/register',
-            '/events',
+            'admin.php',
+            'admin_edit_event.php',
+            'admin_login.php',
+            'club_forgot_password.php',
+            'club_reset_password.php',
+            'event_details.php',
+            'event_register.php',
+            'events.php',
         ];
 
-        foreach ($routeWrappers as $path) {
-            self::assertStringContainsString("$path'", $routes, $path);
+        foreach ($routeWrappers as $file) {
+            $contents = (string) file_get_contents($root . '/public/' . $file);
+            self::assertStringContainsString("require __DIR__ . '/index.php';", $contents);
+            self::assertStringContainsString("('/{$file}'", $routes);
         }
 
         foreach (['event.php', 'event_show.php'] as $file) {
             $contents = (string) file_get_contents($root . '/public/' . $file);
             self::assertStringContainsString("require dirname(__DIR__) . '/src/bootstrap.php';", $contents);
-            self::assertStringContainsString("header('Location: ' . base_url('/events/details'));", $contents);
+            self::assertStringContainsString("header('Location: ' . base_url('/event_details.php'));", $contents);
             self::assertStringContainsString('exit;', $contents);
         }
     }

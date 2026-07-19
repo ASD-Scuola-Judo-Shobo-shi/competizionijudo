@@ -21,11 +21,11 @@ final class ViewRenderTest extends TestCase
 
         $view = new View(dirname(__DIR__) . '/views');
         $html = $view->render('admin/add_event', array_merge([
-            'currentPath' => '/admin/events/add',
+            'currentPath' => '/admin_add_event.php',
             'event' => null,
             'error' => '',
             'locations' => [],
-        ], $this->layoutData('/admin/events/add')));
+        ], $this->layoutData('/admin_add_event.php')));
 
         self::assertStringNotContainsString('</parameter>', $html);
         self::assertStringNotContainsString('</write_to_file>', $html);
@@ -37,7 +37,7 @@ final class ViewRenderTest extends TestCase
         self::assertSame(substr_count($html, '<form'), substr_count($html, '</form>'));
     }
 
-    public function testEventLinksDistinguishPublicDetailsFromAuthorizedEntries(): void
+    public function testEventEntriesLinkIsVisibleToAllVisitors(): void
     {
         Localization::setLocale('en');
         $_GET = [];
@@ -55,24 +55,26 @@ final class ViewRenderTest extends TestCase
             null,
             null,
             true,
-            false
+            false,
+            null
         );
         $view = new View(dirname(__DIR__) . '/views');
 
         $authorized = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => true,
-        ], $this->layoutData('/events')));
+        ], $this->layoutData('/events.php')));
         $anonymous = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => false,
-        ], $this->layoutData('/events')));
+        ], $this->layoutData('/events.php')));
 
-        self::assertStringContainsString('/events/details?event=101', $authorized);
-        self::assertStringContainsString('/events/entries?event=101', $authorized);
+        self::assertStringContainsString('/event_details.php?event=101', $authorized);
+        self::assertStringContainsString('/event_entries.php?event=101', $authorized);
         self::assertStringContainsString('>Details</a>', $authorized);
         self::assertStringContainsString('>Entries</a>', $authorized);
-        self::assertStringNotContainsString('/events/entries?event=101', $anonymous);
+        // Entries link should now be visible to all visitors
+        self::assertStringContainsString('/event_entries.php?event=101', $anonymous);
     }
 
     public function testAthletePreviewEmbedsSharedCategoryDefinitions(): void
@@ -86,7 +88,7 @@ final class ViewRenderTest extends TestCase
             'errors' => [],
             'athletes' => [],
             'pagination' => paginate(0, 1, 50),
-        ], $this->layoutData('/clubs/area')));
+        ], $this->layoutData('/club_area.php')));
 
         self::assertStringContainsString('const ageClasses = ' . AgeClass::definitionsJson('en'), $html);
         self::assertStringContainsString(
@@ -97,8 +99,8 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('weightDefs.limits[classKey]', $html);
         self::assertStringNotContainsString('childMap', $html);
         self::assertStringNotContainsString('adultMap', $html);
-        self::assertStringContainsString('href="/clubs/athletes-export"', $html);
-        self::assertStringContainsString('action="/clubs/athletes-import"', $html);
+        self::assertStringContainsString('href="/club_athletes_export.csv"', $html);
+        self::assertStringContainsString('action="/club_athletes_import.php"', $html);
         self::assertStringContainsString('enctype="multipart/form-data"', $html);
         self::assertStringContainsString('name="athletes_csv"', $html);
     }
@@ -140,7 +142,7 @@ final class ViewRenderTest extends TestCase
         $view = new View(dirname(__DIR__) . '/views');
         $favicon = (string) config('app.favicon');
         $expected = '<link rel="icon" href="' . $favicon . '">';
-        $app = $view->render('static/about', $this->layoutData('/'));
+        $app = $view->render('static/index', $this->layoutData('/'));
         $error = $view->render('errors/500', [
             'title' => __('errors.server_error'),
             'message' => __('errors.unexpected_failure'),
@@ -161,9 +163,10 @@ final class ViewRenderTest extends TestCase
         Localization::setLocale('en');
         $_GET = [];
         $view = new View(dirname(__DIR__) . '/views');
-
-        $html = $view->render('static/about', $this->layoutData('/'));
         $logoPath = '/assets/competizioni-judo-logo-optim.svgz';
+
+        // Logo appears in header (site-heading-logo) and in about page (landing-logo)
+        $html = $view->render('static/about', $this->layoutData('/about'));
 
         self::assertSame(2, substr_count($html, 'src="' . $logoPath . '?v='));
         self::assertStringContainsString('class="site-heading-logo"', $html);
@@ -181,7 +184,7 @@ final class ViewRenderTest extends TestCase
         $html = $view->render('club/register', array_merge([
             'errors' => [],
             'success' => null,
-        ], $this->layoutData('/clubs/register')));
+        ], $this->layoutData('/club_register.php')));
 
         self::assertStringContainsString(
             'name="athlete_data_rights_declaration" value="1" required',

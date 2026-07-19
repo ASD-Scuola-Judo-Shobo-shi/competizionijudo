@@ -49,9 +49,9 @@ final class DeleteActionsTest extends TestCase
         $router = new Router($this->view);
         (require dirname(__DIR__) . '/routes/web.php')($router);
         $paths = [
-            '/admin/clubs/delete',
-            '/admin/events/delete',
-            '/clubs/delete-athlete',
+            '/admin_delete_club.php',
+            '/admin_delete_event.php',
+            '/club_delete_athlete.php',
         ];
 
         foreach ($paths as $path) {
@@ -83,7 +83,7 @@ final class DeleteActionsTest extends TestCase
         $this->assertCsrfRejected(static fn(): Response => $admin->deleteEvent($adminRequest));
 
         Session::set('club_id', 201);
-        $clubRequest = new Request('POST', '/clubs/delete-athlete', [], [
+        $clubRequest = new Request('POST', '/club_delete_athlete.php', [], [
             'csrf_token' => 'synthetic-invalid-csrf',
             'athlete_id' => '301',
         ]);
@@ -95,7 +95,7 @@ final class DeleteActionsTest extends TestCase
     {
         Session::set('is_admin', true);
         $this->setDatabase($this->databaseExpectingDelete('DELETE FROM clubs WHERE id = ?', [401]));
-        $request = new Request('POST', '/admin/clubs/delete', [], [
+        $request = new Request('POST', '/admin_delete_club.php', [], [
             'csrf_token' => csrf_token(),
             'club_id' => '401',
         ]);
@@ -114,17 +114,17 @@ final class DeleteActionsTest extends TestCase
         $database->exec(
             "INSERT INTO events
              (id, name, date, location, organizer, registration_deadline, type, description, notes,
-              poster_file, info_file, published, closed)
+              max_participants, poster_file, info_file, published, closed)
              VALUES
              (501, 'Synthetic event', '2026-07-01', 'Test city', '', '', 'only_competitive', '', '',
-              'uploads/events/old-poster.pdf', 'uploads/events/old-info.pdf', 1, 0)"
+              NULL, 'uploads/events/old-poster.pdf', 'uploads/events/old-info.pdf', 1, 0)"
         );
         $this->setDatabase($database);
         $publicRoot = sys_get_temp_dir() . '/competizionijudo-delete-' . bin2hex(random_bytes(8));
         mkdir($publicRoot . '/uploads/events', 0755, true);
         file_put_contents($publicRoot . '/uploads/events/old-poster.pdf', 'synthetic');
         file_put_contents($publicRoot . '/uploads/events/old-info.pdf', 'synthetic');
-        $request = new Request('POST', '/admin/events/delete', [], [
+        $request = new Request('POST', '/admin_delete_event.php', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '501',
         ]);
@@ -156,10 +156,10 @@ final class DeleteActionsTest extends TestCase
         $database->exec(
             "INSERT INTO events
              (id, name, date, location, organizer, registration_deadline, type, description, notes,
-              poster_file, info_file, published, closed)
+              max_participants, poster_file, info_file, published, closed)
              VALUES
              (502, 'Synthetic event', '2026-07-01', 'Test city', '', '', 'only_competitive', '', '',
-              'uploads/events/old-poster.png', NULL, 1, 0)"
+              NULL, 'uploads/events/old-poster.png', NULL, 1, 0)"
         );
         $this->setDatabase($database);
 
@@ -178,7 +178,7 @@ final class DeleteActionsTest extends TestCase
             'error' => UPLOAD_ERR_OK,
             'size' => filesize($temporaryUpload),
         ];
-        $request = new Request('POST', '/admin/events/add', [], [
+        $request = new Request('POST', '/admin_add_event.php', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '502',
             'name' => 'Synthetic event',
@@ -232,7 +232,7 @@ final class DeleteActionsTest extends TestCase
             'DELETE FROM athletes WHERE id = ? AND club_id = ?',
             [301, 201]
         ));
-        $request = new Request('POST', '/clubs/delete-athlete', [], [
+        $request = new Request('POST', '/club_delete_athlete.php', [], [
             'csrf_token' => csrf_token(),
             'athlete_id' => '301',
             'club_id' => '999',
@@ -246,10 +246,10 @@ final class DeleteActionsTest extends TestCase
     public function testDeleteControlsAreCsrfProtectedForms(): void
     {
         $templates = [
-            'views/admin/manage_clubs.php' => ['/admin/clubs/delete', 'club_id'],
-            'views/admin/manage_events.php' => ['/admin/events/delete', 'event_id'],
-            'views/club/area_list.php' => ['/clubs/delete-athlete', 'athlete_id'],
-            'views/club/area_add.php' => ['/clubs/delete-athlete', 'athlete_id'],
+            'views/admin/manage_clubs.php' => ['/admin_delete_club.php', 'club_id'],
+            'views/admin/manage_events.php' => ['/admin_delete_event.php', 'event_id'],
+            'views/club/area_list.php' => ['/club_delete_athlete.php', 'athlete_id'],
+            'views/club/area_add.php' => ['/club_delete_athlete.php', 'athlete_id'],
         ];
 
         foreach ($templates as $path => [$action, $idField]) {
@@ -314,8 +314,33 @@ final class DeleteActionsTest extends TestCase
             'CREATE TABLE events (
                 id INTEGER PRIMARY KEY, name TEXT NOT NULL, date TEXT NOT NULL, location TEXT NOT NULL,
                 organizer TEXT NOT NULL, registration_deadline TEXT, type TEXT NOT NULL,
-                description TEXT, notes TEXT, poster_file TEXT, info_file TEXT,
+                description TEXT, notes TEXT, max_participants INTEGER, poster_file TEXT, info_file TEXT,
                 published INTEGER NOT NULL, closed INTEGER NOT NULL
+            )'
+        );
+        $database->exec(
+            'CREATE TABLE clubs (
+                id INTEGER PRIMARY KEY,
+                federal_code TEXT NOT NULL,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                phone TEXT NOT NULL,
+                contact_first_name TEXT NOT NULL,
+                contact_last_name TEXT NOT NULL,
+                contact_phone TEXT NOT NULL,
+                contact_email TEXT,
+                affiliation TEXT NOT NULL,
+                recovery_email TEXT NOT NULL,
+                password_hash TEXT NOT NULL
+            )'
+        );
+        $database->exec(
+            'CREATE TABLE event_registration_exceptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                club_id INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (event_id, club_id)
             )'
         );
     }

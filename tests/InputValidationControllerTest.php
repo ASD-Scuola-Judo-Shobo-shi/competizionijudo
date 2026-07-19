@@ -148,8 +148,10 @@ final class InputValidationControllerTest extends TestCase
     {
         $locations = $this->createMock(PDOStatement::class);
         $locations->method('fetchAll')->willReturn([]);
+        $clubs = $this->createMock(PDOStatement::class);
+        $clubs->method('fetchAll')->willReturn([]);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::once())->method('query')->willReturn($locations);
+        $database->expects(self::exactly(2))->method('query')->willReturn($locations, $clubs);
         $database->expects(self::never())->method('prepare');
         $this->setDatabase($database);
         Session::set('is_admin', true);
