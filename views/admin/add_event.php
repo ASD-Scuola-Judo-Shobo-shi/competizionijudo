@@ -95,3 +95,19 @@ $isEdit = !empty($event);
         <button class="btn green" type="submit"><?= e($isEdit ? __('admin.edit.save') : __('admin.add.save')) ?></button>
     </form>
 </div>
+    <script>
+    // Dropdown toggle for registration exceptions
+    function toggleDropdown(button) {
+        const menu = button.nextElementSibling;
+        if (menu && menu.classList.contains('dropdown-menu')) {
+            menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none';
+        }
+    }
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.checkbox-dropdown')) {
+            document.querySelectorAll('.dropdown-menu').forEach(function(menu) {
+                menu.style.display = 'none';
+            });
+        }
+    });
+    </script>

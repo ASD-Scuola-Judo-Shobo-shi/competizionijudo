@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Controller\HomeController;
+use App\Controller\AboutController;
 use App\Core\Request;
 use App\Core\Router;
 use App\Core\View;
@@ -84,7 +84,7 @@ final class PrivacyNoticeTest extends TestCase
 
     public function testHomepageNoLongerLoadsHardCodedLegacyEventData(): void
     {
-        $controller = new HomeController(
+        $controller = new AboutController(
             new View(dirname(__DIR__) . '/views'),
             new Request('GET', '/')
         );

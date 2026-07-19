@@ -130,7 +130,7 @@ final class HelpersTest extends TestCase
     public function testTranslateFunction(): void
     {
         // Use a known key
-        $result = __('nav.home');
+        $result = __('nav.about');
         self::assertIsString($result);
         self::assertNotEmpty($result);
     }

@@ -40,7 +40,7 @@ for route in \
   /events.php \
   /event_details.php \
   /event_entries.php \
-  /event_register.php \
+  /events/register \
   /language/switch; do
   if ! grep -Fq "\$router->get('${route}'" "$ARTIFACT_DIR/routes/web.php"; then
     echo "Missing expected public GET route: $route" >&2

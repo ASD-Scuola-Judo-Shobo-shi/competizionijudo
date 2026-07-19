@@ -40,7 +40,7 @@
                         <?php endif; ?>
                     </td>
                     <td>
-                        <a class="btn btn-sm green" href="<?= e(base_url('/admin_add_event.php?event_id=' . (int) $event->id)) ?>"><?= e(__('admin.events.edit')) ?></a>
+                        <a class="btn btn-sm green" href="<?= e(base_url('/admin/events/add?event_id=' . (int) $event->id)) ?>"><?= e(__('admin.events.edit')) ?></a>
                         <form method="post" action="<?= e(base_url('/admin/events/delete?')) ?>" style="display:inline" onsubmit="return confirm('<?= e(__('admin.events.confirm_delete')) ?>')">
                             <?= csrf_field() ?>
                             <input type="hidden" name="event_id" value="<?= (int) $event->id ?>">

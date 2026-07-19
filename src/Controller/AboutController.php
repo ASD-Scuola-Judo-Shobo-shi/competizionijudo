@@ -8,17 +8,17 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 
-final class HomeController extends Controller
+final class AboutController extends Controller
 {
     public function index(Request $request): Response
     {
-        return $this->view('static/index', ['title' => __('nav.home')]);
+        return $this->view('static/index', ['title' => __('nav.about')]);
     }
 
     public function about(Request $request): Response
     {
         return $this->view('static/about', [
-            'title' => __('nav.home'),
+            'title' => __('nav.about'),
         ]);
     }
 

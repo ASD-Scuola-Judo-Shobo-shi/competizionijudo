@@ -126,7 +126,7 @@ final class InputValidationControllerTest extends TestCase
             );
         $this->setDatabase($database);
         Session::set('club_id', 31);
-        $request = new Request('POST', '/club_area.php?view=add', ['view' => 'add'], [
+        $request = new Request('POST', '/clubs/area?view=add', ['view' => 'add'], [
             'csrf_token' => csrf_token(),
             'athlete_id' => '',
             'last_name' => '',

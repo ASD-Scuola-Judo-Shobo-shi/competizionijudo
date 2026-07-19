@@ -91,12 +91,12 @@ final class LanguageControllerTest extends TestCase
     public function testInvalidLocaleFallsBackToItalianAndRelativeRefererIsPreserved(): void
     {
         $request = new Request('GET', '/language/switch', ['locale' => 'forged'], [], [
-            'HTTP_REFERER' => '/club_area.php?view=list',
+            'HTTP_REFERER' => '/clubs/area?view=list',
         ]);
 
         $response = $this->router()->dispatch($request);
 
-        self::assertSame('/club_area.php?view=list', $response->headers()['Location']);
+        self::assertSame('/clubs/area?view=list', $response->headers()['Location']);
         self::assertSame('it', Session::get('locale'));
         self::assertSame('it', Localization::getLocale());
     }

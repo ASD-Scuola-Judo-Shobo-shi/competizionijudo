@@ -555,6 +555,6 @@ final class AdminController extends Controller
             return $this->redirect('/admin/events');
         }
 
-        return $this->redirect('/admin_add_event.php?event_id=' . $id);
+        return $this->redirect('/admin/events/add?event_id=' . $id);
     }
 }

@@ -106,7 +106,7 @@ final class AthleteCsvWorkflowTest extends TestCase
         $response = (new ClubAreaController($this->view, $request))->importAthletes($request);
 
         self::assertSame(302, $response->status());
-        self::assertSame('/club_area.php?view=list', $response->headers()['Location']);
+        self::assertSame('/clubs/area?view=list', $response->headers()['Location']);
         self::assertSame('UpdatedOwn', $this->database->query(
             'SELECT last_name FROM athletes WHERE id = 301'
         )->fetchColumn());

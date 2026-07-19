@@ -21,7 +21,7 @@ final class PublicEndpointInventoryTest extends TestCase
             'club_reset_password.php',
             'event.php',
             'event_details.php',
-            'event_register.php',
+            'events/register',
             'event_show.php',
             'events.php',
             'index.php',
@@ -41,7 +41,7 @@ final class PublicEndpointInventoryTest extends TestCase
             'club_forgot_password.php',
             'club_reset_password.php',
             'event_details.php',
-            'event_register.php',
+            'events/register',
             'events.php',
         ];
 

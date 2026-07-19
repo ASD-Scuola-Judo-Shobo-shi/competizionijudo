@@ -112,7 +112,7 @@ final class LogoutTest extends TestCase
         self::assertStringNotContainsString('href="/club_logout.php"', $layout);
 
         $adminLogout = $this->findLogoutItem(Navigation::submenu('/admin_manage_events.php', true, false));
-        $clubLogout = $this->findLogoutItem(Navigation::submenu('/club_area.php', false, true));
+        $clubLogout = $this->findLogoutItem(Navigation::submenu('/clubs/area', false, true));
         self::assertSame('/admin_logout.php', $adminLogout['url']);
         self::assertSame('post', $adminLogout['method'] ?? null);
         self::assertSame('/club_logout.php', $clubLogout['url']);

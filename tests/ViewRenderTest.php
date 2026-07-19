@@ -21,11 +21,11 @@ final class ViewRenderTest extends TestCase
 
         $view = new View(dirname(__DIR__) . '/views');
         $html = $view->render('admin/add_event', array_merge([
-            'currentPath' => '/admin_add_event.php',
+            'currentPath' => '/admin/events/add',
             'event' => null,
             'error' => '',
             'locations' => [],
-        ], $this->layoutData('/admin_add_event.php')));
+        ], $this->layoutData('/admin/events/add')));
 
         self::assertStringNotContainsString('</parameter>', $html);
         self::assertStringNotContainsString('</write_to_file>', $html);
@@ -63,18 +63,18 @@ final class ViewRenderTest extends TestCase
         $authorized = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => true,
-        ], $this->layoutData('/events.php')));
+        ], $this->layoutData('/events')));
         $anonymous = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => false,
-        ], $this->layoutData('/events.php')));
+        ], $this->layoutData('/events')));
 
-        self::assertStringContainsString('/event_details.php?event=101', $authorized);
-        self::assertStringContainsString('/event_entries.php?event=101', $authorized);
+        self::assertStringContainsString('/events/details?event=101', $authorized);
+        self::assertStringContainsString('/events/entries?event=101', $authorized);
         self::assertStringContainsString('>Details</a>', $authorized);
         self::assertStringContainsString('>Entries</a>', $authorized);
         // Entries link should now be visible to all visitors
-        self::assertStringContainsString('/event_entries.php?event=101', $anonymous);
+        self::assertStringContainsString('/events/entries?event=101', $anonymous);
     }
 
     public function testAthletePreviewEmbedsSharedCategoryDefinitions(): void
@@ -88,7 +88,7 @@ final class ViewRenderTest extends TestCase
             'errors' => [],
             'athletes' => [],
             'pagination' => paginate(0, 1, 50),
-        ], $this->layoutData('/club_area.php')));
+        ], $this->layoutData('/clubs/area')));
 
         self::assertStringContainsString('const ageClasses = ' . AgeClass::definitionsJson('en'), $html);
         self::assertStringContainsString(
@@ -99,8 +99,8 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('weightDefs.limits[classKey]', $html);
         self::assertStringNotContainsString('childMap', $html);
         self::assertStringNotContainsString('adultMap', $html);
-        self::assertStringContainsString('href="/club_athletes_export.csv"', $html);
-        self::assertStringContainsString('action="/club_athletes_import.php"', $html);
+        self::assertStringContainsString('href="/clubs/athletes-export"', $html);
+        self::assertStringContainsString('action="/clubs/athletes-import?"', $html);
         self::assertStringContainsString('enctype="multipart/form-data"', $html);
         self::assertStringContainsString('name="athletes_csv"', $html);
     }
@@ -184,7 +184,7 @@ final class ViewRenderTest extends TestCase
         $html = $view->render('club/register', array_merge([
             'errors' => [],
             'success' => null,
-        ], $this->layoutData('/club_register.php')));
+        ], $this->layoutData('/clubs/register')));
 
         self::assertStringContainsString(
             'name="athlete_data_rights_declaration" value="1" required',

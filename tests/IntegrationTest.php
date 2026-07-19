@@ -75,7 +75,7 @@ final class IntegrationTest extends TestCase
 
     public function testAdminLoginShowsErrorOnInvalidCredentials(): void
     {
-        $request = new Request('POST', '/admin_login.php', [], [
+        $request = new Request('POST', '/admin/login', [], [
             'csrf_token' => csrf_token(),
             'user' => 'wrong',
             'pass' => 'wrong',
@@ -86,7 +86,7 @@ final class IntegrationTest extends TestCase
         $response = $controller->login($request);
 
         self::assertSame(200, $response->status());
-        self::assertStringContainsString('Credenziali amministratore non valide', $response->content());
+        self::assertStringContainsString(e(__('admin.login.errors.invalid_credentials')), $response->content());
         self::assertSame([[
             'scope' => 'admin-login',
             'account' => 'wrong',
@@ -103,7 +103,7 @@ final class IntegrationTest extends TestCase
 
         $this->startCleanSession();
 
-        $request = new Request('POST', '/admin_login.php', [], [
+        $request = new Request('POST', '/admin/login', [], [
             'csrf_token' => csrf_token(),
             'user' => 'wrong',
             'pass' => 'wrong',
@@ -123,7 +123,7 @@ final class IntegrationTest extends TestCase
         $throttle->recordAttempt('club-login', 'club@example.test', '192.0.2.30');
         $this->startCleanSession();
 
-        $request = new Request('POST', '/club_login.php', [], [
+        $request = new Request('POST', '/clubs/login', [], [
             'csrf_token' => csrf_token(),
             'email' => 'club@example.test',
             'password' => 'wrong',
@@ -141,7 +141,7 @@ final class IntegrationTest extends TestCase
     {
         Session::destroy();
 
-        $request = new Request('GET', '/admin_add_event.php');
+        $request = new Request('GET', '/admin/events/add');
         $controller = new AdminController($this->view, $request);
 
         $response = $controller->addEvent($request);
@@ -152,7 +152,7 @@ final class IntegrationTest extends TestCase
     {
         Session::destroy();
 
-        $request = new Request('GET', '/admin_manage_events.php');
+        $request = new Request('GET', '/admin/events');
         $controller = new AdminController($this->view, $request);
 
         $response = $controller->manageEvents($request);

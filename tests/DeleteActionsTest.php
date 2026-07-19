@@ -49,9 +49,9 @@ final class DeleteActionsTest extends TestCase
         $router = new Router($this->view);
         (require dirname(__DIR__) . '/routes/web.php')($router);
         $paths = [
-            '/admin_delete_club.php',
-            '/admin_delete_event.php',
-            '/club_delete_athlete.php',
+            '/admin/clubs/delete',
+            '/admin/events/delete',
+            '/clubs/delete-athlete',
         ];
 
         foreach ($paths as $path) {
@@ -83,7 +83,7 @@ final class DeleteActionsTest extends TestCase
         $this->assertCsrfRejected(static fn(): Response => $admin->deleteEvent($adminRequest));
 
         Session::set('club_id', 201);
-        $clubRequest = new Request('POST', '/club_delete_athlete.php', [], [
+        $clubRequest = new Request('POST', '/clubs/delete-athlete', [], [
             'csrf_token' => 'synthetic-invalid-csrf',
             'athlete_id' => '301',
         ]);
@@ -95,7 +95,7 @@ final class DeleteActionsTest extends TestCase
     {
         Session::set('is_admin', true);
         $this->setDatabase($this->databaseExpectingDelete('DELETE FROM clubs WHERE id = ?', [401]));
-        $request = new Request('POST', '/admin_delete_club.php', [], [
+        $request = new Request('POST', '/admin/clubs/delete', [], [
             'csrf_token' => csrf_token(),
             'club_id' => '401',
         ]);
@@ -124,7 +124,7 @@ final class DeleteActionsTest extends TestCase
         mkdir($publicRoot . '/uploads/events', 0755, true);
         file_put_contents($publicRoot . '/uploads/events/old-poster.pdf', 'synthetic');
         file_put_contents($publicRoot . '/uploads/events/old-info.pdf', 'synthetic');
-        $request = new Request('POST', '/admin_delete_event.php', [], [
+        $request = new Request('POST', '/admin/events/delete', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '501',
         ]);
@@ -178,7 +178,7 @@ final class DeleteActionsTest extends TestCase
             'error' => UPLOAD_ERR_OK,
             'size' => filesize($temporaryUpload),
         ];
-        $request = new Request('POST', '/admin_add_event.php', [], [
+        $request = new Request('POST', '/admin/events/add', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '502',
             'name' => 'Synthetic event',
@@ -232,7 +232,7 @@ final class DeleteActionsTest extends TestCase
             'DELETE FROM athletes WHERE id = ? AND club_id = ?',
             [301, 201]
         ));
-        $request = new Request('POST', '/club_delete_athlete.php', [], [
+        $request = new Request('POST', '/clubs/delete-athlete', [], [
             'csrf_token' => csrf_token(),
             'athlete_id' => '301',
             'club_id' => '999',
@@ -246,16 +246,16 @@ final class DeleteActionsTest extends TestCase
     public function testDeleteControlsAreCsrfProtectedForms(): void
     {
         $templates = [
-            'views/admin/manage_clubs.php' => ['/admin_delete_club.php', 'club_id'],
-            'views/admin/manage_events.php' => ['/admin_delete_event.php', 'event_id'],
-            'views/club/area_list.php' => ['/club_delete_athlete.php', 'athlete_id'],
-            'views/club/area_add.php' => ['/club_delete_athlete.php', 'athlete_id'],
+            'views/admin/manage_clubs.php' => ['/admin/clubs/delete', 'club_id'],
+            'views/admin/manage_events.php' => ['/admin/events/delete', 'event_id'],
+            'views/club/area_list.php' => ['/clubs/delete-athlete', 'athlete_id'],
+            'views/club/area_add.php' => ['/clubs/delete-athlete', 'athlete_id'],
         ];
 
         foreach ($templates as $path => [$action, $idField]) {
             $template = file_get_contents(dirname(__DIR__) . '/' . $path);
             self::assertIsString($template);
-            self::assertStringContainsString('method="post" action="<?= e(base_url(\'' . $action . '\')) ?>"', $template);
+            self::assertStringContainsString('method="post" action="<?= e(base_url(\'' . $action . '?\')) ?>"', $template);
             self::assertStringContainsString('csrf_field()', $template);
             self::assertStringContainsString('name="' . $idField . '"', $template);
             self::assertStringNotContainsString('?delete=', $template);

@@ -229,7 +229,7 @@ final class EventController extends Controller
 
             Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $id, $flashFeedback);
 
-            return $this->redirect('/event_register.php?id=' . $id);
+            return $this->redirect('/events/register?id=' . $id);
         }
 
         $athletes = Athlete::findByClub($clubId);

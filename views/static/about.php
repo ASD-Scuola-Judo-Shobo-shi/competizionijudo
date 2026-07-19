@@ -7,7 +7,7 @@
         <div>
             <h2><?= translate('header.title') ?></h2>
             <p>
-                <?= translate('home.description') ?>
+                <?= translate('about.description') ?>
             </p>
         </div>
     </div>
@@ -15,15 +15,16 @@
 
 <section class="info-strip">
     <div>
-        <strong><?= translate('home_info.entries') ?></strong>
-        <span><?= translate('home_info.entries_text') ?></span>
+        <strong><?= translate('about_info.entries') ?></strong>
+        <span><?= translate('about_info.entries_text') ?></span>
     </div>
     <div>
-        <strong><?= translate('home_info.clubs') ?></strong>
-        <span><?= translate('home_info.clubs_text') ?></span>
+        <strong><?= translate('about_info.clubs') ?></strong>
+        <span><?= translate('about_info.clubs_text') ?></span>
     </div>
     <div>
-        <strong><?= translate('home_info.athletes') ?></strong>
-        <span><?= translate('home_info.athletes_text') ?></span>
+        <strong><?= translate('about_info.athletes') ?></strong>
+        <span><?= translate('about_info.athletes_text') ?></span>
     </div>
 </section>
+

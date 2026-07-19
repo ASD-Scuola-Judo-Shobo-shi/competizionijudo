@@ -173,7 +173,7 @@ final class ClubAreaCsrfTest extends TestCase
     /** @param array<string, mixed> $overrides */
     private function athleteRequest(array $overrides): Request
     {
-        return new Request('POST', '/club_area.php?view=add', ['view' => 'add'], array_merge([
+        return new Request('POST', '/clubs/area?view=add', ['view' => 'add'], array_merge([
             'last_name' => 'Synthetic',
             'first_name' => 'Athlete',
             'gender' => 'M',

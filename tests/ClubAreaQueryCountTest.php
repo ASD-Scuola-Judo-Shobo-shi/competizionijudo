@@ -119,7 +119,7 @@ final class ClubAreaQueryCountTest extends TestCase
             );
         $database->expects(self::never())->method('query');
         $this->databaseConnection->setValue(null, $database);
-        $request = new Request('GET', '/club_area.php?view=list&event=101', [
+        $request = new Request('GET', '/clubs/area?view=list&event=101', [
             'view' => 'list',
             'event' => '101',
         ]);
