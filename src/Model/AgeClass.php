@@ -31,8 +31,7 @@ final class AgeClass
         public readonly ?int $ageBelow,
         public readonly int $ageMin,
         public readonly ?int $ageMax,
-    ) {
-    }
+    ) {}
 
     /**
      * Returns all age classes definition in the given locale.
@@ -128,20 +127,25 @@ final class AgeClass
 
     private function formatAgeRangeIt(): string
     {
-        if ($this->ageMin === $this->ageMax || $this->ageMax === null) {
-            return $this->ageMin >= 36 ? $this->ageMin . '+' : (string) $this->ageMin;
-        }
-
-        return $this->ageMin . '-' . $this->ageMax . ' anni';
+        return $this->composeAgeRange('anni');
     }
 
     private function formatAgeRangeEn(): string
     {
-        if ($this->ageMin === $this->ageMax || $this->ageMax === null) {
-            return $this->ageMin >= 36 ? $this->ageMin . '+' : (string) $this->ageMin;
+        return $this->composeAgeRange('yr');
+    }
+
+    private function composeAgeRange(string $unit): string
+    {
+        if ($this->ageMax === null) {
+            return "{$this->ageMin}+ {$unit}";
         }
 
-        return $this->ageMin . '-' . $this->ageMax . ' yr';
+        if ($this->ageMin === $this->ageMax) {
+            return "{$this->ageMin} {$unit}";
+        }
+
+        return "{$this->ageMin}-{$this->ageMax} {$unit}";
     }
 
     /**

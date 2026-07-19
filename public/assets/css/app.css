@@ -646,6 +646,24 @@ a.btn-sm:hover {
     color: #8b1a2b;
 }
 
+.registration-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.change-indicator {
+    color: #c80022;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -680,6 +698,33 @@ td {
 
 th {
     background: #edf3fb
+}
+
+/* Odd/even row background colors */
+tr:nth-child(even) {
+    background: #f8faff;
+}
+
+tr:nth-child(odd) {
+    background: #ffffff;
+}
+
+tr.club-row--current {
+    background: #e7f4ff !important;
+}
+
+tr.club-row--current td {
+    font-weight: 600;
+}
+
+.club-badge--current {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #0a3775;
+    background: #cce5ff;
+    border-radius: 12px;
 }
 
 /* Accessibility */
@@ -1016,6 +1061,7 @@ textarea {
 
 /* Event List Card Layout */
 .event-card-public {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     gap: 24px;
@@ -1320,89 +1366,49 @@ button.submenu-item {
     display: none !important;
 }
 
-/* Zebra striping for tables */
-.zebra-table tr:nth-child(odd) {
-    background-color: #ffffff;
-}
-
-.zebra-table tr:nth-child(even) {
-    background-color: #f8faff;
-}
-
-/* Current club row highlighting */
-.club-row--current {
-    background-color: #e8f5e9 !important;
-    outline: 2px solid #4caf50;
-    outline-offset: -2px;
-}
-
-.badge-current {
+/* Checkbox dropdown styles */
+.checkbox-dropdown {
+    position: relative;
     display: inline-block;
-    padding: 2px 8px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    background: #4caf50;
-    color: #fff;
-    border-radius: 10px;
-    margin-left: 6px;
-    vertical-align: middle;
+    width: 100%;
 }
 
-.badge-closed {
-    display: inline-block;
-    padding: 3px 12px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    background: #9e9e9e;
-    color: #fff;
+.dropdown-toggle {
+    width: 100%;
+    text-align: left;
+    justify-content: space-between;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-arrow {
+    margin-left: auto;
+    font-size: 0.8em;
+}
+
+.dropdown-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #ced4da;
     border-radius: 4px;
-    margin-left: 8px;
-    vertical-align: middle;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 8px;
+    margin-bottom: 4px;
 }
 
-/* Recap stats */
-.recap-stats {
-    display: flex;
-    gap: 24px;
-    margin: 16px 0;
-    flex-wrap: wrap;
-}
-
-.recap-stat {
-    background: #f0f4ff;
-    border: 1px solid #d0d8e8;
-    border-radius: 8px;
-    padding: 16px 24px;
-    text-align: center;
-    min-width: 150px;
-}
-
-.recap-stat-value {
+.dropdown-item {
     display: block;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1a3a6b;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
 }
 
-.recap-stat-label {
-    display: block;
-    font-size: 0.85rem;
-    color: #5a6a8a;
-    margin-top: 4px;
-}
-
-.recap-breakdowns {
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
-    margin-top: 16px;
-}
-
-.recap-breakdown {
-    flex: 1;
-    min-width: 200px;
-    background: #fafbfc;
-    border: 1px solid #e0e4ea;
-    border-radius: 6px;
-    padding: 12px 16px;
+.dropdown-item:hover {
+    background: #f7f9fc;
 }

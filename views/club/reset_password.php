@@ -36,9 +36,9 @@
             <input type="password" name="password2" minlength="<?= \App\Security\PasswordPolicy::MINIMUM_LENGTH ?>" required>
 
             <button class="btn green" type="submit"><?= e(__('club.reset_password.submit')) ?></button>
-            <a class="btn" href="<?= e(base_url('/club_login.php')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
+            <a class="btn" href="<?= e(base_url('/clubs/login?')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
         </form>
     <?php else : ?>
-        <a class="btn green" href="<?= e(base_url('/club_login.php')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
+        <a class="btn green" href="<?= e(base_url('/clubs/login?')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
     <?php endif; ?>
 </div>

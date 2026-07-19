@@ -133,7 +133,7 @@ final class ClubController extends Controller
                             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                         ]);
                         $confirmationUrl = sprintf(
-                            '%s/clubs/confirm-registration?token=%s',
+                            '%s/club_confirm_registration.php?token=%s',
                             rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
                             $token
                         );
@@ -224,7 +224,7 @@ final class ClubController extends Controller
                             $throttle->clear('club-login', $email, $networkSignal);
                             Session::authenticateClub($club->id);
 
-                            return $this->redirect('/clubs/area?view=list');
+                            return $this->redirect('/club_area.php?view=list');
                         }
                     }
                 } catch (\Throwable $exception) {
@@ -247,7 +247,7 @@ final class ClubController extends Controller
         $clubs = Club::page($pagination['per_page'], $pagination['offset']);
 
         return $this->view('club/list', [
-            'title' => __('club.list'),
+            'title' => __('club.list.title'),
             'clubs' => $clubs,
             'pagination' => $pagination,
         ]);
@@ -288,7 +288,7 @@ final class ClubController extends Controller
                         $rawToken = $this->passwordResetTokens->issueForEmail($email);
                         if ($rawToken !== null) {
                             $resetUrl = sprintf(
-                                '%s/clubs/reset-password?token=%s',
+                                '%s/club_reset_password.php?token=%s',
                                 rtrim((string) env('APP_URL', 'http://localhost:8080'), '/'),
                                 $rawToken
                             );

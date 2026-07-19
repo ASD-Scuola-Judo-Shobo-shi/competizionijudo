@@ -36,7 +36,7 @@ $affiliationOptions = $affiliationOptions ?? \App\Model\Affiliation::options();
         <?php if (!empty($confirmation_link)) : ?>
             <p><a class="btn green" href="<?= e($confirmation_link) ?>"><?= e(__('club.register.confirm_now')) ?></a></p>
         <?php endif; ?>
-        <a class="btn green" href="<?= e(base_url('/club_login.php')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
+        <a class="btn green" href="<?= e(base_url('/clubs/login?')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
     <?php else : ?>
         <form method="post" class="form-card">
             <?= csrf_field() ?>
@@ -126,7 +126,7 @@ $affiliationOptions = $affiliationOptions ?? \App\Model\Affiliation::options();
             </label>
 
             <button class="btn green" type="submit"><?= e(__('club.register.register_button')) ?></button>
-            <a class="btn" href="<?= e(base_url('/club_login.php')) ?>"><?= e(__('nav.club_login')) ?></a>
+            <a class="btn" href="<?= e(base_url('/clubs/login?')) ?>"><?= e(__('nav.club_login')) ?></a>
         </form>
         <script>
         (() => {

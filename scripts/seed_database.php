@@ -2,263 +2,299 @@
 
 declare(strict_types=1);
 
-/**
- * Database Seeding Utility
- *
- * Completely purges existing tables (events, clubs, athletes, entries) before execution.
- * Generates mock data: 6 Italian regional events, 50 clubs scattered across Sardinian
- * provinces, and roughly ~4,600+ distributed athletes.
- *
- * Usage: php scripts/seed_database.php
- */
-
-require_once __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../src/bootstrap.php';
 
 use App\Model\Database;
-use App\Model\AgeClass;
 use App\Model\Belt;
-use App\Model\JudoCategory;
+use App\Model\Gender;
+use App\Model\SardinianLocation;
+use App\Model\Affiliation;
 
-// Load environment
-$envFile = __DIR__ . '/../.env';
-if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (str_starts_with(trim($line), '#')) {
-            continue;
-        }
-        putenv(trim($line));
-    }
-}
+/**
+ * Seed the database with test data for Sardinian judo competitions.
+ * Generates 6 events in Sardinia (Italian) and 50 clubs with 15-150 athletes each.
+ */
 
-$db = Database::connection();
+// Configuration
+$eventCount = 6;
+$clubCount = 50;
+$minAthletesPerClub = 15;
+$maxAthletesPerClub = 150;
 
-echo "Purging existing data...\n";
-
-// Disable foreign key checks for truncation
-$db->exec('SET FOREIGN_KEY_CHECKS = 0');
-$db->exec('TRUNCATE TABLE entries');
-$db->exec('TRUNCATE TABLE athletes');
-$db->exec('TRUNCATE TABLE event_registration_exceptions');
-$db->exec('TRUNCATE TABLE events');
-$db->exec('TRUNCATE TABLE clubs');
-$db->exec('SET FOREIGN_KEY_CHECKS = 1');
-
-echo "Creating 75 clubs...\n";
-
-$provinces = ['CA', 'NU', 'OR', 'SS', 'SU'];
-$citiesByProvince = [
-    'CA' => ['Cagliari', 'Quartu Sant\'Elena', 'Selargius', 'Assemini', 'Capoterra', 'Sestu', 'Monserrato', 'Senorbì', 'Dolianova', 'Serdiana'],
-    'NU' => ['Nuoro', 'Siniscola', 'Macomer', 'Dorgali', 'Orosei', 'Bitti', 'Orgosolo', 'Mamoiada', 'Oliena', 'Gavoi'],
-    'OR' => ['Oristano', 'Cabras', 'Terralba', 'Marrubiu', 'Santa Giusta', 'Bosa', 'Ghilarza', 'Mogoro', 'Ales', 'Nurachi'],
-    'SS' => ['Sassari', 'Alghero', 'Porto Torres', 'Olbia', 'Tempio Pausania', 'Ozieri', 'Ittiri', 'Sennori', 'Castelsardo', 'Ploaghe'],
-    'SU' => ['Carbonia', 'Iglesias', 'Sant\'Antioco', 'Guspini', 'Villacidro', 'Sanluri', 'Muravera', 'San Gavino Monreale', 'Serrenti', 'Gonnosfanadiga'],
+// Sardinian venue names (Italian)
+$venues = [
+    'Palazzetto dello Sport Cagliari',
+    'PalaMandolesi Sassari',
+    'Gymnasium Comunale Nuoro',
+    'Palestra Arzana',
+    'Centro Sportivo Oristano',
+    'Area Eventi Olbia',
+    'Palazzetto dello Sport Pula',
+    'Gym Ortauro',
+    'Palestra Comunale Alghero',
+    'PalaVigor Sestu',
+    'Centro Tennistico Calasetta',
+    'Palazzetto Villaspeciosa',
 ];
 
-$clubNames = [
-    'Judo Club', 'Polisportiva Judo', 'ASD Judo', 'Circolo Judo', 'Accademia Judo',
-    'Centro Judo', 'Società Judo', 'Team Judo', 'Scuola Judo', 'Sport Judo',
-    'Judo Shobo-shi', 'Judo Kodokan', 'Judo Bushido', 'Judo Samurai', 'Judo Rising Sun',
-    'Judo Dragon', 'Judo Phoenix', 'Judo Tiger', 'Judo Falcon', 'Judo Eagle',
-    'Judo Warrior', 'Judo Spirit', 'Judo Elite', 'Judo Pro', 'Judo Champion',
-    'Judo Star', 'Judo Gold', 'Judo Silver', 'Judo Bronze', 'Judo Diamond',
-    'Judo Master', 'Judo Expert', 'Judo Legend', 'Judo Hero', 'Judo Pride',
-    'Judo Honor', 'Judo Glory', 'Judo Victory', 'Judo Triumph', 'Judo Force',
-    'Judo Power', 'Judo Energy', 'Judo Dynamic', 'Judo Active', 'Judo Fit',
-    'Judo Health', 'Judo Sport', 'Judo Fun', 'Judo Joy', 'Judo Happy',
-];
-
-$passwordHash = password_hash('000000000000', PASSWORD_DEFAULT);
-
-$clubStmt = $db->prepare(
-    'INSERT INTO clubs (federal_code, name, email, phone, contact_first_name, contact_last_name, contact_phone, contact_email, organization, recovery_email, password_hash, address_line, postal_code, city, province)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-);
-
-$clubIds = [];
-for ($i = 0; $i < 75; $i++) {
-    $province = $provinces[$i % count($provinces)];
-    $cities = $citiesByProvince[$province];
-    $city = $cities[$i % count($cities)];
-    $federalCode = 'FED' . str_pad((string) ($i + 1), 5, '0', STR_PAD_LEFT);
-    $name = $clubNames[$i] . ' ' . $city;
-    $email = 'club' . ($i + 1) . '@example.com';
-    $phone = '+39 3' . random_int(20, 99) . ' ' . str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-    $contactFirst = ['Marco', 'Luca', 'Giovanni', 'Andrea', 'Francesco', 'Roberto', 'Alessandro', 'Paolo', 'Simone', 'Fabio'][$i % 10];
-    $contactLast = ['Rossi', 'Bianchi', 'Verdi', 'Russo', 'Ferrari', 'Esposito', 'Romano', 'Gallo', 'Costa', 'Fontana'][$i % 10];
-    $postalCode = (string) random_int(9010, 98100);
-
-    $clubStmt->execute([
-        $federalCode,
-        $name,
-        $email,
-        $phone,
-        $contactFirst,
-        $contactLast,
-        $phone,
-        $email,
-        'CSEN',
-        $email,
-        $passwordHash,
-        'Via ' . $contactLast . ' ' . random_int(1, 100),
-        $postalCode,
-        $city,
-        $province,
-    ]);
-    $clubIds[] = (int) $db->lastInsertId();
-}
-
-echo "Creating 6 events...\n";
-
-$eventNames = [
-    'Trofeo Città di Cagliari',
-    'Gran Premio Sardegna',
-    'Coppa Italia Judo Sardegna',
-    'Memorial Gianni Mura',
-    'Torneo Regionale Under',
-    'Campionato Provinciale',
-];
-
-$eventLocations = [
-    'Cagliari',
-    'Sassari',
-    'Oristano',
-    'Nuoro',
-    'Carbonia',
-    'Olbia',
-];
-
+// Event types
 $eventTypes = ['only_precompetitive', 'only_competitive', 'precompetitive_and_competitive'];
 
-$eventStmt = $db->prepare(
-    'INSERT INTO events (name, date, location, organizer, registration_deadline, max_participants, type, description, published, closed)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-);
+// Age class birth years mapping (for realistic weight/age combinations)
+$ageClassBirthYears = [
+    'children_a' => range(2019, 2021), // 4-6 years old (2026)
+    'children_b' => range(2017, 2018), // 6-7 years old
+    'kids' => range(2015, 2016), // 8-9 years old
+    'youth' => range(2013, 2014), // 10-11 years old
+    'pre_cadets_a' => [2014], // 12 years old
+    'pre_cadets_b' => [2011, 2012, 2013], // 13-14 years old
+    'cadets' => range(2008, 2010), // 15-17 years old
+    'juniors' => range(2006, 2007), // 18-20 years old
+    'seniors' => range(1990, 2005), // 21-36 years old
+    'masters' => range(1950, 1989), // 37+ years old
+];
 
-$eventIds = [];
-$baseDate = strtotime('2026-09-01');
-for ($i = 0; $i < 6; $i++) {
-    $eventDate = date('Y-m-d', strtotime('+' . ($i * 14) . ' days', $baseDate));
-    $deadline = date('Y-m-d', strtotime('-7 days', strtotime($eventDate)));
-    $maxParticipants = [100, 150, 200, 120, 180, 250][$i];
-    $published = $i < 4 ? 1 : 1; // All published
-    $closed = $i >= 4 ? 1 : 0; // Last 2 are closed
+// Weight ranges by gender and age class
+$weightRanges = [
+    'M' => [
+        'children_a' => [16, 36],
+        'children_b' => [18, 40],
+        'kids' => [20, 50],
+        'youth' => [26, 66],
+        'pre_cadets_a' => [36, 73],
+        'pre_cadets_b' => [38, 81],
+        'cadets' => [46, 90],
+        'juniors' => [60, 100],
+        'seniors' => [60, 100],
+        'masters' => [60, 110],
+    ],
+    'F' => [
+        'children_a' => [16, 36],
+        'children_b' => [18, 40],
+        'kids' => [20, 50],
+        'youth' => [26, 60],
+        'pre_cadets_a' => [36, 63],
+        'pre_cadets_b' => [40, 70],
+        'cadets' => [40, 78],
+        'juniors' => [48, 78],
+        'seniors' => [48, 78],
+        'masters' => [50, 90],
+    ],
+];
 
-    $eventStmt->execute([
-        $eventNames[$i],
-        $eventDate,
-        $eventLocations[$i],
-        'ASD Scuola Judo Shobo-shi',
-        $deadline,
-        $maxParticipants,
-        $eventTypes[$i % count($eventTypes)],
-        'Evento di judo aperto a tutte le società affiliate.',
-        $published,
-        $closed,
-    ]);
-    $eventIds[] = (int) $db->lastInsertId();
+// Sample Italian first and last names
+$maleFirstNames = ['Marco', 'Luca', 'Giuseppe', 'Antonio', 'Francesco', 'Alessandro', 'Giovanni', 'Carlo', 'Roberto', 'Davide', 'Andrea', 'Matteo', 'Lorenzo', 'Pietro', 'Tommaso', 'Gabriele', 'Simone', 'Alberto', 'Stefano', 'Massimo'];
+$femaleFirstNames = ['Maria', 'Anna', 'Sara', 'Laura', 'Giulia', 'Chiara', 'Francesca', 'Alessia', 'Valentina', 'Martina', 'Sofia', 'Giorgia', 'Michela', 'Ilaria', 'Elisa', 'Camilla', 'Aurora', 'Beatrice', 'Vittoria', 'Nicole'];
+$lastNames = ['Santoro', 'Bianchi', 'Rossi', 'Ferrari', 'Roma', 'Leonardo', 'Martinez', 'Gonzalez', 'Herrera', 'Romano', 'Conti', 'Ricci', 'Marchetti', 'Colombo', 'Bruno', 'Mancini', 'Messina', 'Sanna', 'De Luca', 'Cabrera', 'Diaz', 'Lopez', 'Garcia', 'Perez', 'Verdi', 'Neri', 'Costa', 'Mauri', 'Fabbri', 'Leoni', 'Grassi', 'Barbieri', 'Marta', 'Carmine', 'Vitale', 'Ortu', 'Melis', 'Serra', 'Mura', 'Pinna', 'Lecca'];
+
+// Italian club name prefixes/suffixes
+$clubPrefixes = ['Judo Club', 'Associazione Judo', 'Aquanera Judo', 'Shobu Kan', 'Seiryu Kan', 'Kiai', 'Spirito', 'Draghi', 'Leonesse', 'Campioni', 'Giovani', 'Speranza', 'Forza', 'Passione', 'Arte', 'Druido', 'Fucina', 'Fiamma', 'Eclisse'];
+$clubSuffixes = ['Cagliari', 'Sassari', 'Nuoro', 'Oristano', 'Olbia', 'Alghero', 'Pula', 'Sestu', 'Villaspeciosa', 'Lanusei', 'Arzana', 'Alghero', 'Porto Torres', 'Iglesias', 'Ortauro', 'Tortolì', 'Tempio', 'Bosa', 'Guspini', 'Serramanna'];
+
+function randomElement(array $arr): mixed
+{
+    return $arr[array_rand($arr)];
 }
 
-echo "Creating ~4,600+ athletes...\n";
+function randomDate(string $start, string $end): string
+{
+    $startTs = strtotime($start);
+    $endTs = strtotime($end);
+    $randomTs = random_int((int) $startTs, (int) $endTs);
+    return date('Y-m-d', $randomTs);
+}
 
-$firstNamesM = ['Marco', 'Luca', 'Giovanni', 'Andrea', 'Francesco', 'Roberto', 'Alessandro', 'Paolo', 'Simone', 'Fabio', 'Matteo', 'Stefano', 'Davide', 'Federico', 'Antonio', 'Giuseppe', 'Claudio', 'Michele', 'Emanuele', 'Vincenzo'];
-$firstNamesF = ['Sofia', 'Giulia', 'Aurora', 'Alice', 'Ginevra', 'Emma', 'Giorgia', 'Beatrice', 'Anna', 'Martina', 'Chiara', 'Francesca', 'Elena', 'Sara', 'Valentina', 'Alessia', 'Camilla', 'Serena', 'Ilaria', 'Veronica'];
-$lastNames = ['Rossi', 'Bianchi', 'Verdi', 'Russo', 'Ferrari', 'Esposito', 'Romano', 'Gallo', 'Costa', 'Fontana', 'Conti', 'Marino', 'Greco', 'Bruno', 'Rizzo', 'Barbieri', 'Lombardi', 'Moretti', 'Fabbri', 'Martini'];
-$belts = ['white', 'white_yellow', 'yellow', 'yellow_orange', 'orange', 'orange_green', 'green', 'green_blue', 'blue', 'brown', 'black'];
+function randomBirthDate(int $minYear, int $maxYear): string
+{
+    $year = random_int($minYear, $maxYear);
+    $month = random_int(1, 12);
+    $day = random_int(1, 28);
+    return sprintf('%04d-%02d-%02d', $year, $month, $day);
+}
 
-$athleteStmt = $db->prepare(
-    'INSERT INTO athletes (club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt, membership_number)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-);
+function randomWeight(int $min, int $max): float
+{
+    $intWeight = random_int($min, $max);
+    $decimals = random_int(0, 99) / 100;
+    return round($intWeight + $decimals, 2);
+}
 
-$entryStmt = $db->prepare(
-    'INSERT IGNORE INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
-);
+function randomBelt(): string
+{
+    $belts = array_map(fn($b) => $b->value, Belt::cases());
+    return randomElement($belts);
+}
 
-$totalAthletes = 0;
-$totalEntries = 0;
+function randomSardinianLocation(): array
+{
+    $locations = SardinianLocation::all();
+    $province = randomElement(array_keys($locations));
+    $city = randomElement($locations[$province]);
+    $postalCode = SardinianLocation::postalCode($province, $city);
 
-foreach ($clubIds as $clubId) {
-    // Each club gets between 80-120 athletes
-    $numAthletes = random_int(80, 120);
-    $athleteIdsForClub = [];
+    return [
+        'province' => $province,
+        'city' => $city,
+        'postal_code' => $postalCode,
+    ];
+}
 
-    for ($a = 0; $a < $numAthletes; $a++) {
-        $gender = random_int(0, 1) === 0 ? 'M' : 'F';
-        $firstNames = $gender === 'M' ? $firstNamesM : $firstNamesF;
-        $firstName = $firstNames[array_rand($firstNames)];
-        $lastName = $lastNames[array_rand($lastNames)];
+function randomAffiliation(): ?string
+{
+    $options = array_keys(Affiliation::options());
+    // 10% chance of no affiliation (null)
+    if (random_int(1, 10) === 1) {
+        return null;
+    }
+    // Otherwise, pick 1-3 affiliations
+    $count = random_int(1, 3);
+    $selected = [];
+    for ($i = 0; $i < $count; $i++) {
+        $selected[] = randomElement($options);
+    }
+    return json_encode(array_unique($selected), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+}
 
-        // Age range: 4 to 60 years old
-        $age = random_int(4, 60);
-        $birthYear = 2026 - $age;
-        $birthMonth = str_pad((string) random_int(1, 12), 2, '0', STR_PAD_LEFT);
-        $birthDay = str_pad((string) random_int(1, 28), 2, '0', STR_PAD_LEFT);
-        $dateOfBirth = $birthYear . '-' . $birthMonth . '-' . $birthDay;
+function generateAthlete(array $ageClassBirthYears, array $weightRanges, array $maleFirstNames, array $femaleFirstNames, array $lastNames): array
+{
+    $gender = randomElement(['M', 'F']);
+    $firstNames = $gender === 'M' ? $maleFirstNames : $femaleFirstNames;
 
-        // Weight based on age
-        if ($age <= 7) {
-            $weightKg = round(random_int(180, 300) / 10, 1);
-        } elseif ($age <= 10) {
-            $weightKg = round(random_int(250, 400) / 10, 1);
-        } elseif ($age <= 13) {
-            $weightKg = round(random_int(300, 550) / 10, 1);
-        } elseif ($age <= 17) {
-            $weightKg = round(random_int(450, 750) / 10, 1);
-        } else {
-            $weightKg = round(random_int(500, 1000) / 10, 1);
-        }
+    // Pick a random age class and get appropriate birth year
+    $classKey = randomElement(array_keys($ageClassBirthYears));
+    $birthYears = $ageClassBirthYears[$classKey];
+    $birthYear = is_array($birthYears) ? randomElement($birthYears) : $birthYears;
 
-        // Belt based on age
-        if ($age <= 7) {
-            $belt = $belts[array_rand(array_slice($belts, 0, 3))];
-        } elseif ($age <= 10) {
-            $belt = $belts[array_rand(array_slice($belts, 0, 5))];
-        } elseif ($age <= 13) {
-            $belt = $belts[array_rand(array_slice($belts, 0, 7))];
-        } elseif ($age <= 17) {
-            $belt = $belts[array_rand(array_slice($belts, 0, 9))];
-        } else {
-            $belt = $belts[array_rand($belts)];
-        }
+    return [
+        'gender' => $gender,
+        'first_name' => randomElement($firstNames),
+        'last_name' => randomElement($lastNames),
+        'date_of_birth' => randomBirthDate($birthYear, $birthYear),
+        'weight_kg' => randomWeight($weightRanges[$gender][$classKey][0], $weightRanges[$gender][$classKey][1]),
+        'belt' => randomBelt(),
+    ];
+}
 
-        $membershipNumber = 'MEM' . str_pad((string) ($totalAthletes + 1), 8, '0', STR_PAD_LEFT);
+echo "Seeding database...\n\n";
 
-        $athleteStmt->execute([
-            $clubId,
-            $lastName,
-            $firstName,
-            $gender,
-            $dateOfBirth,
-            $weightKg,
-            $belt,
-            $membershipNumber,
+$pdo = Database::connection();
+
+// Transaction for safety
+$pdo->beginTransaction();
+
+try {
+    // 0. Clear existing data
+    echo "Clearing existing data...\n";
+    $pdo->query('DELETE FROM entries');
+    $pdo->query('DELETE FROM athletes');
+    $pdo->query('DELETE FROM clubs');
+    $pdo->query('DELETE FROM events');
+    echo "  Done.\n\n";
+
+    // 1. Create Events
+    echo "Creating {$eventCount} events...\n";
+    for ($i = 0; $i < $eventCount; $i++) {
+        $eventNames = [
+            'Trofei Sardi Judo',
+            'Campionati Regionali Sardegna',
+            'Open Judo Sardegna',
+            'Gara Preagonistica Sarda',
+            'Cintura e Collo Judo',
+            'Festival Judo Estate',
+        ];
+        $location = randomElement($venues);
+        $eventDate = randomDate('2026-08-01', '2027-06-30');
+        $deadline = date('Y-m-d', strtotime($eventDate . ' -14 days'));
+        $type = randomElement($eventTypes);
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO events (name, date, location, organizer, registration_deadline, type, published, closed)
+             VALUES (?, ?, ?, ?, ?, ?, 1, 0)'
+        );
+        $stmt->execute([
+            $eventNames[$i % count($eventNames)],
+            $eventDate,
+            $location,
+            'Comitato Regionale Judo Sardegna',
+            $deadline,
+            $type,
         ]);
-        $athleteIdsForClub[] = (int) $db->lastInsertId();
-        $totalAthletes++;
+        echo "  - Created event: {$eventNames[$i % count($eventNames)]} on {$eventDate}\n";
     }
+    echo "\n";
 
-    // Register athletes for events (each club registers for 2-4 events)
-    $numEvents = random_int(2, 4);
-    $selectedEvents = (array) array_rand(array_flip($eventIds), min($numEvents, count($eventIds)));
-    foreach ($selectedEvents as $eventId) {
-        // Register 30-70% of athletes for each event
-        $numToRegister = (int) round(count($athleteIdsForClub) * (random_int(30, 70) / 100));
-        $selectedAthletes = (array) array_rand(array_flip($athleteIdsForClub), min($numToRegister, count($athleteIdsForClub)));
-        foreach ($selectedAthletes as $athleteId) {
-            $entryStmt->execute([$eventId, $clubId, $athleteId]);
-            $totalEntries++;
+    // 2. Create Clubs with Athletes
+    echo "Creating {$clubCount} clubs with athletes (15-150 per club)...\n";
+    $totalAthletes = 0;
+
+    for ($i = 0; $i < $clubCount; $i++) {
+        $location = randomSardinianLocation();
+        $clubName = randomElement($clubPrefixes) . ' ' . randomElement($clubSuffixes) . ' ' . ($i + 1);
+        $email = 'club' . ($i + 1) . '@example.it';
+
+        $federalCode = 'SARD' . sprintf('%04d', $i + 1);
+        $phone = '+39 0' . sprintf('%02d', $i % 90) . ' ' . sprintf('%07d', random_int(1000000, 9999999));
+        $addressLine = 'Via del Judo ' . ($i + 1);
+        $contactFirstName = randomElement($maleFirstNames);
+        $contactLastName = randomElement($lastNames);
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO clubs (federal_code, name, email, phone, address_line, postal_code, city, province, contact_first_name, contact_last_name, affiliation, password_hash)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([
+            $federalCode,
+            $clubName,
+            mb_strtolower(trim($email)),
+            $phone,
+            $addressLine,
+            $location['postal_code'],
+            $location['city'],
+            $location['province'],
+            $contactFirstName,
+            $contactLastName,
+            randomAffiliation(),
+            password_hash('000000000000', PASSWORD_DEFAULT),
+        ]);
+
+        $clubId = (int) $pdo->lastInsertId();
+
+        // Add athletes to this club
+        $athleteCount = random_int($minAthletesPerClub, $maxAthletesPerClub);
+        for ($a = 0; $a < $athleteCount; $a++) {
+            $athlete = generateAthlete($ageClassBirthYears, $weightRanges, $maleFirstNames, $femaleFirstNames, $lastNames);
+            $stmt = $pdo->prepare(
+                'INSERT INTO athletes (club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)'
+            );
+            $stmt->execute([
+                $clubId,
+                $athlete['last_name'],
+                $athlete['first_name'],
+                $athlete['gender'],
+                $athlete['date_of_birth'],
+                $athlete['weight_kg'],
+                $athlete['belt'],
+            ]);
+        }
+
+        $totalAthletes += $athleteCount;
+        if (($i + 1) % 10 === 0) {
+            $progressClubs = $i + 1;
+            echo "  - Created {$progressClubs} clubs, {$totalAthletes} athletes so far...\n";
         }
     }
 
-    if ($clubId % 10 === 0) {
-        echo "  Processed club ID {$clubId} ({$numAthletes} athletes)...\n";
-    }
-}
+    echo "\n";
+    echo "Seeding complete!\n";
+    echo "Total events: {$eventCount}\n";
+    echo "Total clubs: {$clubCount}\n";
+    echo "Total athletes: {$totalAthletes}\n";
 
-echo "\nSeeding complete!\n";
-echo "  Clubs: 50\n";
-echo "  Events: 6\n";
-echo "  Athletes: {$totalAthletes}\n";
-echo "  Entries: {$totalEntries}\n";
-echo "  Club password (all): 000000000000\n";
+    $pdo->commit();
+
+} catch (Exception $e) {
+    $pdo->rollBack();
+    echo "Error: " . $e->getMessage() . "\n";
+    exit(1);
+}

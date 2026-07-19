@@ -22,8 +22,8 @@
                     <td><?= e($club->phone) ?></td>
                     <td><?= e($club->contact_first_name . ' ' . $club->contact_last_name) ?></td>
                     <td>
-                        <a class="btn btn-sm green" href="<?= e(base_url('/admin/clubs/edit?id=' . (int) $club->id)) ?>"><?= e(__('admin.clubs.edit')) ?></a>
-                        <form method="post" action="<?= e(base_url('/admin/clubs/delete')) ?>" style="display:inline" onsubmit="return confirm('<?= e(__('admin.clubs.confirm_delete')) ?>')">
+                        <a class="btn btn-sm green" href="<?= e(base_url('/admin_edit_club.php?id=' . (int) $club->id)) ?>"><?= e(__('admin.clubs.edit')) ?></a>
+                        <form method="post" action="<?= e(base_url('/admin/clubs/delete?')) ?>" style="display:inline" onsubmit="return confirm('<?= e(__('admin.clubs.confirm_delete')) ?>')">
                             <?= csrf_field() ?>
                             <input type="hidden" name="club_id" value="<?= (int) $club->id ?>">
                             <button class="btn btn-sm red" type="submit"><?= e(__('admin.clubs.delete')) ?></button>

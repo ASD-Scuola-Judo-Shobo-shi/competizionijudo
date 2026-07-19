@@ -1,47 +1,38 @@
 <?php
-
 /** @var array $events */
-/** @var bool $canViewEntries */
+/** @var int|null $loggedInClubId */
+/** @var array<int, bool> $eventExceptions */
 ?>
 <div class="card">
-    <?php if (!$events) : ?>
-        <div class="landing-copy">
-            <img
-                class="landing-logo"
-                src="<?= e(asset_url('assets/competizioni-judo-logo-optim.svgz')) ?>"
-                alt="<?= e(__('app.logo_alt')) ?>">
-            <div>
-                <h2><?= translate('header.title') ?></h2>
-                <p>
-                    <?= translate('home.description') ?>
-                </p>
-            </div>
-        </div>
+    <?php if (empty($events)) : ?>
         <p><?= e(__('events.none')) ?></p>
     <?php endif; ?>
 
-    <?php foreach ($events as $ev) : ?>
+<?php foreach ($events as $ev) : ?>
         <div class="event-card-public">
+            <?php if ($ev->closed) : ?>
+                <div class="event-badge-closed" style="position: absolute; top: 10px; right: 10px; background: #6c757d; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold;"><?= e(__('admin.dashboard.closed')) ?></div>
+            <?php endif; ?>
             <div class="event-poster">
-                <?php if ($ev->poster_file) : ?>
-                    <?php $ext = strtolower(pathinfo($ev->poster_file, PATHINFO_EXTENSION)); ?>
-                    <?php if (in_array($ext, ['jpg', 'jpeg', 'png'], true)) : ?>
-                        <a href="<?= e(base_url((string) $ev->poster_file)) ?>" target="_blank">
-                            <img src="<?= e(base_url((string) $ev->poster_file)) ?>" alt="<?= e(__('events.poster_alt', ['name' => $ev->name])) ?>">
-                        </a>
-                    <?php else : ?>
-                        <div class="poster-pdf">
-                            <strong><?= e(__('events.poster_pdf')) ?></strong><br>
-                            <a class="btn orange" href="<?= e(base_url((string) $ev->poster_file)) ?>" target="_blank" download><?= e(__('events.download_poster')) ?></a>
-                        </div>
-                    <?php endif; ?>
+<?php if ($ev->poster_file) : ?>
+<?php $ext = strtolower(pathinfo($ev->poster_file, PATHINFO_EXTENSION)); ?>
+<?php if (in_array($ext, ['jpg', 'jpeg', 'png'], true)) : ?>
+                    <a href="<?= e(base_url((string) $ev->poster_file)) ?>" target="_blank">
+                        <img src="<?= e(base_url((string) $ev->poster_file)) ?>" alt="<?= e(__('events.poster_alt', ['name' => $ev->name])) ?>">
+                    </a>
                 <?php else : ?>
-                    <div class="poster-placeholder" style="background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('<?= e(asset_url('assets/judo-bg-1280.webp')) ?>') center center / cover no-repeat;">
-                        <span style="background: rgba(255,255,255,0.75); padding: 8px 14px; border-radius: 0.75em; display: inline-block;">
-                            <strong><?= e(__('events.poster_not_available')) ?></strong>
-                        </span>
+                    <div class="poster-pdf">
+                        <strong><?= e(__('events.poster_pdf')) ?></strong><br>
+                        <a class="btn orange" href="<?= e(base_url((string) $ev->poster_file)) ?>" target="_blank" download><?= e(__('events.download_poster')) ?></a>
                     </div>
                 <?php endif; ?>
+            <?php else : ?>
+                <div class="poster-placeholder" style="background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('<?= e(asset_url('assets/judo-bg-1280.webp')) ?>') center center / cover no-repeat);">
+    <span style="background: rgba(255,255,255,0.75); padding: 8px 14px; border-radius: 0.75em; display: inline-block;">
+        <strong><?= e(__('events.poster_not_available')) ?></strong>
+    </span>
+</div>
+            <?php endif; ?>
             </div>
 
             <div class="event-info">
@@ -73,10 +64,11 @@
                         <a class="btn orange" href="<?= e(base_url((string) $ev->info_file)) ?>" target="_blank" download><?= e(__('events.download_info')) ?></a>
                     <?php endif; ?>
                     <a class="btn" href="<?= e(base_url('/events/details?event=' . (string) $ev->id)) ?>"><?= e(__('events.details')) ?></a>
-                    <?php if ($canViewEntries) : ?>
-                        <a class="btn" href="<?= e(base_url('/events/entries?event=' . (string) $ev->id)) ?>"><?= e(__('events.entries')) ?></a>
+                    <a class="btn" href="<?= e(base_url('/events/entries?event=' . (string) $ev->id)) ?>"><?= e(__('events.entries')) ?></a>
+                    <?php $hasException = $loggedInClubId !== null && ($eventExceptions[$ev->id] ?? false); ?>
+                    <?php if (!$ev->closed || $hasException) : ?>
+                        <a class="btn green" href="<?= e(base_url('/events/register?id=' . (string) $ev->id)) ?>"><?= e(__('events.registration')) ?></a>
                     <?php endif; ?>
-                    <a class="btn green" href="<?= e(base_url('/events/register?id=' . (string) $ev->id)) ?>"><?= e(__('events.registration')) ?></a>
                 </div>
             </div>
         </div>

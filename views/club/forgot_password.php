@@ -19,7 +19,7 @@
                 <p><code><?= e($dev_link) ?></code></p>
             <?php endif; ?>
         </div>
-        <a class="btn green" href="<?= e(base_url('/clubs/login')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
+        <a class="btn green" href="<?= e(base_url('/clubs/login?')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
     <?php else : ?>
         <form method="post" class="form-card">
             <?= csrf_field() ?>
@@ -27,7 +27,7 @@
             <input type="email" name="email" required placeholder="<?= e(__('club.forgot_password.email')) ?>">
 
             <button class="btn green" type="submit"><?= e(__('club.forgot_password.submit')) ?></button>
-            <a class="btn" href="<?= e(base_url('/clubs/login')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
+            <a class="btn" href="<?= e(base_url('/clubs/login?')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
         </form>
     <?php endif; ?>
 </div>

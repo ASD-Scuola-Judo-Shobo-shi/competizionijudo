@@ -89,7 +89,7 @@ final class ClubAreaController extends Controller
                     }
 
                     if ($errors === []) {
-                        return $this->redirect('/clubs/area?view=add');
+                        return $this->redirect('/club_area.php?view=add');
                     }
                 } elseif ((string) $request->input('athlete_id') !== '') {
                     $edit = Athlete::findById((int) $request->input('athlete_id'), $club->id);
@@ -179,7 +179,7 @@ final class ClubAreaController extends Controller
             Athlete::remove($athleteId, (int) $clubId);
         }
 
-        return $this->redirect('/clubs/area?view=add');
+        return $this->redirect('/club_area.php?view=add');
     }
 
     public function exportAthletes(Request $request): Response
@@ -210,7 +210,7 @@ final class ClubAreaController extends Controller
 
         validate_csrf((string) $request->post('csrf_token'));
         $returnView = $request->post('return_view') === 'add' ? 'add' : 'list';
-        $redirect = '/clubs/area?view=' . $returnView;
+        $redirect = '/club_area.php?view=' . $returnView;
         $file = $request->file('athletes_csv');
         $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
 

@@ -114,10 +114,10 @@ enum Belt: string
             ],
             self::GreenBlue => [
                 ['key' => 'green', 'color' => '#4caf50', 'textColor' => '#ffffff', 'circle' => "\u{1F7E2}"],
-                ['key' => 'blue', 'color' => '#2196f3', 'textColor' => '#ffffff', 'circle' => "\u{1F535}"],
+                ['key' => 'blue', 'color' => '#214284', 'textColor' => '#ffffff', 'circle' => "\u{1F535}"],
             ],
             self::Blue => [
-                ['key' => 'blue', 'color' => '#2196f3', 'textColor' => '#ffffff', 'circle' => "\u{1F535}"],
+                ['key' => 'blue', 'color' => '#214284', 'textColor' => '#ffffff', 'circle' => "\u{1F535}"],
             ],
             self::Brown => [
                 ['key' => 'brown', 'color' => '#795548', 'textColor' => '#ffffff', 'circle' => "\u{1F7E4}"],
