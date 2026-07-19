@@ -206,6 +206,17 @@ final class Entry
         return $repository->register($eventId, $clubId, $athleteId, $registrationDate);
     }
 
+    public static function unregister(
+        int $eventId,
+        int $clubId,
+        int $athleteId,
+        string $registrationDate
+    ): EntryRegistrationResult {
+        $repository = new EntryRegistrationRepository(Database::connection());
+
+        return $repository->unregister($eventId, $clubId, $athleteId, $registrationDate);
+    }
+
     /** @return list<int> */
     public static function findByClubEvent(int $eventId, int $clubId): array
     {

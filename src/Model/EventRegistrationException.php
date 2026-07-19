@@ -6,79 +6,69 @@ namespace App\Model;
 
 final class EventRegistrationException
 {
-    /**
-     * @return list<int> Returns list of club_ids that have exceptions for the given event
-     */
-    public static function findClubIdsByEvent(int $eventId): array
-    {
-        $stmt = Database::connection()->prepare(
-            'SELECT club_id FROM event_registration_exceptions WHERE event_id = ?'
-        );
-        $stmt->execute([$eventId]);
+    public function __construct(
+        public readonly int $id,
+        public readonly int $event_id,
+        public readonly int $club_id,
+    ) {
+    }
 
-        return array_column($stmt->fetchAll() ?: [], 'club_id');
+    /** @param array<string, mixed> $data */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            (int) ($data['id'] ?? 0),
+            (int) ($data['event_id'] ?? 0),
+            (int) ($data['club_id'] ?? 0),
+        );
     }
 
     /**
-     * @return list<array{id: int, name: string, exception_id: int}>
+     * @param list<int> $clubIds
      */
-    public static function findClubsWithExceptions(int $eventId): array
+    public static function setForEvent(int $eventId, array $clubIds): void
     {
-        $stmt = Database::connection()->prepare(
-            'SELECT c.id, c.name, ere.id AS exception_id
-             FROM event_registration_exceptions ere
-             JOIN clubs c ON c.id = ere.club_id
-             WHERE ere.event_id = ?
-             ORDER BY c.name'
-        );
+        $db = Database::connection();
+        
+        // Remove all existing exceptions for this event
+        $stmt = $db->prepare('DELETE FROM event_registration_exceptions WHERE event_id = ?');
         $stmt->execute([$eventId]);
-
-        return $stmt->fetchAll() ?: [];
+        
+        // Insert new exceptions
+        $stmt = $db->prepare('INSERT INTO event_registration_exceptions (event_id, club_id) VALUES (?, ?)');
+        foreach ($clubIds as $clubId) {
+            $stmt->execute([$eventId, $clubId]);
+        }
     }
 
-    public static function hasException(int $eventId, int $clubId): bool
+    /**
+     * @return list<int>
+     */
+    public static function clubIdsForEvent(int $eventId): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT club_id FROM event_registration_exceptions WHERE event_id = ? ORDER BY club_id'
+        );
+        $stmt->execute([$eventId]);
+        
+        return array_column($stmt->fetchAll(), 'club_id');
+    }
+
+    public static function exists(int $eventId, int $clubId): bool
     {
         $stmt = Database::connection()->prepare(
             'SELECT 1 FROM event_registration_exceptions WHERE event_id = ? AND club_id = ?'
         );
         $stmt->execute([$eventId, $clubId]);
-
-        return $stmt->fetch() !== false;
+        
+        return (bool) $stmt->fetch();
     }
 
-    public static function addException(int $eventId, int $clubId): void
-    {
-        $stmt = Database::connection()->prepare(
-            'INSERT IGNORE INTO event_registration_exceptions (event_id, club_id) VALUES (?, ?)'
-        );
-        $stmt->execute([$eventId, $clubId]);
-    }
-
-    public static function removeException(int $eventId, int $clubId): void
+    public static function remove(int $eventId, int $clubId): void
     {
         $stmt = Database::connection()->prepare(
             'DELETE FROM event_registration_exceptions WHERE event_id = ? AND club_id = ?'
         );
         $stmt->execute([$eventId, $clubId]);
-    }
-
-    public static function setExceptions(int $eventId, array $clubIds): void
-    {
-        $db = Database::connection();
-        $db->beginTransaction();
-        try {
-            $db->prepare('DELETE FROM event_registration_exceptions WHERE event_id = ?')->execute([$eventId]);
-            $stmt = $db->prepare('INSERT INTO event_registration_exceptions (event_id, club_id) VALUES (?, ?)');
-            foreach ($clubIds as $clubId) {
-                $clubId = (int) $clubId;
-                if ($clubId > 0) {
-                    $stmt->execute([$eventId, $clubId]);
-                }
-            }
-            $db->commit();
-        } catch (\Throwable $e) {
-            $db->rollBack();
-            throw $e;
-        }
     }
 }

@@ -9,4 +9,7 @@ enum EntryRegistrationResult
     case Registered;
     case AthleteRejected;
     case AlreadyRegistered;
+    case CapacityExceeded;
+    case Unsubscribed;
+    case UnsubscribeFailed;
 }
