@@ -21,7 +21,12 @@
                     <td><?= e($event->date) ?></td>
                     <td><?= e($event->location) ?></td>
                     <td><?= e(__('events.type.' . $event->type)) ?></td>
-                    <td><?= e(($entry_counts[$event->id]['clubs'] ?? 0) . ' / ' . ($entry_counts[$event->id]['athletes'] ?? 0)) ?></td>
+                    <td>
+                        <?= e(($entry_counts[$event->id]['clubs'] ?? 0) . ' / ' . ($entry_counts[$event->id]['athletes'] ?? 0)) ?>
+                        <?php if ($event->max_participants !== null) : ?>
+                            <br><span class="count-badge"><?= e((string) ($entry_counts[$event->id]['athletes'] ?? 0)) ?>/<?= e((string) $event->max_participants) ?></span>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <?php if ($event->published) : ?>
                             <span class="badge green"><?= e(__('admin.events.published')) ?></span>
@@ -35,8 +40,8 @@
                         <?php endif; ?>
                     </td>
                     <td>
-                        <a class="btn btn-sm green" href="<?= e(base_url('/admin/events/add?event_id=' . (int) $event->id)) ?>"><?= e(__('admin.events.edit')) ?></a>
-                        <form method="post" action="<?= e(base_url('/admin/events/delete')) ?>" style="display:inline" onsubmit="return confirm('<?= e(__('admin.events.confirm_delete')) ?>')">
+                        <a class="btn btn-sm green" href="<?= e(base_url('/admin_add_event.php?event_id=' . (int) $event->id)) ?>"><?= e(__('admin.events.edit')) ?></a>
+                        <form method="post" action="<?= e(base_url('/admin/events/delete?')) ?>" style="display:inline" onsubmit="return confirm('<?= e(__('admin.events.confirm_delete')) ?>')">
                             <?= csrf_field() ?>
                             <input type="hidden" name="event_id" value="<?= (int) $event->id ?>">
                             <button class="btn btn-sm red" type="submit"><?= e(__('admin.events.delete')) ?></button>

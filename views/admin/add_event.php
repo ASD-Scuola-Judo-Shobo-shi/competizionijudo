@@ -2,6 +2,8 @@
 /** @var \App\Model\Event|null $event */
 /** @var string $error */
 /** @var list<string> $locations */
+/** @var list<array{id: int, name: string}> $clubs */
+/** @var list<int> $exceptionClubIds */
 $isEdit = !empty($event);
 ?>
 <div class="card">
@@ -50,6 +52,9 @@ $isEdit = !empty($event);
         <label><?= e($isEdit ? __('admin.edit.notes') : __('admin.add.notes')) ?></label>
         <textarea name="notes" rows="3"><?= e($event?->notes ?? '') ?></textarea>
 
+        <label><?= e($isEdit ? __('admin.edit.max_participants') : __('admin.add.max_participants')) ?></label>
+        <input type="number" name="max_participants" value="<?= e($event?->max_participants ? (string) $event->max_participants : '') ?>" min="1" placeholder="<?= e(__('admin.add.max_participants_placeholder')) ?>">
+
         <label><?= e($isEdit ? __('admin.edit.poster') : __('admin.add.poster')) ?></label>
         <input type="file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->poster_file)) : ?>
@@ -66,6 +71,26 @@ $isEdit = !empty($event);
             <label><input type="checkbox" name="published" value="1" <?= $isEdit && !empty($event->published) ? 'checked' : '' ?>> <?= e($isEdit ? __('admin.edit.published') : __('admin.add.published')) ?></label>
             <label><input type="checkbox" name="closed" value="1" <?= $isEdit && !empty($event->closed) ? 'checked' : '' ?>> <?= e($isEdit ? __('admin.edit.closed') : __('admin.add.closed')) ?></label>
         </p>
+
+        <?php if (!empty($clubs)) : ?>
+        <label><?= e(__('admin.add.registration_exceptions')) ?></label>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 0.5rem;"><?= e(__('admin.add.registration_exceptions_help')) ?></p>
+        <div class="checkbox-dropdown">
+            <button type="button" class="dropdown-toggle btn btn-sm" onclick="toggleDropdown(this)">
+                <span><?= e(__('admin.add.select_clubs')) ?></span>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-menu" style="display: none;">
+                <?php foreach ($clubs as $club) : ?>
+                    <?php $isChecked = in_array($club['id'], $exceptionClubIds, true); ?>
+                    <label class="dropdown-item">
+                        <input type="checkbox" name="registration_exceptions[]" value="<?= e((string) $club['id']) ?>" <?= $isChecked ? 'checked' : '' ?>>
+                        <?= e($club['name']) ?>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <button class="btn green" type="submit"><?= e($isEdit ? __('admin.edit.save') : __('admin.add.save')) ?></button>
     </form>

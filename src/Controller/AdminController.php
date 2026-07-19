@@ -18,6 +18,7 @@ use App\Model\EntrySnapshotService;
 use App\Model\Event;
 use App\Model\SardinianLocation;
 use App\Security\AuthenticationThrottle;
+use App\Model\EventRegistrationException;
 use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
 use App\Service\DatabasePasswordResetRepository;
@@ -231,24 +232,47 @@ final class AdminController extends Controller
             return (string) $r['location'];
         }, $db->query('SELECT DISTINCT location FROM events WHERE location != "" ORDER BY location ASC')->fetchAll()));
 
+        // Fetch all clubs for the exceptions dropdown (needed for both GET and POST with errors)
+        $stmt = $db->query('SELECT id, name FROM clubs ORDER BY name');
+        $clubs = array_map(fn(array $row) => ['id' => (int) $row['id'], 'name' => (string) $row['name']], $stmt->fetchAll() ?: []);
+
+        // Get current exceptions for the event being edited
+        $exceptionClubIds = $event !== null ? EventRegistrationException::clubIdsForEvent((int) $event->id) : [];
+
         $error = '';
 
-        if ($request->method() === 'POST') {
+        // Validate uploads early for quick failure before any other database work
+        $uploads = $this->eventUploads();
+        if ($error === '' && $request->method() === 'POST') {
+            foreach (['poster_file', 'info_file'] as $field) {
+                $uploadError = EventInputValidator::extension($uploads[$field] ?? null);
+                if ($uploadError === null && isset($uploads[$field])) {
+                    // Check file size
+                    $size = filter_var($uploads[$field]['size'] ?? null, FILTER_VALIDATE_INT);
+                    if ($size === false || $size < 0 || $size > EventInputValidator::MAX_UPLOAD_BYTES) {
+                        $error = __('validation.event_upload_too_large');
+                    }
+                }
+            }
+        }
+
+        if ($request->method() === 'POST' && $error === '') {
             validate_csrf((string) $request->post('csrf_token'));
-            /**
-             * @var array{
-             *     name: string,
-             *     date: string,
-             *     location: string,
-             *     organizer: string,
-             *     registration_deadline: string,
-             *     type: string,
-             *     description: string,
-             *     notes: string,
-             *     published: int,
-             *     closed: int
-             * } $data
-             */
+/**
+              * @var array{
+              *     name: string,
+              *     date: string,
+              *     location: string,
+              *     organizer: string,
+              *     registration_deadline: string,
+              *     type: string,
+              *     description: string,
+              *     notes: string,
+              *     max_participants: string,
+              *     published: int,
+              *     closed: int
+              * } $data
+              */
             $data = [
                 'name' => trim((string) $request->post('name')),
                 'date' => trim((string) $request->post('date')),
@@ -258,6 +282,7 @@ final class AdminController extends Controller
                 'type' => trim((string) $request->post('type')),
                 'description' => trim((string) $request->post('description')),
                 'notes' => trim((string) $request->post('notes')),
+                'max_participants' => trim((string) $request->post('max_participants')),
                 'published' => $request->post('published') === '1' ? 1 : 0,
                 'closed' => $request->post('closed') === '1' ? 1 : 0,
             ];
@@ -268,7 +293,8 @@ final class AdminController extends Controller
                 $data['location'],
                 $data['registration_deadline'],
                 $data['type'],
-                $uploads
+                $uploads,
+                $data['max_participants']
             );
             if ($validationErrors !== []) {
                 $error = __($validationErrors[0]);
@@ -290,9 +316,21 @@ final class AdminController extends Controller
                         $storedUploads[] = $informativa;
                     }
 
+                    // Handle registration exceptions (clubs that can register for closed events)
+                    $exceptionClubIds = [];
+                    $exceptionInput = $request->post('registration_exceptions', []);
+                    if (is_array($exceptionInput)) {
+                        foreach ($exceptionInput as $clubIdStr) {
+                            $clubIdInt = (int) $clubIdStr;
+                            if ($clubIdInt > 0) {
+                                $exceptionClubIds[] = $clubIdInt;
+                            }
+                        }
+                    }
+
                     if ($event) {
                         $db->beginTransaction();
-                        $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, poster_file=?, info_file=?, published=?, closed=? WHERE id=?";
+                        $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, max_participants=?, poster_file=?, info_file=?, published=?, closed=? WHERE id=?";
                         $params = [
                             $data['name'],
                             $data['date'],
@@ -302,6 +340,7 @@ final class AdminController extends Controller
                             $data['type'],
                             $data['description'],
                             $data['notes'],
+                            $data['max_participants'] !== '' ? (int) $data['max_participants'] : null,
                             $locandina,
                             $informativa,
                             $data['published'],
@@ -312,11 +351,13 @@ final class AdminController extends Controller
                         if (!$event->closed && $data['closed'] === 1) {
                             (new EntrySnapshotService($db))->consolidate($eventId, $data['date']);
                         }
+                        // Save registration exceptions
+                        EventRegistrationException::setForEvent($eventId, $exceptionClubIds);
                         $db->commit();
                         $persisted = true;
                     } else {
                         $db->prepare(
-                            "INSERT INTO events (name, date, location, organizer, registration_deadline, type, description, notes, poster_file, info_file, published, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                            "INSERT INTO events (name, date, location, organizer, registration_deadline, type, description, notes, max_participants, poster_file, info_file, published, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                         )->execute([
                             $data['name'],
                             $data['date'],
@@ -326,11 +367,15 @@ final class AdminController extends Controller
                             $data['type'],
                             $data['description'],
                             $data['notes'],
+                            $data['max_participants'] !== '' ? (int) $data['max_participants'] : null,
                             $locandina,
                             $informativa,
                             $data['published'],
                             $data['closed'],
                         ]);
+                        $newEventId = (int) $db->lastInsertId();
+                        // Save registration exceptions for new event
+                        EventRegistrationException::setForEvent($newEventId, $exceptionClubIds);
                         $persisted = true;
                     }
 
@@ -371,6 +416,8 @@ final class AdminController extends Controller
                 'event' => $event,
                 'error' => $error,
                 'locations' => $locations,
+                'clubs' => $clubs,
+                'exceptionClubIds' => $exceptionClubIds,
             ]);
         }
 
@@ -379,6 +426,8 @@ final class AdminController extends Controller
             'event' => $event,
             'error' => $error,
             'locations' => $locations,
+            'clubs' => $clubs,
+            'exceptionClubIds' => $exceptionClubIds,
         ]);
     }
 
@@ -506,6 +555,6 @@ final class AdminController extends Controller
             return $this->redirect('/admin/events');
         }
 
-        return $this->redirect('/admin/events/add?event_id=' . $id);
+        return $this->redirect('/admin_add_event.php?event_id=' . $id);
     }
 }
