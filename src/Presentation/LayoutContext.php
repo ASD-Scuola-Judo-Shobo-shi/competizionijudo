@@ -16,11 +16,15 @@ final class LayoutContext
     {
         $sessionClubId = AuthContext::clubId();
         $authenticatedClub = null;
+        $loggedInClubId = null;
         if (is_numeric($sessionClubId) && (int) $sessionClubId > 0) {
             $clubId = (int) $sessionClubId;
             $authenticatedClub = $candidateClub?->id === $clubId
                 ? $candidateClub
                 : Club::findForLayoutById($clubId);
+            if ($authenticatedClub !== null) {
+                $loggedInClubId = $clubId;
+            }
         }
 
         $isLoggedIn = $authenticatedClub !== null;
@@ -33,6 +37,7 @@ final class LayoutContext
             'locale' => Localization::getLocale(),
             'isLoggedIn' => $isLoggedIn,
             'isAdmin' => $isAdmin,
+            'loggedInClubId' => $loggedInClubId,
             'clubEmail' => $authenticatedClub?->email,
             'privacyControllerName' => (string) config('privacy.controller_name'),
             'privacyControllerAddress' => (string) config('privacy.controller_address'),
