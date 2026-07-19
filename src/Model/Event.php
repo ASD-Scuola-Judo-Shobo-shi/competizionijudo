@@ -20,6 +20,7 @@ final class Event
         public readonly ?string $info_file,
         public readonly bool $published,
         public readonly bool $closed,
+        public readonly ?int $max_participants,
     ) {
     }
 
@@ -40,6 +41,9 @@ final class Event
             $data['info_file'] !== '' ? (string) $data['info_file'] : null,
             !empty($data['published']),
             !empty($data['closed']),
+            isset($data['max_participants']) && (int) $data['max_participants'] > 0
+                ? (int) $data['max_participants']
+                : null,
         );
     }
 
@@ -78,26 +82,155 @@ final class Event
         return $row ? self::fromArray($row) : null;
     }
 
+    /**
+     * Finds a published event by ID, regardless of closed status.
+     * Used for entries viewing where closed events should still be visible.
+     */
+    public static function findPublishedByIdIncludingClosed(int $id): ?self
+    {
+        $stmt = Database::connection()->prepare('SELECT * FROM events WHERE id = ? AND published = 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+
+        return $row ? self::fromArray($row) : null;
+    }
+
+    /**
+     * Finds a published event by ID, including closed events that the club has entries in
+     * OR closed events with registration exceptions for the club.
+     * Used for allowing clubs to view closed events they participated in or have exception for.
+     */
+    public static function findPublishedByIdOrClosedWithEntries(int $id, int $clubId): ?self
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT e.* FROM events e
+             WHERE e.id = ? AND e.published = 1
+               AND (e.closed = 0 
+                    OR EXISTS (SELECT 1 FROM entries WHERE event_id = e.id AND club_id = ?)
+                    OR EXISTS (SELECT 1 FROM event_registration_exceptions WHERE event_id = e.id AND club_id = ?))'
+        );
+        $stmt->execute([$id, $clubId, $clubId]);
+        $row = $stmt->fetch();
+
+        return $row ? self::fromArray($row) : null;
+    }
+
     public static function findRegistrationEligibleById(int $id, string $onDate): ?self
+    {
+        return self::findRegistrationEligibleByIdForClub($id, $onDate, null);
+    }
+
+    /**
+     * Finds an event eligible for registration by a specific club.
+     * An event is eligible if:
+     * - It is published
+     * - It is not closed (OR the club has an exception)
+     * - The event date is in the future
+     * - The registration deadline is not passed
+     */
+    public static function findRegistrationEligibleByIdForClub(int $id, string $onDate, ?int $clubId): ?self
     {
         $stmt = Database::connection()->prepare(
             'SELECT * FROM events
              WHERE id = ?
                AND published = 1
-               AND closed = 0
+               AND (closed = 0 OR EXISTS (
+                     SELECT 1 FROM event_registration_exceptions WHERE event_id = ? AND club_id = ?
+                 ))
                AND date >= ?
                AND (registration_deadline IS NULL OR registration_deadline >= ?)'
         );
-        $stmt->execute([$id, $onDate, $onDate]);
+        $stmt->bindValue(1, $id, \PDO::PARAM_INT);
+        $stmt->bindValue(2, $id, \PDO::PARAM_INT);
+        $stmt->bindValue(3, $clubId);
+        $stmt->bindValue(4, $onDate);
+        $stmt->bindValue(5, $onDate);
+        $stmt->execute();
         $row = $stmt->fetch();
 
         return $row ? self::fromArray($row) : null;
+    }
+
+    /**
+     * Finds all published events eligible for registration, optionally filtering by club exception.
+     * @return list<self>
+     */
+    public static function allPublishedEligible(string $onDate, int $limit, ?int $clubId = null): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM events
+             WHERE published = 1
+               AND (closed = 0 OR EXISTS (
+                     SELECT 1 FROM event_registration_exceptions WHERE event_id = events.id AND club_id = ?
+                 ))
+               AND date >= ?
+               AND (registration_deadline IS NULL OR registration_deadline >= ?)'
+        );
+        $stmt->bindValue(1, $clubId);
+        $stmt->bindValue(2, $onDate);
+        $stmt->bindValue(3, $onDate);
+        $stmt->bindValue(4, max(1, $limit), \PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+
+        return array_map(fn(array $r) => self::fromArray($r), $rows ?: []);
+    }
+
+    /**
+     * Finds the next upcoming published eligible events, optionally filtering by club exception.
+     * @return list<self>
+     */
+    public static function nextUpcomingPublishedEligible(
+        int $excludeId,
+        string $onDate,
+        int $limit,
+        ?int $clubId = null
+    ): array {
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM events
+             WHERE published = 1
+               AND (closed = 0 OR EXISTS (
+                     SELECT 1 FROM event_registration_exceptions WHERE event_id = events.id AND club_id = ?
+                 ))
+               AND date >= ?
+               AND id != ?
+           ORDER BY date ASC, id ASC
+           LIMIT ?'
+        );
+        $stmt->bindValue(1, $clubId);
+        $stmt->bindValue(2, $onDate);
+        $stmt->bindValue(3, $excludeId, \PDO::PARAM_INT);
+        $stmt->bindValue(4, max(1, $limit), \PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+
+        return array_map(fn(array $r) => self::fromArray($r), $rows ?: []);
     }
 
     public static function remove(int $id): void
     {
         $statement = Database::connection()->prepare('DELETE FROM events WHERE id = ?');
         $statement->execute([$id]);
+    }
+
+    /**
+     * Lists all published events including closed ones.
+     * Used for the event selection dropdown in entries page.
+     * @return list<self>
+     */
+    public static function allPublishedIncludingClosed(string $onDate, int $limit): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM events
+             WHERE published = 1
+             ORDER BY date DESC, id DESC
+             LIMIT ?'
+        );
+        $stmt->bindValue(1, max(1, $limit), \PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+
+        return array_map(fn(array $r) => self::fromArray($r), $rows ?: []);
     }
 
     /** @return list<self> */

@@ -28,17 +28,18 @@ final class EventInputValidator
     {
     }
 
-    /**
-     * @param array<string, array<string, mixed>> $uploads
-     * @return list<string> Translation keys for invalid fields.
-     */
+/**
+      * @param array<string, array<string, mixed>> $uploads
+      * @return list<string> Translation keys for invalid fields.
+      */
     public static function errors(
         string $name,
         string $date,
         string $location,
         string $registrationDeadline,
         string $type,
-        array $uploads
+        array $uploads,
+        ?string $maxParticipants = null
     ): array {
         $errors = [];
         $eventDate = self::date($date);
@@ -60,6 +61,13 @@ final class EventInputValidator
         }
         if (!in_array(trim($type), self::EVENT_TYPES, true)) {
             $errors[] = 'validation.event_type_invalid';
+        }
+
+        if ($maxParticipants !== null && $maxParticipants !== '') {
+            $maxParticipantsInt = filter_var($maxParticipants, FILTER_VALIDATE_INT);
+            if ($maxParticipantsInt === false || $maxParticipantsInt <= 0) {
+                $errors[] = 'validation.event_max_participants_invalid';
+            }
         }
 
         foreach (['poster_file', 'info_file'] as $field) {
