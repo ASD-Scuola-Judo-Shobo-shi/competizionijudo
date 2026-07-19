@@ -282,7 +282,7 @@ The layout queries the club on every authenticated render. The club list view qu
 - Belt colors, text colors, split status, circles, components, and labels encode overlapping representations; the duplication caused the current PHPStan failure.
 - Judo weight tables are repeated in calculation and JSON-export methods.
 - Navigation path arrays appear in both the helper and layout.
-- A removed legacy event data source contained past hard-coded 2026 records, and `AboutController` passed them to a view that never used them.
+- A removed legacy event data source contained past hard-coded 2026 records, and `HomeController` passed them to a view that never used them.
 - `AgeClass::options()`, enum option helpers, and some legacy views/controllers appear unused.
 
 Prefer one data definition with small rendering adapters, then remove confirmed dead code under route/usage tests.
