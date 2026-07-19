@@ -64,7 +64,7 @@
                         <td><?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?></td>
                         <td><?= e((string) ($registrationCounts[$athlete->id] ?? 0)) ?></td>
                         <td>
-                            <a class="btn btn-sm" href="<?= e(base_url('/club_area.php?view=add&edit=' . (string) $athlete->id)) ?>"><?= e(__('club.area.edit')) ?></a>
+                            <a class="btn btn-sm" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>"><?= e(__('club.area.edit')) ?></a>
                             <form method="post" action="<?= e(base_url('/clubs/delete-athlete?')) ?>" style="display:inline" onsubmit="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="athlete_id" value="<?= e((string) $athlete->id) ?>">

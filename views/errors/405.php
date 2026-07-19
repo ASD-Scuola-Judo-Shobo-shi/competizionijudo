@@ -4,6 +4,6 @@
     <p class="error-description"><?= e(__('errors.method_not_allowed_description')) ?></p>
     <div class="error-actions">
         <a class="btn green" href="<?= e(base_url('/')) ?>"><?= e(__('errors.go_home')) ?></a>
-        <a class="btn" href="<?= e(base_url('/events.php')) ?>"><?= e(__('errors.view_events')) ?></a>
+        <a class="btn" href="<?= e(base_url('/events')) ?>"><?= e(__('errors.view_events')) ?></a>
     </div>
 </section>
