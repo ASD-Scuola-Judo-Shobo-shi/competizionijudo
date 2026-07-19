@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Controller\ClubAreaController;
 use App\Controller\ClubController;
-use App\Controller\AboutController;
+use App\Controller\HomeController;
 use App\Controller\HealthController;
 use App\Controller\EventController;
 use App\Controller\MigrationWebhookController;
@@ -14,10 +14,10 @@ use App\Core\HttpException;
 use App\Core\AuthContext;
 
 return static function (App\Core\Router $router): void {
-    $router->get('/', [AboutController::class, 'index']);
-    $router->get('/index.php', [AboutController::class, 'index']);
-    $router->get('/about', [AboutController::class, 'about']);
-    $router->get('/privacy', [AboutController::class, 'privacy']);
+    $router->get('/', [HomeController::class, 'index']);
+    $router->get('/index.php', [HomeController::class, 'index']);
+    $router->get('/about', [HomeController::class, 'about']);
+    $router->get('/privacy', [HomeController::class, 'privacy']);
     $router->get('/health', [HealthController::class, 'show']);
     $router->post('/migrations', [MigrationWebhookController::class, 'run']);
 
