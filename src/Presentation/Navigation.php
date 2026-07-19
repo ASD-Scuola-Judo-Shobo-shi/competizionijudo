@@ -87,7 +87,7 @@ final class Navigation
         }
 
         $items = [
-            ['label' => translate('club.list'), 'url' => base_url('/clubs'), 'paths' => ['/clubs']],
+            ['label' => translate('club.list.title'), 'url' => base_url('/clubs'), 'paths' => ['/clubs']],
         ];
         if (!$isLoggedIn) {
             $items[] = ['label' => translate('nav.login'), 'url' => base_url('/clubs/login'), 'paths' => ['/clubs/login']];
