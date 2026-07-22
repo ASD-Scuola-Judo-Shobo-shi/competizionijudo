@@ -17,7 +17,7 @@
         __('events.date')                  => $event->date,
         __('events.location')              => $event->location,
         __('admin.add.organizer')          => $event->organizer,
-        __('admin.events.type')            => __('events.type.' . $event->type),
+        __('events.type_label')            => __('events.type.' . $event->type),
         __('events.registration_deadline') => $event->registration_deadline,
     ]);
     ?>

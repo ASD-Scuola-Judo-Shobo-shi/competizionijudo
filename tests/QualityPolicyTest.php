@@ -229,6 +229,8 @@ final class QualityPolicyTest extends TestCase
         self::assertStringContainsString('"${BUILD_DIR}/var/log"', $script);
         self::assertStringContainsString('touch', $script);
         self::assertStringContainsString('"${BUILD_DIR}/var/log/.gitkeep"', $script);
+        self::assertStringContainsString('DEPLOYMENT_TRANSFER_PROTOCOL', $script);
+        self::assertStringContainsString('scripts/generate-deploy-manifest.sh', $script);
     }
 
     public function testSharedDeploymentPreflightCoversTheArtifactAndRootRouter(): void

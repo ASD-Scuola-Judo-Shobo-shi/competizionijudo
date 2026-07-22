@@ -9,6 +9,8 @@ fi
 
 for path in \
   .htaccess \
+  DEPLOYMENT_MANIFEST.sha256 \
+  DEPLOYMENT_TRANSFER_PROTOCOL \
   LICENSE \
   REVISION \
   composer.json \
@@ -34,6 +36,14 @@ for path in \
     exit 1
   fi
 done
+
+(
+  cd "$ARTIFACT_DIR"
+  sha256sum --check --status --strict DEPLOYMENT_MANIFEST.sha256
+) || {
+  echo 'Deployment artifact manifest checksum verification failed.' >&2
+  exit 1
+}
 
 revision="$(tr -d '\r\n' < "$ARTIFACT_DIR/REVISION")"
 if [[ ! "$revision" =~ ^[a-f0-9]{40}$ ]]; then

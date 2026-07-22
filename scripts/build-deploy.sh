@@ -54,6 +54,7 @@ if [[ ! "$BUILD_REVISION" =~ ^[a-fA-F0-9]{40}$ ]]; then
   exit 1
 fi
 printf '%s\n' "${BUILD_REVISION,,}" > "${BUILD_DIR}/REVISION"
+printf '%s\n' '1' > "${BUILD_DIR}/DEPLOYMENT_TRANSFER_PROTOCOL"
 
 COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-${ROOT_DIR}/.cache/composer}" \
   composer install \
@@ -70,4 +71,5 @@ chmod 775 \
   "${BUILD_DIR}/public/uploads/events" \
   "${BUILD_DIR}/var/log"
 
+bash "${ROOT_DIR}/scripts/generate-deploy-manifest.sh" "${BUILD_DIR}"
 bash "${ROOT_DIR}/scripts/verify-deploy-artifact.sh" "${BUILD_DIR}"

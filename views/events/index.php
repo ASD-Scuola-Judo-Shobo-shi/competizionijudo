@@ -42,7 +42,7 @@
                     <strong><?= e(__('events.date')) ?>:</strong> <?= e($ev->date) ?><br>
                     <strong><?= e(__('events.location')) ?>:</strong> <?= e($ev->location) ?><br>
                     <strong><?= e(__('events.organizer')) ?>:</strong> <?= e($ev->organizer) ?><br>
-                    <strong><?= e(__('admin.events.type')) ?>:</strong> <?= e(__('events.type.' . $ev->type)) ?><br>
+                    <strong><?= e(__('events.type_label')) ?>:</strong> <?= e(__('events.type.' . $ev->type)) ?><br>
                     <strong><?= e(__('events.registration_deadline')) ?>:</strong> <?= e($ev->registration_deadline) ?>
                 </p>
 

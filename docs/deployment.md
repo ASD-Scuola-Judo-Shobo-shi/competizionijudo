@@ -6,6 +6,20 @@ contains `.env`. Instead, each deploy job renders an environment-specific
 `.env` from GitHub Actions environment variables/secrets and uploads it
 separately to the target directory.
 
+Each artifact contains a SHA-256 manifest of every deployable file. FTPS uses
+the prior remote manifest to upload only added or changed application files
+and remove code files retired by the new artifact; it uploads the new manifest
+last. A missing, malformed, or older-protocol remote manifest triggers one
+complete transfer instead. Temporary filenames and retries protect each copy,
+then the workflow downloads every expected file again and compares its
+SHA-256 hash on the runner. It verifies the generated `.env` and root router
+files the same way. A byte mismatch, missing file, or failed rename stops the
+deployment before migrations run. A mismatch records its paths, retransfers
+only those files plus the manifest, and runs another read-back check up to
+`FTP_VERIFY_RETRIES` times (default and minimum: 4); configure a larger value
+with the GitHub Actions environment variable only when the FTP service is
+demonstrably transiently unreliable.
+
 ## First-time environment provisioning
 
 Before directing traffic to a new `prod/` or `dev/` directory, an authorized
@@ -213,13 +227,13 @@ the endpoint after FTPS upload and fail unless HTTP 200 reports the exact SHA
 that was built. Override `PRODUCTION_HEALTH_URL` or `DEVELOPMENT_HEALTH_URL`
 only when the canonical host differs from the workflow defaults.
 
-The FTP action uses a separate state file in each environment. Normal app sync
-removes code files that were present in the preceding artifact but are absent
+The deployment manifest is the per-environment state record. Normal app sync
+removes code files that were present in the preceding manifest but are absent
 from the new one. The application sync still excludes `.env`, while a dedicated
-runtime-config sync uploads only the generated `.env`. `dangerous-clean-slate`
-remains disabled: runtime uploads/logs that never enter either sync state and
-the independent `legacy/` directory are preserved. Do not delete deployment
-state files manually, because doing so disables reliable stale-code retirement.
+runtime-config sync uploads the generated `.env`. Runtime uploads/logs that
+never enter the manifest and the independent `legacy/` directory are preserved.
+Do not delete the remote deployment manifest manually: the next deployment
+will safely fall back to a complete transfer, but will lose the fast path.
 
 Repository administrators own rollback execution. Record the last healthy SHA
 after each deployment. If health verification fails:

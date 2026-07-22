@@ -34,7 +34,7 @@
                         </tr>
                     <?php endif; ?>
                     <tr>
-                        <td><strong><?= e(__('admin.events.type')) ?>:</strong></td>
+                        <td><strong><?= e(__('events.type_label')) ?>:</strong></td>
                         <td><?= e(__('events.type.' . $event->type)) ?></td>
                     </tr>
                     <tr>

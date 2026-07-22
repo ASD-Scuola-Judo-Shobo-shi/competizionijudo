@@ -3,6 +3,7 @@ set -euo pipefail
 
 operation="${1:?operation required}"
 remote_dir="${2:?remote directory required}"
+deploy_artifact_dir="${DEPLOY_ARTIFACT_DIR:-build/deploy}"
 : "${FTP_SERVER:?FTP_SERVER is required}" "${FTP_PORT:?FTP_PORT is required}" \
   "${FTP_USERNAME:?FTP_USERNAME is required}" "${FTP_PASSWORD:?FTP_PASSWORD is required}"
 
@@ -23,7 +24,7 @@ if [[ "$FTP_SERVER" == 'ftp.competizionijudo.it' ]]; then
   FTP_SERVER='ftplnx02.aruba.it'
 fi
 
-echo "FTPS upload wrapper v4: preflighting ${FTP_SERVER}:${FTP_PORT}."
+echo "FTPS upload wrapper v5: preflighting ${FTP_SERVER}:${FTP_PORT}."
 
 lftp_quote() {
   local value="$1"
@@ -35,21 +36,323 @@ lftp_quote() {
   printf '"%s"' "$value"
 }
 
-case "$operation" in
-  deploy) commands="mkdir -pf $(lftp_quote "$remote_dir"); cd $(lftp_quote "$remote_dir"); rm -rf vendor/; mirror -R --exclude-glob .git* --exclude-glob .env* --exclude-glob legacy/ build/deploy/ .;" ;;
-  env) commands="mkdir -pf $(lftp_quote "$remote_dir"); cd $(lftp_quote "$remote_dir"); mirror -R build/runtime-env/ .;" ;;
-  root) commands="mirror -R --no-perms build/root-router/ $(lftp_quote "$remote_dir");" ;;
-  *) echo 'Unknown upload operation' >&2; exit 2 ;;
-esac
+transfer_dir=''
+verification_dir=''
+cleanup() {
+  if [[ -n "$transfer_dir" && -d "$transfer_dir" ]]; then
+    rm -rf "$transfer_dir"
+  fi
+  if [[ -n "$verification_dir" && -d "$verification_dir" ]]; then
+    rm -rf "$verification_dir"
+  fi
+}
+trap cleanup EXIT
 
-connection_settings="set cmd:fail-exit true; set net:max-retries 2; set net:timeout 30; set ftp:ssl-allow true; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate true;"
+connection_settings="set cmd:fail-exit true; set cmd:verify-path true; set net:max-retries 5; set net:timeout 45; set xfer:timeout 90; set xfer:use-temp-file true; set xfer:temp-file-name .deploying-*; set ftp:list-options -a; set ftp:ssl-allow true; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate true;"
 open_command="open -p $(lftp_quote "$FTP_PORT") -u $(lftp_quote "$FTP_USERNAME"),$(lftp_quote "$FTP_PASSWORD") $(lftp_quote "$FTP_SERVER");"
+
+upload_commands() {
+  case "$operation" in
+    env)
+      printf 'mkdir -pf %s; cd %s; mirror -R --transfer-all --no-perms --verbose --max-errors=1 build/runtime-env/ .;' \
+        "$(lftp_quote "$remote_dir")" "$(lftp_quote "$remote_dir")"
+      ;;
+    root)
+      printf 'mirror -R --transfer-all --no-perms --verbose --max-errors=1 build/root-router/ %s;' \
+        "$(lftp_quote "$remote_dir")"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+upload_full_deployment_artifact() {
+  local commands
+  commands="mkdir -pf $(lftp_quote "$remote_dir"); cd $(lftp_quote "$remote_dir"); mirror -R --transfer-all --no-perms --verbose --max-errors=1 --exclude-glob .env* --exclude-glob legacy/ --exclude-glob DEPLOYMENT_MANIFEST.sha256 $(lftp_quote "${deploy_artifact_dir}/") .; put $(lftp_quote "${deploy_artifact_dir}/DEPLOYMENT_MANIFEST.sha256");"
+
+  echo 'FTPS upload: no trusted compatible remote manifest; transferring the complete artifact.'
+  if ! lftp -c "${connection_settings} ${open_command} ${commands}"; then
+    echo 'FTPS artifact upload failed; inspect remote directory permissions and available quota.' >&2
+    exit 1
+  fi
+}
+
+manifest_checksum=''
+manifest_relative_path=''
+parse_manifest_record() {
+  local record="$1"
+  manifest_checksum="${record:0:64}"
+  manifest_relative_path="${record:66}"
+
+  [[ "$record" == "${manifest_checksum}  ${manifest_relative_path}" \
+    && "$manifest_checksum" =~ ^[a-f0-9]{64}$ \
+    && "$manifest_relative_path" =~ ^\./[A-Za-z0-9._/-]+$ ]]
+}
+
+write_mismatch_paths() {
+  local manifest_path="$1"
+  [[ -n "${FTP_MISMATCH_FILE:-}" ]] || return 0
+  : > "$FTP_MISMATCH_FILE"
+
+  local record local_path actual_checksum
+  while IFS= read -r record; do
+    parse_manifest_record "$record" || continue
+    local_path="${verification_dir}/${manifest_relative_path#./}"
+    actual_checksum=''
+    if [[ -f "$local_path" ]]; then
+      actual_checksum="$(sha256sum "$local_path" | cut -d ' ' -f 1)"
+    fi
+    if [[ "$actual_checksum" != "$manifest_checksum" ]]; then
+      printf '%s\n' "$manifest_relative_path" >> "$FTP_MISMATCH_FILE"
+    fi
+  done < "$manifest_path"
+}
+
+load_manifest() {
+  local manifest_path="$1"
+  local target_name="$2"
+  local -n target_entries="$target_name"
+  target_entries=()
+  [[ -s "$manifest_path" ]] || return 1
+
+  local record
+  while IFS= read -r record; do
+    if ! parse_manifest_record "$record"; then
+      return 1
+    fi
+    target_entries["$manifest_relative_path"]="$manifest_checksum"
+  done < "$manifest_path"
+
+  (( ${#target_entries[@]} > 0 ))
+}
+
+fetch_remote_deployment_manifest() {
+  local destination="$1"
+  local commands="cd $(lftp_quote "$remote_dir"); get $(lftp_quote 'DEPLOYMENT_MANIFEST.sha256') -o $(lftp_quote "$destination");"
+
+  lftp -c "${connection_settings} ${open_command} ${commands}" > "${transfer_dir}/manifest-download.log" 2>&1
+}
+
+upload_changed_deployment_files() {
+  local local_manifest="${deploy_artifact_dir}/DEPLOYMENT_MANIFEST.sha256"
+  local remote_manifest="${transfer_dir}/remote-manifest.sha256"
+  declare -A local_entries=()
+  declare -A remote_entries=()
+
+  if ! load_manifest "$local_manifest" local_entries; then
+    echo 'The local deployment manifest is invalid.' >&2
+    exit 1
+  fi
+  if ! load_manifest "$remote_manifest" remote_entries; then
+    echo 'The remote deployment manifest is invalid; a full artifact upload is required.'
+    upload_full_deployment_artifact
+    return
+  fi
+
+  if [[ "${remote_entries[./DEPLOYMENT_TRANSFER_PROTOCOL]:-}" != "${local_entries[./DEPLOYMENT_TRANSFER_PROTOCOL]:-}" ]]; then
+    echo 'The remote deployment manifest predates the incremental-transfer protocol; transferring the complete artifact once.'
+    upload_full_deployment_artifact
+    return
+  fi
+
+  local commands="mkdir -pf $(lftp_quote "$remote_dir");"
+  local relative_path remote_path local_path parent_path
+  local changed=0 removed=0
+  for relative_path in "${!local_entries[@]}"; do
+    if [[ "${remote_entries[$relative_path]:-}" == "${local_entries[$relative_path]}" ]]; then
+      continue
+    fi
+
+    remote_path="${remote_dir%/}/${relative_path#./}"
+    local_path="${deploy_artifact_dir}/${relative_path#./}"
+    parent_path="$(dirname "$remote_path")"
+    [[ -f "$local_path" ]] || { echo "Manifest file is missing from the artifact: ${local_path}" >&2; exit 1; }
+    commands+=" mkdir -pf $(lftp_quote "$parent_path"); put $(lftp_quote "$local_path") -o $(lftp_quote "$remote_path");"
+    ((changed += 1))
+  done
+
+  for relative_path in "${!remote_entries[@]}"; do
+    [[ -n "${local_entries[$relative_path]:-}" ]] && continue
+    remote_path="${remote_dir%/}/${relative_path#./}"
+    commands+=" rm -f $(lftp_quote "$remote_path");"
+    ((removed += 1))
+  done
+
+  commands+=" put $(lftp_quote "$local_manifest") -o $(lftp_quote "${remote_dir%/}/DEPLOYMENT_MANIFEST.sha256");"
+  echo "FTPS upload: ${changed} changed and ${removed} removed artifact files; uploading the manifest last."
+  if ! lftp -c "${connection_settings} ${open_command} ${commands}"; then
+    echo 'FTPS incremental artifact upload failed; the previous manifest remains authoritative for the next retry.' >&2
+    exit 1
+  fi
+}
+
+upload_deployment_artifact() {
+  local local_manifest="${deploy_artifact_dir}/DEPLOYMENT_MANIFEST.sha256"
+  [[ -s "$local_manifest" ]] || { echo "Deployment manifest is unavailable: ${local_manifest}" >&2; exit 2; }
+
+  transfer_dir="$(mktemp -d)"
+  if ! fetch_remote_deployment_manifest "${transfer_dir}/remote-manifest.sha256"; then
+    upload_full_deployment_artifact
+    return
+  fi
+
+  upload_changed_deployment_files
+}
+
+repair_mismatched_deployment_files() {
+  local source_directory="${3:?repair source directory required}"
+  local mismatch_file="${4:?repair mismatch file required}"
+  source_directory="$(cd "$source_directory" && pwd)" \
+    || { echo "Repair source directory is unavailable: ${source_directory}" >&2; exit 2; }
+  [[ -s "$mismatch_file" ]] || { echo 'The targeted FTP repair list is missing or empty.' >&2; exit 2; }
+
+  local local_manifest="${source_directory}/DEPLOYMENT_MANIFEST.sha256"
+  declare -A local_entries=()
+  if ! load_manifest "$local_manifest" local_entries; then
+    echo 'The local deployment manifest is invalid.' >&2
+    exit 1
+  fi
+
+  local commands="mkdir -pf $(lftp_quote "$remote_dir");"
+  local relative_path local_path remote_path parent_path temporary_path
+  local repaired=0 repair_manifest=false
+  while IFS= read -r relative_path; do
+    if [[ "$relative_path" == './DEPLOYMENT_MANIFEST.sha256' ]]; then
+      repair_manifest=true
+      continue
+    fi
+    if [[ ! "$relative_path" =~ ^\./[A-Za-z0-9._/-]+$ || -z "${local_entries[$relative_path]:-}" ]]; then
+      echo "The targeted FTP repair list contains an unsafe or unknown path: ${relative_path}" >&2
+      exit 2
+    fi
+
+    local_path="${source_directory}/${relative_path#./}"
+    remote_path="${remote_dir%/}/${relative_path#./}"
+    parent_path="$(dirname "$remote_path")"
+    temporary_path="${parent_path}/.repair-$(basename "$remote_path")"
+    [[ -f "$local_path" ]] || { echo "Repair source file is missing: ${local_path}" >&2; exit 1; }
+    commands+=" mkdir -pf $(lftp_quote "$parent_path"); rm -f $(lftp_quote "$temporary_path"); put $(lftp_quote "$local_path") -o $(lftp_quote "$temporary_path"); rm -f $(lftp_quote "$remote_path"); mv $(lftp_quote "$temporary_path") $(lftp_quote "$remote_path");"
+    ((repaired += 1))
+  done < "$mismatch_file"
+
+  if (( repaired == 0 )) && [[ "$repair_manifest" != true ]]; then
+    echo 'The targeted FTP repair list contains no artifact files.' >&2
+    exit 2
+  fi
+  remote_path="${remote_dir%/}/DEPLOYMENT_MANIFEST.sha256"
+  temporary_path="${remote_dir%/}/.repair-DEPLOYMENT_MANIFEST.sha256"
+  commands+=" rm -f $(lftp_quote "$temporary_path"); put $(lftp_quote "$local_manifest") -o $(lftp_quote "$temporary_path"); rm -f $(lftp_quote "$remote_path"); mv $(lftp_quote "$temporary_path") $(lftp_quote "$remote_path");"
+  echo "FTPS repair: retransferring ${repaired} mismatched artifact files and the manifest."
+  if ! lftp -c "${connection_settings} set xfer:use-temp-file false; ${open_command} ${commands}"; then
+    echo 'FTPS targeted artifact repair failed.' >&2
+    exit 1
+  fi
+}
+
+create_verification_manifest() {
+  local source_directory="$1"
+
+  if [[ ! -d "$source_directory" ]]; then
+    echo "Verification source directory is unavailable: ${source_directory}" >&2
+    exit 2
+  fi
+
+  if [[ -f "$source_directory/DEPLOYMENT_MANIFEST.sha256" ]]; then
+    printf '%s' "$source_directory/DEPLOYMENT_MANIFEST.sha256"
+    return
+  fi
+
+  local manifest_path="${verification_dir}/local-manifest.sha256"
+  (
+    cd "$source_directory"
+    find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > "$manifest_path"
+  )
+  printf '%s' "$manifest_path"
+}
+
+verify_remote_files() {
+  local source_directory="${3:?verification source directory required}"
+  source_directory="$(cd "$source_directory" && pwd)" \
+    || { echo "Verification source directory is unavailable: ${source_directory}" >&2; exit 2; }
+  verification_dir="$(mktemp -d)"
+  local manifest_path
+  manifest_path="$(create_verification_manifest "$source_directory")"
+  [[ -s "$manifest_path" ]] || { echo 'Verification manifest is missing or empty.' >&2; exit 1; }
+
+  local download_commands="cd $(lftp_quote "$remote_dir");"
+  local remote_manifest_path="${verification_dir}/remote-manifest.sha256"
+  if [[ "$manifest_path" == "$source_directory/DEPLOYMENT_MANIFEST.sha256" ]]; then
+    download_commands+=" get $(lftp_quote 'DEPLOYMENT_MANIFEST.sha256') -o $(lftp_quote "$remote_manifest_path");"
+  fi
+
+  local record checksum relative_path remote_path destination
+  while IFS= read -r record; do
+    checksum="${record:0:64}"
+    relative_path="${record:66}"
+    if [[ ! "$checksum" =~ ^[a-f0-9]{64}$ || ! "$relative_path" =~ ^\./[A-Za-z0-9._/-]+$ ]]; then
+      echo "Verification manifest contains an unsafe entry: ${record}" >&2
+      exit 2
+    fi
+
+    remote_path="${relative_path#./}"
+    destination="${verification_dir}/${remote_path}"
+    mkdir -p "$(dirname "$destination")"
+    download_commands+=" get $(lftp_quote "$remote_path") -o $(lftp_quote "$destination");"
+  done < "$manifest_path"
+
+  echo "FTPS verification: downloading the expected files from ${remote_dir}."
+  if ! lftp -c "${connection_settings} ${open_command} ${download_commands}"; then
+    echo 'FTPS verification download failed; the remote artifact is incomplete or unreadable.' >&2
+    exit 1
+  fi
+
+  if [[ -f "$remote_manifest_path" ]] && ! cmp --silent "$manifest_path" "$remote_manifest_path"; then
+    if [[ -n "${FTP_MISMATCH_FILE:-}" ]]; then
+      printf '%s\n' './DEPLOYMENT_MANIFEST.sha256' > "$FTP_MISMATCH_FILE"
+    fi
+    echo 'Remote deployment manifest does not match the tested artifact.' >&2
+    exit 1
+  fi
+
+  if ! (cd "$verification_dir" && sha256sum --check --status --strict "$manifest_path"); then
+    write_mismatch_paths "$manifest_path"
+    echo 'Remote file checksum verification failed.' >&2
+    (cd "$verification_dir" && sha256sum --check --strict "$manifest_path") >&2 || true
+    exit 1
+  fi
+
+  echo "FTPS verification succeeded for ${remote_dir}."
+}
 
 if ! lftp -c "${connection_settings} ${open_command} quote PWD;"; then
   echo "FTPS connection, certificate, or authentication failed for ${FTP_SERVER}:${FTP_PORT}." >&2
   exit 1
 fi
 
+if [[ "$operation" == 'verify' ]]; then
+  verify_remote_files "$@"
+  exit 0
+fi
+
+if [[ "$operation" == 'deploy' ]]; then
+  upload_deployment_artifact
+  exit 0
+fi
+
+if [[ "$operation" == 'deploy-full' ]]; then
+  [[ -s "${deploy_artifact_dir}/DEPLOYMENT_MANIFEST.sha256" ]] \
+    || { echo "Deployment manifest is unavailable: ${deploy_artifact_dir}/DEPLOYMENT_MANIFEST.sha256" >&2; exit 2; }
+  upload_full_deployment_artifact
+  exit 0
+fi
+
+if [[ "$operation" == 'repair' ]]; then
+  repair_mismatched_deployment_files "$@"
+  exit 0
+fi
+
+commands="$(upload_commands)" || { echo 'Unknown upload operation' >&2; exit 2; }
 echo "FTPS preflight succeeded; starting ${operation} upload."
 if ! lftp -c "${connection_settings} ${open_command} ${commands}"; then
   echo "FTPS upload failed after a successful preflight; inspect remote directory permissions and available quota." >&2

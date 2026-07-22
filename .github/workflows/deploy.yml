@@ -109,6 +109,35 @@ jobs:
           REMOTE_DIR: ${{ steps.production-ftp-dir.outputs.path }}
         run: bash scripts/lftp-upload.sh deploy "$REMOTE_DIR"
 
+      - name: Verify production application artifact over FTPS
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ steps.production-ftp-dir.outputs.path }}
+          FTP_VERIFY_RETRIES: ${{ vars.FTP_VERIFY_RETRIES || 4 }}
+        run: |
+          if [[ ! "$FTP_VERIFY_RETRIES" =~ ^[0-9]+$ ]] || (( FTP_VERIFY_RETRIES < 4 )); then
+            echo 'FTP_VERIFY_RETRIES must be an integer of at least 4.' >&2
+            exit 2
+          fi
+          FTP_MISMATCH_FILE="$RUNNER_TEMP/production-ftp-mismatches.txt"
+          rm -f "$FTP_MISMATCH_FILE"
+          for attempt in $(seq 0 "$FTP_VERIFY_RETRIES"); do
+            if FTP_MISMATCH_FILE="$FTP_MISMATCH_FILE" bash scripts/lftp-upload.sh verify "$REMOTE_DIR" build/deploy; then
+              exit 0
+            fi
+            if (( attempt == FTP_VERIFY_RETRIES )); then
+              echo "Artifact verification failed after ${FTP_VERIFY_RETRIES} targeted repair attempts." >&2
+              exit 1
+            fi
+            [[ -s "$FTP_MISMATCH_FILE" ]] || { echo 'Verification did not identify files for targeted repair.' >&2; exit 1; }
+            echo "Read-back mismatch; targeted production repair attempt $((attempt + 1))/${FTP_VERIFY_RETRIES}."
+            bash scripts/lftp-upload.sh repair "$REMOTE_DIR" build/deploy "$FTP_MISMATCH_FILE"
+            rm -f "$FTP_MISMATCH_FILE"
+          done
+
       - name: Render runtime .env
         env:
           APP_ENV: production
@@ -140,6 +169,15 @@ jobs:
           REMOTE_DIR: ${{ steps.production-ftp-dir.outputs.path }}
         run: bash scripts/lftp-upload.sh env "$REMOTE_DIR"
 
+      - name: Verify production runtime env over FTPS
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ steps.production-ftp-dir.outputs.path }}
+        run: bash scripts/lftp-upload.sh verify "$REMOTE_DIR" build/runtime-env
+
       - name: Upload root router to host root
         env:
           FTP_SERVER: ${{ vars.FTP_SERVER }}
@@ -148,6 +186,15 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_BASE_DIR: ${{ vars.FTP_BASE_DIR }}
         run: bash scripts/lftp-upload.sh root "$FTP_BASE_DIR"
+
+      - name: Verify root router over FTPS
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_BASE_DIR: ${{ vars.FTP_BASE_DIR }}
+        run: bash scripts/lftp-upload.sh verify "$FTP_BASE_DIR" build/root-router
 
       - name: Run production migrations on the hosting server
         env:
@@ -243,6 +290,35 @@ jobs:
           REMOTE_DIR: ${{ steps.development-ftp-dir.outputs.path }}
         run: bash scripts/lftp-upload.sh deploy "$REMOTE_DIR"
 
+      - name: Verify development application artifact over FTPS
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ steps.development-ftp-dir.outputs.path }}
+          FTP_VERIFY_RETRIES: ${{ vars.FTP_VERIFY_RETRIES || 4 }}
+        run: |
+          if [[ ! "$FTP_VERIFY_RETRIES" =~ ^[0-9]+$ ]] || (( FTP_VERIFY_RETRIES < 4 )); then
+            echo 'FTP_VERIFY_RETRIES must be an integer of at least 4.' >&2
+            exit 2
+          fi
+          FTP_MISMATCH_FILE="$RUNNER_TEMP/development-ftp-mismatches.txt"
+          rm -f "$FTP_MISMATCH_FILE"
+          for attempt in $(seq 0 "$FTP_VERIFY_RETRIES"); do
+            if FTP_MISMATCH_FILE="$FTP_MISMATCH_FILE" bash scripts/lftp-upload.sh verify "$REMOTE_DIR" build/deploy; then
+              exit 0
+            fi
+            if (( attempt == FTP_VERIFY_RETRIES )); then
+              echo "Artifact verification failed after ${FTP_VERIFY_RETRIES} targeted repair attempts." >&2
+              exit 1
+            fi
+            [[ -s "$FTP_MISMATCH_FILE" ]] || { echo 'Verification did not identify files for targeted repair.' >&2; exit 1; }
+            echo "Read-back mismatch; targeted development repair attempt $((attempt + 1))/${FTP_VERIFY_RETRIES}."
+            bash scripts/lftp-upload.sh repair "$REMOTE_DIR" build/deploy "$FTP_MISMATCH_FILE"
+            rm -f "$FTP_MISMATCH_FILE"
+          done
+
       - name: Render runtime .env
         env:
           APP_ENV: development
@@ -273,6 +349,15 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           REMOTE_DIR: ${{ steps.development-ftp-dir.outputs.path }}
         run: bash scripts/lftp-upload.sh env "$REMOTE_DIR"
+
+      - name: Verify development runtime env over FTPS
+        env:
+          FTP_SERVER: ${{ vars.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT || 21 }}
+          FTP_USERNAME: ${{ vars.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ steps.development-ftp-dir.outputs.path }}
+        run: bash scripts/lftp-upload.sh verify "$REMOTE_DIR" build/runtime-env
 
       - name: Run development migrations on the hosting server
         env:

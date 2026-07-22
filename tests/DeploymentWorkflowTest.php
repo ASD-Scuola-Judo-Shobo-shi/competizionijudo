@@ -79,6 +79,23 @@ final class DeploymentWorkflowTest extends TestCase
         self::assertStringContainsString('cancel-in-progress: false', $workflow);
     }
 
+    public function testDeploymentsVerifyEveryUploadedArtifactBeforeRunningMigrations(): void
+    {
+        $workflow = $this->workflow('deploy.yml');
+
+        self::assertSame(5, substr_count($workflow, 'scripts/lftp-upload.sh verify'));
+        self::assertSame(2, substr_count($workflow, 'scripts/lftp-upload.sh repair'));
+        self::assertSame(2, substr_count($workflow, 'FTP_VERIFY_RETRIES: ${{ vars.FTP_VERIFY_RETRIES || 4 }}'));
+        self::assertSame(2, substr_count($workflow, 'FTP_VERIFY_RETRIES must be an integer of at least 4.'));
+        self::assertSame(2, substr_count($workflow, 'for attempt in $(seq 0 "$FTP_VERIFY_RETRIES")'));
+        self::assertSame(2, substr_count($workflow, 'Verification did not identify files for targeted repair.'));
+        self::assertStringContainsString('Verify production application artifact over FTPS', $workflow);
+        self::assertStringContainsString('Verify production runtime env over FTPS', $workflow);
+        self::assertStringContainsString('Verify root router over FTPS', $workflow);
+        self::assertStringContainsString('Verify development application artifact over FTPS', $workflow);
+        self::assertStringContainsString('Verify development runtime env over FTPS', $workflow);
+    }
+
     private function workflow(string $name): string
     {
         $path = dirname(__DIR__) . '/.github/workflows/' . $name;
