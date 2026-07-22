@@ -4,185 +4,122 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Model\Database;
 use App\Model\EntryRegistrationRepository;
 use App\Model\EntryRegistrationResult;
 use PDO;
-use PDOException;
-use PDOStatement;
-use PHPUnit\Framework\MockObject\MockObject;
+use ReflectionProperty;
 use PHPUnit\Framework\TestCase;
 
 final class EntryRegistrationRepositoryTest extends TestCase
 {
+    private ReflectionProperty $databaseConnection;
+    private ?PDO $originalConnection;
+    private PDO $database;
+
+    protected function setUp(): void
+    {
+        $this->databaseConnection = new ReflectionProperty(Database::class, 'pdo');
+        $connection = $this->databaseConnection->getValue();
+        self::assertTrue($connection === null || $connection instanceof PDO);
+        $this->originalConnection = $connection;
+
+        $this->database = new PDO('sqlite::memory:');
+        $this->database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->createSchema();
+        $this->databaseConnection->setValue(null, $this->database);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->databaseConnection->setValue(null, $this->originalConnection);
+    }
+
     public function testOwnAthleteIsRegisteredByOneConstrainedStatement(): void
     {
-        $repository = $this->repositoryReturningRowCount(1, 301, false);
+        $this->insertAthlete(301, 201);
+        $this->insertEvent(101, false);
 
-        $result = $repository->register(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::Registered, $result);
     }
 
     public function testForeignAthleteIsRejectedWithoutAnInsert(): void
     {
-        $repository = $this->repositoryReturningRowCount(0, 302, false);
+        $this->insertAthlete(302, 202);
+        $this->insertEvent(101, false);
 
-        $result = $repository->register(101, 201, 302, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 302, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
     }
 
     public function testMissingAthleteIsRejectedWithoutAnInsert(): void
     {
-        $repository = $this->repositoryReturningRowCount(0, 999, false);
+        $this->insertEvent(101, false);
 
-        $result = $repository->register(101, 201, 999, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 999, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
     }
 
     public function testDuplicateConstraintViolationReturnsAlreadyRegistered(): void
     {
-        $exception = new PDOException('Synthetic duplicate entry.');
-        $exception->errorInfo = ['23000', 1062, 'Synthetic duplicate entry.'];
-        $repository = $this->repositoryThrowingOnRegistration($exception);
+        $this->insertAthlete(301, 201);
+        $this->insertEvent(101, false);
+        $this->insertEntry(101, 201, 301);
 
-        $result = $repository->register(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AlreadyRegistered, $result);
     }
 
-    public function testSqliteDuplicateConstraintViolationSupportsIntegrationFixtures(): void
-    {
-        $exception = new PDOException('Synthetic duplicate entry.');
-        $exception->errorInfo = ['23000', 19, 'UNIQUE constraint failed: entries.event_id'];
-        $repository = $this->repositoryThrowingOnRegistration($exception);
-
-        self::assertSame(
-            EntryRegistrationResult::AlreadyRegistered,
-            $repository->register(101, 201, 301, '2026-06-28')
-        );
-    }
-
     public function testCapacityExceededReturnsCapacityExceededResult(): void
     {
-        $capacityStatement = $this->createMock(PDOStatement::class);
-        $capacityStatement->expects(self::once())
-            ->method('execute')
-            ->willReturn(true);
-        $capacityStatement->expects(self::once())
-            ->method('fetch')
-            ->willReturn(['max_participants' => 10, 'current_count' => 10]);
+        $this->insertAthlete(301, 201);
+        $this->insertEvent(101, false, maxParticipants: 10);
+        $this->insertEntries(101, 201, 10);
 
-        $database = $this->createMock(PDO::class);
-        $database->expects(self::once())
-            ->method('prepare')
-            ->willReturn($capacityStatement);
-
-        $repository = new EntryRegistrationRepository($database);
-
-        $result = $repository->register(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::CapacityExceeded, $result);
     }
 
     public function testNoLimitAllowsRegistration(): void
     {
-        $repository = $this->repositoryReturningRowCount(1, 301, false);
+        $this->insertAthlete(301, 201);
+        $this->insertEvent(101, false);
 
-        $result = $repository->register(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::Registered, $result);
     }
 
     public function testOpenEventAthleteIsUnsubscribed(): void
     {
-        $statement = $this->createMock(PDOStatement::class);
-        $statement->expects(self::once())
-            ->method('execute')
-            ->with([101, 201, 301])
-            ->willReturn(true);
-        $statement->expects(self::once())
-            ->method('rowCount')
-            ->willReturn(1);
+        $this->insertEvent(101, false);
+        $this->insertEntry(101, 201, 301);
 
-        $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(2))
-            ->method('prepare')
-            ->willReturnCallback(function (string $sql) use ($statement): PDOStatement {
-                if (str_contains($sql, 'closed FROM events')) {
-                    $eligibilityStatement = $this->createMock(PDOStatement::class);
-                    $eligibilityStatement->expects(self::once())
-                        ->method('execute')
-                        ->willReturn(true);
-                    $eligibilityStatement->expects(self::once())
-                        ->method('fetch')
-                        ->willReturn(['closed' => 0]);
-                    return $eligibilityStatement;
-                }
-                return $statement;
-            });
-
-        $repository = new EntryRegistrationRepository($database);
-
-        $result = $repository->unregister(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->unregister(101, 201, 301, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::Unsubscribed, $result);
     }
 
     public function testClosedEventReturnsUnsubscribeFailed(): void
     {
-        $eligibilityStatement = $this->createMock(PDOStatement::class);
-        $eligibilityStatement->expects(self::once())
-            ->method('execute')
-            ->willReturn(true);
-        $eligibilityStatement->expects(self::once())
-            ->method('fetch')
-            ->willReturn(['closed' => 1]);
+        $this->insertEvent(101, true);
 
-        $database = $this->createMock(PDO::class);
-        $database->expects(self::once())
-            ->method('prepare')
-            ->willReturn($eligibilityStatement);
-
-        $repository = new EntryRegistrationRepository($database);
-
-        $result = $repository->unregister(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->unregister(101, 201, 301, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::UnsubscribeFailed, $result);
     }
 
     public function testNonexistentEntryReturnsUnsubscribeFailed(): void
     {
-        $statement = $this->createMock(PDOStatement::class);
-        $statement->expects(self::once())
-            ->method('execute')
-            ->with([101, 201, 301])
-            ->willReturn(true);
-        $statement->expects(self::once())
-            ->method('rowCount')
-            ->willReturn(0);
+        $this->insertEvent(101, false);
 
-        $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(2))
-            ->method('prepare')
-            ->willReturnCallback(function (string $sql) use ($statement): PDOStatement {
-                if (str_contains($sql, 'closed FROM events')) {
-                    $eligibilityStatement = $this->createMock(PDOStatement::class);
-                    $eligibilityStatement->expects(self::once())
-                        ->method('execute')
-                        ->willReturn(true);
-                    $eligibilityStatement->expects(self::once())
-                        ->method('fetch')
-                        ->willReturn(['closed' => 0]);
-                    return $eligibilityStatement;
-                }
-                return $statement;
-            });
-
-        $repository = new EntryRegistrationRepository($database);
-
-        $result = $repository->unregister(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->unregister(101, 201, 301, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::UnsubscribeFailed, $result);
     }
@@ -198,71 +135,100 @@ final class EntryRegistrationRepositoryTest extends TestCase
         );
     }
 
-    private function repositoryReturningRowCount(int $rowCount, int $athleteId, bool $capacityExceeded): EntryRegistrationRepository
+    private function createSchema(): void
     {
-        $registrationStatement = $this->createMock(PDOStatement::class);
-        $registrationStatement->expects(self::once())
-            ->method('execute')
-            ->with($this->registrationParameters($athleteId))
-            ->willReturn(true);
-        $registrationStatement->expects(self::once())->method('rowCount')->willReturn($rowCount);
-
-        $capacityStatement = $this->createMock(PDOStatement::class);
-        $capacityStatement->expects(self::once())
-            ->method('execute')
-            ->willReturn(true);
-        $capacityStatement->expects(self::once())
-            ->method('fetch')
-            ->willReturn($capacityExceeded ? ['max_participants' => 10, 'current_count' => 10] : ['max_participants' => 0, 'current_count' => 0]);
-
-        return $this->repositoryWithStatements($capacityStatement, $registrationStatement);
+        $this->database->exec(
+            'CREATE TABLE clubs (id INTEGER PRIMARY KEY, federal_code TEXT NOT NULL, name TEXT NOT NULL)'
+        );
+        $this->database->exec(
+            'CREATE TABLE events (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                date TEXT NOT NULL,
+                location TEXT,
+                registration_deadline TEXT,
+                max_participants INTEGER,
+                published INTEGER NOT NULL,
+                closed INTEGER NOT NULL
+            )'
+        );
+        $this->database->exec(
+            'CREATE TABLE athletes (
+                id INTEGER PRIMARY KEY,
+                club_id INTEGER NOT NULL,
+                last_name TEXT NOT NULL,
+                first_name TEXT NOT NULL,
+                gender TEXT NOT NULL,
+                date_of_birth TEXT NOT NULL,
+                weight_kg REAL NOT NULL,
+                belt TEXT
+            )'
+        );
+        $this->database->exec(
+            'CREATE TABLE entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                club_id INTEGER NOT NULL,
+                athlete_id INTEGER NOT NULL,
+                UNIQUE (event_id, club_id, athlete_id)
+            )'
+        );
+        $this->database->exec(
+            'CREATE TABLE event_registration_exceptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                club_id INTEGER NOT NULL,
+                UNIQUE (event_id, club_id)
+            )'
+        );
     }
 
-    private function repositoryThrowingOnRegistration(PDOException $exception): EntryRegistrationRepository
+    private function insertClub(int $id, string $code, string $name): void
     {
-        $registrationStatement = $this->createMock(PDOStatement::class);
-        $registrationStatement->expects(self::once())
-            ->method('execute')
-            ->willThrowException($exception);
-
-        $capacityStatement = $this->createMock(PDOStatement::class);
-        $capacityStatement->expects(self::once())
-            ->method('execute')
-            ->willReturn(true);
-        $capacityStatement->expects(self::once())
-            ->method('fetch')
-            ->willReturn(['max_participants' => 0, 'current_count' => 0]);
-
-        return $this->repositoryWithStatements($capacityStatement, $registrationStatement);
+        $this->database->prepare(
+            'INSERT INTO clubs (id, federal_code, name) VALUES (?, ?, ?)'
+        )->execute([$id, $code, $name]);
     }
 
-    /** @return array<string, int> */
-    private function registrationParameters(int $athleteId): array
+    private function insertAthlete(int $athleteId, int $clubId): void
     {
-        return [
-            'event_id' => 101,
-            'entry_club_id' => 201,
-            'athlete_id' => $athleteId,
-            'athlete_club_id' => 201,
-            'event_date' => '2026-06-28',
-            'deadline_date' => '2026-06-28',
-        ];
+        $this->database->prepare(
+            'INSERT INTO athletes (id, club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([$athleteId, $clubId, 'Last', 'First', 'M', '2010-01-01', 50.0, 'white']);
     }
 
-    private function repositoryWithStatements(
-        PDOStatement&MockObject $capacityStatement,
-        PDOStatement&MockObject $registrationStatement
-    ): EntryRegistrationRepository {
-        $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(2))
-            ->method('prepare')
-            ->willReturnCallback(function (string $sql) use ($capacityStatement, $registrationStatement): PDOStatement {
-                if (str_contains($sql, 'max_participants')) {
-                    return $capacityStatement;
-                }
-                return $registrationStatement;
-            });
+    private function insertEvent(int $eventId, bool $closed, string $date = '2026-06-29', ?string $deadline = '2026-06-28', ?int $maxParticipants = null): void
+    {
+        $this->database->prepare(
+            'INSERT INTO events (id, name, date, location, registration_deadline, max_participants, published, closed)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([
+            $eventId,
+            'Synthetic Event',
+            $date,
+            'Venue',
+            $deadline,
+            $maxParticipants,
+            1,
+            $closed ? 1 : 0
+        ]);
+    }
 
-        return new EntryRegistrationRepository($database);
+    private function insertEntry(int $eventId, int $clubId, int $athleteId): void
+    {
+        $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        )->execute([$eventId, $clubId, $athleteId]);
+    }
+
+    private function insertEntries(int $eventId, int $clubId, int $count): void
+    {
+        $stmt = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        for ($i = 0; $i < $count; $i++) {
+            $stmt->execute([$eventId, $clubId, 400 + $i]);
+        }
     }
 }
