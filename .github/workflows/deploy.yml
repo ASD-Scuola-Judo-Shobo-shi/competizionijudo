@@ -97,17 +97,8 @@ jobs:
           file_put_contents($outputPath, "path={$value}" . PHP_EOL, FILE_APPEND);
           PHP
 
-      - name: Stage root router (.htaccess + index.php)
+      - name: Stage and verify root router (.htaccess + index.php)
         run: bash scripts/stage-root-router.sh build/root-router
-
-      - name: Verify staged root router
-        run: |
-          test -s build/root-router/.htaccess
-          test -s build/root-router/index.php
-          cd build/root-router
-          sha256sum --check --strict router.sha256
-          rm router.sha256
-          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 2
 
       - name: Upload to production FTP directory
         env:

@@ -1,4 +1,4 @@
-.PHONY: install hooks-install serve test lint format analyse security-audit syntax check ci
+.PHONY: install hooks-install serve test lint format analyse security-audit syntax check ci dependencies-verify deploy-preflight
 
 install:
 	composer install
@@ -32,3 +32,9 @@ check:
 
 ci:
 	composer ci
+
+dependencies-verify:
+	composer dependencies:verify
+
+deploy-preflight:
+	composer deploy:preflight

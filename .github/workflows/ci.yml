@@ -124,16 +124,10 @@ jobs:
             composer-${{ runner.os }}-php-8.4-
             composer-${{ runner.os }}-
 
-      - name: Build deploy artifact
+      - name: Run shared deployment preflight
         env:
           BUILD_REVISION: ${{ steps.revision.outputs.sha }}
-        run: bash scripts/build-deploy.sh
-
-      - name: Verify deploy artifact
-        run: bash scripts/verify-deploy-artifact.sh build/deploy
-
-      - name: Boot deploy artifact
-        run: bash scripts/test-deploy-artifact.sh build/deploy
+        run: bash scripts/deploy-preflight.sh
 
       - name: Select artifact name
         id: artifact

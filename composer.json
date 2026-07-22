@@ -34,14 +34,16 @@
       "@test"
     ],
     "ci": [
+      "@dependencies:verify",
       "@workflow:check",
       "@test:migrations",
       "@quality",
       "@test:coverage:changed",
-      "bash scripts/build-deploy.sh",
-      "bash scripts/test-deploy-artifact.sh build/deploy"
+      "@deploy:preflight"
     ],
     "cs": "phpcs --standard=phpcs.xml",
+    "dependencies:verify": "composer install --dry-run --prefer-dist --no-interaction --no-progress",
+    "deploy:preflight": "bash scripts/deploy-preflight.sh",
     "fix": "phpcbf --standard=phpcs.xml",
     "format": "@fix",
     "hooks:install": "git config core.hooksPath scripts/git-hooks",

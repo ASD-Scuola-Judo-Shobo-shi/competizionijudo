@@ -35,6 +35,12 @@ fi
   cd "$STAGING_DIR"
   sha256sum .htaccess index.php > router.sha256
   sha256sum --check --strict router.sha256
+  rm router.sha256
+
+  if [[ "$(find . -maxdepth 1 -type f | wc -l)" -ne 2 ]]; then
+    echo "Root router staging directory must contain only .htaccess and index.php." >&2
+    exit 1
+  fi
 )
 
 echo "Repository root router (.htaccess + index.php) staged and verified."

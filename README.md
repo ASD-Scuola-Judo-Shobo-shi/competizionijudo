@@ -90,11 +90,14 @@ See [deployment operations](docs/deployment.md) for the production checklist.
 
 ## Verification and deployment
 
-Run the full gate before committing:
+Run the same non-secret quality and deployment preflight used by GitHub Actions
+before pushing:
 
 ```sh
-composer check
+composer ci
 ```
+
+`composer check` remains the faster quality-only check.
 
 Install the repository hooks once per clone if you have not already:
 
@@ -102,23 +105,27 @@ Install the repository hooks once per clone if you have not already:
 composer hooks:install
 ```
 
-It validates Composer metadata, PHP syntax, coding style, PHPStan, PHPUnit, and
+It validates the lock-file installation on the current PHP platform, Composer
+metadata, workflow definitions, PHP syntax, coding style, PHPStan, PHPUnit, and
 the Composer security audit. `composer test:migrations` needs an isolated MySQL
 test account. Copy `dev.env.example` to `dev.env`, fill the local MySQL
 administrator and test-account values, then run `composer test:migrations:prepare`
 once to create the dedicated test user and grants. `composer test:migrations`
-and `composer ci` read `dev.env` when present. `composer ci` also validates the
-workflow definitions, enforces the changed-source coverage policy, and builds
-and verifies the exact production-only artifact. The build includes only runtime
-directories and access-control marker files, never `.env`, tests, development
-dependencies, logs, or uploaded files.
+and `composer ci` read `dev.env` when present. `composer ci` also enforces the
+changed-source coverage policy, builds and boots the exact production-only
+artifact, and stages/verifies the root router uploaded by the deploy workflow.
+The build includes only runtime directories and access-control marker files,
+never `.env`, tests, development dependencies, logs, or uploaded files.
 
 The pre-commit hook validates staged Composer metadata and PHP syntax only when
-those files are staged. The pre-push hook runs `composer ci`; it reuses the
-installed dependencies instead of reinstalling them. Run `composer install`
-after changing `composer.lock` or when the hook reports that dependencies are
-missing. Workflow validation uses Go to install the pinned `actionlint` version
-once, then reuses that binary.
+those files are staged. The pre-push hook runs `composer ci`; it verifies that
+the locked dependencies can be installed without changing the local vendor
+directory. Run `composer install` after changing `composer.lock` or when the
+hook reports that dependencies are missing. FTPS upload, signed server-side
+migrations, and remote health verification run only in GitHub Actions because
+they require environment credentials and a live deployment target. Workflow
+validation uses Go to install the pinned `actionlint` version once, then reuses
+that binary.
 
 Project remediation evidence and sequencing live in
 [audit.md](docs/audit.md), [roadmap.md](docs/roadmap.md), and

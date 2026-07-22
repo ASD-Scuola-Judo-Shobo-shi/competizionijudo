@@ -19,12 +19,12 @@ final class QualityPolicyTest extends TestCase
 
         self::assertSame(
             [
+                '@dependencies:verify',
                 '@workflow:check',
                 '@test:migrations',
                 '@quality',
                 '@test:coverage:changed',
-                'bash scripts/build-deploy.sh',
-                'bash scripts/test-deploy-artifact.sh build/deploy',
+                '@deploy:preflight',
             ],
             $composer['scripts']['ci']
         );
@@ -48,6 +48,11 @@ final class QualityPolicyTest extends TestCase
             'composer audit --locked --abandoned=fail',
             $composer['scripts']['security:audit']
         );
+        self::assertSame(
+            'composer install --dry-run --prefer-dist --no-interaction --no-progress',
+            $composer['scripts']['dependencies:verify']
+        );
+        self::assertSame('bash scripts/deploy-preflight.sh', $composer['scripts']['deploy:preflight']);
     }
 
     public function testCiEnforcesChangedSourceCoverageAndDeployReusesCi(): void
@@ -66,9 +71,11 @@ final class QualityPolicyTest extends TestCase
         );
         self::assertSame(2, substr_count($ci, 'path: ${{ env.COMPOSER_CACHE_DIR }}/files'));
         self::assertStringNotContainsString('composer install --no-dev --', $ci);
+        self::assertStringContainsString('run: bash scripts/deploy-preflight.sh', $ci);
 
         $deploy = (string) file_get_contents(dirname(__DIR__) . '/.github/workflows/deploy.yml');
         self::assertStringContainsString('uses: ./.github/workflows/ci.yml', $deploy);
+        self::assertSame(1, substr_count($deploy, 'run: bash scripts/stage-root-router.sh build/root-router'));
     }
 
     public function testCiRunsOnlyThePhp84QualityMatrixEntry(): void
@@ -222,5 +229,17 @@ final class QualityPolicyTest extends TestCase
         self::assertStringContainsString('"${BUILD_DIR}/var/log"', $script);
         self::assertStringContainsString('touch', $script);
         self::assertStringContainsString('"${BUILD_DIR}/var/log/.gitkeep"', $script);
+    }
+
+    public function testSharedDeploymentPreflightCoversTheArtifactAndRootRouter(): void
+    {
+        $preflight = (string) file_get_contents(dirname(__DIR__) . '/scripts/deploy-preflight.sh');
+        $router = (string) file_get_contents(dirname(__DIR__) . '/scripts/stage-root-router.sh');
+
+        self::assertStringContainsString('scripts/build-deploy.sh', $preflight);
+        self::assertStringContainsString('scripts/test-deploy-artifact.sh', $preflight);
+        self::assertStringContainsString('scripts/stage-root-router.sh', $preflight);
+        self::assertStringContainsString('rm router.sha256', $router);
+        self::assertStringContainsString('Root router staging directory must contain only', $router);
     }
 }
