@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 final class QualityPolicyTest extends TestCase
 {
-    public function testComposerCiIsTheCompleteSchemaQualityCoverageArtifactAndBootGate(): void
+    public function testComposerCiRunsTheCompleteGateThroughParallelQualityAndArtifactLanes(): void
     {
         $composer = json_decode(
             (string) file_get_contents(dirname(__DIR__) . '/composer.json'),
@@ -17,6 +17,7 @@ final class QualityPolicyTest extends TestCase
             JSON_THROW_ON_ERROR
         );
 
+        self::assertSame('bash scripts/run-ci.sh', $composer['scripts']['ci']);
         self::assertSame(
             [
                 '@dependencies:verify',
@@ -24,22 +25,15 @@ final class QualityPolicyTest extends TestCase
                 '@test:migrations',
                 '@quality',
                 '@test:coverage:changed',
-                '@deploy:preflight',
             ],
-            $composer['scripts']['ci']
+            $composer['scripts']['ci:quality']
         );
         self::assertSame(['@quality', '@test'], $composer['scripts']['check']);
         self::assertSame(
             ['@metadata', '@syntax', '@cs', '@analyse', '@security:audit'],
             $composer['scripts']['quality']
         );
-        self::assertSame(
-            [
-                '@test:coverage',
-                'php scripts/check-changed-coverage.php build/coverage.xml "${BASE_SHA:-HEAD^}" 70',
-            ],
-            $composer['scripts']['test:coverage:changed']
-        );
+        self::assertSame('bash scripts/run-changed-coverage.sh', $composer['scripts']['test:coverage:changed']);
         self::assertSame(
             'git config core.hooksPath scripts/git-hooks',
             $composer['scripts']['hooks:install']
@@ -60,10 +54,15 @@ final class QualityPolicyTest extends TestCase
         $ci = (string) file_get_contents(dirname(__DIR__) . '/.github/workflows/ci.yml');
         $composer = (string) file_get_contents(dirname(__DIR__) . '/composer.json');
 
+        $coverage = (string) file_get_contents(dirname(__DIR__) . '/scripts/run-changed-coverage.sh');
+        $localCi = (string) file_get_contents(dirname(__DIR__) . '/scripts/run-ci.sh');
+
         self::assertStringContainsString('"@test:coverage:changed"', $composer);
-        self::assertStringContainsString('--coverage-clover build/coverage.xml', $composer);
-        self::assertStringContainsString('php scripts/check-changed-coverage.php build/coverage.xml', $composer);
-        self::assertStringContainsString('run: composer ci', $ci);
+        self::assertStringContainsString('--coverage-clover build/coverage.xml', $coverage);
+        self::assertStringContainsString('php scripts/check-changed-coverage.php build/coverage.xml', $coverage);
+        self::assertStringContainsString('composer ci:quality', $localCi);
+        self::assertStringContainsString('composer deploy:preflight', $localCi);
+        self::assertStringContainsString('run: composer ci:quality', $ci);
         self::assertStringContainsString('fetch-depth: 0', $ci);
         self::assertStringContainsString(
             'COMPOSER_CACHE_DIR: ${{ github.workspace }}/.cache/composer',
@@ -72,6 +71,7 @@ final class QualityPolicyTest extends TestCase
         self::assertSame(2, substr_count($ci, 'path: ${{ env.COMPOSER_CACHE_DIR }}/files'));
         self::assertStringNotContainsString('composer install --no-dev --', $ci);
         self::assertStringContainsString('run: bash scripts/deploy-preflight.sh', $ci);
+        self::assertStringNotContainsString('needs: quality', $ci);
 
         $deploy = (string) file_get_contents(dirname(__DIR__) . '/.github/workflows/deploy.yml');
         self::assertStringContainsString('uses: ./.github/workflows/ci.yml', $deploy);

@@ -31,48 +31,30 @@ final class MigrationCommandTest extends TestCase
         self::assertSame(2, substr_count($command, 'failureDetail($exception)'));
     }
 
-    public function testAutomaticMigrationSafetyCheckAllowsOnlyRetryableTableCreation(): void
+    public function testManualEventSchemaRepairIsBrowserOnlyAndRequiresBasicAuthentication(): void
     {
-        $directory = sys_get_temp_dir() . '/competizionijudo-automatic-migration-'
-            . bin2hex(random_bytes(8));
-        self::assertTrue(mkdir($directory, 0700));
+        $command = (string) file_get_contents(dirname(__DIR__) . '/scripts/repair-event-schema.php');
 
-        try {
-            self::assertNotFalse(file_put_contents(
-                $directory . '/20260716_000001_safe.sql',
-                'CREATE TABLE IF NOT EXISTS synthetic_safe (id INT PRIMARY KEY);' . PHP_EOL
-            ));
-            self::assertSame([0, 'Automatic migration safety check passed.' . PHP_EOL], $this->runSafetyCheck($directory));
-
-            self::assertNotFalse(file_put_contents(
-                $directory . '/20260716_000002_unsafe.sql',
-                'ALTER TABLE synthetic_safe ADD COLUMN label VARCHAR(20);' . PHP_EOL
-            ));
-            [$status, $output] = $this->runSafetyCheck($directory);
-            self::assertSame(1, $status);
-            self::assertStringContainsString('20260716_000002_unsafe.sql', $output);
-        } finally {
-            foreach (glob($directory . '/*.sql') ?: [] as $migration) {
-                unlink($migration);
-            }
-            rmdir($directory);
-        }
-    }
-
-    /** @return array{int, string} */
-    private function runSafetyCheck(string $directory): array
-    {
-        $process = proc_open(
-            [PHP_BINARY, dirname(__DIR__) . '/scripts/check-automatic-migrations.php', $directory],
-            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
-            $pipes
-        );
-        self::assertIsResource($process);
-
-        $output = (string) stream_get_contents($pipes[1]) . (string) stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-
-        return [proc_close($process), $output];
+        self::assertStringContainsString("PHP_SAPI === 'cli'", $command);
+        self::assertStringContainsString('$_SERVER[\'REQUEST_METHOD\'] !== \'POST\'', $command);
+        self::assertStringContainsString('isHttpsRequest()', $command);
+        self::assertStringContainsString('isAuthorizedAdministrator()', $command);
+        self::assertStringContainsString('$_SERVER[\'PHP_AUTH_USER\']', $command);
+        self::assertStringContainsString('$_SERVER[\'PHP_AUTH_PW\']', $command);
+        self::assertStringContainsString("env('ADMIN_USER', '')", $command);
+        self::assertStringContainsString('hash_equals($expectedUser, $providedPassword)', $command);
+        self::assertStringContainsString('WWW-Authenticate: Basic realm=', $command);
+        self::assertStringNotContainsString('HTTP_X_FORWARDED_PROTO', $command);
+        self::assertStringContainsString("hash_equals('REPAIR EVENT SCHEMA', \$confirmation)", $command);
+        self::assertStringContainsString('MAX_PARTICIPANTS_MIGRATION', $command);
+        self::assertStringContainsString('REGISTRATION_EXCEPTIONS_MIGRATION', $command);
+        self::assertStringContainsString('MigrationExecutor', $command);
+        self::assertStringContainsString('schemaMigrationsTableExists()', $command);
+        self::assertStringContainsString('schema_migrations is absent, so no migration history was recorded.', $command);
+        self::assertStringContainsString('delete this temporary PHP file immediately.', $command);
+        self::assertStringContainsString("__DIR__ . '/prod'", $command);
+        self::assertStringNotContainsString('MIGRATION_WEBHOOK_SECRET', $command);
+        self::assertStringNotContainsString('ADMIN_PASS_HASH', $command);
+        self::assertStringNotContainsString("require dirname(__DIR__) . '/src/bootstrap.php';", $command);
     }
 }

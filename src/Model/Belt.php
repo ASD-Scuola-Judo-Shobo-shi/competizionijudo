@@ -33,9 +33,11 @@ enum Belt: string
     /**
      * Tries to parse a value into a Belt. Falls back to null.
      */
-    public static function tryFromValue(string $value): ?self
+    public static function tryFromValue(?string $value): ?self
     {
-        $normalized = str_replace([' ', '-', '_'], '_', strtolower(trim($value)));
+        $normalized = $value !== null
+            ? str_replace([' ', '-', '_'], '_', strtolower(trim($value)))
+            : '';
 
         // Handle common variations like "bianca/gialla" -> "bianca_gialla" -> try to map
         $normalized = str_replace('/', '_', $normalized);

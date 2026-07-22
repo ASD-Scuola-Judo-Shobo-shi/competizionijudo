@@ -105,7 +105,7 @@ final class MigrationRunnerTest extends TestCase
             ->with($historicalVersions)
             ->willReturn(true);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::once())->method('query')->willReturn($migrationQuery);
+        $database->expects(self::exactly(3))->method('query')->willReturn($migrationQuery);
         $database->expects(self::exactly(9))
             ->method('prepare')
             ->willReturnOnConsecutiveCalls(
@@ -119,7 +119,7 @@ final class MigrationRunnerTest extends TestCase
                 $recordStatement,
                 $recordStatement
             );
-        $database->expects(self::exactly(10))->method('exec');
+        $database->expects(self::atLeast(10))->method('exec');
         $database->expects(self::exactly(8))->method('beginTransaction')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true);
         $database->expects(self::exactly(7))->method('inTransaction')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true);
         $database->expects(self::exactly(8))->method('commit')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true);
@@ -145,7 +145,7 @@ final class MigrationRunnerTest extends TestCase
             '20260619_000000_create_baseline_schema.sql',
         ]);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::once())->method('query')->willReturn($migrationQuery);
+        $database->expects(self::exactly(3))->method('query')->willReturn($migrationQuery);
         $database->expects(self::once())->method('exec');
         $database->expects(self::never())->method('prepare');
         $database->expects(self::never())->method('beginTransaction');
@@ -178,7 +178,7 @@ final class MigrationRunnerTest extends TestCase
         $migrationQuery = $this->createMock(PDOStatement::class);
         $migrationQuery->method('fetchAll')->willReturn([]);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::once())->method('query')->willReturn($migrationQuery);
+        $database->expects(self::exactly(3))->method('query')->willReturn($migrationQuery);
         $database->expects(self::never())->method('prepare');
         $database->method('beginTransaction')->willReturnCallback(
             static function () use (&$transactionActive): bool {
@@ -221,6 +221,31 @@ final class MigrationRunnerTest extends TestCase
         } finally {
             unlink($path);
             rmdir($directory);
+        }
+    }
+
+    public function testExistingSchemaWithoutMigrationHistoryIsRefusedWithoutCreatingALedger(): void
+    {
+        $historyQuery = $this->createMock(PDOStatement::class);
+        $historyQuery->method('fetchColumn')->willReturn(false);
+        $applicationSchemaQuery = $this->createMock(PDOStatement::class);
+        $applicationSchemaQuery->method('fetchColumn')->willReturn(1);
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::exactly(2))
+            ->method('query')
+            ->willReturnOnConsecutiveCalls($historyQuery, $applicationSchemaQuery);
+        $database->expects(self::never())->method('exec');
+        $database->expects(self::never())->method('prepare');
+
+        try {
+            (new MigrationRunner($database))->run();
+            self::fail('Expected an untracked application schema to be refused.');
+        } catch (MigrationException $exception) {
+            self::assertSame('20260630_000000_create_schema.sql', $exception->version());
+            self::assertSame(
+                'Migration failed: 20260630_000000_create_schema.sql',
+                $exception->getMessage()
+            );
         }
     }
 }

@@ -1,4 +1,4 @@
-CREATE TABLE event_registration_exceptions (
+CREATE TABLE IF NOT EXISTS event_registration_exceptions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     event_id INT NOT NULL,
     club_id INT NOT NULL,

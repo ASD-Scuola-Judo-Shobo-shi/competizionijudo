@@ -14,8 +14,7 @@ repository/hosting operator must:
 1. Create or update the GitHub Actions environments named `production` and
    `development`. Use the same key names as `.env.example`.
 2. Store only sensitive values as environment secrets: at minimum `DB_PASS`,
-   `ADMIN_PASS_HASH`, `FTP_PASSWORD`, and a distinct randomly generated
-   `MIGRATION_WEBHOOK_SECRET` for each environment. Store non-secret values such as
+   `ADMIN_PASS_HASH`, and `FTP_PASSWORD`. Store non-secret values such as
    `DB_HOST`, `DB_NAME`, `DB_USER`, `ADMIN_USER`, `APP_URL`, `APP_OWNER*`,
    `APP_WEBHOST*`, retention days, `FTP_SERVER`, and `FTP_USERNAME` as
     environment variables. Set `FTP_BASE_DIR` to the common base directory
@@ -57,34 +56,58 @@ repository/hosting operator must:
    operator makes an emergency manual `.env` edit on the host, they must
    immediately mirror that change back into the matching GitHub environment or
    the next deploy will overwrite it.
-7. The deploy workflow uploads the artifact and generated `.env`, then sends a
-   signed HTTPS `POST` request to `APP_URL/migrations` (or the optional
+7. The deploy workflow uploads the artifact and generated `.env`, then sends an
+   HTTPS `POST` request to `APP_URL/migrations` (or the optional
    `PRODUCTION_MIGRATION_URL` / `DEVELOPMENT_MIGRATION_URL` override). The
    endpoint runs on the hosting server, where MySQL is locally reachable. It
-   accepts only a current (five-minute) HMAC signature made with
-   `MIGRATION_WEBHOOK_SECRET`; it does not use an administrator session or
-   password. A POST without a valid signature receives a generic 404.
-   A migration failure fails the workflow and returns a password-redacted
-   diagnostic only to the signed request.
+   requires HTTP Basic Auth: both the username and password must equal that
+   environment's `ADMIN_USER`. GitHub passes `vars.ADMIN_USER` to the trigger;
+   no additional migration secret is required. An unauthenticated request
+   receives HTTP 401. A migration failure fails the workflow and returns a
+   password-redacted diagnostic to the authenticated caller.
 
 The workflow never connects directly to MySQL, so GitHub runner IP addresses
 do not need database access. Do not create `MIGRATION_DB_*` GitHub entries for
 this flow. Deployment concurrency queues a newer run instead of cancelling an
 active one, so an in-progress migration request is not interrupted by a new
-push. Generate each environment's secret with `openssl rand -hex 32`, add the
-same value as the GitHub environment secret, and do not place it in a local
-file or chat message.
+push.
 
-Automatic deployments accept only additive `CREATE TABLE IF NOT EXISTS`
-forward migrations after the consolidated baseline. They are safe to retry if
-the table was created before a failed run could record the migration. Any
-index, column, data, rename, or destructive change requires a database backup
-and a separately approved maintenance procedure; it is intentionally blocked
-from the automatic deployment path.
+The runner records each successfully completed migration in
+`schema_migrations`, so repeating a completed deployment is a no-op. Forward
+migrations must also guard their individual schema changes, allowing a retry to
+finish after MySQL has implicitly committed DDL before the version could be
+recorded. The runner refuses an existing application schema with no
+`schema_migrations` table: it makes no changes and does not create a ledger.
+Back up and repair or rebuild that legacy database through an operator-directed
+procedure instead of treating it as a fresh installation.
+
+### Manual event-schema repair
+
+If an older production database is missing `events.max_participants` or the
+`event_registration_exceptions` table, an administrator can temporarily upload
+`scripts/repair-event-schema.php` under a newly generated, unguessable name in
+the hosting root, beside the root `index.php` that contains the `prod/`
+directory. Do not upload it inside `prod/public/`: the root router sends those
+URLs to the application and they return 404. Take and verify a database backup
+first. Open the root-level temporary URL in a browser (without `/prod/`) and
+authenticate through the HTTPS Basic Auth prompt using the production
+`ADMIN_USER` value for both the username and password. Type `REPAIR EVENT SCHEMA` exactly to
+execute it. The script accepts only that authenticated POST request and changes
+only those two schema contracts. Delete the temporary public PHP file
+immediately after a successful run.
+
+The script refuses to proceed when the migration history says the schema is
+present but its required column or table is absent. Do not manually insert a
+`schema_migrations` record: the script records a version only after verifying
+the matching schema. Some legacy production databases have no
+`schema_migrations` table at all. In that case, the script applies and verifies
+only the two event-schema changes, and deliberately does not create or seed a
+migration ledger. Establishing a complete migration history is a separate,
+backed-up maintenance task.
 
 The consolidated schema baseline can initialize an empty database or adopt a
 database that has recorded every pre-squash migration. It deliberately rejects
-existing application tables without that complete history, as well as partial
+existing application tables without a migration ledger, as well as partial
 pre-squash histories. Back up the database and investigate its migration records
 instead of bypassing this guard.
 
@@ -117,9 +140,9 @@ while exception messages and configuration values remain redacted.
 
 The `MIGRATION_TEST_*` variables documented in `dev.env.example` belong only
 to the isolated local/CI migration smoke harness. Do not provision them in a
-deployed application environment. The rendered deployment environment also
-requires `MIGRATION_WEBHOOK_SECRET`; it is used only by the signed migration
-route and is never returned in an HTTP response or written to application logs.
+deployed application environment. The migration route uses the deployed
+`ADMIN_USER` value for its Basic-Auth credentials and never returns a password
+or configuration value in an HTTP response or application log.
 
 ## Session environment boundary
 
@@ -201,8 +224,9 @@ state files manually, because doing so disables reliable stale-code retirement.
 Repository administrators own rollback execution. Record the last healthy SHA
 after each deployment. If health verification fails:
 
-1. Do not reverse database migrations. Automatic migrations are additive table
-   creations only, and a retry is safe after the failure cause is corrected.
+1. Do not reverse database migrations. Completed versions are recorded and
+   skipped on retry; the guarded forward migrations can be retried after the
+   failure cause is corrected.
 2. In GitHub Actions, run the **Deploy** workflow from the affected branch and
    enter the last healthy complete SHA as `deployment_ref`.
 3. Confirm the rollback run passes build gates and `/health` reports that SHA.

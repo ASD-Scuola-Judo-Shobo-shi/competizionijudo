@@ -118,7 +118,6 @@ jobs:
           DB_NAME: ${{ vars.DB_NAME }}
           DB_USER: ${{ vars.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
-          MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}
           ADMIN_USER: ${{ vars.ADMIN_USER }}
           ADMIN_PASS_HASH: ${{ secrets.ADMIN_PASS_HASH }}
           MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
@@ -153,7 +152,7 @@ jobs:
       - name: Run production migrations on the hosting server
         env:
           MIGRATION_ENDPOINT_URL: ${{ vars.PRODUCTION_MIGRATION_URL || format('{0}/migrations', vars.APP_URL) }}
-          MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}
+          MIGRATION_BASIC_AUTH_USER: ${{ vars.ADMIN_USER }}
         run: bash scripts/trigger-server-migrations.sh
 
       - name: Verify production health and revision
@@ -253,7 +252,6 @@ jobs:
           DB_NAME: ${{ vars.DB_NAME }}
           DB_USER: ${{ vars.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
-          MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}
           ADMIN_USER: ${{ vars.ADMIN_USER }}
           ADMIN_PASS_HASH: ${{ secrets.ADMIN_PASS_HASH }}
           MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
@@ -279,7 +277,7 @@ jobs:
       - name: Run development migrations on the hosting server
         env:
           MIGRATION_ENDPOINT_URL: ${{ vars.DEVELOPMENT_MIGRATION_URL || format('{0}/migrations', vars.APP_URL) }}
-          MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}
+          MIGRATION_BASIC_AUTH_USER: ${{ vars.ADMIN_USER }}
         run: bash scripts/trigger-server-migrations.sh
 
       - name: Verify development health and revision

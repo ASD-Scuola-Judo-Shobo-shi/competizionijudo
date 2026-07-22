@@ -139,7 +139,7 @@ final class SchemaMigrationTest extends TestCase
         );
         self::assertIsString($migration);
 
-        self::assertStringContainsString('CREATE TABLE club_registration_confirmations', $migration);
+        self::assertStringContainsString('CREATE TABLE IF NOT EXISTS club_registration_confirmations', $migration);
         self::assertStringContainsString('registration_payload JSON NOT NULL', $migration);
         self::assertStringContainsString('uniq_club_registration_confirmations_token', $migration);
     }

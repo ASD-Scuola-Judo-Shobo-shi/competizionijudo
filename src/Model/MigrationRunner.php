@@ -22,6 +22,17 @@ final class MigrationRunner
         '20260629_000002_add_list_query_indexes.sql',
         '20260629_000003_snapshot_closed_event_entries.sql',
     ];
+    private const APPLICATION_TABLES = [
+        'clubs',
+        'events',
+        'athletes',
+        'entries',
+        'password_reset_tokens',
+        'authentication_throttles',
+        'club_data_rights_declarations',
+        'club_registration_confirmations',
+        'event_registration_exceptions',
+    ];
 
     private readonly string $migrationDirectory;
 
@@ -35,7 +46,7 @@ final class MigrationRunner
 
     public function run(): void
     {
-        $this->ensureMigrationTableExists();
+        $this->ensureMigrationHistoryIsAvailable();
         $applied = $this->appliedVersions();
 
         foreach ($this->migrationFiles() as $migration) {
@@ -62,7 +73,54 @@ final class MigrationRunner
         }
     }
 
-    private function ensureMigrationTableExists(): void
+    private function ensureMigrationHistoryIsAvailable(): void
+    {
+        if ($this->schemaMigrationsTableExists()) {
+            return;
+        }
+
+        if ($this->applicationSchemaExists()) {
+            throw new MigrationException(
+                self::CONSOLIDATED_BASELINE,
+                new RuntimeException(
+                    'Migration history is absent while application tables already exist. '
+                    . 'Refusing to create schema_migrations or modify this database automatically.'
+                )
+            );
+        }
+
+        $this->createMigrationTable();
+    }
+
+    private function schemaMigrationsTableExists(): bool
+    {
+        $statement = $this->pdo->query(
+            "SELECT 1 FROM information_schema.TABLES "
+            . "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'schema_migrations' LIMIT 1"
+        );
+
+        $result = $statement === false ? false : $statement->fetchColumn();
+
+        return $result === 1 || $result === '1';
+    }
+
+    private function applicationSchemaExists(): bool
+    {
+        $quotedTables = implode(', ', array_map(
+            static fn (string $table): string => "'" . $table . "'",
+            self::APPLICATION_TABLES
+        ));
+        $statement = $this->pdo->query(
+            'SELECT 1 FROM information_schema.TABLES '
+            . 'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (' . $quotedTables . ') LIMIT 1'
+        );
+
+        $result = $statement === false ? false : $statement->fetchColumn();
+
+        return $result === 1 || $result === '1';
+    }
+
+    private function createMigrationTable(): void
     {
         $this->pdo->exec(
             'CREATE TABLE IF NOT EXISTS schema_migrations (' .

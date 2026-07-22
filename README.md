@@ -121,8 +121,8 @@ The pre-commit hook validates staged Composer metadata and PHP syntax only when
 those files are staged. The pre-push hook runs `composer ci`; it verifies that
 the locked dependencies can be installed without changing the local vendor
 directory. Run `composer install` after changing `composer.lock` or when the
-hook reports that dependencies are missing. FTPS upload, signed server-side
-migrations, and remote health verification run only in GitHub Actions because
+hook reports that dependencies are missing. FTPS upload, Basic-Auth-protected
+server-side migrations, and remote health verification run only in GitHub Actions because
 they require environment credentials and a live deployment target. Workflow
 validation uses Go to install the pinned `actionlint` version once, then reuses
 that binary.

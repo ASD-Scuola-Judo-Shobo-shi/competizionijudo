@@ -1,6 +1,7 @@
 <?php
+
 /** @var \App\Model\Event|null $event */
-/** @var string $error */
+/** @var string|null $error */
 /** @var list<string> $locations */
 /** @var list<array{id: int, name: string}> $clubs */
 /** @var list<int> $exceptionClubIds */
@@ -73,29 +74,29 @@ $isEdit = !empty($event);
         </p>
 
         <?php if (!empty($clubs)) : ?>
-        <label><?= e(__('admin.add.registration_exceptions')) ?></label>
-        <p style="font-size: 0.9em; color: #666; margin-bottom: 0.5rem;"><?= e(__('admin.add.registration_exceptions_help')) ?></p>
-        <div class="checkbox-dropdown">
-            <button type="button" class="dropdown-toggle btn btn-sm" onclick="toggleDropdown(this)">
-                <span><?= e(__('admin.add.select_clubs')) ?></span>
-                <span class="dropdown-arrow">▼</span>
-            </button>
-            <div class="dropdown-menu" style="display: none;">
-                <?php foreach ($clubs as $club) : ?>
-                    <?php $isChecked = in_array($club['id'], $exceptionClubIds, true); ?>
-                    <label class="dropdown-item">
-                        <input type="checkbox" name="registration_exceptions[]" value="<?= e((string) $club['id']) ?>" <?= $isChecked ? 'checked' : '' ?>>
-                        <?= e($club['name']) ?>
-                    </label>
-                <?php endforeach; ?>
+            <label><?= e(__('admin.add.registration_exceptions')) ?></label>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 0.5rem;"><?= e(__('admin.add.registration_exceptions_help')) ?></p>
+            <div class="checkbox-dropdown">
+                <button type="button" class="dropdown-toggle btn btn-sm" onclick="toggleDropdown(this)">
+                    <span><?= e(__('admin.add.select_clubs')) ?></span>
+                    <span class="dropdown-arrow">▼</span>
+                </button>
+                <div class="dropdown-menu" style="display: none;">
+                    <?php foreach ($clubs as $club) : ?>
+                        <?php $isChecked = in_array($club['id'], $exceptionClubIds, true); ?>
+                        <label class="dropdown-item">
+                            <input type="checkbox" name="registration_exceptions[]" value="<?= e((string) $club['id']) ?>" <?= $isChecked ? 'checked' : '' ?>>
+                            <?= e($club['name']) ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
             </div>
-        </div>
         <?php endif; ?>
 
         <button class="btn green" type="submit"><?= e($isEdit ? __('admin.edit.save') : __('admin.add.save')) ?></button>
     </form>
 </div>
-    <script>
+<script>
     // Dropdown toggle for registration exceptions
     function toggleDropdown(button) {
         const menu = button.nextElementSibling;
@@ -110,4 +111,4 @@ $isEdit = !empty($event);
             });
         }
     });
-    </script>
+</script>

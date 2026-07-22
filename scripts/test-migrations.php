@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Model\MigrationException;
 use App\Model\MigrationRunner;
+use App\Service\MigrationExecutor;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/src/helpers.php';
@@ -93,7 +94,7 @@ try {
 } catch (Throwable $exception) {
     $message = $exception instanceof MigrationException
         ? $exception->getMessage()
-        : 'Migration smoke check failed before a version could be applied.';
+        : (new MigrationExecutor())->failureDetail($exception);
     fwrite(STDERR, $message . "\n");
     exit(1);
 } finally {
@@ -282,10 +283,11 @@ function assertExistingSchemaRejected(PDO $database): void
         );
     }
 
-    $recorded = (int) $database->query(
-        'SELECT COUNT(*) FROM schema_migrations'
+    $ledgerCreated = (int) $database->query(
+        "SELECT COUNT(*) FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'schema_migrations'"
     )->fetchColumn();
-    assertSameValue(0, $recorded, 'Rejected baseline was recorded as applied.');
+    assertSameValue(0, $ledgerCreated, 'Rejected schema received a migration ledger.');
 
     $created = (int) $database->query(
         "SELECT COUNT(*) FROM information_schema.TABLES
@@ -305,7 +307,29 @@ function runMigrationsTwice(PDO $database): void
         (string) $database->query('SELECT @@SESSION.sql_mode')->fetchColumn(),
         'Migration runner did not restore the session SQL mode.'
     );
+    assertUnrecordedForwardMigrationsCanBeRetried($database);
     $runner->run();
+    assertMigrationCount($database);
+}
+
+function assertUnrecordedForwardMigrationsCanBeRetried(PDO $database): void
+{
+    $versions = [
+        '20260715_000001_create_club_data_rights_declarations.sql',
+        '20260716_000001_consolidate_club_contacts_and_add_addresses.sql',
+        '20260716_000002_rename_club_organization_to_affiliation.sql',
+        '20260717_000001_make_club_affiliation_nullable_and_multiple.sql',
+        '20260717_000002_create_club_registration_confirmations.sql',
+        '20260717_000003_add_max_participants_to_events.sql',
+        '20260718_000001_create_event_registration_exceptions.sql',
+    ];
+    $placeholders = implode(', ', array_fill(0, count($versions), '?'));
+    $statement = $database->prepare(
+        'DELETE FROM schema_migrations WHERE version IN (' . $placeholders . ')'
+    );
+    $statement->execute($versions);
+
+    (new MigrationRunner($database))->run();
     assertMigrationCount($database);
 }
 

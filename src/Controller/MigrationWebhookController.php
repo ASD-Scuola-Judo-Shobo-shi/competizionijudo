@@ -10,36 +10,39 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
 use App\Model\MigrationException;
-use App\Service\AutomaticMigrationSafety;
+use App\Service\MigrationBasicAuthenticator;
 use App\Service\MigrationExecutor;
-use App\Service\MigrationWebhookAuthenticator;
 
 final class MigrationWebhookController extends Controller
 {
-    private readonly AutomaticMigrationSafety $safety;
+    private readonly MigrationBasicAuthenticator $authenticator;
     private readonly MigrationExecutor $executor;
 
     public function __construct(
         View $view,
         Request $request,
-        ?AutomaticMigrationSafety $safety = null,
+        ?MigrationBasicAuthenticator $authenticator = null,
         ?MigrationExecutor $executor = null,
         ?Logger $logger = null
     ) {
         parent::__construct($view, $request, $logger);
-        $this->safety = $safety ?? new AutomaticMigrationSafety();
+        $this->authenticator = $authenticator ?? new MigrationBasicAuthenticator(
+            trim((string) env('ADMIN_USER', ''))
+        );
         $this->executor = $executor ?? new MigrationExecutor();
     }
 
     public function run(Request $request): Response
     {
-        $secret = trim((string) env('MIGRATION_WEBHOOK_SECRET', ''));
-        if ($secret === '' || !(new MigrationWebhookAuthenticator($secret))->accepts($request)) {
-            return $this->json(['status' => 'not_found'], 404);
+        if (!$this->authenticator->accepts($request)) {
+            return $this->json(
+                ['status' => 'unauthorized'],
+                401,
+                ['WWW-Authenticate' => 'Basic realm="Migration endpoint", charset="UTF-8"']
+            );
         }
 
         try {
-            $this->safety->assertSafe();
             $this->executor->run();
 
             return $this->json(['status' => 'ok']);
@@ -61,16 +64,19 @@ final class MigrationWebhookController extends Controller
         }
     }
 
-    /** @param array<string, string> $data */
-    private function json(array $data, int $status = 200): Response
+    /**
+     * @param array<string, string> $data
+     * @param array<string, string> $headers
+     */
+    private function json(array $data, int $status = 200, array $headers = []): Response
     {
         return new Response(
             json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
             $status,
-            [
+            array_merge([
                 'Content-Type' => 'application/json; charset=UTF-8',
                 'Cache-Control' => 'no-store',
-            ]
+            ], $headers)
         );
     }
 }

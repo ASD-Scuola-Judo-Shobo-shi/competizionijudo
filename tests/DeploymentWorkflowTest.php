@@ -57,7 +57,7 @@ final class DeploymentWorkflowTest extends TestCase
         self::assertSame(2, substr_count($configuration, 'interval: "weekly"'));
     }
 
-    public function testDeploymentsInvokeSignedServerLocalMigrationsAfterUpload(): void
+    public function testDeploymentsInvokeBasicAuthServerLocalMigrationsAfterUpload(): void
     {
         $workflow = $this->workflow('deploy.yml');
 
@@ -65,10 +65,11 @@ final class DeploymentWorkflowTest extends TestCase
             $workflow,
             'run: bash scripts/trigger-server-migrations.sh'
         ));
-        self::assertSame(4, substr_count(
+        self::assertSame(2, substr_count(
             $workflow,
-            'MIGRATION_WEBHOOK_SECRET: ${{ secrets.MIGRATION_WEBHOOK_SECRET }}'
+            'MIGRATION_BASIC_AUTH_USER: ${{ vars.ADMIN_USER }}'
         ));
+        self::assertStringNotContainsString('MIGRATION_WEBHOOK_SECRET', $workflow);
         self::assertStringContainsString('vars.PRODUCTION_MIGRATION_URL', $workflow);
         self::assertStringContainsString('vars.DEVELOPMENT_MIGRATION_URL', $workflow);
         self::assertStringNotContainsString('migrate_production:', $workflow);

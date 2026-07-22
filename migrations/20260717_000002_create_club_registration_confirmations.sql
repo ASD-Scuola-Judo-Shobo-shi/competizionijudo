@@ -1,4 +1,4 @@
-CREATE TABLE club_registration_confirmations (
+CREATE TABLE IF NOT EXISTS club_registration_confirmations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
     token_hash CHAR(64) NOT NULL,
