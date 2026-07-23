@@ -216,7 +216,7 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
         </p>
 
         <?php if (!empty($charts)) : ?>
-            <div class="recap-summary" style="margin-top: 1rem; padding: 1rem; background: #f7f9fc; border-radius: 8px;">
+            <div class="recap-summary" style="margin-top: 1rem; padding: 1rem; border-radius: 8px;">
                 <h4 style="margin-top: 0;"><?= e(__('events.entries_recap')) ?></h4>
                 <p>
                     <strong><?= e(__('events.entries_subscribed')) ?>:</strong> <?= e((string) count($rows)) ?><br>

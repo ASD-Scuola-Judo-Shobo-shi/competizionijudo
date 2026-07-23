@@ -135,7 +135,6 @@ jobs:
             [[ -s "$FTP_MISMATCH_FILE" ]] || { echo 'Verification did not identify files for targeted repair.' >&2; exit 1; }
             echo "Read-back mismatch; targeted production repair attempt $((attempt + 1))/${FTP_VERIFY_RETRIES}."
             bash scripts/lftp-upload.sh repair "$REMOTE_DIR" build/deploy "$FTP_MISMATCH_FILE"
-            rm -f "$FTP_MISMATCH_FILE"
           done
 
       - name: Render runtime .env
@@ -316,7 +315,6 @@ jobs:
             [[ -s "$FTP_MISMATCH_FILE" ]] || { echo 'Verification did not identify files for targeted repair.' >&2; exit 1; }
             echo "Read-back mismatch; targeted development repair attempt $((attempt + 1))/${FTP_VERIFY_RETRIES}."
             bash scripts/lftp-upload.sh repair "$REMOTE_DIR" build/deploy "$FTP_MISMATCH_FILE"
-            rm -f "$FTP_MISMATCH_FILE"
           done
 
       - name: Render runtime .env

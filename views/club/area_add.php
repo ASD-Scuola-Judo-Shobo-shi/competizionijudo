@@ -260,13 +260,15 @@
                             <?php endforeach; ?>
                         </td>
                         <td><?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?></td>
-                        <td>
-                            <a class="btn btn-sm" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>"><?= e(__('club.area.edit')) ?></a>
-                            <form method="post" action="<?= e(base_url('/clubs/delete-athlete?')) ?>" style="display:inline" onsubmit="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="athlete_id" value="<?= e((string) $athlete->id) ?>">
-                                <button class="btn btn-sm red" type="submit"><?= e(__('club.area.delete')) ?></button>
-                            </form>
+                        <td class="table-actions-cell">
+                            <div class="table-actions">
+                                <a class="btn btn-sm table-action-icon" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>" aria-label="<?= e(__('club.area.edit')) ?>" title="<?= e(__('club.area.edit')) ?>">✏️</a>
+                                <form method="post" action="<?= e(base_url('/clubs/delete-athlete?')) ?>" onsubmit="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="athlete_id" value="<?= e((string) $athlete->id) ?>">
+                                    <button class="btn btn-sm red table-action-icon" type="submit" aria-label="<?= e(__('club.area.delete')) ?>" title="<?= e(__('club.area.delete')) ?>">❌</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>

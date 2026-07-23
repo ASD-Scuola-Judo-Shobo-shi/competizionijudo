@@ -22,11 +22,23 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <?php $pageTitle = trim((string) ($title ?? '')); ?>
     <title><?= e($pageTitle !== '' && $pageTitle !== $appName ? $pageTitle . ' | ' . $appName : $appName) ?></title>
 
     <link rel="icon" href="<?= $favicon ?>">
     <link rel="stylesheet" href="<?= e(asset_url('assets/css/app.css')) ?>">
+    <script>
+        (function () {
+            try {
+                if (window.localStorage.getItem('competizioni-judo-theme') === 'dark') {
+                    document.documentElement.dataset.theme = 'dark';
+                }
+            } catch (error) {
+                // Keep the default light theme when browser storage is unavailable.
+            }
+        }());
+    </script>
 
     <style>
         .next-events-list {
@@ -85,13 +97,28 @@
             <p><?= translate('header.subtitle') ?></p>
         </div>
         <div class="right-panel">
-            <form class="lang-switch" action="<?= e(base_url('/language/switch')) ?>" method="get" aria-label="<?= e(translate('a11y.language_selector')) ?>">
-                <label for="locale-select" class="sr-only"><?= e(translate('a11y.language_selector')) ?></label>
-                <select id="locale-select" name="locale" onchange="this.form.submit()">
-                    <option value="it" <?= $locale === 'it' ? 'selected' : '' ?>>🇮🇹 Italiano</option>
-                    <option value="en" <?= $locale === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
-                </select>
-            </form>
+            <div class="header-controls">
+                <form class="lang-switch" action="<?= e(base_url('/language/switch')) ?>" method="get" aria-label="<?= e(translate('a11y.language_selector')) ?>">
+                    <label for="locale-select" class="sr-only"><?= e(translate('a11y.language_selector')) ?></label>
+                    <select id="locale-select" name="locale" onchange="this.form.submit()">
+                        <option value="it" <?= $locale === 'it' ? 'selected' : '' ?>>🇮🇹 Italiano</option>
+                        <option value="en" <?= $locale === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+                    </select>
+                </form>
+                <button
+                    type="button"
+                    class="theme-toggle"
+                    id="theme-toggle"
+                    aria-pressed="false"
+                    aria-label="<?= e(__('a11y.use_dark_theme')) ?>"
+                    data-light-action="<?= e(__('a11y.use_light_theme')) ?>"
+                    data-dark-action="<?= e(__('a11y.use_dark_theme')) ?>"
+                    title="<?= e(__('a11y.use_dark_theme')) ?>">
+                    <svg class="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                        <path data-theme-icon d="M12 3v2m0 14v2M3 12h2m14 0h2m-3.64-5.36-1.41 1.41M7.05 16.95l-1.41 1.41m0-12.72L7.05 7.05m10.54 10.54 1.41 1.41M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" />
+                    </svg>
+                </button>
+            </div>
             <?php if ($isLoggedIn) : ?>
                 <div class="club-login-info">
                     <span><?= e($clubEmail) ?></span>
@@ -162,6 +189,44 @@
             <a href="<?= e(base_url('/privacy')) ?>"><?= e(__('privacy.footer_link')) ?></a>
         </div>
     </footer>
+
+    <script>
+        (function () {
+            const toggle = document.getElementById('theme-toggle');
+            if (!toggle) {
+                return;
+            }
+
+            const iconPath = toggle.querySelector('[data-theme-icon]');
+            const sunPath = 'M12 3v2m0 14v2M3 12h2m14 0h2m-3.64-5.36-1.41 1.41M7.05 16.95l-1.41 1.41m0-12.72L7.05 7.05m10.54 10.54 1.41 1.41M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z';
+            const moonPath = 'M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5a8.5 8.5 0 1 0 12 12Z';
+
+            function setTheme(theme, persist) {
+                const isDark = theme === 'dark';
+                document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+                toggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+                const action = isDark ? toggle.dataset.lightAction : toggle.dataset.darkAction;
+                toggle.setAttribute('aria-label', action);
+                toggle.setAttribute('title', action);
+                iconPath.setAttribute('d', isDark ? moonPath : sunPath);
+
+                if (!persist) {
+                    return;
+                }
+
+                try {
+                    window.localStorage.setItem('competizioni-judo-theme', isDark ? 'dark' : 'light');
+                } catch (error) {
+                    // The selected theme remains active for the current page.
+                }
+            }
+
+            setTheme(document.documentElement.dataset.theme, false);
+            toggle.addEventListener('click', function () {
+                setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true);
+            });
+        }());
+    </script>
 
 </body>
 

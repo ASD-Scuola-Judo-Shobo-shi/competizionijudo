@@ -40,7 +40,7 @@ body {
 
 .lang-switch select {
     width: auto;
-    min-width: 160px;
+    min-width: 145px;
     padding: 6px 10px;
     border: 1px solid #cfd7e3;
     border-radius: 8px;
@@ -961,7 +961,7 @@ textarea {
     }
 
     .lang-switch select {
-        min-width: 130px;
+        min-width: 100px;
         padding: 4px 8px;
         font-size: 13px;
     }
@@ -1064,6 +1064,9 @@ textarea {
     position: relative;
     display: flex;
     flex-wrap: wrap;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
     gap: 24px;
     background: rgba(255, 255, 255, 0.85);
     border: 1px solid #cfd7e3;
@@ -1104,9 +1107,24 @@ textarea {
     padding: 10px;
 }
 
+.poster-placeholder {
+    background:
+        linear-gradient(rgba(255, 255, 255, .5), rgba(255, 255, 255, .5)),
+        url('/assets/judo-bg.jpg') center center/cover no-repeat;
+}
+
+.poster-placeholder-label {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: .75em;
+    background: rgba(255, 255, 255, .78);
+    color: #0b1f3a;
+}
+
 .event-info {
-    flex: 1;
-    min-width: 280px;
+    flex: 1 1 280px;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .event-info h3 {
@@ -1126,6 +1144,17 @@ textarea {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.event-actions .btn {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 @media screen and (max-width: 600px) {
@@ -1190,6 +1219,35 @@ button.submenu-item {
     border-left: 1px solid rgba(255, 255, 255, .16);
     cursor: default;
     opacity: 0.85;
+}
+
+@media(max-width:900px) {
+    .submenu {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .submenu .logout-form {
+        width: 100%;
+        margin: 0;
+    }
+
+    .submenu-item {
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+        border: 0;
+        border-top: 1px solid rgba(255, 255, 255, .16);
+    }
+
+    .submenu > :first-child .submenu-item,
+    .submenu > .submenu-item:first-child {
+        border-top: 0;
+    }
+
+    .submenu-item--email {
+        border-left: 0;
+    }
 }
 
 .event-details-card {
@@ -1411,4 +1469,271 @@ button.submenu-item {
 
 .dropdown-item:hover {
     background: #f7f9fc;
+}
+
+.table-actions-cell {
+    white-space: normal;
+}
+
+.table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.table-actions form {
+    margin: 0;
+}
+
+.table-actions a.table-action-icon,
+.table-actions button.table-action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    inline-size: 44px;
+    block-size: 44px;
+    min-inline-size: 44px;
+    padding: 2px;
+    margin: 0;
+    background: #e5e7eb;
+    color: #1f2937;
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.table-actions a.table-action-icon:hover,
+.table-actions button.table-action-icon:hover {
+    background: #d1d5db;
+}
+
+/* Theme selector */
+:root {
+    color-scheme: light;
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 36px;
+    block-size: 36px;
+    min-width: 36px;
+    padding: 0;
+    border: 1px solid #cfd7e3;
+    border-radius: 8px;
+    background: #fff;
+    color: #071d3d;
+    font: inherit;
+    line-height: 1;
+}
+
+.theme-toggle:hover {
+    background: #f2f6fb;
+}
+
+.theme-toggle-icon {
+    display: block;
+    inline-size: 20px;
+    block-size: 20px;
+}
+
+.recap-summary {
+    background: #f7f9fc;
+}
+
+html[data-theme="dark"] body {
+    color: #e7edf7;
+    background:
+        linear-gradient(90deg, rgba(2, 10, 25, .96) 0%, rgba(4, 19, 43, .88) 42%, rgba(7, 25, 52, .9) 100%),
+        url('/assets/judo-bg.jpg') center center/cover no-repeat fixed;
+}
+
+html[data-theme="dark"] .top-hero {
+    background: linear-gradient(90deg, #101d31 0%, #162842 50%, #101d31 100%);
+    color: #edf3fc;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, .42);
+}
+
+html[data-theme="dark"] .main-title h1,
+html[data-theme="dark"] .club-login-info,
+html[data-theme="dark"] .event-info h3,
+html[data-theme="dark"] .event-info-table td:first-child {
+    color: #edf3fc;
+}
+
+html[data-theme="dark"] .main-title p,
+html[data-theme="dark"] .club-login-info a,
+html[data-theme="dark"] .logout-link,
+html[data-theme="dark"] .footer-links a,
+html[data-theme="dark"] .page-shell a:not(.btn):not(.btn-sm) {
+    color: #a9caff;
+}
+
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .lang-switch select,
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+    border-color: #405675;
+    background: #172841;
+    color: #edf3fc;
+}
+
+html[data-theme="dark"] .theme-toggle:hover,
+html[data-theme="dark"] .multi-select-dropdown label:hover,
+html[data-theme="dark"] .dropdown-item:hover {
+    background: #223958;
+}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .content-panel,
+html[data-theme="dark"] .event-card-public,
+html[data-theme="dark"] .event-line {
+    background: rgba(17, 30, 50, .94);
+    border-color: #405675;
+    box-shadow: 0 16px 35px rgba(0, 0, 0, .35);
+}
+
+html[data-theme="dark"] .content-panel {
+    background: rgba(17, 30, 50, .88);
+}
+
+html[data-theme="dark"] .recap-summary {
+    border: 1px solid #405675;
+    background: #203653;
+}
+
+html[data-theme="dark"] .error-description,
+html[data-theme="dark"] .event-info p,
+html[data-theme="dark"] .csv-help,
+html[data-theme="dark"] .next-event-item .location {
+    color: #c4d1e2;
+}
+
+html[data-theme="dark"] .multi-select-dropdown,
+html[data-theme="dark"] .dropdown-menu {
+    border-color: #405675;
+    background: #172841;
+    color: #edf3fc;
+}
+
+html[data-theme="dark"] .poster-pdf {
+    border-color: #526b8d;
+    background: #203653;
+}
+
+html[data-theme="dark"] .poster-placeholder {
+    border-color: #526b8d;
+    background:
+        linear-gradient(rgba(3, 14, 32, .58), rgba(3, 14, 32, .58)),
+        url('/assets/judo-bg.jpg') center center/cover no-repeat;
+}
+
+html[data-theme="dark"] .poster-placeholder-label {
+    background: rgba(10, 25, 48, .84);
+    color: #edf3fc;
+}
+
+html[data-theme="dark"] table,
+html[data-theme="dark"] .table-full {
+    background: #172841;
+}
+
+html[data-theme="dark"] th {
+    background: #243b5d;
+}
+
+html[data-theme="dark"] th,
+html[data-theme="dark"] td,
+html[data-theme="dark"] .event-info-table td,
+html[data-theme="dark"] .next-event-item {
+    border-color: #405675;
+}
+
+html[data-theme="dark"] tr:nth-child(even) {
+    background: #1b2f4d;
+}
+
+html[data-theme="dark"] tr:nth-child(odd) {
+    background: #172841;
+}
+
+html[data-theme="dark"] tr.club-row--current {
+    background: #203e63 !important;
+}
+
+html[data-theme="dark"] .club-badge--current,
+html[data-theme="dark"] .count-badge {
+    color: #dce9fa;
+    background: #294767;
+}
+
+html[data-theme="dark"] .notice {
+    color: #f8e3a0;
+    border-color: #896e24;
+    background: #4a3c17;
+}
+
+html[data-theme="dark"] .notice.success {
+    color: #c7f0d2;
+    border-color: #43825a;
+    background: #193e2a;
+}
+
+html[data-theme="dark"] .pagination-link {
+    border-color: #526b8d;
+    color: #dce9fa;
+}
+
+html[data-theme="dark"] .pagination-link:hover {
+    border-color: #6c88ad;
+    background: #294767;
+}
+
+html[data-theme="dark"] .pagination-link.disabled {
+    color: #8496ad;
+}
+
+html[data-theme="dark"] .pagination-link.disabled:hover {
+    border-color: #526b8d;
+    background: transparent;
+}
+
+html[data-theme="dark"] .next-event-details {
+    background: #203653;
+}
+
+html[data-theme="dark"] .table-actions a.table-action-icon,
+html[data-theme="dark"] .table-actions button.table-action-icon {
+    background: #29415f;
+    color: #edf3fc;
+}
+
+html[data-theme="dark"] .table-actions a.table-action-icon:hover,
+html[data-theme="dark"] .table-actions button.table-action-icon:hover {
+    background: #385778;
+}
+
+@media (max-width: 480px) {
+    .header-controls {
+        gap: 4px;
+    }
+
+    .lang-switch select {
+        width: 100px;
+        min-width: 100px;
+    }
+
 }

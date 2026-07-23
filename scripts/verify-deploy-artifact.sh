@@ -14,7 +14,6 @@ for path in \
   LICENSE \
   REVISION \
   composer.json \
-  composer.lock \
   config/app.php \
   config/privacy.php \
   lang/en.php \
@@ -53,6 +52,7 @@ fi
 
 for path in \
   .env \
+  composer.lock \
   dev.env \
   dev.env.example \
   docs \

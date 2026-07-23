@@ -35,8 +35,8 @@
                         <a class="btn orange" href="<?= e($posterUrl) ?>" target="_blank" download><?= e(__('events.download_poster')) ?></a>
                     </div>
                 <?php else : ?>
-                    <div class="poster-placeholder" style="background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('<?= e(asset_url('assets/judo-bg-1280.webp')) ?>') center center / cover no-repeat);">
-                        <span style="background: rgba(255,255,255,0.75); padding: 8px 14px; border-radius: 0.75em; display: inline-block;">
+                    <div class="poster-placeholder">
+                        <span class="poster-placeholder-label">
                             <strong><?= e(__('events.poster_not_available')) ?></strong>
                         </span>
                     </div>

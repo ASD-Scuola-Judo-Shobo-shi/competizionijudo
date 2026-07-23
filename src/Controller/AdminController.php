@@ -22,6 +22,7 @@ use App\Model\EventRegistrationException;
 use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
 use App\Service\DatabasePasswordResetRepository;
+use App\Service\EventEntriesCsvTransfer;
 use App\Service\EventUploadStorage;
 use App\Service\PasswordResetRepository;
 use App\Validation\ClubInputValidator;
@@ -206,6 +207,29 @@ final class AdminController extends Controller
         }
 
         return $this->redirect('/admin/events');
+    }
+
+    public function exportEventEntries(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+
+        $eventId = (int) ($request->query('event_id') ?? $request->input('event_id') ?? 0);
+        $event = $eventId > 0 ? Event::findById($eventId) : null;
+        if ($event === null) {
+            return $this->redirect('/admin/events');
+        }
+
+        $csv = (new EventEntriesCsvTransfer())->export($event->id);
+
+        return new Response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="event-' . $event->id . '-entries.csv"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function addEvent(Request $request): Response

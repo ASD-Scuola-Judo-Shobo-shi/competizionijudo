@@ -65,6 +65,11 @@ COMPOSER_CACHE_DIR="${COMPOSER_CACHE_DIR:-${ROOT_DIR}/.cache/composer}" \
     --no-progress \
     --optimize-autoloader
 
+# The installed vendor tree is self-contained at runtime. Keeping composer.lock
+# in the hosted artifact is unnecessary and Aruba does not preserve it
+# byte-for-byte, which makes checksum verification impossible.
+rm -f "${BUILD_DIR}/composer.lock"
+
 find "${BUILD_DIR}" -type d -exec chmod 755 {} +
 find "${BUILD_DIR}" -type f -exec chmod 644 {} +
 chmod 775 \

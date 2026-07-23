@@ -29,6 +29,7 @@ final class AdvertisedRoutesTest extends TestCase
             '/clubs/delete-athlete' => 'post',
             '/admin/events' => 'get',
             '/admin/events/add' => 'get',
+            '/admin/events/export' => 'get',
             '/admin/clubs' => 'get',
             '/admin/clubs/edit' => 'get',
             '/admin/events/delete' => 'post',

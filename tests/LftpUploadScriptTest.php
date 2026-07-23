@@ -16,8 +16,9 @@ final class LftpUploadScriptTest extends TestCase
         self::assertStringContainsString('FTP_PASSWORD must not contain line breaks', $script);
         self::assertStringContainsString('set cmd:fail-exit true', $script);
         self::assertStringContainsString('set xfer:use-temp-file true', $script);
-        self::assertStringContainsString('set xfer:use-temp-file false', $script);
+        self::assertStringNotContainsString('set xfer:use-temp-file false', $script);
         self::assertStringContainsString('set xfer:temp-file-name .deploying-*', $script);
+        self::assertStringContainsString('set ftp:use-mode-z false', $script);
         self::assertStringContainsString('set ftp:ssl-force true', $script);
         self::assertStringContainsString("FTP_SERVER='ftplnx02.aruba.it'", $script);
         self::assertGreaterThanOrEqual(3, substr_count($script, 'mkdir -pf '));
@@ -117,6 +118,9 @@ fi
 if [[ "$command" != *'get "DEPLOYMENT_MANIFEST.sha256" -o '* ]]; then
   exit 1
 fi
+if [[ -n "${FAKE_COMMAND_LOG:-}" ]]; then
+  printf '%s' "$command" > "$FAKE_COMMAND_LOG"
+fi
 while IFS= read -r download_arguments; do
   eval "set -- ${download_arguments}"
   remote_path="$1"
@@ -145,6 +149,21 @@ BASH
             self::assertSame(1, $status, $output);
             self::assertStringContainsString('Remote file checksum verification failed.', $output);
             self::assertSame("./nested/example.php\n", file_get_contents($directory . '/mismatches.txt'));
+
+            [$status, $output] = $this->runVerification(
+                $directory,
+                $fakeDirectory,
+                '',
+                false,
+                $directory . '/mismatches.txt',
+                $directory . '/commands.txt'
+            );
+            self::assertSame(0, $status, $output);
+            self::assertStringContainsString('FTPS targeted verification succeeded', $output);
+            $commands = (string) file_get_contents($directory . '/commands.txt');
+            self::assertStringContainsString('get "nested/example.php"', $commands);
+            self::assertStringNotContainsString('get ".htaccess"', $commands);
+            self::assertSame('', file_get_contents($directory . '/mismatches.txt'));
         } finally {
             unlink($fakeLftp);
             rmdir($fakeDirectory);
@@ -153,6 +172,7 @@ BASH
             unlink($directory . '/.htaccess');
             unlink($directory . '/DEPLOYMENT_MANIFEST.sha256');
             unlink($directory . '/mismatches.txt');
+            unlink($directory . '/commands.txt');
             rmdir($directory);
         }
     }
@@ -209,14 +229,15 @@ BASH
             self::assertStringContainsString('retransferring 1 mismatched artifact files', $output);
             $commands = (string) file_get_contents($commandLog);
             self::assertStringContainsString(
-                'put "' . $artifact . '/changed.php" -o "site/prod/.repair-changed.php"',
+                'put "' . $artifact . '/changed.php" -o "site/prod/changed.php"',
                 $commands
             );
             self::assertStringNotContainsString('put "' . $artifact . '/unchanged.php"', $commands);
             self::assertStringContainsString(
-                'put "' . $artifact . '/DEPLOYMENT_MANIFEST.sha256" -o "site/prod/.repair-DEPLOYMENT_MANIFEST.sha256"',
+                'put "' . $artifact . '/DEPLOYMENT_MANIFEST.sha256" -o "site/prod/DEPLOYMENT_MANIFEST.sha256"',
                 $commands
             );
+            self::assertStringNotContainsString('.repair-', $commands);
         } finally {
             unlink($fakeLftp);
             unlink($commandLog);
@@ -345,7 +366,8 @@ BASH
         string $fakeDirectory,
         string $corruptPath = '',
         bool $useRelativeSourceDirectory = false,
-        string $mismatchFile = ''
+        string $mismatchFile = '',
+        string $commandLog = ''
     ): array {
         $sourceDirectory = $useRelativeSourceDirectory ? '.' : $directory;
         $process = proc_open(
@@ -362,6 +384,7 @@ BASH
                 'FAKE_REMOTE_ROOT' => $directory,
                 'FAKE_CORRUPT_PATH' => $corruptPath,
                 'FTP_MISMATCH_FILE' => $mismatchFile,
+                'FAKE_COMMAND_LOG' => $commandLog,
             ]
         );
         self::assertIsResource($process);

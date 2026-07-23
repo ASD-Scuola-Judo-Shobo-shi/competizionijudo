@@ -132,7 +132,7 @@ final class ClubAreaQueryCountTest extends TestCase
         self::assertSame(200, $response->status());
         self::assertStringContainsString('Synthetic1 Athlete1', $response->content());
         self::assertMatchesRegularExpression(
-            '/Synthetic1 Athlete1.*?<td>1<\/td>\s*<td>.*?edit=301/s',
+            '/Synthetic1 Athlete1.*?<td>1<\/td>\s*<td\\b[^>]*>.*?edit=301/s',
             $response->content()
         );
         if ($athleteCount > 50) {

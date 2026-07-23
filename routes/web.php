@@ -60,6 +60,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/admin/events/add', [\App\Controller\AdminController::class, 'addEvent'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/add', [\App\Controller\AdminController::class, 'addEvent'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events', [\App\Controller\AdminController::class, 'manageEvents'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/events/export', [\App\Controller\AdminController::class, 'exportEventEntries'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/delete', [\App\Controller\AdminController::class, 'deleteEvent'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/edit', [\App\Controller\AdminController::class, 'editClub'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/edit', [\App\Controller\AdminController::class, 'editClub'], AuthContext::ADMINISTRATOR);

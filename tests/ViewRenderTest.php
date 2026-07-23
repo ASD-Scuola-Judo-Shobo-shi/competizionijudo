@@ -162,6 +162,32 @@ final class ViewRenderTest extends TestCase
         }
     }
 
+    public function testApplicationLayoutIncludesAThemeToggleBesideTheLanguageSelector(): void
+    {
+        Localization::setLocale('en');
+        $_GET = [];
+        $view = new View(dirname(__DIR__) . '/views');
+
+        $html = $view->render('static/index', $this->layoutData('/'));
+        $css = file_get_contents(dirname(__DIR__) . '/public/assets/css/app.css');
+
+        self::assertIsString($css);
+        self::assertStringContainsString('class="header-controls"', $html);
+        self::assertStringContainsString('id="locale-select"', $html);
+        self::assertStringContainsString('id="theme-toggle"', $html);
+        self::assertStringContainsString('<svg class="theme-toggle-icon"', $html);
+        self::assertStringContainsString('data-theme-icon', $html);
+        self::assertStringContainsString('competizioni-judo-theme', $html);
+        self::assertStringContainsString('html[data-theme="dark"]', $css);
+        self::assertStringContainsString('.theme-toggle', $css);
+        self::assertStringContainsString('html[data-theme="dark"] .recap-summary', $css);
+        self::assertMatchesRegularExpression(
+            '#\.poster-placeholder\s*\{[^}]*url\(\'/assets/judo-bg\.jpg\'\)#s',
+            $css
+        );
+        self::assertStringContainsString('html[data-theme="dark"] .poster-placeholder', $css);
+    }
+
     public function testExistingLogoAppearsInPageHeadingAndHomepage(): void
     {
         Localization::setLocale('en');

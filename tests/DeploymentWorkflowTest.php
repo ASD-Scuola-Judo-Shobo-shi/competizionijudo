@@ -89,11 +89,26 @@ final class DeploymentWorkflowTest extends TestCase
         self::assertSame(2, substr_count($workflow, 'FTP_VERIFY_RETRIES must be an integer of at least 4.'));
         self::assertSame(2, substr_count($workflow, 'for attempt in $(seq 0 "$FTP_VERIFY_RETRIES")'));
         self::assertSame(2, substr_count($workflow, 'Verification did not identify files for targeted repair.'));
+        self::assertSame(2, substr_count($workflow, 'rm -f "$FTP_MISMATCH_FILE"'));
         self::assertStringContainsString('Verify production application artifact over FTPS', $workflow);
         self::assertStringContainsString('Verify production runtime env over FTPS', $workflow);
         self::assertStringContainsString('Verify root router over FTPS', $workflow);
         self::assertStringContainsString('Verify development application artifact over FTPS', $workflow);
         self::assertStringContainsString('Verify development runtime env over FTPS', $workflow);
+    }
+
+    public function testRuntimeArtifactOmitsComposerLockAfterInstallingDependencies(): void
+    {
+        $root = dirname(__DIR__);
+        $builder = (string) file_get_contents($root . '/scripts/build-deploy.sh');
+        $verifier = (string) file_get_contents($root . '/scripts/verify-deploy-artifact.sh');
+
+        $installPosition = strpos($builder, 'composer install');
+        $removePosition = strpos($builder, 'rm -f "${BUILD_DIR}/composer.lock"');
+        self::assertIsInt($installPosition);
+        self::assertIsInt($removePosition);
+        self::assertGreaterThan($installPosition, $removePosition);
+        self::assertStringContainsString("  composer.lock \\\n  dev.env", $verifier);
     }
 
     private function workflow(string $name): string
