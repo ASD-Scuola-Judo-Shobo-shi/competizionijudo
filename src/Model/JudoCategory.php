@@ -75,7 +75,7 @@ final class JudoCategory
         return null;
     }
 
-    /** @return array{age_below: int|null, program: string, weight_category: string} */
+    /** @return array{age_below: int|null, type: string, weight_category: string} */
     public static function calculate(string $birth, string $gender, float $weight, int $eventYear = 0): array
     {
         $year = self::extractBirthYear($birth);
@@ -95,14 +95,14 @@ final class JudoCategory
         }
 
         if ($ageBelow !== null && $ageBelow <= 12) {
-            $program = 'bambini';
+            $type = 'pre-competitive';
         } else {
-            $program = 'adulti';
+            $type = 'competitive';
         }
 
         return [
             'age_below' => $ageBelow,
-            'program' => $program,
+            'type' => $type,
             'weight_category' => self::weightCategory($classKey, $gender, $weight),
         ];
     }
@@ -150,12 +150,12 @@ final class JudoCategory
         );
     }
 
-    /** @return array{age_below: null, program: '', weight_category: ''} */
+    /** @return array{age_below: null, type: '', weight_category: ''} */
     private static function emptyResult(): array
     {
         return [
             'age_below' => null,
-            'program' => '',
+            'type' => '',
             'weight_category' => '',
         ];
     }

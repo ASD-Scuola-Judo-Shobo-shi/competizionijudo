@@ -72,7 +72,7 @@ final class AthleteCsvWorkflowTest extends TestCase
             'last_name',
             'first_name',
             'gender',
-            'date_of_birth',
+            'birth_date',
             'weight_kg',
             'belt',
             'membership_number',
@@ -95,7 +95,7 @@ final class AthleteCsvWorkflowTest extends TestCase
     public function testImportUpdatesByMembershipAndCreatesRowsOnlyInsideCurrentClub(): void
     {
         $csv = implode("\n", [
-            'last_name;first_name;gender;date_of_birth;weight_kg;belt;membership_number;notes',
+            'last_name;first_name;gender;birth_date;weight_kg;belt;membership_number;notes',
             'UpdatedOwn;Athlete;M;2012-04-05;43,5;blue;OWN-001;updated',
             'NewOwn;Athlete;F;2013-05-06;39;yellow;NEW-002;new',
             'SameNumberAsForeign;Athlete;F;2014-06-07;37;white;FOREIGN-001;scoped',
@@ -132,7 +132,7 @@ final class AthleteCsvWorkflowTest extends TestCase
     public function testInvalidImportRejectsTheEntireFileWithoutPartialChanges(): void
     {
         $csv = implode("\n", [
-            'last_name,first_name,gender,date_of_birth,weight_kg,belt,membership_number,notes',
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number,notes',
             'WouldBeAdded,Athlete,F,2013-05-06,39,yellow,NEW-003,valid',
             'Invalid,Athlete,X,not-a-date,0,unknown,NEW-004,invalid',
         ]);
@@ -154,7 +154,7 @@ final class AthleteCsvWorkflowTest extends TestCase
     public function testImportRequiresAuthenticationAndCsrfProtection(): void
     {
         $path = $this->temporaryCsv(
-            "last_name,first_name,gender,date_of_birth,weight_kg,belt,membership_number,notes\n"
+            "last_name,first_name,gender,birth_date,weight_kg,belt,membership_number,notes\n"
             . "New,Athlete,M,2012-04-05,42,green,NEW-005,notes\n"
         );
         $request = new Request(
@@ -261,7 +261,7 @@ final class AthleteCsvWorkflowTest extends TestCase
                 last_name TEXT NOT NULL,
                 first_name TEXT NOT NULL,
                 gender TEXT NOT NULL,
-                date_of_birth TEXT NOT NULL,
+                birth_date TEXT NOT NULL,
                 weight_kg REAL NOT NULL,
                 belt TEXT NOT NULL,
                 membership_number TEXT,
@@ -286,7 +286,7 @@ final class AthleteCsvWorkflowTest extends TestCase
 
         $athlete = $this->database->prepare(
             'INSERT INTO athletes
-             (id, club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt,
+             (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt,
               membership_number, notes)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );

@@ -219,6 +219,10 @@ function preparePreSquashDatabase(PDO $database): void
         $database,
         dirname(__DIR__) . '/migrations/20260630_000000_create_schema.sql'
     );
+    $database->exec('ALTER TABLE athletes CHANGE COLUMN birth_date date_of_birth DATE NOT NULL');
+    $database->exec(
+        'ALTER TABLE entries CHANGE COLUMN snapshot_birth_date snapshot_date_of_birth DATE NULL'
+    );
     $database->exec(
         'CREATE TABLE schema_migrations ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY, '
@@ -263,7 +267,7 @@ function preparePreSquashDatabase(PDO $database): void
             snapshot_weight_category, snapshot_at
         ) VALUES (
             1, 1, 1, 1, 'Synthetic', 'Athlete', 'M', '2010-01-01',
-            50, 'white', 'adulti', '-50 kg', '2026-06-30 12:00:00'
+            50, 'white', 'competitive', '-50 kg', '2026-06-30 12:00:00'
         )"
     );
 }
@@ -322,6 +326,7 @@ function assertUnrecordedForwardMigrationsCanBeRetried(PDO $database): void
         '20260717_000002_create_club_registration_confirmations.sql',
         '20260717_000003_add_max_participants_to_events.sql',
         '20260718_000001_create_event_registration_exceptions.sql',
+        '20260723_000001_rename_date_of_birth_to_birth_date.sql',
     ];
     $placeholders = implode(', ', array_fill(0, count($versions), '?'));
     $statement = $database->prepare(
@@ -378,12 +383,14 @@ function assertSchemaContract(PDO $database): void
     assertColumn($database, 'club_data_rights_declarations', 'declaration_version', 'NO');
     assertColumn($database, 'club_data_rights_declarations', 'declared_at', 'NO');
     assertColumn($database, 'events', 'location', 'NO');
+    assertColumn($database, 'athletes', 'birth_date', 'NO');
+    assertColumnMissing($database, 'athletes', 'date_of_birth');
     assertColumn($database, 'entries', 'athlete_id');
     $snapshotColumns = [
         'snapshot_last_name',
         'snapshot_first_name',
         'snapshot_gender',
-        'snapshot_date_of_birth',
+        'snapshot_birth_date',
         'snapshot_weight_kg',
         'snapshot_belt',
         'snapshot_membership_number',
@@ -394,7 +401,8 @@ function assertSchemaContract(PDO $database): void
     foreach ($snapshotColumns as $snapshotColumn) {
         assertColumn($database, 'entries', $snapshotColumn, 'YES');
     }
-    assertColumnMissing($database, 'athletes', 'program');
+    assertColumnMissing($database, 'entries', 'snapshot_date_of_birth');
+    assertColumnMissing($database, 'athletes', 'type');
     assertColumnMissing($database, 'athletes', 'weight_category');
 
     assertUniqueIndex(
@@ -550,7 +558,7 @@ function assertCleanWritesAndReads(PDO $database): void
     );
     $database->exec(
         "INSERT INTO athletes (
-            id, club_id, last_name, first_name, gender, date_of_birth,
+            id, club_id, last_name, first_name, gender, birth_date,
             weight_kg, belt
         ) VALUES (
             201, 101, 'Synthetic', 'Athlete', 'M', '2010-01-01',
@@ -604,16 +612,16 @@ function assertPreSquashDataPreserved(PDO $database): void
     assertSameValue('Athlete', $athlete['first_name'], 'Pre-squash athlete name changed.');
 
     $snapshot = $database->query(
-        'SELECT snapshot_last_name, snapshot_date_of_birth, snapshot_weight_kg, '
+        'SELECT snapshot_last_name, snapshot_birth_date, snapshot_weight_kg, '
         . 'snapshot_program, snapshot_weight_category, snapshot_at FROM entries WHERE id = 1'
     )->fetch();
     if (!is_array($snapshot)) {
         throw new RuntimeException('Pre-squash closed-entry snapshot disappeared.');
     }
     assertSameValue('Synthetic', $snapshot['snapshot_last_name'], 'Pre-squash snapshot name changed.');
-    assertSameValue('2010-01-01', $snapshot['snapshot_date_of_birth'], 'Pre-squash snapshot birth date changed.');
+    assertSameValue('2010-01-01', $snapshot['snapshot_birth_date'], 'Pre-squash snapshot birth date changed.');
     assertSameValue('50.00', $snapshot['snapshot_weight_kg'], 'Pre-squash snapshot weight changed.');
-    assertSameValue('adulti', $snapshot['snapshot_program'], 'Pre-squash snapshot program changed.');
+    assertSameValue('competitive', $snapshot['snapshot_program'], 'Pre-squash snapshot program changed.');
     assertSameValue('-50 kg', $snapshot['snapshot_weight_category'], 'Pre-squash snapshot category changed.');
     if (!is_string($snapshot['snapshot_at']) || $snapshot['snapshot_at'] === '') {
         throw new RuntimeException('Pre-squash snapshot timestamp disappeared.');

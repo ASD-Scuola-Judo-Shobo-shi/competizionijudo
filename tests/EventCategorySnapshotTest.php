@@ -71,7 +71,7 @@ final class EventCategorySnapshotTest extends TestCase
         );
 
         $columns = $this->database->query('PRAGMA table_info(athletes)')->fetchAll(PDO::FETCH_COLUMN, 1);
-        self::assertNotContains('program', $columns);
+        self::assertNotContains('type', $columns);
         self::assertNotContains('weight_category', $columns);
     }
 
@@ -133,7 +133,7 @@ final class EventCategorySnapshotTest extends TestCase
         $this->database->exec(
             'CREATE TABLE athletes (
                 id INTEGER PRIMARY KEY, club_id INTEGER NOT NULL, last_name TEXT NOT NULL,
-                first_name TEXT NOT NULL, gender TEXT NOT NULL, date_of_birth TEXT NOT NULL,
+                first_name TEXT NOT NULL, gender TEXT NOT NULL, birth_date TEXT NOT NULL,
                 weight_kg REAL NOT NULL, belt TEXT NOT NULL, membership_number TEXT, notes TEXT
             )'
         );
@@ -141,7 +141,7 @@ final class EventCategorySnapshotTest extends TestCase
             'CREATE TABLE entries (
                 id INTEGER PRIMARY KEY, event_id INTEGER NOT NULL, club_id INTEGER NOT NULL,
                 athlete_id INTEGER NOT NULL, snapshot_last_name TEXT, snapshot_first_name TEXT,
-                snapshot_gender TEXT, snapshot_date_of_birth TEXT, snapshot_weight_kg REAL,
+                snapshot_gender TEXT, snapshot_birth_date TEXT, snapshot_weight_kg REAL,
                 snapshot_belt TEXT, snapshot_membership_number TEXT, snapshot_program TEXT,
                 snapshot_weight_category TEXT, snapshot_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )'

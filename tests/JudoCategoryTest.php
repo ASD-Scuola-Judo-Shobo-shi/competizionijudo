@@ -122,10 +122,10 @@ final class JudoCategoryTest extends TestCase
         $female = JudoCategory::calculate('1980-01-01', 'F', 78.01, 2026);
 
         self::assertNull($male['age_below']);
-        self::assertSame('adulti', $male['program']);
+        self::assertSame('competitive', $male['type']);
         self::assertSame('+100 kg', $male['weight_category']);
         self::assertNull($female['age_below']);
-        self::assertSame('adulti', $female['program']);
+        self::assertSame('competitive', $female['type']);
         self::assertSame('+78 kg', $female['weight_category']);
     }
 
@@ -138,15 +138,15 @@ final class JudoCategoryTest extends TestCase
         self::assertSame('-40 kg', $atTwelve['weight_category']);
         self::assertSame(15, $atThirteen['age_below']);
         self::assertSame('-38 kg', $atThirteen['weight_category']);
-        self::assertSame('adulti', $atTwelve['program']);
-        self::assertSame('adulti', $atThirteen['program']);
+        self::assertSame('competitive', $atTwelve['type']);
+        self::assertSame('competitive', $atThirteen['type']);
     }
 
     public function testInvalidAndFutureBirthValuesReturnNoCategory(): void
     {
         foreach (['', 'not-a-date', '2027-01-01'] as $birth) {
             $result = JudoCategory::calculate($birth, 'M', 70.0, 2026);
-            self::assertSame('', $result['program']);
+            self::assertSame('', $result['type']);
             self::assertSame('', $result['weight_category']);
             self::assertNull($result['age_below']);
         }

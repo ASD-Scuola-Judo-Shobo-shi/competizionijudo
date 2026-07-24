@@ -22,7 +22,7 @@ final class AthleteCsvTransfer
         'last_name',
         'first_name',
         'gender',
-        'date_of_birth',
+        'birth_date',
         'weight_kg',
         'belt',
         'membership_number',
@@ -45,7 +45,7 @@ final class AthleteCsvTransfer
                     $this->spreadsheetSafe($athlete->last_name),
                     $this->spreadsheetSafe($athlete->first_name),
                     $athlete->gender,
-                    $athlete->date_of_birth,
+                    $athlete->birth_date,
                     $this->formatWeight($athlete->weight_kg),
                     $athlete->belt,
                     $this->spreadsheetSafe($athlete->membership_number ?? ''),
@@ -92,7 +92,7 @@ final class AthleteCsvTransfer
      *     last_name: string,
      *     first_name: string,
      *     gender: string,
-     *     date_of_birth: string,
+     *     birth_date: string,
      *     weight_kg: float,
      *     belt: string,
      *     membership_number: string|null,
@@ -140,7 +140,7 @@ final class AthleteCsvTransfer
                 $combined['last_name'],
                 $combined['first_name'],
                 $gender?->value ?? $combined['gender'],
-                $combined['date_of_birth'],
+                $combined['birth_date'],
                 $weightInput,
                 $belt?->value ?? $combined['belt']
             );
@@ -169,7 +169,7 @@ final class AthleteCsvTransfer
                 'last_name' => $combined['last_name'],
                 'first_name' => $combined['first_name'],
                 'gender' => $gender?->value ?? '',
-                'date_of_birth' => $combined['date_of_birth'],
+                'birth_date' => $combined['birth_date'],
                 'weight_kg' => (float) $weightInput,
                 'belt' => $belt?->value ?? '',
                 'membership_number' => $membershipNumber !== '' ? $membershipNumber : null,
@@ -233,7 +233,7 @@ final class AthleteCsvTransfer
      *     last_name: string,
      *     first_name: string,
      *     gender: string,
-     *     date_of_birth: string,
+     *     birth_date: string,
      *     weight_kg: float,
      *     belt: string,
      *     membership_number: string|null,
@@ -256,13 +256,13 @@ final class AthleteCsvTransfer
             );
             $insert = $database->prepare(
                 'INSERT INTO athletes
-                 (club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt,
+                 (club_id, last_name, first_name, gender, birth_date, weight_kg, belt,
                   membership_number, notes)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $update = $database->prepare(
                 'UPDATE athletes
-                 SET last_name = ?, first_name = ?, gender = ?, date_of_birth = ?, weight_kg = ?,
+                 SET last_name = ?, first_name = ?, gender = ?, birth_date = ?, weight_kg = ?,
                      belt = ?, membership_number = ?, notes = ?
                  WHERE id = ? AND club_id = ?'
             );
@@ -281,7 +281,7 @@ final class AthleteCsvTransfer
                         $row['last_name'],
                         $row['first_name'],
                         $row['gender'],
-                        $row['date_of_birth'],
+                        $row['birth_date'],
                         $row['weight_kg'],
                         $row['belt'],
                         $row['membership_number'],
@@ -298,7 +298,7 @@ final class AthleteCsvTransfer
                     $row['last_name'],
                     $row['first_name'],
                     $row['gender'],
-                    $row['date_of_birth'],
+                    $row['birth_date'],
                     $row['weight_kg'],
                     $row['belt'],
                     $row['membership_number'],

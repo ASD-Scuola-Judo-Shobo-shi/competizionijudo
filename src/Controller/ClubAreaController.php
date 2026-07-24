@@ -54,7 +54,7 @@ final class ClubAreaController extends Controller
                     'last_name' => trim((string) $request->input('last_name')),
                     'first_name' => trim((string) $request->input('first_name')),
                     'gender' => trim((string) $request->input('gender')),
-                    'date_of_birth' => trim((string) $request->input('date_of_birth')),
+                    'birth_date' => trim((string) $request->input('birth_date')),
                     'weight_kg' => (float) str_replace(',', '.', $weightInput),
                     'belt' => trim((string) $request->input('belt')),
                     'membership_number' => trim((string) $request->input('membership_number')),
@@ -65,7 +65,7 @@ final class ClubAreaController extends Controller
                         $data['last_name'],
                         $data['first_name'],
                         $data['gender'],
-                        $data['date_of_birth'],
+                        $data['birth_date'],
                         $weightInput,
                         $data['belt']
                     ) as $key
@@ -153,7 +153,7 @@ final class ClubAreaController extends Controller
 
     /**
      * @param list<Athlete> $athletes
-     * @return array<int, array{age_below: int|null, program: string, weight_category: string}>
+     * @return array<int, array{age_below: int|null, type: string, weight_category: string}>
      */
     private function athleteCategories(array $athletes): array
     {

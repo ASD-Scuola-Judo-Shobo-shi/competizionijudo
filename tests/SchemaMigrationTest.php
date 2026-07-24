@@ -24,6 +24,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20260717_000002_create_club_registration_confirmations.sql',
                 dirname(__DIR__) . '/migrations/20260717_000003_add_max_participants_to_events.sql',
                 dirname(__DIR__) . '/migrations/20260718_000001_create_event_registration_exceptions.sql',
+                dirname(__DIR__) . '/migrations/20260723_000001_rename_date_of_birth_to_birth_date.sql',
             ],
             array_values($migrations)
         );
@@ -62,6 +63,9 @@ final class SchemaMigrationTest extends TestCase
         );
         self::assertStringContainsString('snapshot_weight_category VARCHAR(50)', $migration);
         self::assertStringContainsString('snapshot_at TIMESTAMP NULL', $migration);
+        self::assertStringContainsString('birth_date DATE NOT NULL', $migration);
+        self::assertStringContainsString('snapshot_birth_date DATE NULL', $migration);
+        self::assertStringNotContainsString('date_of_birth', $migration);
         self::assertDoesNotMatchRegularExpression('/^\s+(?:age_class|program|weight_category)\s/m', $migration);
     }
 
@@ -142,6 +146,23 @@ final class SchemaMigrationTest extends TestCase
         self::assertStringContainsString('CREATE TABLE IF NOT EXISTS club_registration_confirmations', $migration);
         self::assertStringContainsString('registration_payload JSON NOT NULL', $migration);
         self::assertStringContainsString('uniq_club_registration_confirmations_token', $migration);
+    }
+
+    public function testForwardMigrationRenamesBirthDateColumns(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260723_000001_rename_date_of_birth_to_birth_date.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString(
+            'CHANGE COLUMN date_of_birth birth_date DATE NOT NULL',
+            $migration
+        );
+        self::assertStringContainsString(
+            'CHANGE COLUMN snapshot_date_of_birth snapshot_birth_date DATE NULL',
+            $migration
+        );
     }
 
     private function migration(): string

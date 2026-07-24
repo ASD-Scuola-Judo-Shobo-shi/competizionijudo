@@ -77,7 +77,7 @@ CREATE TABLE athletes (
     last_name VARCHAR(120) NOT NULL,
     first_name VARCHAR(120) NOT NULL,
     gender ENUM('M', 'F') NOT NULL,
-    date_of_birth DATE NOT NULL,
+    birth_date DATE NOT NULL,
     weight_kg DECIMAL(6,2) NOT NULL,
     belt ENUM(
         'white',
@@ -110,7 +110,7 @@ CREATE TABLE entries (
     snapshot_last_name VARCHAR(120) NULL,
     snapshot_first_name VARCHAR(120) NULL,
     snapshot_gender VARCHAR(1) NULL,
-    snapshot_date_of_birth DATE NULL,
+    snapshot_birth_date DATE NULL,
     snapshot_weight_kg DECIMAL(6,2) NULL,
     snapshot_belt VARCHAR(40) NULL,
     snapshot_membership_number VARCHAR(80) NULL,

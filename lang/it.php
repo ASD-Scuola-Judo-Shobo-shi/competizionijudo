@@ -186,7 +186,7 @@ return [
                 'export' => 'Esporta atleti in CSV',
                 'file_label' => 'File CSV',
                 'import' => 'Importa atleti da CSV',
-                'columns_help' => 'Intestazione richiesta: last_name, first_name, gender, date_of_birth, weight_kg, belt, membership_number, notes. Usa M/F, date nel formato AAAA-MM-GG e codici cintura come white, yellow, orange, green, blue, brown o black. Massimo 2 MB e 5.000 atleti.',
+                'columns_help' => 'Intestazione richiesta: last_name, first_name, gender, birth_date, weight_kg, belt, membership_number, notes. Usa M/F, date nel formato AAAA-MM-GG e codici cintura come white, yellow, orange, green, blue, brown o black. Massimo 2 MB e 5.000 atleti.',
                 'update_help' => 'Un membership_number non vuoto che corrisponde a un atleta della società aggiorna quell\'atleta. Le altre righe creano nuovi atleti. Se una riga non è valida, l\'intero file viene rifiutato.',
                 'privacy_warning' => 'I file CSV contengono dati personali. Conservali, condividili ed eliminali in modo sicuro.',
                 'import_success' => 'Importazione CSV completata: {created} atleti aggiunti e {updated} aggiornati.',

@@ -161,7 +161,7 @@ final class CriticalWorkflowTest extends TestCase
             'last_name' => 'VisibleOwn',
             'first_name' => 'Athlete',
             'gender' => 'M',
-            'date_of_birth' => '2012-04-05',
+            'birth_date' => '2012-04-05',
             'weight_kg' => '42,5',
             'belt' => 'green',
             'membership_number' => 'OWN-001',
@@ -178,7 +178,7 @@ final class CriticalWorkflowTest extends TestCase
             'last_name' => 'VisibleOwnUpdated',
             'first_name' => 'Athlete',
             'gender' => 'M',
-            'date_of_birth' => '2012-04-05',
+            'birth_date' => '2012-04-05',
             'weight_kg' => '43.0',
             'belt' => 'blue',
             'membership_number' => 'OWN-001',
@@ -360,7 +360,7 @@ final class CriticalWorkflowTest extends TestCase
         $clubId = (int) $this->database->lastInsertId();
         $athlete = $this->database->prepare(
             'INSERT INTO athletes
-             (club_id, last_name, first_name, gender, date_of_birth, weight_kg,
+             (club_id, last_name, first_name, gender, birth_date, weight_kg,
               belt, membership_number, notes)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
@@ -411,7 +411,7 @@ final class CriticalWorkflowTest extends TestCase
                 last_name TEXT NOT NULL,
                 first_name TEXT NOT NULL,
                 gender TEXT NOT NULL,
-                date_of_birth TEXT NOT NULL,
+                birth_date TEXT NOT NULL,
                 weight_kg REAL NOT NULL,
                 belt TEXT NOT NULL,
                 membership_number TEXT,
@@ -442,7 +442,7 @@ final class CriticalWorkflowTest extends TestCase
                 snapshot_last_name TEXT,
                 snapshot_first_name TEXT,
                 snapshot_gender TEXT,
-                snapshot_date_of_birth TEXT,
+                snapshot_birth_date TEXT,
                 snapshot_weight_kg REAL,
                 snapshot_belt TEXT,
                 snapshot_membership_number TEXT,

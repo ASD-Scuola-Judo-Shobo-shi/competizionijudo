@@ -132,7 +132,7 @@ final class InputValidationControllerTest extends TestCase
             'last_name' => '',
             'first_name' => '',
             'gender' => 'forged',
-            'date_of_birth' => '2026-02-30',
+            'birth_date' => '2026-02-30',
             'weight_kg' => '-1',
             'belt' => 'forged',
         ]);

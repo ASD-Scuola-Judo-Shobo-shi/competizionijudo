@@ -167,7 +167,7 @@ $lastNames = ['Rossi', 'Bianchi', 'Verdi', 'Russo', 'Ferrari', 'Esposito', 'Roma
 $belts = ['white', 'white_yellow', 'yellow', 'yellow_orange', 'orange', 'orange_green', 'green', 'green_blue', 'blue', 'brown', 'black'];
 
 $athleteStmt = $db->prepare(
-    'INSERT INTO athletes (club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt, membership_number)
+    'INSERT INTO athletes (club_id, last_name, first_name, gender, birth_date, weight_kg, belt, membership_number)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
 );
 
@@ -194,7 +194,7 @@ foreach ($clubIds as $clubId) {
         $birthYear = 2026 - $age;
         $birthMonth = str_pad((string) random_int(1, 12), 2, '0', STR_PAD_LEFT);
         $birthDay = str_pad((string) random_int(1, 28), 2, '0', STR_PAD_LEFT);
-        $dateOfBirth = $birthYear . '-' . $birthMonth . '-' . $birthDay;
+        $birthDate = $birthYear . '-' . $birthMonth . '-' . $birthDay;
 
         // Weight based on age
         if ($age <= 7) {
@@ -229,7 +229,7 @@ foreach ($clubIds as $clubId) {
             $lastName,
             $firstName,
             $gender,
-            $dateOfBirth,
+            $birthDate,
             $weightKg,
             $belt,
             $membershipNumber,

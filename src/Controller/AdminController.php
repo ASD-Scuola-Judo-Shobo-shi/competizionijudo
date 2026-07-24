@@ -222,11 +222,17 @@ final class AdminController extends Controller
             return $this->redirect('/admin/events');
         }
 
+        $date = str_replace('-', '', $event->date);
+        $name_or_id = $event->name ?? $event->id;
+        $slug = strtolower(preg_replace('/[^A-Za-z0-9]+/', '-', $name_or_id));
+        $truncatedSlug = trim(substr($slug, 0, 16), '-');
+        $filename = sprintf('event-entries-%s-%s.csv', $date, $truncatedSlug);
+
         $csv = (new EventEntriesCsvTransfer())->export($event->id);
 
         return new Response($csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="event-' . $event->id . '-entries.csv"',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             'Cache-Control' => 'private, no-store, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
         ]);
@@ -282,21 +288,21 @@ final class AdminController extends Controller
 
         if ($request->method() === 'POST' && $error === '') {
             validate_csrf((string) $request->post('csrf_token'));
-/**
-              * @var array{
-              *     name: string,
-              *     date: string,
-              *     location: string,
-              *     organizer: string,
-              *     registration_deadline: string,
-              *     type: string,
-              *     description: string,
-              *     notes: string,
-              *     max_participants: string,
-              *     published: int,
-              *     closed: int
-              * } $data
-              */
+            /**
+             * @var array{
+             *     name: string,
+             *     date: string,
+             *     location: string,
+             *     organizer: string,
+             *     registration_deadline: string,
+             *     type: string,
+             *     description: string,
+             *     notes: string,
+             *     max_participants: string,
+             *     published: int,
+             *     closed: int
+             * } $data
+             */
             $data = [
                 'name' => trim((string) $request->post('name')),
                 'date' => trim((string) $request->post('date')),

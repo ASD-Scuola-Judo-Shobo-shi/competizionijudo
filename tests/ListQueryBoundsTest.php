@@ -114,7 +114,7 @@ final class ListQueryBoundsTest extends TestCase
         $this->database->exec(
             'CREATE TABLE athletes (
                 id INTEGER PRIMARY KEY, club_id INTEGER NOT NULL, last_name TEXT NOT NULL,
-                first_name TEXT NOT NULL, gender TEXT NOT NULL, date_of_birth TEXT NOT NULL,
+                first_name TEXT NOT NULL, gender TEXT NOT NULL, birth_date TEXT NOT NULL,
                 weight_kg REAL NOT NULL, belt TEXT NOT NULL, program TEXT NOT NULL,
                 weight_category TEXT NOT NULL, membership_number TEXT, notes TEXT
             )'

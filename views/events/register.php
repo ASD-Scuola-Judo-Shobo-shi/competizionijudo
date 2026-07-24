@@ -7,7 +7,7 @@
 /** @var array<int, bool> $eventExceptions */
 /** @var bool $hasRegistrationException */
 /** @var array{added?: int, already_registered?: int, rejected?: int, capacity_exceeded?: int, failed?: int, removed?: int, unsubscribed_failed?: int}|null $registrationFeedback */
-/** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */
+/** @var array<int, array{age_below: int|null, type: string, weight_category: string}> $athleteCategories */
 ?>
 
 <?php if ($event !== null) : ?>
@@ -84,7 +84,7 @@
                                                     data-registered="<?= $isRegistered ? 'true' : 'false' ?>">
                                             </td>
                                             <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>
-                                            <td><?= e($athlete->date_of_birth) ?></td>
+                                            <td><?= e($athlete->birth_date) ?></td>
                                             <td><?= e((string) $athlete->weight_kg) ?></td>
                                             <td><?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?></td>
                                         </tr>

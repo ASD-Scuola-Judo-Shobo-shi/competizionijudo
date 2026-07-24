@@ -296,7 +296,7 @@ final class EventController extends Controller
         $clubGenderCounts = [];
 
         foreach ($rows as $row) {
-            $birthDate = $row['date_of_birth'] ?? '';
+            $birthDate = $row['birth_date'] ?? '';
             $eventDate = $row['event_date'] ?? '';
             $birthYear = JudoCategory::extractBirthYear($birthDate);
             $eventYear = $eventDate !== '' ? (int) substr($eventDate, 0, 4) : (int) date('Y');
@@ -408,7 +408,7 @@ final class EventController extends Controller
 
     /**
      * @param list<Athlete> $athletes
-     * @return array<int, array{age_below: int|null, program: string, weight_category: string}>
+     * @return array<int, array{age_below: int|null, type: string, weight_category: string}>
      */
     private function athleteCategories(array $athletes, string $eventDate): array
     {

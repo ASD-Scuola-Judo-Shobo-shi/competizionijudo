@@ -53,7 +53,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
         self::assertSame(200, $response->status());
         self::assertSame('text/csv; charset=UTF-8', $response->headers()['Content-Type']);
         self::assertSame(
-            'attachment; filename="event-701-entries.csv"',
+            'attachment; filename="event-entries-20260701-synthetic-event.csv"',
             $response->headers()['Content-Disposition']
         );
         self::assertSame('private, no-store, max-age=0', $response->headers()['Cache-Control']);
@@ -66,11 +66,11 @@ final class EventEntriesCsvWorkflowTest extends TestCase
             'last_name',
             'first_name',
             'gender',
-            'date_of_birth',
+            'birth_date',
             'weight_kg',
             'belt',
             'membership_number',
-            'program',
+            'type',
             'weight_category',
         ], $rows[0]);
         self::assertSame([
@@ -128,7 +128,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
                 last_name TEXT NOT NULL,
                 first_name TEXT NOT NULL,
                 gender TEXT NOT NULL,
-                date_of_birth TEXT NOT NULL,
+                birth_date TEXT NOT NULL,
                 weight_kg REAL NOT NULL,
                 belt TEXT NOT NULL,
                 membership_number TEXT
@@ -160,7 +160,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
                 snapshot_weight_kg REAL,
                 snapshot_belt TEXT,
                 snapshot_membership_number TEXT,
-                snapshot_date_of_birth TEXT,
+                snapshot_birth_date TEXT,
                 snapshot_program TEXT,
                 snapshot_weight_category TEXT
             )'
@@ -172,14 +172,14 @@ final class EventEntriesCsvWorkflowTest extends TestCase
         $this->database->exec(
             "INSERT INTO clubs (id, federal_code, name) VALUES (201, 'SYN-201', '=Formula Club');
              INSERT INTO athletes
-                (id, last_name, first_name, gender, date_of_birth, weight_kg, belt, membership_number)
+                (id, last_name, first_name, gender, birth_date, weight_kg, belt, membership_number)
              VALUES (301, 'Live', 'Athlete', 'F', '2013-05-06', 39, 'yellow', 'LIVE-001');
              INSERT INTO events
                 (id, name, date, location, type, published, closed)
              VALUES (701, 'Synthetic event', '2026-07-01', 'Test city', 'only_competitive', 1, 1);
              INSERT INTO entries
                 (id, event_id, club_id, athlete_id, snapshot_last_name, snapshot_first_name, snapshot_gender,
-                 snapshot_weight_kg, snapshot_belt, snapshot_membership_number, snapshot_date_of_birth,
+                 snapshot_weight_kg, snapshot_belt, snapshot_membership_number, snapshot_birth_date,
                  snapshot_program, snapshot_weight_category)
              VALUES (801, 701, 201, 301, 'Snapshot', 'Athlete', 'M', 42.5, 'green', 'MEM-001',
                      '2012-04-05', 'Pre-competitive', '-42 kg')"

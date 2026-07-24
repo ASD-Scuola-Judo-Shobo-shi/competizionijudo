@@ -20,7 +20,7 @@ final class AthleteInputValidator
         string $lastName,
         string $firstName,
         string $gender,
-        string $dateOfBirth,
+        string $birthDate,
         string $weight,
         string $belt,
         ?DateTimeImmutable $today = null
@@ -37,8 +37,8 @@ final class AthleteInputValidator
         if (Gender::tryFrom(trim($gender)) === null) {
             $errors[] = 'validation.athlete_gender_invalid';
         }
-        $birthDate = self::date($dateOfBirth);
-        if ($birthDate === null || $birthDate > $today) {
+        $validatedBirthDate = self::date($birthDate);
+        if ($validatedBirthDate === null || $validatedBirthDate > $today) {
             $errors[] = 'validation.athlete_birth_date_invalid';
         }
 

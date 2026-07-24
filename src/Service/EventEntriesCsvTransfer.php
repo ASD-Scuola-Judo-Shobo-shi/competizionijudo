@@ -16,11 +16,11 @@ final class EventEntriesCsvTransfer
         'last_name',
         'first_name',
         'gender',
-        'date_of_birth',
+        'birth_date',
         'weight_kg',
         'belt',
         'membership_number',
-        'program',
+        'type',
         'weight_category',
     ];
 
@@ -42,11 +42,11 @@ final class EventEntriesCsvTransfer
                     $this->spreadsheetSafe((string) ($entry['last_name'] ?? '')),
                     $this->spreadsheetSafe((string) ($entry['first_name'] ?? '')),
                     $this->spreadsheetSafe((string) ($entry['gender'] ?? '')),
-                    $this->spreadsheetSafe((string) ($entry['date_of_birth'] ?? '')),
+                    $this->spreadsheetSafe((string) ($entry['birth_date'] ?? '')),
                     $this->formatWeight($entry['weight_kg'] ?? ''),
                     $this->spreadsheetSafe((string) ($entry['belt'] ?? '')),
                     $this->spreadsheetSafe((string) ($entry['membership_number'] ?? '')),
-                    $this->spreadsheetSafe((string) ($entry['program'] ?? '')),
+                    $this->spreadsheetSafe((string) ($entry['type'] ?? '')),
                     $this->spreadsheetSafe((string) ($entry['weight_category'] ?? '')),
                 ]);
             }

@@ -159,7 +159,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
                 last_name TEXT NOT NULL,
                 first_name TEXT NOT NULL,
                 gender TEXT NOT NULL,
-                date_of_birth TEXT NOT NULL,
+                birth_date TEXT NOT NULL,
                 weight_kg REAL NOT NULL,
                 belt TEXT
             )'
@@ -193,7 +193,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
     private function insertAthlete(int $athleteId, int $clubId): void
     {
         $this->database->prepare(
-            'INSERT INTO athletes (id, club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt)
+            'INSERT INTO athletes (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         )->execute([$athleteId, $clubId, 'Last', 'First', 'M', '2010-01-01', 50.0, 'white']);
     }

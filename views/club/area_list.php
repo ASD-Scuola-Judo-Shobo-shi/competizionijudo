@@ -1,7 +1,7 @@
 <?php
 /** @var array<int, int> $registrationCounts */
 /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */
-/** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */
+/** @var array<int, array{age_below: int|null, type: string, weight_category: string}> $athleteCategories */
 /** @var list<array{id: int, name: string, date: string}> $events */
 /** @var int $eventFilter */
 ?>
@@ -45,7 +45,7 @@
             </thead>
             <tbody>
                 <?php foreach ($athletes as $athlete) :
-                    $_birthYear = (int) substr($athlete->date_of_birth, 0, 4);
+                    $_birthYear = (int) substr($athlete->birth_date, 0, 4);
                     $_eventYear = (int) date('Y');
                     $_ac = App\Model\AgeClass::calculate($_birthYear, $_eventYear, App\Localization::getLocale());
                     $_ageClassLabel = $_ac['label'];
@@ -53,7 +53,7 @@
                     <tr>
                         <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>
                         <td><?= e($athlete->genderLabel()) ?></td>
-                        <td><?= e($athlete->date_of_birth) ?></td>
+                        <td><?= e($athlete->birth_date) ?></td>
                         <td><?= e($_ageClassLabel) ?></td>
                         <td><?= e((string) $athlete->weight_kg) ?></td>
                         <td>

@@ -1,7 +1,7 @@
 <?php
 /** @var \App\Model\Athlete|null $edit */
 /** @var list<string> $errors */
-/** @var array<int, array{age_below: int|null, program: string, weight_category: string}> $athleteCategories */
+/** @var array<int, array{age_below: int|null, type: string, weight_category: string}> $athleteCategories */
 ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <div class="card">
@@ -34,7 +34,7 @@
         </select>
         <label><?= e(__('club.area.birth_date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <div style="display:flex;align-items:center;gap:0.5rem;">
-            <input type="date" name="date_of_birth" id="date_of_birth" required value="<?= e($edit?->date_of_birth ?? '') ?>" max="<?= e(date('Y-m-d', strtotime('-2 years'))) ?>" style="flex:1;min-width:0;">
+            <input type="date" name="birth_date" id="birth_date" required value="<?= e($edit?->birth_date ?? '') ?>" max="<?= e(date('Y-m-d', strtotime('-2 years'))) ?>" style="flex:1;min-width:0;">
             <span id="age_class_display" class="age-class-badge" style="flex:0 0 20%;text-align:center;">—</span>
         </div>
 
@@ -82,14 +82,14 @@
         }
 
         form.addEventListener('submit', function () {
-            const dob = this.querySelector('[name="date_of_birth"]');
-            if (dob && dob.value) {
-                dob.value = dob.value.split('T')[0];
+            const birthDate = this.querySelector('[name="birth_date"]');
+            if (birthDate && birthDate.value) {
+                birthDate.value = birthDate.value.split('T')[0];
             }
         });
 
         const ageClasses = <?= App\Model\AgeClass::definitionsJson(App\Localization::getLocale()) ?>;
-        const dobInput = document.getElementById('date_of_birth');
+        const dobInput = document.getElementById('birth_date');
         const ageDisplay = document.getElementById('age_class_display');
         const eventYear = new Date().getFullYear();
 
@@ -251,7 +251,7 @@
                     <tr>
                         <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>
                         <td><?= $athlete->genderIconLabel(App\Localization::getLocale()) ?></td>
-                        <td><?= e($athlete->date_of_birth) ?></td>
+                        <td><?= e($athlete->birth_date) ?></td>
                         <td><?= e($athlete->ageClassLabel()) ?></td>
                         <td><?= e((string) $athlete->weight_kg) ?></td>
                         <td>

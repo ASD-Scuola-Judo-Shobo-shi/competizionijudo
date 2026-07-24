@@ -186,7 +186,7 @@ return [
                 'export' => 'Export athletes CSV',
                 'file_label' => 'CSV file',
                 'import' => 'Import athletes CSV',
-                'columns_help' => 'Required header: last_name, first_name, gender, date_of_birth, weight_kg, belt, membership_number, notes. Use M/F, dates as YYYY-MM-DD, and belt codes such as white, yellow, orange, green, blue, brown, or black. Maximum 2 MB and 5,000 athletes.',
+                'columns_help' => 'Required header: last_name, first_name, gender, birth_date, weight_kg, belt, membership_number, notes. Use M/F, dates as YYYY-MM-DD, and belt codes such as white, yellow, orange, green, blue, brown, or black. Maximum 2 MB and 5,000 athletes.',
                 'update_help' => 'A non-empty membership_number matching an existing athlete in your club updates that athlete. Other rows create new athletes. The entire file is rejected if any row is invalid.',
                 'privacy_warning' => 'CSV files contain personal data. Store, share, and delete them securely.',
                 'import_success' => 'CSV import complete: {created} athletes added and {updated} updated.',

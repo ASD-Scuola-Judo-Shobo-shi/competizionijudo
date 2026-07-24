@@ -38,8 +38,8 @@ final class Entry
                 CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_weight_kg, a.weight_kg) ELSE a.weight_kg END AS weight_kg,
                 CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_belt, a.belt) ELSE a.belt END AS belt,
                 CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_membership_number, a.membership_number) ELSE a.membership_number END AS membership_number,
-                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_date_of_birth, a.date_of_birth) ELSE a.date_of_birth END AS date_of_birth,
-                CASE WHEN e.closed = 1 THEN en.snapshot_program ELSE \'\' END AS program,
+                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_birth_date, a.birth_date) ELSE a.birth_date END AS birth_date,
+                CASE WHEN e.closed = 1 THEN en.snapshot_program ELSE \'\' END AS type,
                 CASE WHEN e.closed = 1 THEN en.snapshot_weight_category ELSE \'\' END AS weight_category,
                 e.name AS event_name, e.date AS event_date, e.closed AS event_closed
             FROM entries en
@@ -62,12 +62,12 @@ final class Entry
         foreach ($rows as &$row) {
             if (empty($row['event_closed']) || empty($row['weight_category'])) {
                 $category = JudoCategory::calculate(
-                    (string) ($row['date_of_birth'] ?? ''),
+                    (string) ($row['birth_date'] ?? ''),
                     (string) ($row['gender'] ?? ''),
                     (float) ($row['weight_kg'] ?? 0.0),
                     Athlete::eventYearFromDate((string) ($row['event_date'] ?? ''))
                 );
-                $row['program'] = $category['program'];
+                $row['type'] = $category['type'];
                 $row['weight_category'] = $category['weight_category'];
             }
             unset($row['event_closed']);

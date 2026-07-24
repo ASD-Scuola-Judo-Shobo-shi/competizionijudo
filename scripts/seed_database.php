@@ -168,7 +168,7 @@ function randomAffiliation(): ?string
  * @param non-empty-array<string> $maleFirstNames
  * @param non-empty-array<string> $femaleFirstNames
  * @param non-empty-array<string> $lastNames
- * @return array{gender: string, first_name: string, last_name: string, date_of_birth: string, weight_kg: float, belt: string}
+ * @return array{gender: string, first_name: string, last_name: string, birth_date: string, weight_kg: float, belt: string}
  */
 function generateAthlete(array $ageClassBirthYears, array $weightRanges, array $maleFirstNames, array $femaleFirstNames, array $lastNames): array
 {
@@ -187,7 +187,7 @@ function generateAthlete(array $ageClassBirthYears, array $weightRanges, array $
         'gender' => $gender,
         'first_name' => randomElement($firstNames),
         'last_name' => randomElement($lastNames),
-        'date_of_birth' => randomBirthDate($birthYear, $birthYear),
+        'birth_date' => randomBirthDate($birthYear, $birthYear),
         'weight_kg' => randomWeight($weightRanges[$gender][$classKey][0], $weightRanges[$gender][$classKey][1]),
         'belt' => randomBelt(),
     ];
@@ -282,7 +282,7 @@ try {
         for ($a = 0; $a < $athleteCount; $a++) {
             $athlete = generateAthlete($ageClassBirthYears, $weightRanges, $maleFirstNames, $femaleFirstNames, $lastNames);
             $stmt = $pdo->prepare(
-                'INSERT INTO athletes (club_id, last_name, first_name, gender, date_of_birth, weight_kg, belt)
+                'INSERT INTO athletes (club_id, last_name, first_name, gender, birth_date, weight_kg, belt)
                  VALUES (?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([
@@ -290,7 +290,7 @@ try {
                 $athlete['last_name'],
                 $athlete['first_name'],
                 $athlete['gender'],
-                $athlete['date_of_birth'],
+                $athlete['birth_date'],
                 $athlete['weight_kg'],
                 $athlete['belt'],
             ]);

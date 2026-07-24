@@ -298,7 +298,7 @@ final class EventLifecycleTest extends TestCase
                 last_name TEXT NOT NULL,
                 first_name TEXT NOT NULL,
                 gender TEXT NOT NULL,
-                date_of_birth TEXT NOT NULL,
+                birth_date TEXT NOT NULL,
                 weight_kg REAL NOT NULL,
                 weight_category TEXT,
                 belt TEXT,
@@ -316,7 +316,7 @@ final class EventLifecycleTest extends TestCase
                 snapshot_last_name TEXT,
                 snapshot_first_name TEXT,
                 snapshot_gender TEXT,
-                snapshot_date_of_birth TEXT,
+                snapshot_birth_date TEXT,
                 snapshot_weight_kg REAL,
                 snapshot_belt TEXT,
                 snapshot_membership_number TEXT,
@@ -375,7 +375,7 @@ final class EventLifecycleTest extends TestCase
 
         $athlete = $this->database->prepare(
             'INSERT INTO athletes (
-                id, club_id, last_name, first_name, gender, date_of_birth,
+                id, club_id, last_name, first_name, gender, birth_date,
                 weight_kg, weight_category, belt, program, membership_number, notes
              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );

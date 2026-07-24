@@ -16,7 +16,7 @@ final class EntrySnapshotService
     public function consolidate(int $eventId, string $eventDate): void
     {
         $entries = $this->database->prepare(
-            'SELECT en.id, a.last_name, a.first_name, a.gender, a.date_of_birth,
+            'SELECT en.id, a.last_name, a.first_name, a.gender, a.birth_date,
                     a.weight_kg, a.belt, a.membership_number
              FROM entries en
              JOIN athletes a ON a.id = en.athlete_id
@@ -27,7 +27,7 @@ final class EntrySnapshotService
         $update = $this->database->prepare(
             'UPDATE entries
              SET snapshot_last_name = ?, snapshot_first_name = ?, snapshot_gender = ?,
-                 snapshot_date_of_birth = ?, snapshot_weight_kg = ?, snapshot_belt = ?,
+                 snapshot_birth_date = ?, snapshot_weight_kg = ?, snapshot_belt = ?,
                  snapshot_membership_number = ?, snapshot_program = ?,
                  snapshot_weight_category = ?, snapshot_at = CURRENT_TIMESTAMP
              WHERE id = ? AND event_id = ?'
@@ -35,7 +35,7 @@ final class EntrySnapshotService
 
         foreach ($entries->fetchAll() as $entry) {
             $category = JudoCategory::calculate(
-                (string) $entry['date_of_birth'],
+                (string) $entry['birth_date'],
                 (string) $entry['gender'],
                 (float) $entry['weight_kg'],
                 Athlete::eventYearFromDate($eventDate)
@@ -44,11 +44,11 @@ final class EntrySnapshotService
                 $entry['last_name'],
                 $entry['first_name'],
                 $entry['gender'],
-                $entry['date_of_birth'],
+                $entry['birth_date'],
                 $entry['weight_kg'],
                 $entry['belt'],
                 $entry['membership_number'],
-                $category['program'],
+                $category['type'],
                 $category['weight_category'],
                 $entry['id'],
                 $eventId,
@@ -68,7 +68,7 @@ final class EntrySnapshotService
     public function consolidateClosedEntry(int $eventId, int $clubId, int $athleteId): bool
     {
         $entryStatement = $this->database->prepare(
-            'SELECT en.id, a.last_name, a.first_name, a.gender, a.date_of_birth,
+            'SELECT en.id, a.last_name, a.first_name, a.gender, a.birth_date,
                     a.weight_kg, a.belt, a.membership_number, e.date AS event_date
              FROM entries en
              JOIN athletes a ON a.id = en.athlete_id
@@ -82,7 +82,7 @@ final class EntrySnapshotService
         }
 
         $category = JudoCategory::calculate(
-            (string) $entry['date_of_birth'],
+            (string) $entry['birth_date'],
             (string) $entry['gender'],
             (float) $entry['weight_kg'],
             Athlete::eventYearFromDate((string) $entry['event_date'])
@@ -90,7 +90,7 @@ final class EntrySnapshotService
         $update = $this->database->prepare(
             'UPDATE entries
              SET snapshot_last_name = ?, snapshot_first_name = ?, snapshot_gender = ?,
-                 snapshot_date_of_birth = ?, snapshot_weight_kg = ?, snapshot_belt = ?,
+                 snapshot_birth_date = ?, snapshot_weight_kg = ?, snapshot_belt = ?,
                  snapshot_membership_number = ?, snapshot_program = ?,
                  snapshot_weight_category = ?, snapshot_at = CURRENT_TIMESTAMP
              WHERE id = ? AND event_id = ?'
@@ -99,11 +99,11 @@ final class EntrySnapshotService
             $entry['last_name'],
             $entry['first_name'],
             $entry['gender'],
-            $entry['date_of_birth'],
+            $entry['birth_date'],
             $entry['weight_kg'],
             $entry['belt'],
             $entry['membership_number'],
-            $category['program'],
+            $category['type'],
             $category['weight_category'],
             $entry['id'],
             $eventId,
