@@ -25,6 +25,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20260717_000003_add_max_participants_to_events.sql',
                 dirname(__DIR__) . '/migrations/20260718_000001_create_event_registration_exceptions.sql',
                 dirname(__DIR__) . '/migrations/20260723_000001_rename_date_of_birth_to_birth_date.sql',
+                dirname(__DIR__) . '/migrations/20260724_000001_normalize_entry_snapshot_types.sql',
             ],
             array_values($migrations)
         );
@@ -163,6 +164,17 @@ final class SchemaMigrationTest extends TestCase
             'CHANGE COLUMN snapshot_date_of_birth snapshot_birth_date DATE NULL',
             $migration
         );
+    }
+
+    public function testForwardMigrationNormalizesLegacyEntrySnapshotTypes(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260724_000001_normalize_entry_snapshot_types.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString("WHEN 'bambini' THEN 'pre-competitive'", $migration);
+        self::assertStringContainsString("WHEN 'adulti' THEN 'competitive'", $migration);
     }
 
     private function migration(): string

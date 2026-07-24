@@ -6,6 +6,14 @@ namespace App\Model;
 
 final class JudoCategory
 {
+    /*
+     * Competition eligibility deliberately uses only calendar years: an athlete
+     * is pre-competitive through the year in which they turn 11. Update this
+     * value and the rule below if the governing regulations switch to an
+     * exact-date age calculation or change the age boundary.
+     */
+    private const PRECOMPETITIVE_MAXIMUM_AGE = 11;
+
     /** @var array<string, array<string, list<int>>> */
     private const WEIGHT_LIMITS = [
         'children_a' => ['*' => [16,18,20,22,24,26,28,30,33,36]],
@@ -94,17 +102,54 @@ final class JudoCategory
             return self::emptyResult();
         }
 
-        if ($ageBelow !== null && $ageBelow <= 12) {
-            $type = 'pre-competitive';
-        } else {
-            $type = 'competitive';
-        }
+        $type = self::competitionTypeForBirthYear($year, $eventYear);
 
         return [
             'age_below' => $ageBelow,
             'type' => $type,
             'weight_category' => self::weightCategory($classKey, $gender, $weight),
         ];
+    }
+
+    /**
+     * Returns the minimum birth year that is pre-competitive for an event year.
+     */
+    public static function preCompetitiveMinimumBirthYear(int $eventYear): int
+    {
+        return $eventYear - self::PRECOMPETITIVE_MAXIMUM_AGE;
+    }
+
+    /**
+     * Returns the competition nature determined from calendar years alone.
+     */
+    public static function competitionTypeForBirthYear(int $birthYear, int $eventYear): string
+    {
+        if ($birthYear > $eventYear) {
+            return '';
+        }
+
+        return $birthYear >= self::preCompetitiveMinimumBirthYear($eventYear)
+            ? 'pre-competitive'
+            : 'competitive';
+    }
+
+    /**
+     * Determines whether an athlete can enter an event with the specified nature.
+     */
+    public static function matchesEventType(string $eventType, string $birth, string $eventDate): bool
+    {
+        $birthYear = self::extractBirthYear($birth);
+        $eventYear = self::extractBirthYear($eventDate);
+        if ($birthYear === null || $eventYear === null) {
+            return false;
+        }
+
+        return match ($eventType) {
+            'only_precompetitive' => self::competitionTypeForBirthYear($birthYear, $eventYear) === 'pre-competitive',
+            'only_competitive' => self::competitionTypeForBirthYear($birthYear, $eventYear) === 'competitive',
+            'precompetitive_and_competitive' => self::competitionTypeForBirthYear($birthYear, $eventYear) !== '',
+            default => false,
+        };
     }
 
     private static function weightCategory(string $classKey, string $gender, float $weight): string

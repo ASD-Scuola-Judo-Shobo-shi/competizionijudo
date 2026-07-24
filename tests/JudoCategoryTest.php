@@ -142,6 +142,35 @@ final class JudoCategoryTest extends TestCase
         self::assertSame('competitive', $atThirteen['type']);
     }
 
+    public function testEventTypeEligibilityUsesCompetitionYear(): void
+    {
+        self::assertTrue(JudoCategory::matchesEventType(
+            'only_precompetitive',
+            '2015-12-31',
+            '2026-01-01'
+        ));
+        self::assertFalse(JudoCategory::matchesEventType(
+            'only_precompetitive',
+            '2014-12-31',
+            '2026-01-01'
+        ));
+        self::assertTrue(JudoCategory::matchesEventType(
+            'only_competitive',
+            '2014-12-31',
+            '2026-01-01'
+        ));
+        self::assertFalse(JudoCategory::matchesEventType(
+            'only_competitive',
+            '2015-01-01',
+            '2026-12-31'
+        ));
+        self::assertTrue(JudoCategory::matchesEventType(
+            'precompetitive_and_competitive',
+            '2015-01-01',
+            '2026-12-31'
+        ));
+    }
+
     public function testInvalidAndFutureBirthValuesReturnNoCategory(): void
     {
         foreach (['', 'not-a-date', '2027-01-01'] as $birth) {

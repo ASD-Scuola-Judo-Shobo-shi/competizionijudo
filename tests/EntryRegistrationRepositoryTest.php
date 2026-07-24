@@ -96,6 +96,36 @@ final class EntryRegistrationRepositoryTest extends TestCase
         self::assertSame(EntryRegistrationResult::Registered, $result);
     }
 
+    public function testPrecompetitiveEventRejectsCompetitiveAthlete(): void
+    {
+        $this->insertAthlete(301, 201, '2014-12-31');
+        $this->insertEvent(101, false, '2026-01-01', type: 'only_precompetitive');
+
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2025-12-31');
+
+        self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
+    }
+
+    public function testCompetitiveEventRejectsPrecompetitiveAthlete(): void
+    {
+        $this->insertAthlete(301, 201, '2015-01-01');
+        $this->insertEvent(101, false, '2026-06-29', type: 'only_competitive');
+
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
+
+        self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
+    }
+
+    public function testCompetitiveEligibilityUsesBirthYearRatherThanExactBirthday(): void
+    {
+        $this->insertAthlete(301, 201, '2014-12-31');
+        $this->insertEvent(101, false, '2026-01-01', type: 'only_competitive');
+
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2025-12-31');
+
+        self::assertSame(EntryRegistrationResult::Registered, $result);
+    }
+
     public function testOpenEventAthleteIsUnsubscribed(): void
     {
         $this->insertEvent(101, false);
@@ -147,6 +177,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
                 date TEXT NOT NULL,
                 location TEXT,
                 registration_deadline TEXT,
+                type TEXT NOT NULL,
                 max_participants INTEGER,
                 published INTEGER NOT NULL,
                 closed INTEGER NOT NULL
@@ -190,25 +221,32 @@ final class EntryRegistrationRepositoryTest extends TestCase
         )->execute([$id, $code, $name]);
     }
 
-    private function insertAthlete(int $athleteId, int $clubId): void
+    private function insertAthlete(int $athleteId, int $clubId, string $birthDate = '2010-01-01'): void
     {
         $this->database->prepare(
             'INSERT INTO athletes (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        )->execute([$athleteId, $clubId, 'Last', 'First', 'M', '2010-01-01', 50.0, 'white']);
+        )->execute([$athleteId, $clubId, 'Last', 'First', 'M', $birthDate, 50.0, 'white']);
     }
 
-    private function insertEvent(int $eventId, bool $closed, string $date = '2026-06-29', ?string $deadline = '2026-06-28', ?int $maxParticipants = null): void
-    {
+    private function insertEvent(
+        int $eventId,
+        bool $closed,
+        string $date = '2026-06-29',
+        ?string $deadline = '2026-06-28',
+        ?int $maxParticipants = null,
+        string $type = 'only_competitive'
+    ): void {
         $this->database->prepare(
-            'INSERT INTO events (id, name, date, location, registration_deadline, max_participants, published, closed)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO events (id, name, date, location, registration_deadline, type, max_participants, published, closed)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         )->execute([
             $eventId,
             'Synthetic Event',
             $date,
             'Venue',
             $deadline,
+            $type,
             $maxParticipants,
             1,
             $closed ? 1 : 0

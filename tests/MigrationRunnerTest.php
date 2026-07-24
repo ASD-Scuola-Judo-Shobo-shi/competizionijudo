@@ -90,7 +90,7 @@ final class MigrationRunnerTest extends TestCase
         $migrationQuery->method('fetchAll')->willReturn($historicalVersions);
         $recordedVersions = [];
         $recordStatement = $this->createMock(PDOStatement::class);
-        $recordStatement->expects(self::exactly(9))
+        $recordStatement->expects(self::exactly(10))
             ->method('execute')
             ->willReturnCallback(
                 static function (?array $parameters = null) use (&$recordedVersions): bool {
@@ -106,7 +106,7 @@ final class MigrationRunnerTest extends TestCase
             ->willReturn(true);
         $database = $this->createMock(PDO::class);
         $database->expects(self::exactly(3))->method('query')->willReturn($migrationQuery);
-        $database->expects(self::exactly(10))
+        $database->expects(self::exactly(11))
             ->method('prepare')
             ->willReturnOnConsecutiveCalls(
                 $recordStatement,
@@ -118,12 +118,13 @@ final class MigrationRunnerTest extends TestCase
                 $recordStatement,
                 $recordStatement,
                 $recordStatement,
+                $recordStatement,
                 $recordStatement
             );
         $database->expects(self::atLeast(10))->method('exec');
-        $database->expects(self::exactly(9))->method('beginTransaction')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true, true);
-        $database->expects(self::exactly(8))->method('inTransaction')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true);
-        $database->expects(self::exactly(9))->method('commit')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true, true);
+        $database->expects(self::exactly(10))->method('beginTransaction')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true, true, true);
+        $database->expects(self::exactly(9))->method('inTransaction')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true, true);
+        $database->expects(self::exactly(10))->method('commit')->willReturnOnConsecutiveCalls(true, true, true, true, true, true, true, true, true, true);
 
         (new MigrationRunner($database))->run();
 
@@ -137,6 +138,7 @@ final class MigrationRunnerTest extends TestCase
             '20260717_000003_add_max_participants_to_events.sql',
             '20260718_000001_create_event_registration_exceptions.sql',
             '20260723_000001_rename_date_of_birth_to_birth_date.sql',
+            '20260724_000001_normalize_entry_snapshot_types.sql',
         ], $recordedVersions);
     }
 

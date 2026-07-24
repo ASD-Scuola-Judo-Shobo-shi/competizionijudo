@@ -267,7 +267,7 @@ function preparePreSquashDatabase(PDO $database): void
             snapshot_weight_category, snapshot_at
         ) VALUES (
             1, 1, 1, 1, 'Synthetic', 'Athlete', 'M', '2010-01-01',
-            50, 'white', 'competitive', '-50 kg', '2026-06-30 12:00:00'
+            50, 'white', 'adulti', '-50 kg', '2026-06-30 12:00:00'
         )"
     );
 }
@@ -327,6 +327,7 @@ function assertUnrecordedForwardMigrationsCanBeRetried(PDO $database): void
         '20260717_000003_add_max_participants_to_events.sql',
         '20260718_000001_create_event_registration_exceptions.sql',
         '20260723_000001_rename_date_of_birth_to_birth_date.sql',
+        '20260724_000001_normalize_entry_snapshot_types.sql',
     ];
     $placeholders = implode(', ', array_fill(0, count($versions), '?'));
     $statement = $database->prepare(

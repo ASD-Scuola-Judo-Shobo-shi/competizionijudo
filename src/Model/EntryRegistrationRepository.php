@@ -24,21 +24,34 @@ final class EntryRegistrationRepository
         // Check if club has registration exception for closed events - if so, skip capacity check
         $hasException = EventRegistrationException::exists($eventId, $clubId);
 
+        $registrationContext = $this->registrationContext(
+            $eventId,
+            $clubId,
+            $athleteId,
+            $registrationDate
+        );
+        if ($registrationContext === null) {
+            return EntryRegistrationResult::AthleteRejected;
+        }
+
+        $eventDate = (string) $registrationContext['date'];
+        $eventType = (string) $registrationContext['type'];
+        $eventYear = JudoCategory::extractBirthYear($eventDate);
+        if (
+            $eventYear === null
+            || !JudoCategory::matchesEventType(
+                $eventType,
+                (string) $registrationContext['birth_date'],
+                $eventDate
+            )
+        ) {
+            return EntryRegistrationResult::AthleteRejected;
+        }
+
         // Only check capacity if no exception
         if (!$hasException) {
-            // Check if event has reached max participants capacity
-            $capacityCheck = $this->database->prepare(
-                'SELECT max_participants, (SELECT COUNT(athlete_id) FROM entries WHERE event_id = :event_id_for_count) AS current_count
-                 FROM events
-                 WHERE id = :event_id_capacity'
-            );
-            $capacityCheck->execute([
-                'event_id_for_count' => $eventId,
-                'event_id_capacity' => $eventId,
-            ]);
-            $eventInfo = $capacityCheck->fetch();
-            $maxParticipants = $eventInfo ? (int) ($eventInfo['max_participants'] ?? 0) : 0;
-            $currentCount = $eventInfo ? (int) ($eventInfo['current_count'] ?? 0) : 0;
+            $maxParticipants = (int) ($registrationContext['max_participants'] ?? 0);
+            $currentCount = (int) $registrationContext['current_count'];
             if ($maxParticipants > 0 && $currentCount >= $maxParticipants) {
                 return EntryRegistrationResult::CapacityExceeded;
             }
@@ -72,6 +85,21 @@ final class EntryRegistrationRepository
                    AND (
                        event_record.registration_deadline IS NULL
                        OR event_record.registration_deadline >= :deadline_date
+                   )
+                   AND event_record.date = :event_record_date
+                   AND event_record.type = :event_type
+                   -- This mirrors JudoCategory::matchesEventType at the final write boundary.
+                   AND SUBSTR(athlete.birth_date, 1, 4) <= SUBSTR(event_record.date, 1, 4)
+                   AND (
+                       event_record.type = \'precompetitive_and_competitive\'
+                       OR (
+                           event_record.type = \'only_precompetitive\'
+                           AND SUBSTR(athlete.birth_date, 1, 4) >= :precompetitive_birth_year
+                       )
+                       OR (
+                           event_record.type = \'only_competitive\'
+                           AND SUBSTR(athlete.birth_date, 1, 4) < :precompetitive_birth_year
+                       )
                    )'
             );
             if ($statement === false) {
@@ -85,6 +113,9 @@ final class EntryRegistrationRepository
                 'athlete_club_id' => $clubId,
                 'event_date' => $registrationDate,
                 'deadline_date' => $registrationDate,
+                'event_record_date' => $eventDate,
+                'event_type' => $eventType,
+                'precompetitive_birth_year' => (string) JudoCategory::preCompetitiveMinimumBirthYear($eventYear),
             ]);
             if ($statement->rowCount() !== 1) {
                 $this->commitOwnedTransaction($ownsTransaction);
@@ -111,6 +142,54 @@ final class EntryRegistrationRepository
 
             throw $exception;
         }
+    }
+
+    /**
+     * @return array{date: string, type: string, birth_date: string, max_participants: int|string|null, current_count: int|string}|null
+     */
+    private function registrationContext(
+        int $eventId,
+        int $clubId,
+        int $athleteId,
+        string $registrationDate
+    ): ?array {
+        $statement = $this->database->prepare(
+            'SELECT event_record.date, event_record.type, athlete.birth_date,
+                    event_record.max_participants,
+                    (SELECT COUNT(athlete_id) FROM entries WHERE event_id = :event_id_for_count) AS current_count
+             FROM events AS event_record
+             JOIN athletes AS athlete ON athlete.id = :athlete_id
+             WHERE event_record.id = :event_id
+               AND athlete.club_id = :club_id
+               AND event_record.published = 1
+               AND (
+                   event_record.closed = 0
+                   OR EXISTS (
+                       SELECT 1 FROM event_registration_exceptions
+                       WHERE event_id = event_record.id AND club_id = :club_id
+                   )
+               )
+               AND event_record.date >= :event_date
+               AND (
+                   event_record.registration_deadline IS NULL
+                   OR event_record.registration_deadline >= :deadline_date
+               )'
+        );
+        if ($statement === false) {
+            throw new RuntimeException('Unable to prepare the entry eligibility statement.');
+        }
+
+        $statement->execute([
+            'event_id_for_count' => $eventId,
+            'athlete_id' => $athleteId,
+            'event_id' => $eventId,
+            'club_id' => $clubId,
+            'event_date' => $registrationDate,
+            'deadline_date' => $registrationDate,
+        ]);
+        $context = $statement->fetch();
+
+        return is_array($context) ? $context : null;
     }
 
     private function isDuplicateEntry(PDOException $exception): bool
