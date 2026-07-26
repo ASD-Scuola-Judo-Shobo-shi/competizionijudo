@@ -80,6 +80,8 @@ final class MigrationBasicAuthenticatorTest extends TestCase
         self::assertStringContainsString('--basic', $script);
         self::assertStringContainsString('--user "${MIGRATION_BASIC_AUTH_USER}:${MIGRATION_BASIC_AUTH_USER}"', $script);
         self::assertStringContainsString('--fail-with-body', $script);
+        self::assertStringContainsString("--write-out '%{http_code}'", $script);
+        self::assertStringContainsString('Migration endpoint returned unexpected HTTP', $script);
         self::assertStringNotContainsString('MIGRATION_WEBHOOK_SECRET', $script);
         self::assertStringNotContainsString('X-Migration-Signature', $script);
     }
@@ -89,7 +91,29 @@ final class MigrationBasicAuthenticatorTest extends TestCase
         $directory = sys_get_temp_dir() . '/competizionijudo-fake-curl-' . bin2hex(random_bytes(8));
         self::assertTrue(mkdir($directory, 0700));
         $fakeCurl = $directory . '/curl';
-        self::assertNotFalse(file_put_contents($fakeCurl, "#!/usr/bin/env bash\nexit 0\n"));
+        self::assertNotFalse(file_put_contents(
+            $fakeCurl,
+            <<<'BASH'
+#!/usr/bin/env bash
+output=''
+while (( $# > 0 )); do
+  case "$1" in
+    --output)
+      output="$2"
+      shift 2
+      ;;
+    --write-out)
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+printf '%s' '{"status":"ok"}' > "$output"
+printf '%s' '200'
+BASH
+        ));
         self::assertTrue(chmod($fakeCurl, 0700));
 
         try {
@@ -100,7 +124,7 @@ final class MigrationBasicAuthenticatorTest extends TestCase
                 dirname(__DIR__),
                 [
                     'PATH' => $directory . ':' . (string) getenv('PATH'),
-                    'MIGRATION_ENDPOINT_URL' => 'https://www.competizionijudo.it/prod/migrations',
+                    'MIGRATION_ENDPOINT_URL' => 'https://www.competizionijudo.it/prod/migrations/',
                     'MIGRATION_BASIC_AUTH_USER' => 'admin',
                 ]
             );

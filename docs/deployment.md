@@ -25,25 +25,28 @@ demonstrably transiently unreliable.
 Before directing traffic to a new `prod/` or `dev/` directory, an authorized
 repository/hosting operator must:
 
-1. Create or update the GitHub Actions environments named `production` and
-   `development`. Use the same key names as `.env.example`.
-2. Store only sensitive values as environment secrets: at minimum `DB_PASS`,
-   `ADMIN_PASS_HASH`, and `FTP_PASSWORD`. Store non-secret values such as
-   `DB_HOST`, `DB_NAME`, `DB_USER`, `ADMIN_USER`, `APP_URL`, `APP_OWNER*`,
+1. Create or update the GitHub Actions `production` environment. Create the
+   `development` environment only when deploying the `dev` branch.
+2. Keep `FTP_PASSWORD` as a repository Actions secret, and `ADMIN_USER`,
+   `FTP_BASE_DIR`, and `APP_URL` as repository Actions variables. Set
+   `APP_URL` to the canonical HTTPS site root with a trailing slash (for
+   example, `https://www.competizionijudo.it/`). Store `DB_PASS` and
+   `ADMIN_PASS_HASH` as environment secrets. Store non-secret environment
+   values such as `DB_HOST`, `DB_NAME`, `DB_USER`, `APP_OWNER*`,
    `APP_WEBHOST*`, retention days, `FTP_SERVER`, and `FTP_USERNAME` as
-    environment variables. Set `FTP_BASE_DIR` to the common base directory
-    (e.g. `competizionijudo/`), and `FTP_PROD_DIR` / `FTP_DEV_DIR` to the
-    environment-specific subdirectories (e.g. `prod/` and `dev/`). The
-    workflow combines them as `FTP_BASE_DIR/FTP_PROD_DIR` and
-    `FTP_BASE_DIR/FTP_DEV_DIR`. Do not use `/`, `./`, or absolute-looking
-    values such as `/prod/`. For this Aruba Linux hosting account, the upload
-    wrapper translates `ftp.competizionijudo.it` to the certificate-covered
-    canonical endpoint `ftplnx02.aruba.it`; TLS certificate verification must
-    remain enabled.
-3. Set `APP_URL` to the canonical HTTPS base URL for the target environment.
-   The workflow sets `APP_ENV=production` on `main`, `APP_ENV=development` on
-   `dev`, and `APP_DEBUG=false` in both environments. Production and
-   development must use separate database and administrator credentials.
+   environment variables. Each environment must define its directory name as
+   `FTP_DEPLOY_DIR` (for example, `prod` or `dev`), without a leading slash,
+   parent-directory segment, or `.`. The workflow combines it with the common
+   `FTP_BASE_DIR` for the app upload; `FTP_BASE_DIR` is also used for the shared
+   root router upload. For this Aruba Linux hosting account, the upload wrapper
+   translates `ftp.competizionijudo.it` to the certificate-covered canonical
+   endpoint `ftplnx02.aruba.it`; TLS certificate verification must remain
+   enabled.
+3. The workflow appends the selected environment path to the repository
+   `APP_URL`: `prod` for `main` and `dev` for `dev`. It sets
+   `APP_ENV=production` on `main`, `APP_ENV=development` on `dev`, and
+   `APP_DEBUG=false` in both environments. Production and development must use
+   separate database and administrator credentials.
 4. Review every blank required key from `.env.example` and verify the
    `APP_OWNER*`, `APP_WEBHOST*`, and retention facts displayed by the privacy
    notice. Use a dedicated least-privilege database account and a password hash
@@ -71,13 +74,14 @@ repository/hosting operator must:
    immediately mirror that change back into the matching GitHub environment or
    the next deploy will overwrite it.
 7. The deploy workflow uploads the artifact and generated `.env`, then sends an
-   HTTPS `POST` request to `APP_URL/migrations` (or the optional
-   `PRODUCTION_MIGRATION_URL` / `DEVELOPMENT_MIGRATION_URL` override). The
+   HTTPS `POST` request to `APP_URL/prod/migrations/` for production or
+   `APP_URL/dev/migrations/` for development (or the optional environment
+   `MIGRATIONS_URL` override). The
    endpoint runs on the hosting server, where MySQL is locally reachable. It
-   requires HTTP Basic Auth: both the username and password must equal that
-   environment's `ADMIN_USER`. GitHub passes `vars.ADMIN_USER` to the trigger;
-   no additional migration secret is required. An unauthenticated request
-   receives HTTP 401. A migration failure fails the workflow and returns a
+   requires HTTP Basic Auth: both the username and password must equal the
+   repository `ADMIN_USER`. GitHub passes `vars.ADMIN_USER` to the trigger; no
+   additional migration secret is required. An unauthenticated request receives
+   HTTP 401. A migration failure fails the workflow and returns a
    password-redacted diagnostic to the authenticated caller.
 
 The workflow never connects directly to MySQL, so GitHub runner IP addresses

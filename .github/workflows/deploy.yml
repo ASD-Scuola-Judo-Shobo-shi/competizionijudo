@@ -58,24 +58,28 @@ jobs:
       - name: Resolve production FTP target directory
         id: production-ftp-dir
         env:
-          RAW_FTP_DIR: ${{ vars.FTP_BASE_DIR }}/${{ vars.FTP_PROD_DIR }}
-          DEFAULT_FTP_DIR: prod/
+          RAW_FTP_BASE_DIR: ${{ vars.FTP_BASE_DIR }}
+          RAW_FTP_DEPLOY_DIR: ${{ vars.FTP_DEPLOY_DIR }}
         run: |
           php <<'PHP'
           <?php
           declare(strict_types=1);
 
-          $raw = getenv('RAW_FTP_DIR');
-          $default = getenv('DEFAULT_FTP_DIR') ?: 'prod/';
-          $value = $raw === false || trim($raw) === '' ? $default : trim($raw);
+          $base = getenv('RAW_FTP_BASE_DIR');
+          $deploy = getenv('RAW_FTP_DEPLOY_DIR');
+          if ($base === false || trim($base) === '' || $deploy === false || trim($deploy) === '') {
+              fwrite(STDERR, "FTP_BASE_DIR and FTP_DEPLOY_DIR are required.\n");
+              exit(1);
+          }
+          $value = trim($base) . '/' . trim($deploy);
 
           if (in_array($value, ['.', './', '/'], true)) {
-              fwrite(STDERR, "FTP_BASE_DIR/FTP_PROD_DIR must point to a dedicated application directory relative to the FTP login root, for example prod/." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEPLOY_DIR must point to a dedicated application directory relative to the FTP login root, for example competizionijudo/prod/." . PHP_EOL);
               exit(1);
           }
 
           if (str_contains($value, '..')) {
-              fwrite(STDERR, "FTP_BASE_DIR/FTP_PROD_DIR must not contain parent-directory segments." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR and FTP_DEPLOY_DIR must not contain parent-directory segments." . PHP_EOL);
               exit(1);
           }
 
@@ -84,7 +88,7 @@ jobs:
           $value = rtrim((string) $value, '/') . '/';
 
           if ($value === '/') {
-              fwrite(STDERR, "FTP_BASE_DIR/FTP_PROD_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEPLOY_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
               exit(1);
           }
 
@@ -141,7 +145,7 @@ jobs:
         env:
           APP_ENV: production
           APP_DEBUG: "false"
-          APP_URL: ${{ vars.APP_URL }}
+          APP_URL: ${{ format('{0}prod', vars.APP_URL) }}
           DB_HOST: ${{ vars.DB_HOST }}
           DB_NAME: ${{ vars.DB_NAME }}
           DB_USER: ${{ vars.DB_USER }}
@@ -197,7 +201,7 @@ jobs:
 
       - name: Run production migrations on the hosting server
         env:
-          MIGRATION_ENDPOINT_URL: ${{ vars.PRODUCTION_MIGRATION_URL || format('{0}/migrations', vars.APP_URL) }}
+          MIGRATION_ENDPOINT_URL: ${{ vars.MIGRATIONS_URL || format('{0}prod/migrations/', vars.APP_URL) }}
           MIGRATION_BASIC_AUTH_USER: ${{ vars.ADMIN_USER }}
         run: bash scripts/trigger-server-migrations.sh
 
@@ -241,24 +245,28 @@ jobs:
       - name: Resolve development FTP target directory
         id: development-ftp-dir
         env:
-          RAW_FTP_DIR: ${{ vars.FTP_BASE_DIR }}/${{ vars.FTP_DEV_DIR }}
-          DEFAULT_FTP_DIR: dev/
+          RAW_FTP_BASE_DIR: ${{ vars.FTP_BASE_DIR }}
+          RAW_FTP_DEPLOY_DIR: ${{ vars.FTP_DEPLOY_DIR }}
         run: |
           php <<'PHP'
           <?php
           declare(strict_types=1);
 
-          $raw = getenv('RAW_FTP_DIR');
-          $default = getenv('DEFAULT_FTP_DIR') ?: 'dev/';
-          $value = $raw === false || trim($raw) === '' ? $default : trim($raw);
+          $base = getenv('RAW_FTP_BASE_DIR');
+          $deploy = getenv('RAW_FTP_DEPLOY_DIR');
+          if ($base === false || trim($base) === '' || $deploy === false || trim($deploy) === '') {
+              fwrite(STDERR, "FTP_BASE_DIR and FTP_DEPLOY_DIR are required.\n");
+              exit(1);
+          }
+          $value = trim($base) . '/' . trim($deploy);
 
           if (in_array($value, ['.', './', '/'], true)) {
-              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEV_DIR must point to a dedicated application directory relative to the FTP login root, for example dev/." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEPLOY_DIR must point to a dedicated application directory relative to the FTP login root, for example competizionijudo/dev/." . PHP_EOL);
               exit(1);
           }
 
           if (str_contains($value, '..')) {
-              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEV_DIR must not contain parent-directory segments." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR and FTP_DEPLOY_DIR must not contain parent-directory segments." . PHP_EOL);
               exit(1);
           }
 
@@ -267,7 +275,7 @@ jobs:
           $value = rtrim((string) $value, '/') . '/';
 
           if ($value === '/') {
-              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEV_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
+              fwrite(STDERR, "FTP_BASE_DIR/FTP_DEPLOY_DIR resolved to the FTP root, which is not allowed." . PHP_EOL);
               exit(1);
           }
 
@@ -321,7 +329,7 @@ jobs:
         env:
           APP_ENV: development
           APP_DEBUG: "false"
-          APP_URL: ${{ vars.APP_URL }}
+          APP_URL: ${{ format('{0}dev', vars.APP_URL) }}
           DB_HOST: ${{ vars.DB_HOST }}
           DB_NAME: ${{ vars.DB_NAME }}
           DB_USER: ${{ vars.DB_USER }}
@@ -359,7 +367,7 @@ jobs:
 
       - name: Run development migrations on the hosting server
         env:
-          MIGRATION_ENDPOINT_URL: ${{ vars.DEVELOPMENT_MIGRATION_URL || format('{0}/migrations', vars.APP_URL) }}
+          MIGRATION_ENDPOINT_URL: ${{ vars.MIGRATIONS_URL || format('{0}dev/migrations/', vars.APP_URL) }}
           MIGRATION_BASIC_AUTH_USER: ${{ vars.ADMIN_USER }}
         run: bash scripts/trigger-server-migrations.sh
 

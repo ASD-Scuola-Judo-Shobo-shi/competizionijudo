@@ -14,7 +14,14 @@ if [[ "$MIGRATION_BASIC_AUTH_USER" == *$'\n'* || "$MIGRATION_BASIC_AUTH_USER" ==
   exit 2
 fi
 
-curl \
+response_file="$(mktemp)"
+cleanup() {
+  rm -f "$response_file"
+}
+trap cleanup EXIT
+
+http_status=''
+if ! http_status="$(curl \
   --fail-with-body \
   --silent \
   --show-error \
@@ -22,8 +29,19 @@ curl \
   --retry-all-errors \
   --connect-timeout 10 \
   --max-time 120 \
+  --output "$response_file" \
+  --write-out '%{http_code}' \
   --basic \
   --user "${MIGRATION_BASIC_AUTH_USER}:${MIGRATION_BASIC_AUTH_USER}" \
   --request POST \
   --header 'Content-Length: 0' \
-  "$MIGRATION_ENDPOINT_URL"
+  "$MIGRATION_ENDPOINT_URL")"; then
+  cat "$response_file" >&2
+  exit 1
+fi
+
+if [[ "$http_status" != '200' ]] || [[ "$(<"$response_file")" != '{"status":"ok"}' ]]; then
+  echo "Migration endpoint returned unexpected HTTP ${http_status:-status} response." >&2
+  cat "$response_file" >&2
+  exit 1
+fi

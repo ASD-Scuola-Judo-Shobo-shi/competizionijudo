@@ -70,8 +70,11 @@ final class DeploymentWorkflowTest extends TestCase
             'MIGRATION_BASIC_AUTH_USER: ${{ vars.ADMIN_USER }}'
         ));
         self::assertStringNotContainsString('MIGRATION_WEBHOOK_SECRET', $workflow);
-        self::assertStringContainsString('vars.PRODUCTION_MIGRATION_URL', $workflow);
-        self::assertStringContainsString('vars.DEVELOPMENT_MIGRATION_URL', $workflow);
+        self::assertSame(2, substr_count($workflow, 'vars.MIGRATIONS_URL'));
+        self::assertStringNotContainsString('PRODUCTION_MIGRATION_URL', $workflow);
+        self::assertStringNotContainsString('DEVELOPMENT_MIGRATION_URL', $workflow);
+        self::assertStringContainsString("format('{0}prod/migrations/', vars.APP_URL)", $workflow);
+        self::assertStringContainsString("format('{0}dev/migrations/', vars.APP_URL)", $workflow);
         self::assertStringNotContainsString('migrate_production:', $workflow);
         self::assertStringNotContainsString('migrate_development:', $workflow);
         self::assertStringNotContainsString('MIGRATION_DB_HOST', $workflow);
