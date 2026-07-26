@@ -7,74 +7,10 @@
    height="1500"
    preserveAspectRatio="none"
    id="svg48"
-   sodipodi:docname="logo-fijlkam-judo.svg"
-   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <defs
-     id="defs48">
-    <inkscape:path-effect
-       effect="fillet_chamfer"
-       id="path-effect7"
-       is_visible="true"
-       lpeversion="1"
-       nodesatellites_param="F,0,0,1,0,0,0,1 @ F,0,0,1,0,0,0,1 @ F,0,0,1,0,0,0,1 @ F,0,0,1,0,0,0,1"
-       radius="0"
-       unit="px"
-       method="auto"
-       mode="F"
-       chamfer_steps="1"
-       flexible="false"
-       use_knot_distance="true"
-       apply_no_radius="true"
-       apply_with_radius="true"
-       only_selected="false"
-       hide_knots="false" />
-    <inkscape:path-effect
-       effect="fillet_chamfer"
-       id="path-effect6"
-       is_visible="true"
-       lpeversion="1"
-       nodesatellites_param="F,0,0,1,0,0,0,1 @ F,0,0,1,0,0,0,1 @ F,0,0,1,0,0,0,1 @ F,0,0,1,0,0,0,1"
-       radius="0"
-       unit="px"
-       method="auto"
-       mode="F"
-       chamfer_steps="1"
-       flexible="false"
-       use_knot_distance="true"
-       apply_no_radius="true"
-       apply_with_radius="true"
-       only_selected="false"
-       hide_knots="false" />
-  </defs>
-  <sodipodi:namedview
-     id="namedview48"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="0.51803768"
-     inkscape:cx="704.58195"
-     inkscape:cy="1287.5511"
-     inkscape:window-width="1920"
-     inkscape:window-height="1052"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="svg48"
-     showguides="true">
-    <sodipodi:guide
-       position="2256.6904,958.29554"
-       orientation="0,-1"
-       id="guide1"
-       inkscape:locked="false" />
-  </sodipodi:namedview>
+     id="defs48" />
   <rect
      style="fill:#ffffff;fill-opacity:1;stroke:#d4aa00;stroke-width:35.3172;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:1"
      id="rect6"
@@ -82,7 +18,6 @@
      height="2127.6721"
      x="17.663977"
      y="17.66066"
-     sodipodi:type="rect"
      ry="221.27832" />
   <g
      id="g6"
@@ -93,24 +28,20 @@
       <path
          fill="#013da4"
          d="m 680.096,874.436 c 0,0 1.78023,-332.25325 0.971,-427.924 8.3926,-77.58278 50.88005,-126.626 76.743,-149.778 28.9208,-25.89114 272.31,-162.073 272.31,-162.073 l 232.92,136.331 c 0,0 -174.3895,100.92293 -230.52,133.071 -56.13049,32.14807 -118.13885,58.60003 -119.519,132.23 -1.38015,73.62997 -0.178,470.687 -0.178,470.687 z"
-         id="path2"
-         sodipodi:nodetypes="ccccczzcc" />
+         id="path2" />
       <path
          fill="#013da4"
          d="m 1146.95,338.851 232.73,134.679 c 0,0 5.8238,317.14188 -13.6545,441.054 -19.4783,123.9121 -65.0289,136.4345 -90.5855,154.076 -81.885,47.3794 -246.3,141.37 -246.3,141.37 l -233.736,-134.6 c 0,0 78.23578,-45.7145 117.419,-68.45 43.44753,-25.56535 62.06202,-36.18185 131.067,-75.522 69.005,-39.34015 102.5267,-65.48859 102.63,-157.753 1.3235,-144.94171 0.43,-434.854 0.43,-434.854 z"
-         id="path5"
-         sodipodi:nodetypes="cczcccczcc" />
+         id="path5" />
     </g>
     <path
        fill="#049846"
        d="M 680.031,67.1094 967.154,67.8408 679.758,233.94 Z"
-       id="path28"
-       sodipodi:nodetypes="cccc" />
+       id="path28" />
     <path
        fill="#ca2c2d"
        d="m 1089.8675,67.1094 290.29,0.094 -0.03,165.4445 z"
-       id="path30"
-       sodipodi:nodetypes="cccc" />
+       id="path30" />
   </g>
   <g
      id="g4"
@@ -118,39 +49,32 @@
     <path
        fill="#013da4"
        d="m 1326.28,1385.29 35.8961,-0.4262 c 0,0 24.3293,25.7089 31.8539,41.0662 6.0864,-16.0655 33.4194,-40.59 33.4194,-40.59 h 36.5269 c 33.3982,0.6945 32.2337,267.3324 32.2337,267.3324 l -47.4,-0.018 c 0,0 -0.2879,-194.4632 -15.6975,-217.7362 -20.2214,20.7697 -15.3425,217.8838 -15.3425,217.8838 l -47.49,-0.11 c 0,0 3.5832,-199.5438 -14.4337,-218.8276 -18.2309,19.1088 -14.4575,218.9476 -14.4575,218.9476 l -47.5988,-0.35 c 0,0 -4.1668,-268.0842 32.49,-267.17 z"
-       id="path12"
-       sodipodi:nodetypes="ccccccccccccccc" />
+       id="path12" />
     <path
        fill="#013da4"
        d="m 1177.74,1385.32 46.28,0.16 c 0,0 40.1927,0.3115 40.03,267.17 l -47.3475,0.4324 -0.9925,-74.1524 -29.6,-0.24 0.3966,74.03 -47.45,0.1231 C 1138.9617,1385.0473 1177.74,1385.32 1177.74,1385.32 Z m 22.4589,57.1908 c 16.1699,29.81 15.28,104.86 15.28,104.86 l -29.02,-0.42 c 0,0 -2.7257,-75.1614 13.74,-104.44 z"
        id="path17"
-       fill-rule="evenodd"
-       sodipodi:nodetypes="ccccccccccccc" />
+       fill-rule="evenodd" />
     <path
        fill="#013da4"
        d="m 1072.2241,1385.54 45.0434,-0.026 c -11.3329,43.91 -14.5506,88.2262 -39.6865,132.1362 25.6829,44.8167 31.541,89.6333 44.069,134.45 l -46.5183,0.58 c -13.2397,-37.3687 -19.3498,-105.0335 -39.7193,-112.1062 l -2.31,111.7662 -45.71895,0.18 -0.48145,-267.26 44.1515,0.3876 2.3775,111.6934 c 23.678,-31.4597 31.5499,-72.9092 38.7931,-111.801 z"
-       id="path22"
-       sodipodi:nodetypes="ccccccccccccc" />
+       id="path22" />
     <path
        fill="#013da4"
        d="m 563.118,1385.21 91.261,0.25 -0.04,43.77 -42.467,0.17 -0.277,66.32 43.218,0.24 -0.224,42.34 -43.567,1.12 0.911,113.26 -48.888,0.05 z"
-       id="path34"
-       sodipodi:nodetypes="ccccccccccc" />
+       id="path34" />
     <path
        fill="#013da4"
        d="m 757.79918,1385.14 84.81982,0.021 c -2.1663,75.9633 11.3059,231.6209 -38.649,267.5986 l -58.237,0.09 c 42.74033,-54.5333 54.23998,-63.1432 48.757,-224.0286 l -36.36964,-0.3514 z"
-       id="path40"
-       sodipodi:nodetypes="ccccccc" />
+       id="path40" />
     <path
        fill="#013da4"
        d="m 871.884,1385.33 46.12445,0.1314 1.11955,223.4086 41.009,0.32 -0.062,43.31 -88.112,0.47 z"
-       id="path43"
-       sodipodi:nodetypes="ccccccc" />
+       id="path43" />
     <path
        fill="#013da4"
        d="m 683.20645,1385.35 46.78793,-0.03 0.1588,266.3214 -46.302,-0.088 z"
-       id="path45"
-       sodipodi:nodetypes="ccccc" />
+       id="path45" />
   </g>
   <g
      id="g3"
@@ -159,23 +83,19 @@
        fill="#17407d"
        d="m 1210.64,1767.09 c 41.69,-3.48 78.33,27.46 81.88,69.14 3.56,41.69 -27.31,78.38 -68.98,82.02 -41.8,3.65 -78.61,-27.32 -82.18,-69.12 -3.57,-41.8 27.47,-78.56 69.28,-82.04 z m 2.1095,19.3961 c 33.57,-2.61 56.674,17.5339 59.544,51.0839 2.87,33.55 -16.6633,59.443 -50.1933,62.583 -33.9,3.17 -57.6139,-19.3021 -60.5139,-53.2321 -2.91,-33.92 17.2132,-57.8048 51.1632,-60.4348 z"
        id="path32"
-       fill-rule="evenodd"
-       sodipodi:nodetypes="cccsccsccc" />
+       fill-rule="evenodd" />
     <path
        fill="#17407d"
        d="m 1003.2,1769.23 c 153.0756,-40.8803 178.8028,175.3339 -0.14,147.51 z m 19.4977,129.1648 c -1.1895,-40.2317 -2.7864,-65.5412 0.1102,-110.319 101.7615,-21.1633 125.9546,116.7029 -0.1102,110.319 z"
        id="path37"
-       fill-rule="evenodd"
-       sodipodi:nodetypes="cccccc" />
+       fill-rule="evenodd" />
     <path
        fill="#17407d"
        d="m 950.80271,1769.51 21.06729,0.06 c -3.59493,361.87 3.13903,-172.9246 -0.735,142.71 -53.07113,13.5437 -109.70889,17.7548 -108.192,-58.25 1.17,-27.34 -0.759,-56.83 0.242,-84.56 l 20.49096,0.02 c 1.99925,74.6547 -24.17933,146.9422 67.67668,125.9163 z"
-       id="path47"
-       sodipodi:nodetypes="cccccccc" />
+       id="path47" />
     <path
        fill="#17407d"
        d="m 810.07381,1769.0803 19.67205,0.6597 c -0.312,21.62 3.15332,109.3104 -4.51386,126.173 -7.66718,16.8625 -41.0473,31.2129 -65.893,9.307 0.557,-4.65 0.3874,-21.6935 0.55443,-26.4535 23.88711,21.4212 36.62278,17.6784 45.31389,7.6412 8.6911,-10.0371 3.94033,-87.5067 3.82066,-116.8046 z"
-       id="path48"
-       sodipodi:nodetypes="cczcczcc" />
+       id="path48" />
   </g>
 </svg>

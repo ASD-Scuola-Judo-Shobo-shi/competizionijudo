@@ -80,6 +80,26 @@ try {
     assertSchemaContract($preSquash);
     assertPreSquashDataPreserved($preSquash);
 
+    recreateDatabase($server, $databaseNames['pre_squash']);
+    $recordedRenameDrift = databaseConnection(
+        $host,
+        $port,
+        $databaseNames['pre_squash'],
+        $user,
+        $password,
+        $options
+    );
+    preparePreSquashDatabase($recordedRenameDrift);
+    $recordedRenameDrift->prepare(
+        'INSERT INTO schema_migrations (version, description) VALUES (?, ?)'
+    )->execute([
+        '20260723_000001_rename_date_of_birth_to_birth_date.sql',
+        'Synthetic recorded migration with surviving legacy columns',
+    ]);
+    runMigrationsTwice($recordedRenameDrift);
+    assertSchemaContract($recordedRenameDrift);
+    assertPreSquashDataPreserved($recordedRenameDrift);
+
     $guarded = databaseConnection(
         $host,
         $port,
@@ -90,7 +110,7 @@ try {
     );
     assertExistingSchemaRejected($guarded);
 
-    echo "Migration smoke checks passed for clean, pre-squash, and guarded schemas.\n";
+    echo "Migration smoke checks passed for clean, pre-squash, recorded-drift, and guarded schemas.\n";
 } catch (Throwable $exception) {
     $message = $exception instanceof MigrationException
         ? $exception->getMessage()
@@ -328,6 +348,7 @@ function assertUnrecordedForwardMigrationsCanBeRetried(PDO $database): void
         '20260718_000001_create_event_registration_exceptions.sql',
         '20260723_000001_rename_date_of_birth_to_birth_date.sql',
         '20260724_000001_normalize_entry_snapshot_types.sql',
+        '20260726_000001_repair_birth_date_schema_drift.sql',
     ];
     $placeholders = implode(', ', array_fill(0, count($versions), '?'));
     $statement = $database->prepare(

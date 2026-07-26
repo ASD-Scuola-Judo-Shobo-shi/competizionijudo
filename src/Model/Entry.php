@@ -28,25 +28,58 @@ final class Entry
     }
 
     /** @return list<array<string, mixed>> */
-    public static function findByEvent(int $eventId, ?int $clubId): array
-    {
-        $sql = 'SELECT en.id AS entry_id, c.id AS club_id,
+    public static function findByEvent(
+        int $eventId,
+        ?int $clubId,
+        ?bool $eventClosed = null
+    ): array {
+        $eventClosed ??= self::eventIsClosed($eventId);
+        $lastName = self::athleteValueExpression($eventClosed, 'snapshot_last_name', 'last_name');
+        $firstName = self::athleteValueExpression($eventClosed, 'snapshot_first_name', 'first_name');
+        $gender = self::athleteValueExpression($eventClosed, 'snapshot_gender', 'gender');
+        $weight = self::athleteValueExpression($eventClosed, 'snapshot_weight_kg', 'weight_kg');
+        $belt = self::athleteValueExpression($eventClosed, 'snapshot_belt', 'belt');
+        $membershipNumber = self::athleteValueExpression(
+            $eventClosed,
+            'snapshot_membership_number',
+            'membership_number'
+        );
+        $birthDate = self::athleteValueExpression(
+            $eventClosed,
+            'snapshot_birth_date',
+            'birth_date'
+        );
+        $type = $eventClosed ? 'en.snapshot_program' : "''";
+        $weightCategory = $eventClosed ? 'en.snapshot_weight_category' : "''";
+
+        $sql = sprintf(
+            'SELECT en.id AS entry_id, c.id AS club_id,
                 c.name AS club_name, c.federal_code AS federal_code,
-                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_last_name, a.last_name) ELSE a.last_name END AS last_name,
-                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_first_name, a.first_name) ELSE a.first_name END AS first_name,
-                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_gender, a.gender) ELSE a.gender END AS gender,
-                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_weight_kg, a.weight_kg) ELSE a.weight_kg END AS weight_kg,
-                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_belt, a.belt) ELSE a.belt END AS belt,
-                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_membership_number, a.membership_number) ELSE a.membership_number END AS membership_number,
-                CASE WHEN e.closed = 1 THEN COALESCE(en.snapshot_birth_date, a.birth_date) ELSE a.birth_date END AS birth_date,
-                CASE WHEN e.closed = 1 THEN en.snapshot_program ELSE \'\' END AS type,
-                CASE WHEN e.closed = 1 THEN en.snapshot_weight_category ELSE \'\' END AS weight_category,
-                e.name AS event_name, e.date AS event_date, e.closed AS event_closed
+                %s AS last_name,
+                %s AS first_name,
+                %s AS gender,
+                %s AS weight_kg,
+                %s AS belt,
+                %s AS membership_number,
+                %s AS birth_date,
+                %s AS type,
+                %s AS weight_category,
+                e.name AS event_name, e.date AS event_date
             FROM entries en
             JOIN clubs c ON c.id = en.club_id
             JOIN athletes a ON a.id = en.athlete_id
             JOIN events e ON e.id = en.event_id
-            WHERE en.event_id = ?';
+            WHERE en.event_id = ?',
+            $lastName,
+            $firstName,
+            $gender,
+            $weight,
+            $belt,
+            $membershipNumber,
+            $birthDate,
+            $type,
+            $weightCategory
+        );
 
         $params = [$eventId];
         if ($clubId !== null) {
@@ -60,7 +93,7 @@ final class Entry
         $stmt->execute($params);
         $rows = $stmt->fetchAll() ?: [];
         foreach ($rows as &$row) {
-            if (empty($row['event_closed']) || empty($row['weight_category'])) {
+            if (!$eventClosed || empty($row['weight_category'])) {
                 $category = JudoCategory::calculate(
                     (string) ($row['birth_date'] ?? ''),
                     (string) ($row['gender'] ?? ''),
@@ -70,11 +103,30 @@ final class Entry
                 $row['type'] = $category['type'];
                 $row['weight_category'] = $category['weight_category'];
             }
-            unset($row['event_closed']);
         }
         unset($row);
 
         return $rows;
+    }
+
+    private static function athleteValueExpression(
+        bool $eventClosed,
+        string $snapshotColumn,
+        string $athleteColumn
+    ): string {
+        if (!$eventClosed) {
+            return 'a.' . $athleteColumn;
+        }
+
+        return sprintf('COALESCE(en.%s, a.%s)', $snapshotColumn, $athleteColumn);
+    }
+
+    private static function eventIsClosed(int $eventId): bool
+    {
+        $statement = Database::connection()->prepare('SELECT closed FROM events WHERE id = ?');
+        $statement->execute([$eventId]);
+
+        return !empty($statement->fetchColumn());
     }
 
     /** @return list<array<string, mixed>> */

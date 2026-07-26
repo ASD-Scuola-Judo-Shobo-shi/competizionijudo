@@ -24,7 +24,7 @@ final class EventEntriesCsvTransfer
         'weight_category',
     ];
 
-    public function export(int $eventId): string
+    public function export(int $eventId, bool $eventClosed): string
     {
         $stream = fopen('php://temp', 'w+b');
         if ($stream === false) {
@@ -35,7 +35,7 @@ final class EventEntriesCsvTransfer
             fwrite($stream, "\xEF\xBB\xBF");
             $this->writeRow($stream, self::HEADERS);
 
-            foreach (Entry::findByEvent($eventId, null) as $entry) {
+            foreach (Entry::findByEvent($eventId, null, $eventClosed) as $entry) {
                 $this->writeRow($stream, [
                     $this->spreadsheetSafe((string) ($entry['club_name'] ?? '')),
                     $this->spreadsheetSafe((string) ($entry['federal_code'] ?? '')),

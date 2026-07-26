@@ -143,6 +143,18 @@ final class EventLifecycleTest extends TestCase
         self::assertSame(200, $response->status());
     }
 
+    public function testOpenEntryReadDoesNotRequireClosedEventSnapshotColumns(): void
+    {
+        $this->seedEntriesForTwoClubs();
+        $this->database->exec('ALTER TABLE entries DROP COLUMN snapshot_birth_date');
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('Own Club', $response->content());
+        self::assertStringContainsString('Foreign Club', $response->content());
+    }
+
     public function testClubEntryDetailsDoNotExposeUnpublishedEventMetadata(): void
     {
         $this->insertEvent(published: false, description: 'UNPUBLISHED-ENTRY-METADATA');

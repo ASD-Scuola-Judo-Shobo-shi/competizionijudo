@@ -283,7 +283,7 @@ final class EventController extends Controller
         }
 
         $clubs = Entry::findClubsByEvent($eventId, null);
-        $rows = Entry::findByEvent($eventId, null);
+        $rows = Entry::findByEvent($eventId, null, $event->closed);
 
         $grouped = [];
         $categoryCounts = [];

@@ -89,6 +89,34 @@ final class EventEntriesCsvWorkflowTest extends TestCase
         self::assertCount(2, $rows);
     }
 
+    public function testOpenEventExportDoesNotRequireClosedEventSnapshotColumns(): void
+    {
+        $this->database->exec(
+            'UPDATE events SET closed = 0 WHERE id = 701;
+             ALTER TABLE entries DROP COLUMN snapshot_birth_date'
+        );
+        Session::set('is_admin', true);
+        $request = new Request('GET', '/admin/events/export', ['event_id' => '701']);
+
+        $response = (new AdminController($this->view, $request))->exportEventEntries($request);
+
+        self::assertSame(200, $response->status());
+        $rows = $this->parseCsv($response->content());
+        self::assertSame([
+            "'=Formula Club",
+            'SYN-201',
+            'Live',
+            'Athlete',
+            'F',
+            '2013-05-06',
+            '39',
+            'yellow',
+            'LIVE-001',
+            'competitive',
+            "'-40 kg",
+        ], $rows[1]);
+    }
+
     public function testExportRedirectsAnonymousAdministratorsToLogin(): void
     {
         $request = new Request('GET', '/admin/events/export', ['event_id' => '701']);

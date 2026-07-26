@@ -228,7 +228,7 @@ final class AdminController extends Controller
         $truncatedSlug = trim(substr($slug, 0, 16), '-');
         $filename = sprintf('event-entries-%s-%s.csv', $date, $truncatedSlug);
 
-        $csv = (new EventEntriesCsvTransfer())->export($event->id);
+        $csv = (new EventEntriesCsvTransfer())->export($event->id, $event->closed);
 
         return new Response($csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',

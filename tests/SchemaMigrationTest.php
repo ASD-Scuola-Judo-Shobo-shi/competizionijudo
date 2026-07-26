@@ -26,6 +26,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20260718_000001_create_event_registration_exceptions.sql',
                 dirname(__DIR__) . '/migrations/20260723_000001_rename_date_of_birth_to_birth_date.sql',
                 dirname(__DIR__) . '/migrations/20260724_000001_normalize_entry_snapshot_types.sql',
+                dirname(__DIR__) . '/migrations/20260726_000001_repair_birth_date_schema_drift.sql',
             ],
             array_values($migrations)
         );
@@ -175,6 +176,28 @@ final class SchemaMigrationTest extends TestCase
 
         self::assertStringContainsString("WHEN 'bambini' THEN 'pre-competitive'", $migration);
         self::assertStringContainsString("WHEN 'adulti' THEN 'competitive'", $migration);
+    }
+
+    public function testForwardMigrationRepairsRecordedBirthDateSchemaDrift(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260726_000001_repair_birth_date_schema_drift.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString(
+            'CHANGE COLUMN date_of_birth birth_date DATE NOT NULL',
+            $migration
+        );
+        self::assertStringContainsString(
+            'CHANGE COLUMN snapshot_date_of_birth snapshot_birth_date DATE NULL',
+            $migration
+        );
+        self::assertStringContainsString(
+            'ADD COLUMN snapshot_birth_date DATE NULL',
+            $migration
+        );
+        self::assertStringContainsString('incomplete_birth_date_schema_repair', $migration);
     }
 
     private function migration(): string
