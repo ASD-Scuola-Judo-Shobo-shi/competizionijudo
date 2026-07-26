@@ -21,8 +21,10 @@ final class MigrationBasicAuthenticatorTest extends TestCase
         $authenticator = new MigrationBasicAuthenticator('admin');
 
         self::assertTrue($authenticator->accepts($this->basicRequest('admin', 'admin')));
+        self::assertTrue($authenticator->accepts($this->forwardedBasicRequest('admin', 'admin')));
         self::assertFalse($authenticator->accepts($this->basicRequest('admin', 'different')));
         self::assertFalse($authenticator->accepts($this->basicRequest('different', 'admin')));
+        self::assertFalse($authenticator->accepts($this->forwardedBasicRequest('admin', 'different')));
         self::assertFalse($authenticator->accepts(new Request('POST', '/migrations')));
         self::assertFalse((new MigrationBasicAuthenticator(''))->accepts($this->basicRequest('admin', 'admin')));
     }
@@ -160,6 +162,13 @@ BASH
         return new Request('POST', '/migrations', [], [], [
             'PHP_AUTH_USER' => $user,
             'PHP_AUTH_PW' => $password,
+        ]);
+    }
+
+    private function forwardedBasicRequest(string $user, string $password): Request
+    {
+        return new Request('POST', '/migrations', [], [], [
+            'HTTP_AUTHORIZATION' => 'Basic ' . base64_encode($user . ':' . $password),
         ]);
     }
 }

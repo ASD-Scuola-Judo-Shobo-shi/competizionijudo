@@ -114,6 +114,14 @@ final class DeploymentWorkflowTest extends TestCase
         self::assertStringContainsString("  composer.lock \\\n  dev.env", $verifier);
     }
 
+    public function testRootRouterForwardsAuthorizationForTheMigrationEndpoint(): void
+    {
+        $router = (string) file_get_contents(dirname(__DIR__) . '/root.htaccess');
+
+        self::assertStringContainsString('RewriteCond %{HTTP:Authorization} ^(.+)$', $router);
+        self::assertStringContainsString('E=HTTP_AUTHORIZATION:%1', $router);
+    }
+
     private function workflow(string $name): string
     {
         $path = dirname(__DIR__) . '/.github/workflows/' . $name;
