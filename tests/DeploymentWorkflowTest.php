@@ -57,7 +57,7 @@ final class DeploymentWorkflowTest extends TestCase
         self::assertSame(2, substr_count($configuration, 'interval: "weekly"'));
     }
 
-    public function testDeploymentsInvokeBasicAuthServerLocalMigrationsAfterUpload(): void
+    public function testDeploymentsInvokeTokenAuthenticatedServerLocalMigrationsAfterUpload(): void
     {
         $workflow = $this->workflow('deploy.yml');
 
@@ -65,11 +65,8 @@ final class DeploymentWorkflowTest extends TestCase
             $workflow,
             'run: bash scripts/trigger-server-migrations.sh'
         ));
-        self::assertSame(2, substr_count(
-            $workflow,
-            'MIGRATION_BASIC_AUTH_USER: ${{ vars.ADMIN_USER }}'
-        ));
-        self::assertStringNotContainsString('MIGRATION_WEBHOOK_SECRET', $workflow);
+        self::assertSame(4, substr_count($workflow, 'MIGRATIONS_TOKEN: ${{ secrets.MIGRATIONS_TOKEN }}'));
+        self::assertStringNotContainsString('MIGRATION_BASIC_AUTH_USER', $workflow);
         self::assertSame(2, substr_count($workflow, 'vars.MIGRATIONS_URL'));
         self::assertStringNotContainsString('PRODUCTION_MIGRATION_URL', $workflow);
         self::assertStringNotContainsString('DEVELOPMENT_MIGRATION_URL', $workflow);
@@ -112,14 +109,6 @@ final class DeploymentWorkflowTest extends TestCase
         self::assertIsInt($removePosition);
         self::assertGreaterThan($installPosition, $removePosition);
         self::assertStringContainsString("  composer.lock \\\n  dev.env", $verifier);
-    }
-
-    public function testRootRouterForwardsAuthorizationForTheMigrationEndpoint(): void
-    {
-        $router = (string) file_get_contents(dirname(__DIR__) . '/root.htaccess');
-
-        self::assertStringContainsString('RewriteCond %{HTTP:Authorization} ^(.+)$', $router);
-        self::assertStringContainsString('E=HTTP_AUTHORIZATION:%1', $router);
     }
 
     private function workflow(string $name): string

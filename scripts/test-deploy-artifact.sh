@@ -78,7 +78,7 @@ boot_and_request() {
         APP_URL='https://smoke.example.test' \
         DB_HOST=127.0.0.1 DB_NAME=synthetic_smoke DB_USER=synthetic_smoke \
         DB_PASS=synthetic-smoke-password ADMIN_USER=synthetic-admin \
-        ADMIN_PASS_HASH=synthetic-smoke-password-hash \
+        ADMIN_PASS_HASH=synthetic-smoke-password-hash MIGRATIONS_TOKEN=synthetic-migration-token \
         PASSWORD_RESET_MAILER=aruba MAIL_FROM_ADDRESS='postmaster@example.test' \
         APP_OWNER='Synthetic Controller' APP_OWNER_ADDRESS='1 Test Street' \
         APP_OWNER_FISCAL_CODE='SYNTHETIC-FISCAL-CODE' \

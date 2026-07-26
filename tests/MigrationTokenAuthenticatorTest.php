@@ -9,24 +9,21 @@ use App\Core\Logger;
 use App\Core\Request;
 use App\Core\View;
 use App\Model\MigrationException;
-use App\Service\MigrationBasicAuthenticator;
 use App\Service\MigrationExecutor;
+use App\Service\MigrationTokenAuthenticator;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
-final class MigrationBasicAuthenticatorTest extends TestCase
+final class MigrationTokenAuthenticatorTest extends TestCase
 {
-    public function testAcceptsOnlyTheConfiguredAdministratorNameForBothCredentials(): void
+    public function testAcceptsOnlyTheConfiguredMigrationToken(): void
     {
-        $authenticator = new MigrationBasicAuthenticator('admin');
+        $authenticator = new MigrationTokenAuthenticator('migration-token');
 
-        self::assertTrue($authenticator->accepts($this->basicRequest('admin', 'admin')));
-        self::assertTrue($authenticator->accepts($this->forwardedBasicRequest('admin', 'admin')));
-        self::assertFalse($authenticator->accepts($this->basicRequest('admin', 'different')));
-        self::assertFalse($authenticator->accepts($this->basicRequest('different', 'admin')));
-        self::assertFalse($authenticator->accepts($this->forwardedBasicRequest('admin', 'different')));
+        self::assertTrue($authenticator->accepts($this->tokenRequest('migration-token')));
+        self::assertFalse($authenticator->accepts($this->tokenRequest('different-token')));
         self::assertFalse($authenticator->accepts(new Request('POST', '/migrations')));
-        self::assertFalse((new MigrationBasicAuthenticator(''))->accepts($this->basicRequest('admin', 'admin')));
+        self::assertFalse((new MigrationTokenAuthenticator(''))->accepts($this->tokenRequest('migration-token')));
     }
 
     public function testEndpointRunsAnAuthenticatedServerLocalMigration(): void
@@ -34,8 +31,8 @@ final class MigrationBasicAuthenticatorTest extends TestCase
         $executor = $this->createMock(MigrationExecutor::class);
         $executor->expects(self::once())->method('run');
 
-        $response = $this->controller(new MigrationBasicAuthenticator('admin'), $executor)
-            ->run($this->basicRequest('admin', 'admin'));
+        $response = $this->controller(new MigrationTokenAuthenticator('migration-token'), $executor)
+            ->run($this->tokenRequest('migration-token'));
 
         self::assertSame(200, $response->status());
         self::assertSame('{"status":"ok"}', $response->content());
@@ -50,8 +47,8 @@ final class MigrationBasicAuthenticatorTest extends TestCase
         $logger = $this->createMock(Logger::class);
         $logger->expects(self::once())->method('error');
 
-        $response = $this->controller(new MigrationBasicAuthenticator('admin'), $executor, $logger)
-            ->run($this->basicRequest('admin', 'admin'));
+        $response = $this->controller(new MigrationTokenAuthenticator('migration-token'), $executor, $logger)
+            ->run($this->tokenRequest('migration-token'));
 
         self::assertSame(500, $response->status());
         self::assertSame(
@@ -60,32 +57,30 @@ final class MigrationBasicAuthenticatorTest extends TestCase
         );
     }
 
-    public function testEndpointChallengesAnUnauthenticatedCaller(): void
+    public function testEndpointRejectsAnUnauthenticatedCaller(): void
     {
         $executor = $this->createMock(MigrationExecutor::class);
         $executor->expects(self::never())->method('run');
 
-        $response = $this->controller(new MigrationBasicAuthenticator('admin'), $executor)
-            ->run($this->basicRequest('admin', 'different'));
+        $response = $this->controller(new MigrationTokenAuthenticator('migration-token'), $executor)
+            ->run($this->tokenRequest('different-token'));
 
         self::assertSame(401, $response->status());
         self::assertSame('{"status":"unauthorized"}', $response->content());
-        self::assertSame('Basic realm="Migration endpoint", charset="UTF-8"', $response->headers()['WWW-Authenticate']);
         self::assertSame('no-store', $response->headers()['Cache-Control']);
     }
 
-    public function testGitHubTriggerUsesBasicAuthenticationWithTheAdministratorNameTwice(): void
+    public function testGitHubTriggerUsesTheMigrationTokenHeader(): void
     {
         $script = (string) file_get_contents(dirname(__DIR__) . '/scripts/trigger-server-migrations.sh');
 
-        self::assertStringContainsString('MIGRATION_BASIC_AUTH_USER is required', $script);
-        self::assertStringContainsString('--basic', $script);
-        self::assertStringContainsString('--user "${MIGRATION_BASIC_AUTH_USER}:${MIGRATION_BASIC_AUTH_USER}"', $script);
+        self::assertStringContainsString('MIGRATIONS_TOKEN is required', $script);
+        self::assertStringContainsString('--header "X-Migration-Token: ${MIGRATIONS_TOKEN}"', $script);
         self::assertStringContainsString('--fail-with-body', $script);
         self::assertStringContainsString("--write-out '%{http_code}'", $script);
         self::assertStringContainsString('Migration endpoint returned unexpected HTTP', $script);
-        self::assertStringNotContainsString('MIGRATION_WEBHOOK_SECRET', $script);
-        self::assertStringNotContainsString('X-Migration-Signature', $script);
+        self::assertStringNotContainsString('MIGRATION_BASIC_AUTH_USER', $script);
+        self::assertStringNotContainsString('--basic', $script);
     }
 
     public function testGitHubTriggerAcceptsAnHttpsEndpointWithAPath(): void
@@ -127,7 +122,7 @@ BASH
                 [
                     'PATH' => $directory . ':' . (string) getenv('PATH'),
                     'MIGRATION_ENDPOINT_URL' => 'https://www.competizionijudo.it/prod/migrations/',
-                    'MIGRATION_BASIC_AUTH_USER' => 'admin',
+                    'MIGRATIONS_TOKEN' => 'synthetic-migration-token',
                 ]
             );
             self::assertIsResource($process);
@@ -144,7 +139,7 @@ BASH
     }
 
     private function controller(
-        MigrationBasicAuthenticator $authenticator,
+        MigrationTokenAuthenticator $authenticator,
         MigrationExecutor $executor,
         ?Logger $logger = null
     ): MigrationWebhookController {
@@ -157,18 +152,10 @@ BASH
         );
     }
 
-    private function basicRequest(string $user, string $password): Request
+    private function tokenRequest(string $token): Request
     {
         return new Request('POST', '/migrations', [], [], [
-            'PHP_AUTH_USER' => $user,
-            'PHP_AUTH_PW' => $password,
-        ]);
-    }
-
-    private function forwardedBasicRequest(string $user, string $password): Request
-    {
-        return new Request('POST', '/migrations', [], [], [
-            'HTTP_AUTHORIZATION' => 'Basic ' . base64_encode($user . ':' . $password),
+            'HTTP_X_MIGRATION_TOKEN' => $token,
         ]);
     }
 }

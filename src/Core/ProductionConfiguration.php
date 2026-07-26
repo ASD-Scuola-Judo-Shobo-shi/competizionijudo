@@ -16,6 +16,7 @@ final class ProductionConfiguration
         'DB_PASS',
         'ADMIN_USER',
         'ADMIN_PASS_HASH',
+        'MIGRATIONS_TOKEN',
         'PASSWORD_RESET_MAILER',
         'MAIL_FROM_ADDRESS',
         'APP_OWNER',

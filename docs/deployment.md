@@ -30,8 +30,9 @@ repository/hosting operator must:
 2. Keep `FTP_PASSWORD` as a repository Actions secret, and `ADMIN_USER`,
    `FTP_BASE_DIR`, and `APP_URL` as repository Actions variables. Set
    `APP_URL` to the canonical HTTPS site root with a trailing slash (for
-   example, `https://www.competizionijudo.it/`). Store `DB_PASS` and
-   `ADMIN_PASS_HASH` as environment secrets. Store non-secret environment
+   example, `https://www.competizionijudo.it/`). Store `DB_PASS`,
+   `ADMIN_PASS_HASH`, and a separately generated `MIGRATIONS_TOKEN` as
+   environment secrets. Store non-secret environment
    values such as `DB_HOST`, `DB_NAME`, `DB_USER`, `APP_OWNER*`,
    `APP_WEBHOST*`, retention days, `FTP_SERVER`, and `FTP_USERNAME` as
    environment variables. Each environment must define its directory name as
@@ -78,10 +79,9 @@ repository/hosting operator must:
    `APP_URL/dev/migrations/` for development (or the optional environment
    `MIGRATIONS_URL` override). The
    endpoint runs on the hosting server, where MySQL is locally reachable. It
-   requires HTTP Basic Auth: both the username and password must equal the
-   repository `ADMIN_USER`. GitHub passes `vars.ADMIN_USER` to the trigger; no
-   additional migration secret is required. An unauthenticated request receives
-   HTTP 401. A migration failure fails the workflow and returns a
+   requires the `MIGRATIONS_TOKEN` environment secret in the
+   `X-Migration-Token` request header. An unauthenticated request receives HTTP
+   401. A migration failure fails the workflow and returns a
    password-redacted diagnostic to the authenticated caller.
 
 The workflow never connects directly to MySQL, so GitHub runner IP addresses
@@ -144,7 +144,8 @@ keys and reuses the template defaults for `APP_NAME`, `APP_LOCALE`,
 `APP_TEST_RESET_LINKS`, `EVENTS_UPCOMING_LIMIT`, and
 `PASSWORD_RESET_MAILER=aruba` unless a future workflow override is added.
 Startup requires `APP_URL`, all four `DB_*` settings, `ADMIN_USER`,
-`ADMIN_PASS_HASH`, `PASSWORD_RESET_MAILER`, `MAIL_FROM_ADDRESS`, all four
+`ADMIN_PASS_HASH`, `MIGRATIONS_TOKEN`, `PASSWORD_RESET_MAILER`,
+`MAIL_FROM_ADDRESS`, all four
 `APP_OWNER*` settings, both `APP_WEBHOST*` settings, and positive
 `APP_LOG_RETENTION_DAYS` and `APP_BACKUP_RETENTION_DAYS` values. It validates
 the public owner contact email. The controller must verify the published facts
@@ -158,9 +159,9 @@ while exception messages and configuration values remain redacted.
 
 The `MIGRATION_TEST_*` variables documented in `dev.env.example` belong only
 to the isolated local/CI migration smoke harness. Do not provision them in a
-deployed application environment. The migration route uses the deployed
-`ADMIN_USER` value for its Basic-Auth credentials and never returns a password
-or configuration value in an HTTP response or application log.
+deployed application environment. The migration route uses only the deployed
+`MIGRATIONS_TOKEN` and never returns a token, password, or configuration value
+in an HTTP response or application log.
 
 ## Session environment boundary
 

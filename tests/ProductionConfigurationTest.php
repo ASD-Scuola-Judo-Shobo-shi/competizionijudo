@@ -109,6 +109,7 @@ final class ProductionConfigurationTest extends TestCase
             'DB_PASS' => 'synthetic-password',
             'ADMIN_USER' => 'synthetic-admin',
             'ADMIN_PASS_HASH' => 'synthetic-password-hash',
+            'MIGRATIONS_TOKEN' => 'synthetic-migration-token',
             'PASSWORD_RESET_MAILER' => 'aruba',
             'MAIL_FROM_ADDRESS' => 'postmaster@example.test',
             'APP_OWNER' => 'Synthetic Sports Association',

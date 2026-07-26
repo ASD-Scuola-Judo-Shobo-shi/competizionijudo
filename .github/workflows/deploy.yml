@@ -152,6 +152,7 @@ jobs:
           DB_PASS: ${{ secrets.DB_PASS }}
           ADMIN_USER: ${{ vars.ADMIN_USER }}
           ADMIN_PASS_HASH: ${{ secrets.ADMIN_PASS_HASH }}
+          MIGRATIONS_TOKEN: ${{ secrets.MIGRATIONS_TOKEN }}
           MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
           APP_OWNER: ${{ vars.APP_OWNER }}
           APP_OWNER_ADDRESS: ${{ vars.APP_OWNER_ADDRESS }}
@@ -202,7 +203,7 @@ jobs:
       - name: Run production migrations on the hosting server
         env:
           MIGRATION_ENDPOINT_URL: ${{ vars.MIGRATIONS_URL || format('{0}prod/migrations/', vars.APP_URL) }}
-          MIGRATION_BASIC_AUTH_USER: ${{ vars.ADMIN_USER }}
+          MIGRATIONS_TOKEN: ${{ secrets.MIGRATIONS_TOKEN }}
         run: bash scripts/trigger-server-migrations.sh
 
       - name: Verify production health and revision
@@ -336,6 +337,7 @@ jobs:
           DB_PASS: ${{ secrets.DB_PASS }}
           ADMIN_USER: ${{ vars.ADMIN_USER }}
           ADMIN_PASS_HASH: ${{ secrets.ADMIN_PASS_HASH }}
+          MIGRATIONS_TOKEN: ${{ secrets.MIGRATIONS_TOKEN }}
           MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
           APP_OWNER: ${{ vars.APP_OWNER }}
           APP_OWNER_ADDRESS: ${{ vars.APP_OWNER_ADDRESS }}
@@ -368,7 +370,7 @@ jobs:
       - name: Run development migrations on the hosting server
         env:
           MIGRATION_ENDPOINT_URL: ${{ vars.MIGRATIONS_URL || format('{0}dev/migrations/', vars.APP_URL) }}
-          MIGRATION_BASIC_AUTH_USER: ${{ vars.ADMIN_USER }}
+          MIGRATIONS_TOKEN: ${{ secrets.MIGRATIONS_TOKEN }}
         run: bash scripts/trigger-server-migrations.sh
 
       - name: Verify development health and revision

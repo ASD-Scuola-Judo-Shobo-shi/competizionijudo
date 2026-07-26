@@ -10,24 +10,24 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
 use App\Model\MigrationException;
-use App\Service\MigrationBasicAuthenticator;
+use App\Service\MigrationTokenAuthenticator;
 use App\Service\MigrationExecutor;
 
 final class MigrationWebhookController extends Controller
 {
-    private readonly MigrationBasicAuthenticator $authenticator;
+    private readonly MigrationTokenAuthenticator $authenticator;
     private readonly MigrationExecutor $executor;
 
     public function __construct(
         View $view,
         Request $request,
-        ?MigrationBasicAuthenticator $authenticator = null,
+        ?MigrationTokenAuthenticator $authenticator = null,
         ?MigrationExecutor $executor = null,
         ?Logger $logger = null
     ) {
         parent::__construct($view, $request, $logger);
-        $this->authenticator = $authenticator ?? new MigrationBasicAuthenticator(
-            trim((string) env('ADMIN_USER', ''))
+        $this->authenticator = $authenticator ?? new MigrationTokenAuthenticator(
+            trim((string) env('MIGRATIONS_TOKEN', ''))
         );
         $this->executor = $executor ?? new MigrationExecutor();
     }
@@ -38,7 +38,7 @@ final class MigrationWebhookController extends Controller
             return $this->json(
                 ['status' => 'unauthorized'],
                 401,
-                ['WWW-Authenticate' => 'Basic realm="Migration endpoint", charset="UTF-8"']
+                []
             );
         }
 
