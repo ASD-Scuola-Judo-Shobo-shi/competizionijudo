@@ -70,6 +70,7 @@ return [
                 'password_required' => 'Inserire una password.',
                 'password_mismatch' => 'Le password non coincidono.',
                 'club_exists' => 'Questa società è già registrata.',
+                'confirmation_delivery_failed' => 'Impossibile inviare l\'email di conferma. Riprova.',
                 'registration_failed' => 'Impossibile completare la registrazione. Riprovare.',
             ],
         ],

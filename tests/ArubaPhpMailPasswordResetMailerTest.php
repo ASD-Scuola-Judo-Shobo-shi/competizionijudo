@@ -50,10 +50,11 @@ final class ArubaPhpMailPasswordResetMailerTest extends TestCase
 
         self::assertCount(1, $calls);
         self::assertSame('club@example.test', $calls[0]['recipient']);
-        self::assertSame(__('club.reset_email.subject'), $calls[0]['subject']);
-        self::assertStringContainsString($url, $calls[0]['message']);
+        self::assertSame(__('club.reset_email.subject'), mb_decode_mimeheader($calls[0]['subject']));
+        self::assertStringContainsString($url, quoted_printable_decode($calls[0]['message']));
         self::assertSame('postmaster@mailer.example.test', $calls[0]['headers']['From']);
         self::assertSame('text/plain; charset=UTF-8', $calls[0]['headers']['Content-Type']);
+        self::assertSame('quoted-printable', $calls[0]['headers']['Content-Transfer-Encoding']);
     }
 
     public function testSendsLocalizedRegistrationConfirmationMessageThroughArubaPhpMail(): void
@@ -74,8 +75,14 @@ final class ArubaPhpMailPasswordResetMailerTest extends TestCase
         $mailer->sendRegistrationConfirmationLink('club@example.test', $url);
 
         self::assertCount(1, $calls);
-        self::assertSame(__('club.registration_confirmation_email.subject'), $calls[0]['subject']);
-        self::assertStringContainsString($url, $calls[0]['message']);
+        self::assertSame(
+            __('club.registration_confirmation_email.subject'),
+            mb_decode_mimeheader($calls[0]['subject'])
+        );
+        self::assertMatchesRegularExpression('/\A[\x20-\x7E]+\z/', $calls[0]['subject']);
+        self::assertStringNotContainsString('società', $calls[0]['subject']);
+        self::assertStringContainsString($url, quoted_printable_decode($calls[0]['message']));
+        self::assertSame('quoted-printable', $calls[0]['headers']['Content-Transfer-Encoding']);
     }
 
     public function testRejectsNonHttpsResetLinksBeforeCallingTransport(): void

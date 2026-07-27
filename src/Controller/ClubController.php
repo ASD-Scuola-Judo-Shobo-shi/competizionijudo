@@ -140,13 +140,24 @@ final class ClubController extends Controller
                         if ($this->canExposeResetLink()) {
                             $confirmationLink = $confirmationUrl;
                         } else {
-                            $this->passwordResetMailer()->sendRegistrationConfirmationLink(
-                                $formData['email'],
-                                $confirmationUrl
-                            );
+                            try {
+                                $this->passwordResetMailer()->sendRegistrationConfirmationLink(
+                                    $formData['email'],
+                                    $confirmationUrl
+                                );
+                            } catch (\Throwable $exception) {
+                                $this->reportFailure(
+                                    'club.registration_confirmation_delivery_failed',
+                                    $exception,
+                                    $request
+                                );
+                                $errors[] = __('club.register.errors.confirmation_delivery_failed');
+                            }
                         }
 
-                        $success = __('club.register.confirmation_sent');
+                        if ($errors === []) {
+                            $success = __('club.register.confirmation_sent');
+                        }
                     }
                 } catch (\Throwable $exception) {
                     $this->reportFailure('club.registration_failed', $exception, $request);

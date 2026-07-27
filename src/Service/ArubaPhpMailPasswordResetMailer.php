@@ -40,11 +40,12 @@ final class ArubaPhpMailPasswordResetMailer implements PasswordResetMailer
             'From' => $sender,
             'MIME-Version' => '1.0',
             'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Transfer-Encoding' => 'quoted-printable',
         ];
         $sent = ($this->send)(
             $recipient,
-            __('club.reset_email.subject'),
-            __('club.reset_email.body', ['url' => $resetUrl]),
+            $this->encodeSubject(__('club.reset_email.subject')),
+            $this->encodeBody(__('club.reset_email.body', ['url' => $resetUrl])),
             $headers
         );
         if (!$sent) {
@@ -69,15 +70,28 @@ final class ArubaPhpMailPasswordResetMailer implements PasswordResetMailer
             'From' => $sender,
             'MIME-Version' => '1.0',
             'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Transfer-Encoding' => 'quoted-printable',
         ];
         $sent = ($this->send)(
             $recipient,
-            __('club.registration_confirmation_email.subject'),
-            __('club.registration_confirmation_email.body', ['url' => $confirmationUrl]),
+            $this->encodeSubject(__('club.registration_confirmation_email.subject')),
+            $this->encodeBody(__('club.registration_confirmation_email.body', ['url' => $confirmationUrl])),
             $headers
         );
         if (!$sent) {
             throw new RuntimeException('Aruba PHP mail rejected the registration confirmation message.');
         }
+    }
+
+    private function encodeSubject(string $subject): string
+    {
+        return mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n");
+    }
+
+    private function encodeBody(string $body): string
+    {
+        $normalized = str_replace(["\r\n", "\r"], "\n", $body);
+
+        return quoted_printable_encode(str_replace("\n", "\r\n", $normalized));
     }
 }
