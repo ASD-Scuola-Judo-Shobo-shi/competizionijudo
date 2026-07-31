@@ -32,6 +32,7 @@ final class MigrationRunner
         'club_data_rights_declarations',
         'club_registration_confirmations',
         'event_registration_exceptions',
+        'event_registration_options',
     ];
 
     private readonly string $migrationDirectory;

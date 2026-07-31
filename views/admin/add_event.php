@@ -5,7 +5,21 @@
 /** @var list<string> $locations */
 /** @var list<array{id: int, name: string}> $clubs */
 /** @var list<int> $exceptionClubIds */
+/** @var list<array{id:int|null, name:string, fee_amount:string, fee_cents:int|null, is_default:bool}>|null $formRegistrationOptions */
+/** @var string|null $formSepaAccountHolder */
+/** @var string|null $formSepaIban */
+/** @var string|null $formSepaBic */
 $isEdit = !empty($event);
+$formRegistrationOptions ??= [[
+    'id' => null,
+    'name' => '',
+    'fee_amount' => '',
+    'fee_cents' => null,
+    'is_default' => true,
+]];
+$formSepaAccountHolder ??= $event?->sepa_account_holder ?? '';
+$formSepaIban ??= $event?->sepa_iban ?? '';
+$formSepaBic ??= $event?->sepa_bic ?? '';
 ?>
 <div class="card">
     <h2><?= $isEdit ? e(__('admin.edit.title')) . ' - ' . e($event->name) : e(__('admin.add.title')) ?></h2>
@@ -56,6 +70,99 @@ $isEdit = !empty($event);
         <label><?= e($isEdit ? __('admin.edit.max_participants') : __('admin.add.max_participants')) ?></label>
         <input type="number" name="max_participants" value="<?= e($event?->max_participants ? (string) $event->max_participants : '') ?>" min="1" placeholder="<?= e(__('admin.add.max_participants_placeholder')) ?>">
 
+        <fieldset class="event-payment-fieldset">
+            <legend><?= e(__('admin.add.registration_options')) ?></legend>
+            <p class="field-help"><?= e(__('admin.add.registration_options_help')) ?></p>
+            <div id="registration-options-list">
+                <?php foreach ($formRegistrationOptions as $index => $option) : ?>
+                    <div class="registration-option-row" data-option-index="<?= e((string) $index) ?>">
+                        <input
+                            type="hidden"
+                            name="registration_options[<?= e((string) $index) ?>][id]"
+                            value="<?= e($option['id'] !== null ? (string) $option['id'] : '') ?>"
+                        >
+                        <div>
+                            <label for="registration-option-name-<?= e((string) $index) ?>">
+                                <?= e(__('admin.add.registration_option_name')) ?>
+                            </label>
+                            <input
+                                id="registration-option-name-<?= e((string) $index) ?>"
+                                type="text"
+                                name="registration_options[<?= e((string) $index) ?>][name]"
+                                value="<?= e($option['name']) ?>"
+                                maxlength="120"
+                                required
+                            >
+                        </div>
+                        <div>
+                            <label for="registration-option-fee-<?= e((string) $index) ?>">
+                                <?= e(__('admin.add.registration_option_fee')) ?>
+                            </label>
+                            <input
+                                id="registration-option-fee-<?= e((string) $index) ?>"
+                                type="number"
+                                name="registration_options[<?= e((string) $index) ?>][fee_amount]"
+                                value="<?= e($option['fee_amount']) ?>"
+                                min="0"
+                                max="42949672.95"
+                                step="0.01"
+                                inputmode="decimal"
+                                required
+                            >
+                        </div>
+                        <label class="registration-option-default">
+                            <input
+                                type="radio"
+                                name="registration_option_default"
+                                value="<?= e((string) $index) ?>"
+                                <?= $option['is_default'] ? 'checked' : '' ?>
+                                required
+                            >
+                            <?= e(__('admin.add.registration_option_default')) ?>
+                        </label>
+                        <button type="button" class="btn gray btn-sm registration-option-remove">
+                            <?= e(__('admin.add.registration_option_remove')) ?>
+                        </button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <button type="button" class="btn btn-sm" id="add-registration-option-btn">
+                <?= e(__('admin.add.registration_option_add')) ?>
+            </button>
+        </fieldset>
+
+        <fieldset class="event-payment-fieldset">
+            <legend><?= e(__('admin.add.sepa_payment_details')) ?></legend>
+            <p class="field-help"><?= e(__('admin.add.sepa_payment_details_help')) ?></p>
+
+            <label for="sepa-account-holder"><?= e(__('events.payment_account_holder')) ?></label>
+            <input
+                id="sepa-account-holder"
+                name="sepa_account_holder"
+                value="<?= e($formSepaAccountHolder) ?>"
+                maxlength="70"
+                autocomplete="organization"
+            >
+
+            <label for="sepa-iban"><?= e(__('events.payment_iban')) ?></label>
+            <input
+                id="sepa-iban"
+                name="sepa_iban"
+                value="<?= e($formSepaIban) ?>"
+                maxlength="34"
+                autocomplete="off"
+            >
+
+            <label for="sepa-bic"><?= e(__('events.payment_bic')) ?></label>
+            <input
+                id="sepa-bic"
+                name="sepa_bic"
+                value="<?= e($formSepaBic) ?>"
+                maxlength="11"
+                autocomplete="off"
+            >
+        </fieldset>
+
         <label><?= e($isEdit ? __('admin.edit.poster') : __('admin.add.poster')) ?></label>
         <input type="file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->poster_file)) : ?>
@@ -97,6 +204,81 @@ $isEdit = !empty($event);
     </form>
 </div>
 <script>
+    let registrationOptionIndex = <?= count($formRegistrationOptions) ?>;
+
+    function refreshRegistrationOptionRows() {
+        const container = document.getElementById('registration-options-list');
+        if (!container) {
+            return;
+        }
+        const rows = Array.from(container.querySelectorAll('.registration-option-row'));
+        rows.forEach(function(row) {
+            const button = row.querySelector('.registration-option-remove');
+            if (button) {
+                button.disabled = rows.length === 1;
+            }
+        });
+    }
+
+    function addRegistrationOptionRow() {
+        const container = document.getElementById('registration-options-list');
+        if (!container) {
+            return;
+        }
+        const index = registrationOptionIndex++;
+        const row = document.createElement('div');
+        row.className = 'registration-option-row';
+        row.dataset.optionIndex = String(index);
+        row.innerHTML =
+            '<input type="hidden" name="registration_options[' + index + '][id]" value="">' +
+            '<div><label for="registration-option-name-' + index + '">' +
+                <?= json_encode(__('admin.add.registration_option_name'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
+            '</label><input id="registration-option-name-' + index + '" type="text" ' +
+                'name="registration_options[' + index + '][name]" maxlength="120" required></div>' +
+            '<div><label for="registration-option-fee-' + index + '">' +
+                <?= json_encode(__('admin.add.registration_option_fee'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
+            '</label><input id="registration-option-fee-' + index + '" type="number" ' +
+                'name="registration_options[' + index + '][fee_amount]" min="0" max="42949672.95" ' +
+                'step="0.01" inputmode="decimal" required></div>' +
+            '<label class="registration-option-default"><input type="radio" ' +
+                'name="registration_option_default" value="' + index + '" required> ' +
+                <?= json_encode(__('admin.add.registration_option_default'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
+            '</label>' +
+            '<button type="button" class="btn gray btn-sm registration-option-remove">' +
+                <?= json_encode(__('admin.add.registration_option_remove'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
+            '</button>';
+        container.appendChild(row);
+        refreshRegistrationOptionRows();
+        row.querySelector('input[type="text"]').focus();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const addButton = document.getElementById('add-registration-option-btn');
+        if (addButton) {
+            addButton.addEventListener('click', addRegistrationOptionRow);
+        }
+        const container = document.getElementById('registration-options-list');
+        if (container) {
+            container.addEventListener('click', function(event) {
+                const button = event.target.closest('.registration-option-remove');
+                if (!button) {
+                    return;
+                }
+                const row = button.closest('.registration-option-row');
+                const wasDefault = row.querySelector('input[type="radio"]').checked;
+                row.remove();
+                if (wasDefault) {
+                    const firstDefault = container.querySelector('input[name="registration_option_default"]');
+                    if (firstDefault) {
+                        firstDefault.checked = true;
+                    }
+                }
+                refreshRegistrationOptionRows();
+            });
+        }
+        refreshRegistrationOptionRows();
+    });
+
     // Dropdown toggle for registration exceptions
     function toggleDropdown(button) {
         const menu = button.nextElementSibling;

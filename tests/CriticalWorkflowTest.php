@@ -222,11 +222,25 @@ final class CriticalWorkflowTest extends TestCase
             'notes' => '',
             'published' => '1',
             'closed' => '0',
+            'registration_options' => [
+                ['name' => 'Standard', 'fee_amount' => '15.00'],
+                ['name' => 'Late', 'fee_amount' => '25.00'],
+            ],
+            'registration_option_default' => '0',
+            'sepa_account_holder' => 'Synthetic Tournament Organizer',
+            'sepa_iban' => 'IT60X0542811101000000123456',
+            'sepa_bic' => 'UNCRITMMXXX',
         ]);
         self::assertSame(302, $createEvent->status());
         $eventId = (int) $this->database->query(
             "SELECT id FROM events WHERE name = 'Synthetic Event'"
         )->fetchColumn();
+        $savedOptions = $this->database->query(
+            'SELECT id, name, fee_cents, is_default
+             FROM event_registration_options
+             WHERE event_id = ' . $eventId . '
+             ORDER BY sort_order, id'
+        )->fetchAll();
 
         $updateEvent = $this->request('POST', '/admin/events/add', [], [
             'csrf_token' => csrf_token(),
@@ -241,6 +255,22 @@ final class CriticalWorkflowTest extends TestCase
             'notes' => '',
             'published' => '1',
             'closed' => '0',
+            'registration_options' => [
+                [
+                    'id' => (string) $savedOptions[0]['id'],
+                    'name' => 'Standard',
+                    'fee_amount' => '15.00',
+                ],
+                [
+                    'id' => (string) $savedOptions[1]['id'],
+                    'name' => 'Late',
+                    'fee_amount' => '25.00',
+                ],
+            ],
+            'registration_option_default' => '0',
+            'sepa_account_holder' => 'Synthetic Tournament Organizer',
+            'sepa_iban' => 'IT60X0542811101000000123456',
+            'sepa_bic' => 'UNCRITMMXXX',
         ]);
         self::assertSame(302, $updateEvent->status());
         self::assertSame('Synthetic Event Updated', $this->database->query(
@@ -270,9 +300,15 @@ final class CriticalWorkflowTest extends TestCase
         ], ['REMOTE_ADDR' => '192.0.2.30']);
         self::assertSame(302, $clubLogin->status());
 
+        $optionId = (int) $this->database->query(
+            'SELECT id FROM event_registration_options WHERE event_id = ' . $eventId . ' ORDER BY id LIMIT 1'
+        )->fetchColumn();
+        self::assertGreaterThan(0, $optionId);
+
         $register = $this->request('POST', '/events/register', ['event' => (string) $eventId], [
             'csrf_token' => csrf_token(),
             'athletes' => [(string) $athleteId, (string) $foreignAthleteId],
+            'registration_option_id' => (string) $optionId,
         ]);
         self::assertSame(302, $register->status());
         self::assertSame(1, (int) $this->database->query(
@@ -281,11 +317,25 @@ final class CriticalWorkflowTest extends TestCase
         $feedback = $this->request('GET', '/events/register', ['event' => (string) $eventId]);
         self::assertStringContainsString(__('events.registration_added', ['count' => '1']), $feedback->content());
         self::assertStringContainsString(__('events.registration_rejected', ['count' => '1']), $feedback->content());
+        self::assertStringContainsString(__('events.amount_due'), $feedback->content());
+        self::assertStringContainsString('15.00', $feedback->content());
+        self::assertStringContainsString('IT60X0542811101000000123456', $feedback->content());
+        self::assertStringContainsString('data:image/svg+xml;base64,', $feedback->content());
 
         $foreignEntry = $this->database->prepare(
-            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+            'INSERT INTO entries (
+                event_id, club_id, athlete_id, registration_option_id,
+                registration_option_name, registration_fee_cents
+             ) VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $foreignEntry->execute([$eventId, $foreignClubId, $foreignAthleteId]);
+        $foreignEntry->execute([
+            $eventId,
+            $foreignClubId,
+            $foreignAthleteId,
+            $optionId,
+            'Standard',
+            1500,
+        ]);
 
         $clubEntries = $this->request('GET', '/events/entries', [
             'event' => (string) $eventId,
@@ -431,13 +481,19 @@ final class CriticalWorkflowTest extends TestCase
                 poster_file TEXT,
                 info_file TEXT,
                 published INTEGER NOT NULL DEFAULT 0,
-                closed INTEGER NOT NULL DEFAULT 0
+                closed INTEGER NOT NULL DEFAULT 0,
+                sepa_iban TEXT,
+                sepa_bic TEXT,
+                sepa_account_holder TEXT
             );
             CREATE TABLE entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_id INTEGER NOT NULL,
                 club_id INTEGER NOT NULL,
                 athlete_id INTEGER NOT NULL,
+                registration_option_id INTEGER NOT NULL,
+                registration_option_name TEXT NOT NULL,
+                registration_fee_cents INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 snapshot_last_name TEXT,
                 snapshot_first_name TEXT,
@@ -457,6 +513,15 @@ final class CriticalWorkflowTest extends TestCase
                 club_id INTEGER NOT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (event_id, club_id)
+            );
+            CREATE TABLE event_registration_options (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                fee_cents INTEGER NOT NULL DEFAULT 0,
+                is_default INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                sort_order INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE password_reset_tokens (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

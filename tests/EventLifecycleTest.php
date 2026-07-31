@@ -70,6 +70,30 @@ final class EventLifecycleTest extends TestCase
         self::assertStringNotContainsString('UNPUBLISHED-EVENT-DATA', $response->content());
     }
 
+    public function testPublicDetailsShowEveryRegistrationFeeAndTheDefaultOption(): void
+    {
+        $this->insertEvent();
+        $this->database->exec(
+            "INSERT INTO event_registration_options (
+                id, event_id, name, fee_cents, is_default, is_active, sort_order
+             ) VALUES (502, 101, 'Premium', 2500, 0, 1, 1)"
+        );
+
+        $request = new Request('GET', '/events/details?event=101', ['event' => '101']);
+        $response = (new EventController($this->view, $request))->details($request);
+        $plainText = preg_replace(
+            '/\s+/u',
+            ' ',
+            html_entity_decode(strip_tags($response->content()), ENT_QUOTES | ENT_HTML5, 'UTF-8')
+        );
+
+        self::assertIsString($plainText);
+        self::assertStringContainsString(__('events.registration_fees'), $plainText);
+        self::assertStringContainsString('Standard €15.00', $plainText);
+        self::assertStringContainsString('Premium €25.00', $plainText);
+        self::assertStringContainsString(__('events.registration_option_default'), $plainText);
+    }
+
     /**
      * @return iterable<string, array{bool, bool, string, string|null, bool}>
      */
@@ -97,6 +121,7 @@ final class EventLifecycleTest extends TestCase
             101,
             201,
             301,
+            501,
             '2026-06-28'
         );
 
@@ -188,6 +213,7 @@ final class EventLifecycleTest extends TestCase
             [
                 'csrf_token' => csrf_token(),
                 'athletes' => ['301', '302', '301', '303', 'invalid'],
+                'registration_option_id' => '501',
             ]
         );
 
@@ -209,6 +235,99 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString(
             '"event":"event.registration_failed"',
             (string) file_get_contents($this->logPath)
+        );
+    }
+
+    public function testRegistrationSummaryPricesNewAndRemovedEnrollmentsFromTheirStoredOptions(): void
+    {
+        $today = date('Y-m-d');
+        $eventDate = date('Y-m-d', strtotime('+1 day'));
+        $this->insertEvent(date: $eventDate, deadline: $today);
+        $this->database->exec(
+            "UPDATE events
+             SET sepa_account_holder = 'Synthetic Beneficiary',
+                 sepa_iban = 'IT60X0542811101000000123456',
+                 sepa_bic = 'UNCRITMMXXX'
+             WHERE id = 101"
+        );
+        $this->database->exec(
+            "INSERT INTO event_registration_options (
+                id, event_id, name, fee_cents, is_default, is_active, sort_order
+             ) VALUES (502, 101, 'Premium', 2500, 0, 1, 1)"
+        );
+        $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        )->execute([101, 201, 301]);
+        $this->database->exec(
+            'UPDATE event_registration_options SET fee_cents = 1900 WHERE id = 501'
+        );
+        Session::set('club_id', 201);
+
+        $post = new Request(
+            'POST',
+            '/events/register?event=101',
+            ['event' => '101'],
+            [
+                'csrf_token' => csrf_token(),
+                'athletes' => ['303'],
+                'registration_option_id' => '502',
+            ]
+        );
+        $postResponse = (new EventController($this->view, $post))->register($post);
+        $get = new Request('GET', '/events/register?event=101', ['event' => '101']);
+        $summary = (new EventController($this->view, $get))->register($get);
+
+        self::assertSame(302, $postResponse->status());
+        self::assertSame(
+            [
+                [303, 502, 'Premium', 2500],
+            ],
+            $this->database->query(
+                'SELECT athlete_id, registration_option_id, registration_option_name,
+                        registration_fee_cents
+                 FROM entries
+                 WHERE event_id = 101 AND club_id = 201'
+            )->fetchAll(PDO::FETCH_NUM)
+        );
+        $plainText = preg_replace(
+            '/\s+/u',
+            ' ',
+            html_entity_decode(strip_tags($summary->content()), ENT_QUOTES | ENT_HTML5, 'UTF-8')
+        );
+        self::assertIsString($plainText);
+        self::assertStringContainsString('FailureFamily FailureGiven — Premium', $plainText);
+        self::assertStringContainsString('OwnFamily OwnGiven — Standard', $plainText);
+        self::assertStringContainsString('+€25.00', $plainText);
+        self::assertStringContainsString('−€15.00', $plainText);
+        self::assertStringContainsString('€10.00', $plainText);
+        self::assertStringContainsString('IT60X0542811101000000123456', $plainText);
+        self::assertStringContainsString('data:image/svg+xml;base64,', $summary->content());
+    }
+
+    public function testRegistrationRejectsChangesWhenNoActiveOptionIsSelected(): void
+    {
+        $today = date('Y-m-d');
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: $today);
+        Session::set('club_id', 201);
+        $post = new Request(
+            'POST',
+            '/events/register?event=101',
+            ['event' => '101'],
+            [
+                'csrf_token' => csrf_token(),
+                'athletes' => ['301'],
+            ]
+        );
+
+        $response = (new EventController($this->view, $post))->register($post);
+        $get = new Request('GET', '/events/register?event=101', ['event' => '101']);
+        $feedback = (new EventController($this->view, $get))->register($get);
+
+        self::assertSame(302, $response->status());
+        self::assertSame(0, $this->entryCount());
+        self::assertStringContainsString(
+            __('events.registration_option_required'),
+            html_entity_decode($feedback->content(), ENT_QUOTES | ENT_HTML5, 'UTF-8')
         );
     }
 
@@ -248,6 +367,7 @@ final class EventLifecycleTest extends TestCase
             101,
             201,
             301,
+            501,
             '2026-06-28'
         );
 
@@ -300,7 +420,30 @@ final class EventLifecycleTest extends TestCase
                 poster_file TEXT,
                 info_file TEXT,
                 published INTEGER NOT NULL,
-                closed INTEGER NOT NULL
+                closed INTEGER NOT NULL,
+                sepa_iban TEXT,
+                sepa_bic TEXT,
+                sepa_account_holder TEXT
+            )'
+        );
+        $this->database->exec(
+            'CREATE TABLE event_registration_options (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                fee_cents INTEGER NOT NULL DEFAULT 0,
+                is_default INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                sort_order INTEGER NOT NULL DEFAULT 0
+            )'
+        );
+        $this->database->exec(
+            'CREATE TABLE event_registration_exceptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                club_id INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (event_id, club_id)
             )'
         );
         $this->database->exec(
@@ -325,6 +468,9 @@ final class EventLifecycleTest extends TestCase
                 event_id INTEGER NOT NULL,
                 club_id INTEGER NOT NULL,
                 athlete_id INTEGER NOT NULL,
+                registration_option_id INTEGER NOT NULL DEFAULT 501,
+                registration_option_name TEXT NOT NULL DEFAULT \'Standard\',
+                registration_fee_cents INTEGER NOT NULL DEFAULT 1500,
                 snapshot_last_name TEXT,
                 snapshot_first_name TEXT,
                 snapshot_gender TEXT,
@@ -337,15 +483,6 @@ final class EventLifecycleTest extends TestCase
                 snapshot_at TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (event_id, club_id, athlete_id)
-            )'
-        );
-        $this->database->exec(
-            'CREATE TABLE event_registration_exceptions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                event_id INTEGER NOT NULL,
-                club_id INTEGER NOT NULL,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE (event_id, club_id)
             )'
         );
 
@@ -463,6 +600,11 @@ final class EventLifecycleTest extends TestCase
             $published ? 1 : 0,
             $closed ? 1 : 0,
         ]);
+        $this->database->prepare(
+            'INSERT OR IGNORE INTO event_registration_options (
+                id, event_id, name, fee_cents, is_default, is_active, sort_order
+             ) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        )->execute([501, 101, 'Standard', 1500, 1, 1, 0]);
     }
 
     private function seedEntriesForTwoClubs(): void

@@ -4,6 +4,8 @@
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var bool $canViewEntries */
 /** @var bool $hasRegistrationException */
+/** @var list<\App\Model\EventRegistrationOption>|null $registrationOptions */
+$registrationOptions ??= [];
 ?>
 
 <?php if ($event !== null) : ?>
@@ -63,6 +65,31 @@
                             <td><?= e($value) ?></td>
                         </tr>
                     <?php endforeach; ?>
+                    <?php if ($registrationOptions !== []) : ?>
+                        <tr>
+                            <td><strong><?= e(__('events.registration_fees')) ?>:</strong></td>
+                            <td>
+                                <ul class="event-registration-fees">
+                                    <?php foreach ($registrationOptions as $option) : ?>
+                                        <li>
+                                            <?php
+                                            $formattedFee = \App\Service\RegistrationPaymentService::formatAmount(
+                                                $option->fee_cents
+                                            );
+                                            ?>
+                                            <span><?= e($option->name) ?></span>
+                                            <strong><?= e($formattedFee) ?></strong>
+                                            <?php if ($option->is_default) : ?>
+                                                <span class="badge registration-default-badge">
+                                                    <?= e(__('events.registration_option_default')) ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
                 </table>
 
                 <?php if ($event->description) : ?>

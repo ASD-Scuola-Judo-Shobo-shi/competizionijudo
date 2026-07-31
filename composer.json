@@ -4,12 +4,13 @@
   "type": "project",
   "license": "proprietary",
   "require": {
+    "php": "^8.4",
     "ext-fileinfo": "*",
     "ext-mbstring": "*",
     "ext-pdo": "*",
     "ext-pdo_mysql": "*",
     "ext-xml": "*",
-    "php": "^8.4"
+    "chillerlan/php-qrcode": "^6.0"
   },
   "require-dev": {
     "ext-pcov": "*",

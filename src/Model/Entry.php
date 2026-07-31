@@ -11,6 +11,9 @@ final class Entry
         public readonly int $event_id,
         public readonly int $club_id,
         public readonly int $athlete_id,
+        public readonly int $registration_option_id,
+        public readonly string $registration_option_name,
+        public readonly int $registration_fee_cents,
         public readonly string $created_at
     ) {
     }
@@ -23,6 +26,9 @@ final class Entry
             (int) ($data['event_id'] ?? 0),
             (int) ($data['club_id'] ?? 0),
             (int) ($data['athlete_id'] ?? 0),
+            (int) ($data['registration_option_id'] ?? 0),
+            (string) ($data['registration_option_name'] ?? ''),
+            (int) ($data['registration_fee_cents'] ?? 0),
             (string) ($data['created_at'] ?? '')
         );
     }
@@ -251,11 +257,18 @@ final class Entry
         int $eventId,
         int $clubId,
         int $athleteId,
+        int $registrationOptionId,
         string $registrationDate
     ): EntryRegistrationResult {
         $repository = new EntryRegistrationRepository(Database::connection());
 
-        return $repository->register($eventId, $clubId, $athleteId, $registrationDate);
+        return $repository->register(
+            $eventId,
+            $clubId,
+            $athleteId,
+            $registrationOptionId,
+            $registrationDate
+        );
     }
 
     public static function unregister(
@@ -276,5 +289,44 @@ final class Entry
         $stmt->execute([$eventId, $clubId]);
 
         return array_column($stmt->fetchAll(), 'athlete_id');
+    }
+
+    /**
+     * @return array<int, array{
+     *     athlete_id:int,
+     *     athlete_name:string,
+     *     option_id:int,
+     *     option_name:string,
+     *     fee_cents:int
+     * }>
+     */
+    public static function enrollmentDetailsByClubEvent(int $eventId, int $clubId): array
+    {
+        $statement = Database::connection()->prepare(
+            'SELECT entry_record.athlete_id,
+                    athlete.last_name,
+                    athlete.first_name,
+                    entry_record.registration_option_id,
+                    entry_record.registration_option_name,
+                    entry_record.registration_fee_cents
+             FROM entries AS entry_record
+             JOIN athletes AS athlete ON athlete.id = entry_record.athlete_id
+             WHERE entry_record.event_id = ? AND entry_record.club_id = ?'
+        );
+        $statement->execute([$eventId, $clubId]);
+
+        $details = [];
+        foreach ($statement->fetchAll() ?: [] as $row) {
+            $athleteId = (int) $row['athlete_id'];
+            $details[$athleteId] = [
+                'athlete_id' => $athleteId,
+                'athlete_name' => (string) $row['last_name'] . ' ' . (string) $row['first_name'],
+                'option_id' => (int) $row['registration_option_id'],
+                'option_name' => (string) $row['registration_option_name'],
+                'fee_cents' => (int) $row['registration_fee_cents'],
+            ];
+        }
+
+        return $details;
     }
 }

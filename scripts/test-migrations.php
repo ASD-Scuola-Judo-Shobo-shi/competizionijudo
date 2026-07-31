@@ -100,6 +100,21 @@ try {
     assertSchemaContract($recordedRenameDrift);
     assertPreSquashDataPreserved($recordedRenameDrift);
 
+    recreateDatabase($server, $databaseNames['pre_squash']);
+    $recordedRegistrationPaymentDrift = databaseConnection(
+        $host,
+        $port,
+        $databaseNames['pre_squash'],
+        $user,
+        $password,
+        $options
+    );
+    preparePreSquashDatabase($recordedRegistrationPaymentDrift);
+    prepareRecordedRegistrationPaymentDrift($recordedRegistrationPaymentDrift);
+    runMigrationsTwice($recordedRegistrationPaymentDrift);
+    assertSchemaContract($recordedRegistrationPaymentDrift);
+    assertPreSquashDataPreserved($recordedRegistrationPaymentDrift);
+
     $guarded = databaseConnection(
         $host,
         $port,
@@ -110,7 +125,8 @@ try {
     );
     assertExistingSchemaRejected($guarded);
 
-    echo "Migration smoke checks passed for clean, pre-squash, recorded-drift, and guarded schemas.\n";
+    echo "Migration smoke checks passed for clean, pre-squash, recorded birth-date drift, "
+        . "recorded registration-payment drift, and guarded schemas.\n";
 } catch (Throwable $exception) {
     $message = $exception instanceof MigrationException
         ? $exception->getMessage()
@@ -292,6 +308,44 @@ function preparePreSquashDatabase(PDO $database): void
     );
 }
 
+function prepareRecordedRegistrationPaymentDrift(PDO $database): void
+{
+    $database->exec(
+        'CREATE TABLE event_registration_options ('
+        . 'id INT AUTO_INCREMENT PRIMARY KEY, '
+        . 'event_id INT NOT NULL, '
+        . 'name VARCHAR(120) NOT NULL, '
+        . 'fee_cents INT UNSIGNED NOT NULL, '
+        . 'is_default TINYINT(1) NOT NULL DEFAULT 0, '
+        . 'created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, '
+        . 'CONSTRAINT fk_legacy_event_registration_options_event '
+        . 'FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $database->exec(
+        "INSERT INTO event_registration_options (event_id, name, fee_cents, is_default)
+         VALUES (1, 'Standard', 0, 1)"
+    );
+    $database->exec(
+        'ALTER TABLE events '
+        . 'ADD COLUMN sepa_iban VARCHAR(34) NULL, '
+        . 'ADD COLUMN sepa_bic VARCHAR(11) NULL, '
+        . 'ADD COLUMN sepa_account_holder VARCHAR(70) NULL'
+    );
+
+    $record = $database->prepare(
+        'INSERT INTO schema_migrations (version, description) VALUES (?, ?)'
+    );
+    $record->execute([
+        '20260729_000001_add_event_registration_options.sql',
+        'Synthetic recorded early registration-option draft',
+    ]);
+    $record->execute([
+        '20260729_000002_add_event_sepa_payment_details.sql',
+        'Synthetic recorded early SEPA draft',
+    ]);
+}
+
 function assertExistingSchemaRejected(PDO $database): void
 {
     $database->exec('CREATE TABLE clubs (id INT AUTO_INCREMENT PRIMARY KEY) ENGINE=InnoDB');
@@ -349,6 +403,9 @@ function assertUnrecordedForwardMigrationsCanBeRetried(PDO $database): void
         '20260723_000001_rename_date_of_birth_to_birth_date.sql',
         '20260724_000001_normalize_entry_snapshot_types.sql',
         '20260726_000001_repair_birth_date_schema_drift.sql',
+        '20260729_000001_add_event_registration_options.sql',
+        '20260729_000002_add_event_sepa_payment_details.sql',
+        '20260730_000001_repair_registration_payment_schema_drift.sql',
     ];
     $placeholders = implode(', ', array_fill(0, count($versions), '?'));
     $statement = $database->prepare(
@@ -375,6 +432,7 @@ function assertSchemaContract(PDO $database): void
         'club_registration_confirmations',
         'club_data_rights_declarations',
         'events',
+        'event_registration_options',
         'athletes',
         'entries',
         'password_reset_tokens',
@@ -405,9 +463,18 @@ function assertSchemaContract(PDO $database): void
     assertColumn($database, 'club_data_rights_declarations', 'declaration_version', 'NO');
     assertColumn($database, 'club_data_rights_declarations', 'declared_at', 'NO');
     assertColumn($database, 'events', 'location', 'NO');
+    assertColumn($database, 'events', 'sepa_account_holder', 'YES');
+    assertColumn($database, 'events', 'sepa_iban', 'YES');
+    assertColumn($database, 'events', 'sepa_bic', 'YES');
+    assertColumn($database, 'event_registration_options', 'fee_cents', 'NO');
+    assertColumn($database, 'event_registration_options', 'is_default', 'NO');
+    assertColumn($database, 'event_registration_options', 'is_active', 'NO');
     assertColumn($database, 'athletes', 'birth_date', 'NO');
     assertColumnMissing($database, 'athletes', 'date_of_birth');
     assertColumn($database, 'entries', 'athlete_id');
+    assertColumn($database, 'entries', 'registration_option_id', 'NO');
+    assertColumn($database, 'entries', 'registration_option_name', 'NO');
+    assertColumn($database, 'entries', 'registration_fee_cents', 'NO');
     $snapshotColumns = [
         'snapshot_last_name',
         'snapshot_first_name',
@@ -439,6 +506,12 @@ function assertSchemaContract(PDO $database): void
         'unique_entry',
         'event_id,club_id,athlete_id'
     );
+    assertUniqueIndex(
+        $database,
+        'event_registration_options',
+        'uniq_event_registration_option_default',
+        'default_event_id'
+    );
     assertIndex($database, 'clubs', 'idx_clubs_name_id', 'name,id');
     assertIndex(
         $database,
@@ -453,6 +526,12 @@ function assertSchemaContract(PDO $database): void
         'club_id,last_name,first_name,id'
     );
     assertIndex($database, 'entries', 'idx_entries_club_event', 'club_id,event_id');
+    assertIndex(
+        $database,
+        'entries',
+        'idx_entries_event_registration_option',
+        'event_id,registration_option_id'
+    );
     assertIndexMissing($database, 'athletes', 'idx_athletes_club_id');
 
     $expectedForeignKeys = [
@@ -462,6 +541,9 @@ function assertSchemaContract(PDO $database): void
         'entries.athlete_id=athletes.id',
         'entries.club_id=clubs.id',
         'entries.event_id=events.id',
+        'entries.event_id=event_registration_options.event_id',
+        'entries.registration_option_id=event_registration_options.id',
+        'event_registration_options.event_id=events.id',
         'password_reset_tokens.club_id=clubs.id',
     ];
     $statement = $database->query(
@@ -592,7 +674,15 @@ function assertCleanWritesAndReads(PDO $database): void
          VALUES (301, 'Synthetic Clean Event', '2026-07-01', 'Synthetic Venue', 1, 0)"
     );
     $database->exec(
-        'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (301, 101, 201)'
+        "INSERT INTO event_registration_options (
+            id, event_id, name, fee_cents, is_default, is_active, sort_order
+         ) VALUES (401, 301, 'Standard', 1500, 1, 1, 0)"
+    );
+    $database->exec(
+        "INSERT INTO entries (
+            event_id, club_id, athlete_id, registration_option_id,
+            registration_option_name, registration_fee_cents
+         ) VALUES (301, 101, 201, 401, 'Standard', 1500)"
     );
     $weight = $database->query(
         'SELECT athletes.weight_kg FROM entries '
@@ -601,6 +691,20 @@ function assertCleanWritesAndReads(PDO $database): void
     )->fetchColumn();
 
     assertSameValue('50.00', $weight, 'Clean schema athlete write or entry read failed.');
+
+    $database->exec('DELETE FROM events WHERE id = 301');
+    assertSameValue(
+        0,
+        (int) $database->query('SELECT COUNT(*) FROM entries WHERE event_id = 301')->fetchColumn(),
+        'Deleting an event did not cascade to its entries.'
+    );
+    assertSameValue(
+        0,
+        (int) $database->query(
+            'SELECT COUNT(*) FROM event_registration_options WHERE event_id = 301'
+        )->fetchColumn(),
+        'Deleting an event did not cascade to its registration options.'
+    );
 }
 
 function assertPreSquashDataPreserved(PDO $database): void
@@ -648,6 +752,16 @@ function assertPreSquashDataPreserved(PDO $database): void
     if (!is_string($snapshot['snapshot_at']) || $snapshot['snapshot_at'] === '') {
         throw new RuntimeException('Pre-squash snapshot timestamp disappeared.');
     }
+
+    $registration = $database->query(
+        'SELECT registration_option_name, registration_fee_cents
+         FROM entries WHERE id = 1'
+    )->fetch();
+    if (!is_array($registration)) {
+        throw new RuntimeException('Pre-squash registration fee snapshot disappeared.');
+    }
+    assertSameValue('Standard', $registration['registration_option_name'], 'Default option was not backfilled.');
+    assertSameValue('0', (string) $registration['registration_fee_cents'], 'Default fee was not backfilled.');
 }
 
 function assertSameValue(mixed $expected, mixed $actual, string $message): void

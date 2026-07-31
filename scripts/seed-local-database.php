@@ -4,7 +4,8 @@
  * Local database seeding utility.
  *
  * Permanently removes local application data before creating varied clubs,
- * athletes, events, entries, closed-event snapshots, and registration exceptions.
+ * athletes, events, registration options, entries, closed-event snapshots,
+ * and registration exceptions.
  * Usage: php scripts/seed-local-database.php
  */
 
@@ -161,11 +162,19 @@ $athleteStatement = $database->prepare(
 $eventStatement = $database->prepare(
     'INSERT INTO events (
         name, date, location, organizer, registration_deadline, max_participants,
-        type, description, published, closed
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        type, description, published, closed, sepa_account_holder, sepa_iban, sepa_bic
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+);
+$registrationOptionStatement = $database->prepare(
+    'INSERT INTO event_registration_options (
+        event_id, name, fee_cents, is_default, is_active, sort_order
+     ) VALUES (?, ?, ?, ?, 1, ?)'
 );
 $entryStatement = $database->prepare(
-    'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+    'INSERT INTO entries (
+        event_id, club_id, athlete_id, registration_option_id,
+        registration_option_name, registration_fee_cents
+     ) VALUES (?, ?, ?, ?, ?, ?)'
 );
 $exceptionStatement = $database->prepare(
     'INSERT INTO event_registration_exceptions (event_id, club_id) VALUES (?, ?)'
@@ -175,6 +184,7 @@ if (
     $clubStatement === false
     || $athleteStatement === false
     || $eventStatement === false
+    || $registrationOptionStatement === false
     || $entryStatement === false
     || $exceptionStatement === false
 ) {
@@ -281,12 +291,45 @@ try {
             seedEventDescription($profile, $target),
             $profile['published'] ? 1 : 0,
             $profile['closed'] ? 1 : 0,
+            'Comitato Regionale Judo Sardegna',
+            'IT60X0542811101000000123456',
+            'UNCRITMMXXX',
         ]);
         $eventId = (int) $database->lastInsertId();
 
+        /** @var list<array{id:int, name:string, fee_cents:int}> $registrationOptions */
+        $registrationOptions = [];
+        foreach (
+            [
+                ['name' => 'Standard', 'fee_cents' => 1500, 'is_default' => true],
+                ['name' => 'Premium', 'fee_cents' => 2500, 'is_default' => false],
+            ] as $sortOrder => $registrationOption
+        ) {
+            $registrationOptionStatement->execute([
+                $eventId,
+                $registrationOption['name'],
+                $registrationOption['fee_cents'],
+                $registrationOption['is_default'] ? 1 : 0,
+                $sortOrder,
+            ]);
+            $registrationOptions[] = [
+                'id' => (int) $database->lastInsertId(),
+                'name' => $registrationOption['name'],
+                'fee_cents' => $registrationOption['fee_cents'],
+            ];
+        }
+
         $selectedAthletes = seedAthletesForEvent($athletes, $profile['type'], $eventDate, $target);
         foreach ($selectedAthletes as $athlete) {
-            $entryStatement->execute([$eventId, $athlete['club_id'], $athlete['id']]);
+            $registrationOption = $registrationOptions[$athlete['id'] % count($registrationOptions)];
+            $entryStatement->execute([
+                $eventId,
+                $athlete['club_id'],
+                $athlete['id'],
+                $registrationOption['id'],
+                $registrationOption['name'],
+                $registrationOption['fee_cents'],
+            ]);
         }
 
         if ($profile['closed']) {
@@ -410,6 +453,7 @@ function purgeSeedData(PDO $database): void
         'club_registration_confirmations',
         'authentication_throttles',
         'athletes',
+        'event_registration_options',
         'events',
         'clubs',
     ];

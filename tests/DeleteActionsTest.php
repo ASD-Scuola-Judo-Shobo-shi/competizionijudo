@@ -161,6 +161,11 @@ final class DeleteActionsTest extends TestCase
              (502, 'Synthetic event', '2026-07-01', 'Test city', '', '', 'only_competitive', '', '',
               NULL, 'uploads/events/old-poster.png', NULL, 1, 0)"
         );
+        $database->exec(
+            "INSERT INTO event_registration_options (
+                id, event_id, name, fee_cents, is_default, is_active, sort_order
+             ) VALUES (701, 502, 'Standard', 0, 1, 1, 0)"
+        );
         $this->setDatabase($database);
 
         $publicRoot = sys_get_temp_dir() . '/competizionijudo-replace-' . bin2hex(random_bytes(8));
@@ -191,6 +196,10 @@ final class DeleteActionsTest extends TestCase
             'notes' => '',
             'published' => '1',
             'closed' => '0',
+            'registration_options' => [
+                ['id' => '701', 'name' => 'Standard', 'fee_amount' => '0.00'],
+            ],
+            'registration_option_default' => '0',
         ]);
         $storage = new EventUploadStorage(
             $publicRoot,
@@ -315,7 +324,19 @@ final class DeleteActionsTest extends TestCase
                 id INTEGER PRIMARY KEY, name TEXT NOT NULL, date TEXT NOT NULL, location TEXT NOT NULL,
                 organizer TEXT NOT NULL, registration_deadline TEXT, type TEXT NOT NULL,
                 description TEXT, notes TEXT, max_participants INTEGER, poster_file TEXT, info_file TEXT,
-                published INTEGER NOT NULL, closed INTEGER NOT NULL
+                published INTEGER NOT NULL, closed INTEGER NOT NULL,
+                sepa_account_holder TEXT, sepa_iban TEXT, sepa_bic TEXT
+            )'
+        );
+        $database->exec(
+            'CREATE TABLE event_registration_options (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                fee_cents INTEGER NOT NULL,
+                is_default INTEGER NOT NULL,
+                is_active INTEGER NOT NULL,
+                sort_order INTEGER NOT NULL
             )'
         );
         $database->exec(

@@ -21,7 +21,16 @@ final class Event
         public readonly bool $published,
         public readonly bool $closed,
         public readonly ?int $max_participants,
+        public readonly ?string $sepa_account_holder = null,
+        public readonly ?string $sepa_iban = null,
+        public readonly ?string $sepa_bic = null,
     ) {
+    }
+
+    /** @return list<EventRegistrationOption> */
+    public function registrationOptions(): array
+    {
+        return EventRegistrationOption::activeForEvent($this->id);
     }
 
     /** @param array<string, mixed> $data */
@@ -44,6 +53,9 @@ final class Event
             isset($data['max_participants']) && (int) $data['max_participants'] > 0
                 ? (int) $data['max_participants']
                 : null,
+            !empty($data['sepa_account_holder']) ? (string) $data['sepa_account_holder'] : null,
+            !empty($data['sepa_iban']) ? (string) $data['sepa_iban'] : null,
+            !empty($data['sepa_bic']) ? (string) $data['sepa_bic'] : null,
         );
     }
 

@@ -11,12 +11,15 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Model\AgeClass;
 use App\Model\Athlete;
+use App\Model\Club;
 use App\Model\Database;
 use App\Model\Entry;
 use App\Model\EntryRegistrationResult;
 use App\Model\Event;
 use App\Model\EventRegistrationException;
+use App\Model\EventRegistrationOption;
 use App\Model\JudoCategory;
+use App\Service\RegistrationPaymentService;
 use Throwable;
 
 final class EventController extends Controller
@@ -67,6 +70,7 @@ final class EventController extends Controller
                 'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
                 'canViewEntries' => $this->canViewEntries(),
                 'hasRegistrationException' => $hasRegistrationException,
+                'registrationOptions' => $event->registrationOptions(),
             ]);
         }
 
@@ -79,6 +83,7 @@ final class EventController extends Controller
             'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
             'canViewEntries' => $this->canViewEntries(),
             'hasRegistrationException' => false,
+            'registrationOptions' => [],
         ]);
     }
 
@@ -108,6 +113,9 @@ final class EventController extends Controller
                 'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
                 'registrationFeedback' => null,
                 'athleteCategories' => [],
+                'registeredEnrollmentDetails' => [],
+                'registrationOptions' => [],
+                'defaultRegistrationOptionId' => null,
             ]);
         }
 
@@ -125,11 +133,36 @@ final class EventController extends Controller
                 'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
                 'registrationFeedback' => null,
                 'athleteCategories' => [],
+                'registeredEnrollmentDetails' => [],
+                'registrationOptions' => [],
+                'defaultRegistrationOptionId' => null,
             ]);
         }
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
+
+            $selectedOptionId = (int) ($request->post('registration_option_id') ?? 0);
+            $selectedOption = EventRegistrationOption::activeForEventById(
+                $eventId,
+                $selectedOptionId
+            );
+            if ($selectedOption === null) {
+                $hasRegistrationOptions = $event->registrationOptions() !== [];
+                Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $eventId, [
+                    'added' => 0,
+                    'already_registered' => 0,
+                    'removed' => 0,
+                    'rejected' => 0,
+                    'capacity_exceeded' => 0,
+                    'failed' => 0,
+                    'option_required_error' => $hasRegistrationOptions,
+                    'option_configuration_error' => !$hasRegistrationOptions,
+                    'payment_summary' => null,
+                ]);
+
+                return $this->redirect('/events/register?event=' . $eventId);
+            }
 
             // Handle registration/unregistration action based on checkbox states
             $athleteIds = $request->input('athletes', []);
@@ -137,8 +170,9 @@ final class EventController extends Controller
                 $athleteIds = [$athleteIds];
             }
 
-            // Get currently registered athletes for comparison
-            $currentlyRegistered = Entry::findByClubEvent($eventId, $clubId);
+            // Load the persisted option snapshot before removals delete any entries.
+            $currentEnrollmentDetails = Entry::enrollmentDetailsByClubEvent($eventId, $clubId);
+            $currentlyRegistered = array_keys($currentEnrollmentDetails);
 
             // Validate and filter athlete IDs - count invalid ones as rejected
             $validAthleteIds = [];
@@ -150,6 +184,7 @@ final class EventController extends Controller
                     $rejectedCount++;
                 }
             }
+            $validAthleteIds = array_values(array_unique($validAthleteIds));
 
             // Determine which athletes to register and which to unregister
             $toRegister = array_values(array_diff($validAthleteIds, $currentlyRegistered));
@@ -164,12 +199,21 @@ final class EventController extends Controller
                 'failed' => 0,
             ];
 
+            $newlyRegisteredAthleteIds = [];
+            $removedEnrollments = [];
+
             // Handle unregistrations first (removals take priority)
             foreach ($toUnregister as $athleteId) {
                 try {
                     $result = Entry::unregister($eventId, $clubId, $athleteId, $registrationDate);
                     if ($result === EntryRegistrationResult::Unsubscribed) {
                         $feedback['removed']++;
+                        $removedEnrollment = $currentEnrollmentDetails[$athleteId];
+                        $removedEnrollments[] = [
+                            'athlete_name' => $removedEnrollment['athlete_name'],
+                            'option_name' => $removedEnrollment['option_name'],
+                            'fee_cents' => $removedEnrollment['fee_cents'],
+                        ];
                     } else {
                         $feedback['failed']++;
                     }
@@ -182,13 +226,22 @@ final class EventController extends Controller
             // Handle registrations
             foreach ($toRegister as $athleteId) {
                 try {
-                    $result = Entry::register($eventId, $clubId, $athleteId, $registrationDate);
+                    $result = Entry::register(
+                        $eventId,
+                        $clubId,
+                        $athleteId,
+                        $selectedOption->id,
+                        $registrationDate
+                    );
                     match ($result) {
                         EntryRegistrationResult::Registered => $feedback['added']++,
                         EntryRegistrationResult::AlreadyRegistered => $feedback['already_registered']++,
                         EntryRegistrationResult::AthleteRejected => $feedback['rejected']++,
                         EntryRegistrationResult::CapacityExceeded => $feedback['capacity_exceeded']++,
                     };
+                    if ($result === EntryRegistrationResult::Registered) {
+                        $newlyRegisteredAthleteIds[] = $athleteId;
+                    }
                 } catch (Throwable $exception) {
                     $feedback['failed']++;
                     $this->reportFailure('event.registration_failed', $exception, $request);
@@ -199,15 +252,61 @@ final class EventController extends Controller
             $stillChecked = array_intersect($currentlyRegistered, $validAthleteIds);
             $feedback['already_registered'] += count($stillChecked);
 
-            // Build feedback message
-            $flashFeedback = array_filter([
+            // Read back the snapshots so the summary reflects the exact option
+            // name and fee persisted by the atomic enrollment query.
+            $finalEnrollmentDetails = Entry::enrollmentDetailsByClubEvent($eventId, $clubId);
+            $newEnrollments = [];
+            foreach ($newlyRegisteredAthleteIds as $athleteId) {
+                $newEnrollment = $finalEnrollmentDetails[$athleteId] ?? null;
+                if ($newEnrollment === null) {
+                    continue;
+                }
+                $newEnrollments[] = [
+                    'athlete_name' => $newEnrollment['athlete_name'],
+                    'option_name' => $newEnrollment['option_name'],
+                    'fee_cents' => $newEnrollment['fee_cents'],
+                ];
+            }
+
+            $newEnrollmentCents = array_sum(array_column($newEnrollments, 'fee_cents'));
+            $removedEnrollmentCents = array_sum(array_column($removedEnrollments, 'fee_cents'));
+            $changeBalanceCents = $newEnrollmentCents - $removedEnrollmentCents;
+            $amountDueCents = max(0, $changeBalanceCents);
+            $creditCents = max(0, -$changeBalanceCents);
+            $club = Club::findById($clubId);
+            $paymentInfo = RegistrationPaymentService::paymentInfoForEvent($event);
+            $paymentReason = $club !== null
+                ? RegistrationPaymentService::buildPaymentReason($event, $club)
+                : '';
+            $qrCodeDataUri = $club !== null && $amountDueCents > 0
+                ? RegistrationPaymentService::buildQrCodeDataUri($event, $club, $amountDueCents)
+                : null;
+            $paymentSummary = [
+                'selected_option_name' => $selectedOption->name,
+                'selected_option_fee_cents' => $selectedOption->fee_cents,
+                'total_athletes' => count($finalEnrollmentDetails),
+                'new_enrollments' => $newEnrollments,
+                'removed_enrollments' => $removedEnrollments,
+                'new_enrollment_cents' => $newEnrollmentCents,
+                'removed_enrollment_cents' => $removedEnrollmentCents,
+                'amount_due_cents' => $amountDueCents,
+                'credit_cents' => $creditCents,
+                'payment_info' => $paymentInfo,
+                'payment_reason' => $paymentReason,
+                'qr_code_data_uri' => $qrCodeDataUri,
+            ];
+
+            $flashFeedback = [
                 'added' => $feedback['added'],
                 'already_registered' => $feedback['already_registered'],
                 'removed' => $feedback['removed'],
                 'rejected' => $feedback['rejected'],
                 'capacity_exceeded' => $feedback['capacity_exceeded'],
                 'failed' => $feedback['failed'],
-            ]);
+                'option_required_error' => false,
+                'option_configuration_error' => false,
+                'payment_summary' => $paymentSummary,
+            ];
 
             Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $eventId, $flashFeedback);
 
@@ -215,9 +314,18 @@ final class EventController extends Controller
         }
 
         $athletes = Athlete::findByClub($clubId);
-        $registered = Entry::findByClubEvent($eventId, $clubId);
+        $registeredEnrollmentDetails = Entry::enrollmentDetailsByClubEvent($eventId, $clubId);
+        $registered = array_keys($registeredEnrollmentDetails);
         $registrationFeedback = $this->registrationFeedback($eventId);
         $upcomingEvents = $this->resolveUpcomingEvents($eventId, $registrationDate, $limit);
+        $registrationOptions = $event->registrationOptions();
+        $defaultRegistrationOptionId = null;
+        foreach ($registrationOptions as $registrationOption) {
+            if ($registrationOption->is_default) {
+                $defaultRegistrationOptionId = $registrationOption->id;
+                break;
+            }
+        }
 
         return $this->view('events/register', [
             'title' => __('events.registration') . ' - ' . $event->name,
@@ -228,6 +336,9 @@ final class EventController extends Controller
             'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
             'registrationFeedback' => $registrationFeedback,
             'athleteCategories' => $this->athleteCategories($athletes, $event->date),
+            'registrationOptions' => $registrationOptions,
+            'defaultRegistrationOptionId' => $defaultRegistrationOptionId,
+            'registeredEnrollmentDetails' => $registeredEnrollmentDetails,
         ]);
     }
 
@@ -445,12 +556,42 @@ final class EventController extends Controller
         return $lowerBound . '-' . ($lowerBound + 4) . 'kg';
     }
 
-    /** @return array{added?: int, already_registered?: int, rejected?: int, capacity_exceeded?: int, failed?: int, removed?: int, unsubscribed_failed?: int}|null */
+    /** @return array<string, mixed>|null */
     private function registrationFeedback(int $eventId): ?array
     {
         $feedback = Session::pullFlash(self::REGISTRATION_FEEDBACK_PREFIX . $eventId);
         if (!is_array($feedback)) {
             return null;
+        }
+
+        $paymentSummary = null;
+        if (isset($feedback['payment_summary']) && is_array($feedback['payment_summary'])) {
+            $ps = $feedback['payment_summary'];
+            $paymentInfo = is_array($ps['payment_info'] ?? null) ? $ps['payment_info'] : [];
+            $qrCodeDataUri = is_string($ps['qr_code_data_uri'] ?? null)
+                ? $ps['qr_code_data_uri']
+                : '';
+            if (!str_starts_with($qrCodeDataUri, 'data:image/svg+xml;base64,')) {
+                $qrCodeDataUri = '';
+            }
+            $paymentSummary = [
+                'selected_option_name' => (string) ($ps['selected_option_name'] ?? ''),
+                'selected_option_fee_cents' => max(0, (int) ($ps['selected_option_fee_cents'] ?? 0)),
+                'total_athletes' => (int) ($ps['total_athletes'] ?? 0),
+                'new_enrollments' => $this->sanitizeEnrollmentChanges($ps['new_enrollments'] ?? null),
+                'removed_enrollments' => $this->sanitizeEnrollmentChanges($ps['removed_enrollments'] ?? null),
+                'new_enrollment_cents' => max(0, (int) ($ps['new_enrollment_cents'] ?? 0)),
+                'removed_enrollment_cents' => max(0, (int) ($ps['removed_enrollment_cents'] ?? 0)),
+                'amount_due_cents' => max(0, (int) ($ps['amount_due_cents'] ?? 0)),
+                'credit_cents' => max(0, (int) ($ps['credit_cents'] ?? 0)),
+                'payment_info' => [
+                    'account_holder' => (string) ($paymentInfo['account_holder'] ?? ''),
+                    'iban' => (string) ($paymentInfo['iban'] ?? ''),
+                    'bic' => (string) ($paymentInfo['bic'] ?? ''),
+                ],
+                'payment_reason' => (string) ($ps['payment_reason'] ?? ''),
+                'qr_code_data_uri' => $qrCodeDataUri,
+            ];
         }
 
         return [
@@ -461,6 +602,33 @@ final class EventController extends Controller
             'failed' => max(0, (int) ($feedback['failed'] ?? 0)),
             'removed' => max(0, (int) ($feedback['removed'] ?? 0)),
             'unsubscribed_failed' => max(0, (int) ($feedback['unsubscribed_failed'] ?? 0)),
+            'option_required_error' => !empty($feedback['option_required_error']),
+            'option_configuration_error' => !empty($feedback['option_configuration_error']),
+            'payment_summary' => $paymentSummary,
         ];
+    }
+
+    /**
+     * @return list<array{athlete_name:string, option_name:string, fee_cents:int}>
+     */
+    private function sanitizeEnrollmentChanges(mixed $changes): array
+    {
+        if (!is_array($changes)) {
+            return [];
+        }
+
+        $sanitized = [];
+        foreach ($changes as $change) {
+            if (!is_array($change)) {
+                continue;
+            }
+            $sanitized[] = [
+                'athlete_name' => (string) ($change['athlete_name'] ?? ''),
+                'option_name' => (string) ($change['option_name'] ?? ''),
+                'fee_cents' => max(0, (int) ($change['fee_cents'] ?? 0)),
+            ];
+        }
+
+        return $sanitized;
     }
 }

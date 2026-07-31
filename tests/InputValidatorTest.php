@@ -175,6 +175,58 @@ final class InputValidatorTest extends TestCase
         }
     }
 
+    public function testEventValidatorEnforcesFeeDefaultsAndDatabaseSepaDetails(): void
+    {
+        $validPaidOption = [[
+            'id' => null,
+            'name' => 'Standard',
+            'fee_amount' => '15.00',
+            'fee_cents' => 1500,
+            'is_default' => true,
+        ]];
+
+        self::assertSame([], EventInputValidator::registrationConfigurationErrors(
+            $validPaidOption,
+            'Synthetic Beneficiary',
+            'IT60 X054 2811 1010 0000 0123 456',
+            ''
+        ));
+        self::assertSame(1525, EventInputValidator::registrationFeeCents('15,25'));
+        self::assertSame(50, EventInputValidator::registrationFeeCents('00.50'));
+
+        $errors = EventInputValidator::registrationConfigurationErrors([
+            [
+                'id' => null,
+                'name' => 'Duplicate',
+                'fee_amount' => 'invalid',
+                'fee_cents' => null,
+                'is_default' => false,
+            ],
+            [
+                'id' => null,
+                'name' => 'duplicate',
+                'fee_amount' => '10.00',
+                'fee_cents' => 1000,
+                'is_default' => false,
+            ],
+        ], '', '', 'INVALID');
+
+        self::assertContains('validation.event_registration_option_fee_invalid', $errors);
+        self::assertContains('validation.event_registration_option_default_invalid', $errors);
+        self::assertContains('validation.event_registration_option_duplicate', $errors);
+        self::assertContains('validation.event_sepa_account_holder_invalid', $errors);
+        self::assertContains('validation.event_sepa_iban_invalid', $errors);
+        self::assertContains('validation.event_sepa_bic_invalid', $errors);
+
+        self::assertSame([], EventInputValidator::registrationConfigurationErrors([[
+            'id' => null,
+            'name' => 'Free',
+            'fee_amount' => '0',
+            'fee_cents' => 0,
+            'is_default' => true,
+        ]], '', '', ''));
+    }
+
     public function testBaselineCreatesTheNormalizedEmailConstraint(): void
     {
         $migration = file_get_contents(

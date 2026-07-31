@@ -19,6 +19,7 @@ final class EntryRegistrationRepository
         int $eventId,
         int $clubId,
         int $athleteId,
+        int $registrationOptionId,
         string $registrationDate
     ): EntryRegistrationResult {
         // Check if club has registration exception for closed events - if so, skip capacity check
@@ -28,6 +29,7 @@ final class EntryRegistrationRepository
             $eventId,
             $clubId,
             $athleteId,
+            $registrationOptionId,
             $registrationDate
         );
         if ($registrationContext === null) {
@@ -67,10 +69,26 @@ final class EntryRegistrationRepository
 
         try {
             $statement = $this->database->prepare(
-                'INSERT INTO entries (event_id, club_id, athlete_id)
-                 SELECT event_record.id, :entry_club_id, athlete.id
+                'INSERT INTO entries (
+                    event_id,
+                    club_id,
+                    athlete_id,
+                    registration_option_id,
+                    registration_option_name,
+                    registration_fee_cents
+                 )
+                 SELECT event_record.id,
+                        :entry_club_id,
+                        athlete.id,
+                        registration_option.id,
+                        registration_option.name,
+                        registration_option.fee_cents
                  FROM athletes AS athlete
                  JOIN events AS event_record ON event_record.id = :event_id
+                 JOIN event_registration_options AS registration_option
+                   ON registration_option.id = :registration_option_id
+                  AND registration_option.event_id = event_record.id
+                  AND registration_option.is_active = 1
                  WHERE athlete.id = :athlete_id
                    AND athlete.club_id = :athlete_club_id
                    AND event_record.published = 1
@@ -109,6 +127,7 @@ final class EntryRegistrationRepository
             $statement->execute([
                 'event_id' => $eventId,
                 'entry_club_id' => $clubId,
+                'registration_option_id' => $registrationOptionId,
                 'athlete_id' => $athleteId,
                 'athlete_club_id' => $clubId,
                 'event_date' => $registrationDate,
@@ -151,6 +170,7 @@ final class EntryRegistrationRepository
         int $eventId,
         int $clubId,
         int $athleteId,
+        int $registrationOptionId,
         string $registrationDate
     ): ?array {
         $statement = $this->database->prepare(
@@ -159,6 +179,10 @@ final class EntryRegistrationRepository
                     (SELECT COUNT(athlete_id) FROM entries WHERE event_id = :event_id_for_count) AS current_count
              FROM events AS event_record
              JOIN athletes AS athlete ON athlete.id = :athlete_id
+             JOIN event_registration_options AS registration_option
+               ON registration_option.id = :registration_option_id
+              AND registration_option.event_id = event_record.id
+              AND registration_option.is_active = 1
              WHERE event_record.id = :event_id
                AND athlete.club_id = :club_id
                AND event_record.published = 1
@@ -182,6 +206,7 @@ final class EntryRegistrationRepository
         $statement->execute([
             'event_id_for_count' => $eventId,
             'athlete_id' => $athleteId,
+            'registration_option_id' => $registrationOptionId,
             'event_id' => $eventId,
             'club_id' => $clubId,
             'event_date' => $registrationDate,

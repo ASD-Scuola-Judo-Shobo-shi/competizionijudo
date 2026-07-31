@@ -648,15 +648,210 @@ a.btn-sm:hover {
 
 .registration-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     margin-top: 1rem;
 }
 
 .change-indicator {
+    margin-left: .5rem;
     color: #c80022;
     font-weight: 600;
     font-size: 0.9rem;
+}
+
+.field-help {
+    margin: 4px 0 12px;
+    color: #334b68;
+    font-size: .9rem;
+    line-height: 1.45;
+}
+
+.event-payment-fieldset {
+    min-width: 0;
+    margin: 18px 0;
+    padding: 16px;
+    border: 1px solid #cfd7e3;
+    border-radius: 12px;
+}
+
+.event-payment-fieldset legend {
+    padding: 0 8px;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.registration-option-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(130px, .35fr) auto auto;
+    gap: 12px;
+    align-items: end;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #dfe6f0;
+    border-radius: 10px;
+    background: #f7f9fc;
+}
+
+.registration-option-row label {
+    margin-bottom: 6px;
+}
+
+.registration-option-default {
+    align-self: center;
+    margin: 22px 0 0;
+    white-space: nowrap;
+}
+
+.registration-option-remove {
+    align-self: center;
+    margin-top: 22px;
+}
+
+.registration-option-selector {
+    max-width: 560px;
+    margin: 20px 0;
+}
+
+.event-registration-fees {
+    display: grid;
+    gap: 6px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.event-registration-fees li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.registration-default-badge {
+    padding: 2px 7px;
+    border-radius: 999px;
+    color: #17385f;
+    background: #dce9f8;
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+.notice-error {
+    color: #721c24;
+    border-color: #f0a8af;
+    background: #fbe7e9;
+}
+
+.registration-payment-summary {
+    margin-top: 22px;
+    padding: clamp(18px, 3vw, 28px);
+    border: 1px solid #b7c9df;
+    border-radius: 14px;
+    background: #f7f9fc;
+}
+
+.registration-payment-summary h3 {
+    margin-top: 0;
+}
+
+.registration-change-grid,
+.sepa-payment-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.registration-change-grid > div {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid #dfe6f0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.registration-change-grid h4,
+.sepa-payment-layout h4 {
+    margin: 0 0 10px;
+}
+
+.registration-change-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.registration-change-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5ebf3;
+}
+
+.registration-change-list li:last-child {
+    border-bottom: 0;
+}
+
+.registration-change-list strong {
+    flex: 0 0 auto;
+}
+
+.registration-payment-totals,
+.sepa-payment-details {
+    margin: 18px 0;
+}
+
+.registration-payment-totals > div,
+.sepa-payment-details > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    padding: 7px 0;
+    border-bottom: 1px solid #dfe6f0;
+}
+
+.registration-payment-totals dt,
+.sepa-payment-details dt {
+    font-weight: 700;
+}
+
+.registration-payment-totals dd,
+.sepa-payment-details dd {
+    margin: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.registration-payment-totals .registration-amount-due {
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.sepa-payment-layout {
+    align-items: start;
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid #b7c9df;
+}
+
+.epc-qr-code {
+    margin: 0;
+    text-align: center;
+}
+
+.epc-qr-code img {
+    display: block;
+    width: min(240px, 100%);
+    height: auto;
+    margin: 0 auto 10px;
+    border: 8px solid #fff;
+}
+
+.epc-qr-code figcaption {
+    font-size: .9rem;
+    line-height: 1.4;
 }
 
 .btn:disabled {
@@ -1618,6 +1813,7 @@ html[data-theme="dark"] .recap-summary {
 html[data-theme="dark"] .error-description,
 html[data-theme="dark"] .event-info p,
 html[data-theme="dark"] .csv-help,
+html[data-theme="dark"] .field-help,
 html[data-theme="dark"] .next-event-item .location {
     color: #c4d1e2;
 }
@@ -1692,6 +1888,37 @@ html[data-theme="dark"] .notice.success {
     background: #193e2a;
 }
 
+html[data-theme="dark"] .notice-error {
+    color: #ffd3d7;
+    border-color: #9d4f5a;
+    background: #4b2229;
+}
+
+html[data-theme="dark"] .event-payment-fieldset,
+html[data-theme="dark"] .registration-option-row,
+html[data-theme="dark"] .registration-payment-summary,
+html[data-theme="dark"] .registration-change-grid > div,
+html[data-theme="dark"] .registration-change-list li,
+html[data-theme="dark"] .registration-payment-totals > div,
+html[data-theme="dark"] .sepa-payment-details > div,
+html[data-theme="dark"] .sepa-payment-layout {
+    border-color: #405675;
+}
+
+html[data-theme="dark"] .registration-option-row,
+html[data-theme="dark"] .registration-payment-summary {
+    background: #203653;
+}
+
+html[data-theme="dark"] .registration-change-grid > div {
+    background: #172841;
+}
+
+html[data-theme="dark"] .registration-default-badge {
+    color: #dce9fa;
+    background: #294767;
+}
+
 html[data-theme="dark"] .pagination-link {
     border-color: #526b8d;
     color: #dce9fa;
@@ -1734,6 +1961,17 @@ html[data-theme="dark"] .table-actions button.table-action-icon:hover {
     .lang-switch select {
         width: 100px;
         min-width: 100px;
+    }
+
+    .registration-option-row,
+    .registration-change-grid,
+    .sepa-payment-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .registration-option-default,
+    .registration-option-remove {
+        margin-top: 0;
     }
 
 }

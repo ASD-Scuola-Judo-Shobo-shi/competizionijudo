@@ -16,6 +16,7 @@ use App\Model\Club;
 use App\Model\Database;
 use App\Model\EntrySnapshotService;
 use App\Model\Event;
+use App\Model\EventRegistrationOption;
 use App\Model\SardinianLocation;
 use App\Security\AuthenticationThrottle;
 use App\Model\EventRegistrationException;
@@ -270,24 +271,17 @@ final class AdminController extends Controller
         $exceptionClubIds = $event !== null ? EventRegistrationException::clubIdsForEvent((int) $event->id) : [];
 
         $error = '';
+        $formRegistrationOptions = $this->registrationOptionsForForm($event);
+        $formSepaAccountHolder = $event?->sepa_account_holder ?? '';
+        $formSepaIban = $event?->sepa_iban ?? '';
+        $formSepaBic = $event?->sepa_bic ?? '';
 
-        // Validate uploads early for quick failure before any other database work
-        $uploads = $this->eventUploads();
-        if ($error === '' && $request->method() === 'POST') {
-            foreach (['poster_file', 'info_file'] as $field) {
-                $uploadError = EventInputValidator::extension($uploads[$field] ?? null);
-                if ($uploadError === null && isset($uploads[$field])) {
-                    // Check file size
-                    $size = filter_var($uploads[$field]['size'] ?? null, FILTER_VALIDATE_INT);
-                    if ($size === false || $size < 0 || $size > EventInputValidator::MAX_UPLOAD_BYTES) {
-                        $error = __('validation.event_upload_too_large');
-                    }
-                }
-            }
-        }
-
-        if ($request->method() === 'POST' && $error === '') {
+        if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
+            $formRegistrationOptions = $this->registrationOptionsFromRequest($request);
+            $formSepaAccountHolder = trim((string) $request->post('sepa_account_holder'));
+            $formSepaIban = EventInputValidator::normalizeIban((string) $request->post('sepa_iban'));
+            $formSepaBic = EventInputValidator::normalizeBic((string) $request->post('sepa_bic'));
             /**
              * @var array{
              *     name: string,
@@ -300,7 +294,17 @@ final class AdminController extends Controller
              *     notes: string,
              *     max_participants: string,
              *     published: int,
-             *     closed: int
+             *     closed: int,
+             *     registration_options: list<array{
+             *         id:int|null,
+             *         name:string,
+             *         fee_amount:string,
+             *         fee_cents:int|null,
+             *         is_default:bool
+             *     }>,
+             *     sepa_account_holder:string,
+             *     sepa_iban:string,
+             *     sepa_bic:string
              * } $data
              */
             $data = [
@@ -315,9 +319,13 @@ final class AdminController extends Controller
                 'max_participants' => trim((string) $request->post('max_participants')),
                 'published' => $request->post('published') === '1' ? 1 : 0,
                 'closed' => $request->post('closed') === '1' ? 1 : 0,
+                'registration_options' => $formRegistrationOptions,
+                'sepa_account_holder' => $formSepaAccountHolder,
+                'sepa_iban' => $formSepaIban,
+                'sepa_bic' => $formSepaBic,
             ];
             $uploads = $this->eventUploads();
-            $validationErrors = EventInputValidator::errors(
+            $validationErrors = array_merge(EventInputValidator::errors(
                 $data['name'],
                 $data['date'],
                 $data['location'],
@@ -325,7 +333,12 @@ final class AdminController extends Controller
                 $data['type'],
                 $uploads,
                 $data['max_participants']
-            );
+            ), EventInputValidator::registrationConfigurationErrors(
+                $data['registration_options'],
+                $data['sepa_account_holder'],
+                $data['sepa_iban'],
+                $data['sepa_bic']
+            ));
             if ($validationErrors !== []) {
                 $error = __($validationErrors[0]);
             }
@@ -358,9 +371,9 @@ final class AdminController extends Controller
                         }
                     }
 
+                    $db->beginTransaction();
                     if ($event) {
-                        $db->beginTransaction();
-                        $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, max_participants=?, poster_file=?, info_file=?, published=?, closed=? WHERE id=?";
+                        $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, max_participants=?, poster_file=?, info_file=?, published=?, closed=?, sepa_account_holder=?, sepa_iban=?, sepa_bic=? WHERE id=?";
                         $params = [
                             $data['name'],
                             $data['date'],
@@ -375,19 +388,18 @@ final class AdminController extends Controller
                             $informativa,
                             $data['published'],
                             $data['closed'],
+                            $data['sepa_account_holder'] !== '' ? $data['sepa_account_holder'] : null,
+                            $data['sepa_iban'] !== '' ? $data['sepa_iban'] : null,
+                            $data['sepa_bic'] !== '' ? $data['sepa_bic'] : null,
                             $eventId,
                         ];
                         $db->prepare($sql)->execute($params);
                         if (!$event->closed && $data['closed'] === 1) {
                             (new EntrySnapshotService($db))->consolidate($eventId, $data['date']);
                         }
-                        // Save registration exceptions
-                        EventRegistrationException::setForEvent($eventId, $exceptionClubIds);
-                        $db->commit();
-                        $persisted = true;
                     } else {
                         $db->prepare(
-                            "INSERT INTO events (name, date, location, organizer, registration_deadline, type, description, notes, max_participants, poster_file, info_file, published, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                            "INSERT INTO events (name, date, location, organizer, registration_deadline, type, description, notes, max_participants, poster_file, info_file, published, closed, sepa_account_holder, sepa_iban, sepa_bic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                         )->execute([
                             $data['name'],
                             $data['date'],
@@ -402,12 +414,27 @@ final class AdminController extends Controller
                             $informativa,
                             $data['published'],
                             $data['closed'],
+                            $data['sepa_account_holder'] !== '' ? $data['sepa_account_holder'] : null,
+                            $data['sepa_iban'] !== '' ? $data['sepa_iban'] : null,
+                            $data['sepa_bic'] !== '' ? $data['sepa_bic'] : null,
                         ]);
-                        $newEventId = (int) $db->lastInsertId();
-                        // Save registration exceptions for new event
-                        EventRegistrationException::setForEvent($newEventId, $exceptionClubIds);
-                        $persisted = true;
+                        $eventId = (int) $db->lastInsertId();
                     }
+
+                    /** @var list<array{id:int|null, name:string, fee_cents:int, is_default:bool}> $options */
+                    $options = array_map(
+                        static fn(array $option): array => [
+                            'id' => $option['id'],
+                            'name' => $option['name'],
+                            'fee_cents' => (int) $option['fee_cents'],
+                            'is_default' => $option['is_default'],
+                        ],
+                        $data['registration_options']
+                    );
+                    EventRegistrationOption::synchronize($db, $eventId, $options);
+                    EventRegistrationException::setForEvent($eventId, $exceptionClubIds);
+                    $db->commit();
+                    $persisted = true;
 
                     if ($event !== null) {
                         $replacedUploads = [];
@@ -448,6 +475,10 @@ final class AdminController extends Controller
                 'locations' => $locations,
                 'clubs' => $clubs,
                 'exceptionClubIds' => $exceptionClubIds,
+                'formRegistrationOptions' => $formRegistrationOptions,
+                'formSepaAccountHolder' => $formSepaAccountHolder,
+                'formSepaIban' => $formSepaIban,
+                'formSepaBic' => $formSepaBic,
             ]);
         }
 
@@ -458,7 +489,94 @@ final class AdminController extends Controller
             'locations' => $locations,
             'clubs' => $clubs,
             'exceptionClubIds' => $exceptionClubIds,
+            'formRegistrationOptions' => $formRegistrationOptions,
+            'formSepaAccountHolder' => $formSepaAccountHolder,
+            'formSepaIban' => $formSepaIban,
+            'formSepaBic' => $formSepaBic,
         ]);
+    }
+
+    /**
+     * @return list<array{
+     *     id:int|null,
+     *     name:string,
+     *     fee_amount:string,
+     *     fee_cents:int|null,
+     *     is_default:bool
+     * }>
+     */
+    private function registrationOptionsFromRequest(Request $request): array
+    {
+        $rawOptions = $request->post('registration_options', []);
+        if (!is_array($rawOptions)) {
+            return [];
+        }
+
+        $defaultIndex = $request->post('registration_option_default');
+        $defaultIndex = is_scalar($defaultIndex) ? (string) $defaultIndex : '';
+
+        $options = [];
+        foreach ($rawOptions as $index => $option) {
+            if (!is_array($option)) {
+                continue;
+            }
+            $name = trim((string) ($option['name'] ?? ''));
+            $feeAmount = trim((string) ($option['fee_amount'] ?? ''));
+            if ($name === '' && $feeAmount === '') {
+                continue;
+            }
+            $optionId = filter_var($option['id'] ?? null, FILTER_VALIDATE_INT);
+            $options[] = [
+                'id' => $optionId !== false && $optionId > 0 ? $optionId : null,
+                'name' => $name,
+                'fee_amount' => $feeAmount,
+                'fee_cents' => EventInputValidator::registrationFeeCents($feeAmount),
+                'is_default' => $defaultIndex !== '' && (string) $index === $defaultIndex,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * @return list<array{
+     *     id:int|null,
+     *     name:string,
+     *     fee_amount:string,
+     *     fee_cents:int|null,
+     *     is_default:bool
+     * }>
+     */
+    private function registrationOptionsForForm(?Event $event): array
+    {
+        if ($event === null) {
+            return [[
+                'id' => null,
+                'name' => '',
+                'fee_amount' => '',
+                'fee_cents' => null,
+                'is_default' => true,
+            ]];
+        }
+
+        $options = array_map(
+            static fn(EventRegistrationOption $option): array => [
+                'id' => $option->id,
+                'name' => $option->name,
+                'fee_amount' => number_format($option->fee_cents / 100, 2, '.', ''),
+                'fee_cents' => $option->fee_cents,
+                'is_default' => $option->is_default,
+            ],
+            $event->registrationOptions()
+        );
+
+        return $options !== [] ? $options : [[
+            'id' => null,
+            'name' => '',
+            'fee_amount' => '',
+            'fee_cents' => null,
+            'is_default' => true,
+        ]];
     }
 
     /** @return array<string, array<string, mixed>> */

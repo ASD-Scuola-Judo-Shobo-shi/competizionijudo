@@ -11,6 +11,7 @@ use finfo;
 final class EventInputValidator
 {
     public const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+    public const MAX_REGISTRATION_FEE_CENTS = 4_294_967_295;
 
     private const EVENT_TYPES = [
         'only_precompetitive',
@@ -78,6 +79,109 @@ final class EventInputValidator
         }
 
         return array_values(array_unique($errors));
+    }
+
+    /**
+     * @param list<array{
+     *     id:int|null,
+     *     name:string,
+     *     fee_amount:string,
+     *     fee_cents:int|null,
+     *     is_default:bool
+     * }> $options
+     * @return list<string> Translation keys for invalid registration/payment fields.
+     */
+    public static function registrationConfigurationErrors(
+        array $options,
+        string $accountHolder,
+        string $iban,
+        string $bic
+    ): array {
+        $errors = [];
+        if ($options === []) {
+            $errors[] = 'validation.event_registration_option_required';
+        }
+
+        $defaultCount = 0;
+        $names = [];
+        $hasPaidOption = false;
+        foreach ($options as $option) {
+            $name = trim($option['name']);
+            if ($name === '' || mb_strlen($name) > 120) {
+                $errors[] = 'validation.event_registration_option_name_invalid';
+            } else {
+                $normalizedName = mb_strtolower($name);
+                if (isset($names[$normalizedName])) {
+                    $errors[] = 'validation.event_registration_option_duplicate';
+                }
+                $names[$normalizedName] = true;
+            }
+
+            $feeCents = $option['fee_cents'];
+            if (
+                $feeCents === null
+                || $feeCents < 0
+                || $feeCents > self::MAX_REGISTRATION_FEE_CENTS
+            ) {
+                $errors[] = 'validation.event_registration_option_fee_invalid';
+            } elseif ($feeCents > 0) {
+                $hasPaidOption = true;
+            }
+
+            if ($option['is_default']) {
+                $defaultCount++;
+            }
+        }
+
+        if ($options !== [] && $defaultCount !== 1) {
+            $errors[] = 'validation.event_registration_option_default_invalid';
+        }
+
+        $accountHolder = trim($accountHolder);
+        $iban = self::normalizeIban($iban);
+        $bic = self::normalizeBic($bic);
+        $hasAnySepaValue = $accountHolder !== '' || $iban !== '' || $bic !== '';
+        if ($hasPaidOption || $hasAnySepaValue) {
+            if ($accountHolder === '' || mb_strlen($accountHolder) > 70) {
+                $errors[] = 'validation.event_sepa_account_holder_invalid';
+            }
+            if (!self::validIban($iban)) {
+                $errors[] = 'validation.event_sepa_iban_invalid';
+            }
+            if ($bic !== '' && preg_match('/\A[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\z/', $bic) !== 1) {
+                $errors[] = 'validation.event_sepa_bic_invalid';
+            }
+        }
+
+        return array_values(array_unique($errors));
+    }
+
+    public static function registrationFeeCents(string $value): ?int
+    {
+        $value = str_replace(',', '.', trim($value));
+        if (preg_match('/\A[0-9]+(?:\.[0-9]{1,2})?\z/', $value) !== 1) {
+            return null;
+        }
+
+        [$euros, $decimals] = array_pad(explode('.', $value, 2), 2, '');
+        $decimals = str_pad($decimals, 2, '0');
+        if (strlen($euros) > 10) {
+            return null;
+        }
+
+        $cents = ((int) $euros * 100) + (int) $decimals;
+
+        return $cents <= self::MAX_REGISTRATION_FEE_CENTS ? $cents : null;
+    }
+
+    public static function normalizeIban(string $iban): string
+    {
+        return strtoupper(preg_replace('/\s+/', '', trim($iban)) ?? '');
+    }
+
+    public static function normalizeBic(string $bic): string
+    {
+        return strtoupper(preg_replace('/\s+/', '', trim($bic)) ?? '');
     }
 
     /** @param array<string, mixed>|null $upload */
@@ -151,5 +255,28 @@ final class EventInputValidator
         }
 
         return $date->format('Y-m-d') === trim($value) ? $date : null;
+    }
+
+    private static function validIban(string $iban): bool
+    {
+        if (
+            preg_match('/\A[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}\z/', $iban) !== 1
+            || strlen($iban) > 34
+        ) {
+            return false;
+        }
+
+        $rearranged = substr($iban, 4) . substr($iban, 0, 4);
+        $remainder = 0;
+        foreach (str_split($rearranged) as $character) {
+            $digits = ctype_alpha($character)
+                ? (string) (ord($character) - ord('A') + 10)
+                : $character;
+            foreach (str_split($digits) as $digit) {
+                $remainder = (($remainder * 10) + (int) $digit) % 97;
+            }
+        }
+
+        return $remainder === 1;
     }
 }

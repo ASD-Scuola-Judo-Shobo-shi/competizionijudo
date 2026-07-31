@@ -6,8 +6,14 @@
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var array<int, bool> $eventExceptions */
 /** @var bool $hasRegistrationException */
-/** @var array{added?: int, already_registered?: int, rejected?: int, capacity_exceeded?: int, failed?: int, removed?: int, unsubscribed_failed?: int}|null $registrationFeedback */
+/** @var array<string, mixed>|null $registrationFeedback */
 /** @var array<int, array{age_below: int|null, type: string, weight_category: string}> $athleteCategories */
+/** @var list<\App\Model\EventRegistrationOption> $registrationOptions */
+/** @var int|null $defaultRegistrationOptionId */
+/** @var array<int, array{athlete_id:int, athlete_name:string, option_id:int, option_name:string, fee_cents:int}> $registeredEnrollmentDetails */
+$showRegistrationFeedback = $registrationFeedback !== null
+    && empty($registrationFeedback['option_required_error'])
+    && empty($registrationFeedback['option_configuration_error']);
 ?>
 
 <?php if ($event !== null) : ?>
@@ -56,9 +62,21 @@
                         </div>
                     <?php endif; ?>
 
+                    <?php if (!empty($registrationFeedback['option_required_error'])) : ?>
+                        <div class="notice notice-error">
+                            <?= e(__('events.registration_option_required')) ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($registrationOptions === [] || !empty($registrationFeedback['option_configuration_error'])) : ?>
+                        <div class="notice notice-error">
+                            <?= e(__('events.registration_options_unavailable')) ?>
+                        </div>
+                    <?php endif; ?>
+
                     <?php if (empty($athletes)) : ?>
                         <p><?= e(__('events.register_no_athletes')) ?></p>
-                    <?php else : ?>
+                    <?php elseif ($registrationOptions !== []) : ?>
                         <form method="post" id="registration-form">
                             <?= csrf_field() ?>
                             <p><?= e(__('events.register_select')) ?></p>
@@ -70,6 +88,7 @@
                                         <th><?= e(__('club.area.birth')) ?></th>
                                         <th><?= e(__('club.area.weight')) ?></th>
                                         <th><?= e(__('club.area.weight_category')) ?></th>
+                                        <th><?= e(__('events.registration_option_current')) ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -87,15 +106,53 @@
                                             <td><?= e($athlete->birth_date) ?></td>
                                             <td><?= e((string) $athlete->weight_kg) ?></td>
                                             <td><?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?></td>
+                                            <td>
+                                                <?php if (isset($registeredEnrollmentDetails[$athlete->id])) : ?>
+                                                    <?= e(
+                                                        $registeredEnrollmentDetails[$athlete->id]['option_name']
+                                                        . ' — '
+                                                        . \App\Service\RegistrationPaymentService::formatAmount(
+                                                            $registeredEnrollmentDetails[$athlete->id]['fee_cents']
+                                                        )
+                                                    ) ?>
+                                                <?php else : ?>
+                                                    —
+                                                <?php endif; ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
 
+                            <div class="registration-option-selector">
+                                <label for="registration_option_id">
+                                    <?= e(__('events.registration_option')) ?>
+                                    <span class="required-marker" aria-hidden="true">*</span>
+                                </label>
+                                <select id="registration_option_id" name="registration_option_id" required>
+                                    <option value=""><?= e(__('events.registration_option_select')) ?></option>
+                                    <?php foreach ($registrationOptions as $option) : ?>
+                                        <option
+                                            value="<?= e((string) $option->id) ?>"
+                                            <?= $defaultRegistrationOptionId === $option->id ? 'selected' : '' ?>
+                                        >
+                                            <?= e(
+                                                $option->name
+                                                . ' — '
+                                                . \App\Service\RegistrationPaymentService::formatAmount(
+                                                    $option->fee_cents
+                                                )
+                                            ) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <p class="field-help"><?= e(__('events.registration_option_help')) ?></p>
+                            </div>
+
                             <div class="registration-actions">
                                 <button class="btn green" type="submit" id="save-changes-btn" disabled><?= e(__('events.register_save_changes')) ?></button>
-                                <?php if ($registrationFeedback !== null) : ?>
-                                    <span class="change-indicator" id="feedback-indicator" style="margin-left: 0.5rem;">
+                                <?php if ($showRegistrationFeedback) : ?>
+                                    <span class="change-indicator" id="feedback-indicator">
                                         <?php
                                         $parts = [];
                                         if (($registrationFeedback['added'] ?? 0) > 0) {
@@ -117,11 +174,156 @@
                                         ?>
                                     </span>
                                 <?php else : ?>
-                                    <span class="change-indicator" id="change-indicator" style="display: none; margin-left: 0.5rem;">
+                                    <span class="change-indicator" id="change-indicator" hidden>
                                         <?= e(__('events.register_unsaved_changes')) ?>
                                     </span>
                                 <?php endif; ?>
                             </div>
+
+                            <?php if (($registrationFeedback['payment_summary'] ?? null) !== null) : ?>
+                                <?php
+                                $paymentSummary = $registrationFeedback['payment_summary'];
+                                $newEnrollments = $paymentSummary['new_enrollments'] ?? [];
+                                $removedEnrollments = $paymentSummary['removed_enrollments'] ?? [];
+                                $paymentInfo = $paymentSummary['payment_info'] ?? [];
+                                $amountDueCents = (int) ($paymentSummary['amount_due_cents'] ?? 0);
+                                ?>
+                                <section class="registration-payment-summary" aria-labelledby="payment-summary-title">
+                                    <h3 id="payment-summary-title"><?= e(__('events.payment_summary_title')) ?></h3>
+                                    <p>
+                                        <strong><?= e(__('events.registration_option_selected')) ?>:</strong>
+                                        <?= e((string) ($paymentSummary['selected_option_name'] ?? '')) ?>
+                                        (<?= e(\App\Service\RegistrationPaymentService::formatAmount(
+                                            (int) ($paymentSummary['selected_option_fee_cents'] ?? 0)
+                                        )) ?>)
+                                    </p>
+
+                                    <div class="registration-change-grid">
+                                        <div>
+                                            <h4><?= e(__('events.payment_summary_new_enrollments')) ?></h4>
+                                            <?php if ($newEnrollments === []) : ?>
+                                                <p>—</p>
+                                            <?php else : ?>
+                                                <ul class="registration-change-list">
+                                                    <?php foreach ($newEnrollments as $change) : ?>
+                                                        <li>
+                                                            <span>
+                                                                <?= e((string) ($change['athlete_name'] ?? '')) ?>
+                                                                — <?= e((string) ($change['option_name'] ?? '')) ?>
+                                                            </span>
+                                                            <strong>+<?= e(\App\Service\RegistrationPaymentService::formatAmount(
+                                                                (int) ($change['fee_cents'] ?? 0)
+                                                            )) ?></strong>
+                                                        </li>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div>
+                                            <h4><?= e(__('events.payment_summary_removed_enrollments')) ?></h4>
+                                            <?php if ($removedEnrollments === []) : ?>
+                                                <p>—</p>
+                                            <?php else : ?>
+                                                <ul class="registration-change-list">
+                                                    <?php foreach ($removedEnrollments as $change) : ?>
+                                                        <li>
+                                                            <span>
+                                                                <?= e((string) ($change['athlete_name'] ?? '')) ?>
+                                                                — <?= e((string) ($change['option_name'] ?? '')) ?>
+                                                            </span>
+                                                            <strong>−<?= e(\App\Service\RegistrationPaymentService::formatAmount(
+                                                                (int) ($change['fee_cents'] ?? 0)
+                                                            )) ?></strong>
+                                                        </li>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+
+                                    <dl class="registration-payment-totals">
+                                        <div>
+                                            <dt><?= e(__('events.payment_summary_new_total')) ?></dt>
+                                            <dd>+<?= e(\App\Service\RegistrationPaymentService::formatAmount(
+                                                (int) ($paymentSummary['new_enrollment_cents'] ?? 0)
+                                            )) ?></dd>
+                                        </div>
+                                        <div>
+                                            <dt><?= e(__('events.payment_summary_removed_total')) ?></dt>
+                                            <dd>−<?= e(\App\Service\RegistrationPaymentService::formatAmount(
+                                                (int) ($paymentSummary['removed_enrollment_cents'] ?? 0)
+                                            )) ?></dd>
+                                        </div>
+                                        <div class="registration-amount-due">
+                                            <dt><?= e(__('events.amount_due')) ?></dt>
+                                            <dd><?= e(\App\Service\RegistrationPaymentService::formatAmount(
+                                                $amountDueCents
+                                            )) ?></dd>
+                                        </div>
+                                        <?php if (($paymentSummary['credit_cents'] ?? 0) > 0) : ?>
+                                            <div>
+                                                <dt><?= e(__('events.payment_summary_credit')) ?></dt>
+                                                <dd><?= e(\App\Service\RegistrationPaymentService::formatAmount(
+                                                    (int) $paymentSummary['credit_cents']
+                                                )) ?></dd>
+                                            </div>
+                                        <?php endif; ?>
+                                        <div>
+                                            <dt><?= e(__('events.payment_summary_total_athletes')) ?></dt>
+                                            <dd><?= e((string) ($paymentSummary['total_athletes'] ?? 0)) ?></dd>
+                                        </div>
+                                    </dl>
+
+                                    <?php if ($amountDueCents > 0) : ?>
+                                        <div class="sepa-payment-layout">
+                                            <div>
+                                                <h4><?= e(__('events.payment_info')) ?></h4>
+                                                <dl class="sepa-payment-details">
+                                                    <div>
+                                                        <dt><?= e(__('events.payment_account_holder')) ?></dt>
+                                                        <dd><?= e((string) ($paymentInfo['account_holder'] ?? '')) ?></dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt><?= e(__('events.payment_iban')) ?></dt>
+                                                        <dd><?= e((string) ($paymentInfo['iban'] ?? '')) ?></dd>
+                                                    </div>
+                                                    <?php if (!empty($paymentInfo['bic'])) : ?>
+                                                        <div>
+                                                            <dt><?= e(__('events.payment_bic')) ?></dt>
+                                                            <dd><?= e((string) $paymentInfo['bic']) ?></dd>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <div>
+                                                        <dt><?= e(__('events.payment_reason')) ?></dt>
+                                                        <dd><?= e((string) ($paymentSummary['payment_reason'] ?? '')) ?></dd>
+                                                    </div>
+                                                </dl>
+                                            </div>
+
+                                            <?php if (!empty($paymentSummary['qr_code_data_uri'])) : ?>
+                                                <figure class="epc-qr-code">
+                                                    <img
+                                                        src="<?= e((string) $paymentSummary['qr_code_data_uri']) ?>"
+                                                        alt="<?= e(__('events.payment_qr_code_alt')) ?>"
+                                                        width="240"
+                                                        height="240"
+                                                    >
+                                                    <figcaption>
+                                                        <strong><?= e(__('events.payment_qr_code')) ?></strong><br>
+                                                        <?= e(__('events.payment_qr_code_help')) ?>
+                                                    </figcaption>
+                                                </figure>
+                                            <?php else : ?>
+                                                <p class="notice notice-error">
+                                                    <?= e(__('events.payment_qr_code_unavailable')) ?>
+                                                </p>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php else : ?>
+                                        <p class="notice success"><?= e(__('events.payment_not_required')) ?></p>
+                                    <?php endif; ?>
+                                </section>
+                            <?php endif; ?>
                         </form>
                     <?php endif; ?>
                 </div>
@@ -145,9 +347,11 @@
                     }
                 });
 
-                saveBtn.disabled = !hasChanges;
+                if (saveBtn) {
+                    saveBtn.disabled = !hasChanges;
+                }
                 if (changeIndicator) {
-                    changeIndicator.style.display = hasChanges ? 'inline' : 'none';
+                    changeIndicator.hidden = !hasChanges;
                 }
             }
 

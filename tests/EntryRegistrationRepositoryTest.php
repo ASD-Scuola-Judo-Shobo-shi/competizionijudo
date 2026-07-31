@@ -40,9 +40,15 @@ final class EntryRegistrationRepositoryTest extends TestCase
         $this->insertAthlete(301, 201);
         $this->insertEvent(101, false);
 
-        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::Registered, $result);
+        self::assertSame(
+            ['Standard', 1500],
+            $this->database->query(
+                'SELECT registration_option_name, registration_fee_cents FROM entries'
+            )->fetch(PDO::FETCH_NUM)
+        );
     }
 
     public function testForeignAthleteIsRejectedWithoutAnInsert(): void
@@ -50,7 +56,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
         $this->insertAthlete(302, 202);
         $this->insertEvent(101, false);
 
-        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 302, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 302, 501, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
     }
@@ -59,9 +65,31 @@ final class EntryRegistrationRepositoryTest extends TestCase
     {
         $this->insertEvent(101, false);
 
-        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 999, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 999, 501, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
+    }
+
+    public function testOptionFromOutsideTheEventIsRejectedWithoutAnInsert(): void
+    {
+        $this->insertAthlete(301, 201);
+        $this->insertEvent(101, false);
+        $this->database->exec(
+            "INSERT INTO event_registration_options (
+                id, event_id, name, fee_cents, is_default, is_active, sort_order
+             ) VALUES (999, 202, 'Foreign option', 2500, 1, 1, 0)"
+        );
+
+        $result = (new EntryRegistrationRepository($this->database))->register(
+            101,
+            201,
+            301,
+            999,
+            '2026-06-28'
+        );
+
+        self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM entries')->fetchColumn());
     }
 
     public function testDuplicateConstraintViolationReturnsAlreadyRegistered(): void
@@ -70,7 +98,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
         $this->insertEvent(101, false);
         $this->insertEntry(101, 201, 301);
 
-        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AlreadyRegistered, $result);
     }
@@ -81,7 +109,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
         $this->insertEvent(101, false, maxParticipants: 10);
         $this->insertEntries(101, 201, 10);
 
-        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::CapacityExceeded, $result);
     }
@@ -91,7 +119,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
         $this->insertAthlete(301, 201);
         $this->insertEvent(101, false);
 
-        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::Registered, $result);
     }
@@ -101,7 +129,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
         $this->insertAthlete(301, 201, '2014-12-31');
         $this->insertEvent(101, false, '2026-01-01', type: 'only_precompetitive');
 
-        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2025-12-31');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2025-12-31');
 
         self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
     }
@@ -111,7 +139,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
         $this->insertAthlete(301, 201, '2015-01-01');
         $this->insertEvent(101, false, '2026-06-29', type: 'only_competitive');
 
-        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2026-06-28');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2026-06-28');
 
         self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
     }
@@ -121,7 +149,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
         $this->insertAthlete(301, 201, '2014-12-31');
         $this->insertEvent(101, false, '2026-01-01', type: 'only_competitive');
 
-        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, '2025-12-31');
+        $result = (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2025-12-31');
 
         self::assertSame(EntryRegistrationResult::Registered, $result);
     }
@@ -201,7 +229,21 @@ final class EntryRegistrationRepositoryTest extends TestCase
                 event_id INTEGER NOT NULL,
                 club_id INTEGER NOT NULL,
                 athlete_id INTEGER NOT NULL,
+                registration_option_id INTEGER NOT NULL DEFAULT 501,
+                registration_option_name TEXT NOT NULL DEFAULT \'Standard\',
+                registration_fee_cents INTEGER NOT NULL DEFAULT 1500,
                 UNIQUE (event_id, club_id, athlete_id)
+            )'
+        );
+        $this->database->exec(
+            'CREATE TABLE event_registration_options (
+                id INTEGER PRIMARY KEY,
+                event_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                fee_cents INTEGER NOT NULL,
+                is_default INTEGER NOT NULL,
+                is_active INTEGER NOT NULL,
+                sort_order INTEGER NOT NULL
             )'
         );
         $this->database->exec(
@@ -251,6 +293,11 @@ final class EntryRegistrationRepositoryTest extends TestCase
             1,
             $closed ? 1 : 0
         ]);
+        $this->database->prepare(
+            'INSERT OR IGNORE INTO event_registration_options (
+                id, event_id, name, fee_cents, is_default, is_active, sort_order
+             ) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        )->execute([501, $eventId, 'Standard', 1500, 1, 1, 0]);
     }
 
     private function insertEntry(int $eventId, int $clubId, int $athleteId): void
