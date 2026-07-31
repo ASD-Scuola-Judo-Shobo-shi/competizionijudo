@@ -72,6 +72,21 @@ final class ClubInputValidator
         return $errors;
     }
 
+    /** @return list<string> Translation keys for fields editable from the club table. */
+    public static function summaryErrors(
+        string $name,
+        string $federalCode,
+        string $email,
+        string $phone
+    ): array {
+        $errors = self::identityErrors($name, $federalCode, $email);
+        if (trim($phone) === '') {
+            $errors[] = 'validation.club_phone_required';
+        }
+
+        return $errors;
+    }
+
     /** @return list<string> */
     private static function identityErrors(string $name, string $federalCode, string $email): array
     {

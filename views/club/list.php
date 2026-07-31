@@ -10,26 +10,43 @@
     <?php if (empty($clubs)) : ?>
         <p><?= e(__('club.no_clubs')) ?></p>
     <?php else : ?>
-        <ol class="public-club-list">
-            <?php foreach ($clubs as $i => $club) : ?>
-                <?php $isCurrentClub = $loggedInClubId !== null && $club->id === $loggedInClubId; ?>
-                <li class="public-club-card<?= $isCurrentClub ? ' public-club-card--current' : '' ?>">
-                    <div class="public-club-card__meta">
-                        <span class="public-club-index">#<?= e((string) ($pagination['offset'] + $i + 1)) ?></span>
-                        <?php if ($isCurrentClub) : ?>
-                            <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <h4><?= e($club->name) ?></h4>
-                    <dl class="public-club-details">
-                        <div>
-                            <dt><?= e(__('club.federal_code')) ?></dt>
-                            <dd><span class="public-club-code"><?= e($club->federal_code) ?></span></dd>
-                        </div>
-                    </dl>
-                </li>
-            <?php endforeach; ?>
-        </ol>
+        <div
+            class="table-scroll table-scroll--responsive public-club-table-wrap"
+            role="region"
+            tabindex="0"
+            aria-label="<?= e(__('club.list.title')) ?>"
+        >
+            <table class="table-full responsive-table public-club-table">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col"><?= e(__('club.list.table_name')) ?></th>
+                        <th scope="col"><?= e(__('club.list.table_code')) ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($clubs as $i => $club) : ?>
+                        <?php $isCurrentClub = $loggedInClubId !== null && $club->id === $loggedInClubId; ?>
+                        <tr<?= $isCurrentClub ? ' class="club-row--current"' : '' ?>>
+                            <td data-label="#">
+                                <span class="public-club-index">
+                                    #<?= e((string) ($pagination['offset'] + $i + 1)) ?>
+                                </span>
+                            </td>
+                            <td class="public-club-table__name" data-label="<?= e(__('club.name')) ?>">
+                                <?= e($club->name) ?>
+                                <?php if ($isCurrentClub) : ?>
+                                    <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="<?= e(__('club.federal_code')) ?>">
+                                <span class="public-club-code"><?= e($club->federal_code) ?></span>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     <?php endif; ?>
     <?= $pagination['links'] ?>
 </section>

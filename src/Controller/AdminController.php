@@ -34,6 +34,9 @@ use PDOException;
 
 final class AdminController extends Controller
 {
+    private const CLUB_INLINE_FEEDBACK = 'admin_club_inline_feedback';
+    private const EVENT_INLINE_FEEDBACK = 'admin_event_inline_feedback';
+
     private ?AuthenticationThrottle $authenticationThrottle;
     private ?PasswordResetRepository $passwordResetRepository;
     private readonly EventUploadStorage $eventUploadStorage;
@@ -137,7 +140,73 @@ final class AdminController extends Controller
             'clubs' => $clubs,
             'athlete_counts' => Athlete::countsByClubIds($clubIds),
             'pagination' => $pagination,
+            'inlineFeedback' => Session::pullFlash(self::CLUB_INLINE_FEEDBACK),
         ]);
+    }
+
+    public function updateClubInline(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+
+        validate_csrf((string) $request->post('csrf_token'));
+        $clubId = (int) $request->post('club_id');
+        $page = max(1, (int) $request->post('page', 1));
+        $redirect = '/admin/clubs?page=' . $page . '#club-row-' . $clubId;
+        $club = $clubId > 0 ? Club::findById($clubId) : null;
+
+        if ($club === null) {
+            Session::flash(self::CLUB_INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __('tables.update_failed'),
+            ]);
+
+            return $this->redirect($redirect, 303);
+        }
+
+        $data = [
+            'name' => trim((string) $request->post('name')),
+            'federal_code' => trim((string) $request->post('federal_code')),
+            'email' => Club::normalizeEmail((string) $request->post('email')),
+            'phone' => trim((string) $request->post('phone')),
+            'contact_first_name' => trim((string) $request->post('contact_first_name')),
+            'contact_last_name' => trim((string) $request->post('contact_last_name')),
+        ];
+        $errors = ClubInputValidator::summaryErrors(
+            $data['name'],
+            $data['federal_code'],
+            $data['email'],
+            $data['phone']
+        );
+
+        if ($errors !== []) {
+            Session::flash(self::CLUB_INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __($errors[0]),
+            ]);
+
+            return $this->redirect($redirect, 303);
+        }
+
+        try {
+            Club::update($club->id, $data);
+            Session::flash(self::CLUB_INLINE_FEEDBACK, [
+                'type' => 'success',
+                'message' => __('tables.update_success'),
+            ]);
+        } catch (\Throwable $exception) {
+            $this->reportFailure('admin.club_inline_save_failed', $exception, $request);
+            Session::flash(self::CLUB_INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => $exception instanceof PDOException && (string) $exception->getCode() === '23000'
+                    ? __('errors.account_conflict')
+                    : __('tables.update_failed'),
+            ]);
+        }
+
+        return $this->redirect($redirect, 303);
     }
 
     public function clubAthletes(Request $request): Response
@@ -245,7 +314,97 @@ final class AdminController extends Controller
             'events' => $events,
             'entry_counts' => $counts,
             'pagination' => $pagination,
+            'inlineFeedback' => Session::pullFlash(self::EVENT_INLINE_FEEDBACK),
         ]);
+    }
+
+    public function updateEventInline(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+
+        validate_csrf((string) $request->post('csrf_token'));
+        $eventId = (int) $request->post('event_id');
+        $page = max(1, (int) $request->post('page', 1));
+        $redirect = '/admin/events?page=' . $page . '#event-row-' . $eventId;
+        $event = $eventId > 0 ? Event::findById($eventId) : null;
+
+        if ($event === null) {
+            Session::flash(self::EVENT_INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __('tables.update_failed'),
+            ]);
+
+            return $this->redirect($redirect, 303);
+        }
+
+        $data = [
+            'name' => trim((string) $request->post('name')),
+            'date' => trim((string) $request->post('date')),
+            'location' => trim((string) $request->post('location')),
+            'type' => trim((string) $request->post('type')),
+            'max_participants' => trim((string) $request->post('max_participants')),
+            'published' => $request->post('published') === '1' ? 1 : 0,
+            'closed' => $request->post('closed') === '1' ? 1 : 0,
+        ];
+        $errors = EventInputValidator::errors(
+            $data['name'],
+            $data['date'],
+            $data['location'],
+            $event->registration_deadline,
+            $data['type'],
+            [],
+            $data['max_participants']
+        );
+
+        if ($errors !== []) {
+            Session::flash(self::EVENT_INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __($errors[0]),
+            ]);
+
+            return $this->redirect($redirect, 303);
+        }
+
+        $db = Database::connection();
+        try {
+            $db->beginTransaction();
+            $db->prepare(
+                'UPDATE events
+                 SET name = ?, date = ?, location = ?, type = ?, max_participants = ?, published = ?, closed = ?
+                 WHERE id = ?'
+            )->execute([
+                $data['name'],
+                $data['date'],
+                $data['location'],
+                $data['type'],
+                $data['max_participants'] !== '' ? (int) $data['max_participants'] : null,
+                $data['published'],
+                $data['closed'],
+                $event->id,
+            ]);
+            if (!$event->closed && $data['closed'] === 1) {
+                (new EntrySnapshotService($db))->consolidate($event->id, $data['date']);
+            }
+            $db->commit();
+            Session::flash(self::EVENT_INLINE_FEEDBACK, [
+                'type' => 'success',
+                'message' => __('tables.update_success'),
+            ]);
+        } catch (\Throwable $exception) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $this->reportFailure('admin.event_inline_save_failed', $exception, $request);
+            Session::flash(self::EVENT_INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __('tables.update_failed'),
+            ]);
+        }
+
+        return $this->redirect($redirect, 303);
     }
 
     public function deleteEvent(Request $request): Response

@@ -152,6 +152,60 @@ final class ClubAreaCsrfTest extends TestCase
         self::assertSame(302, $response->status());
     }
 
+    public function testInlineAthleteUpdateRejectsMissingTokenBeforeDatabaseAccess(): void
+    {
+        $this->setDatabase($this->databaseExpectingNoAccess());
+        Session::set('club_id', 201);
+        $request = $this->inlineAthleteRequest(['csrf_token' => null]);
+
+        try {
+            (new ClubAreaController($this->view, $request))->updateAthleteInline($request);
+            self::fail('Expected CSRF validation to reject the inline athlete mutation.');
+        } catch (HttpException $exception) {
+            self::assertSame(419, $exception->statusCode());
+        }
+    }
+
+    public function testValidTokenAllowsOwnedInlineAthleteUpdate(): void
+    {
+        $athleteStatement = $this->statementFetching($this->athleteRow());
+        $updateStatement = $this->createMock(PDOStatement::class);
+        $updateStatement->expects(self::once())
+            ->method('execute')
+            ->with(self::callback(static fn(array $values): bool =>
+                $values[0] === 'Updated'
+                && $values[1] === 'Athlete'
+                && $values[4] === 52.5
+                && $values[8] === 301
+                && $values[9] === 201))
+            ->willReturn(true);
+
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::exactly(2))
+            ->method('prepare')
+            ->willReturnCallback(
+                static function (string $sql) use ($athleteStatement, $updateStatement): PDOStatement {
+                    return match (true) {
+                        str_starts_with($sql, 'SELECT * FROM athletes') => $athleteStatement,
+                        str_starts_with($sql, 'UPDATE athletes') => $updateStatement,
+                        default => throw new RuntimeException('Unexpected synthetic fixture query.'),
+                    };
+                }
+            );
+        $database->expects(self::never())->method('query');
+        $this->setDatabase($database);
+        Session::set('club_id', 201);
+        $request = $this->inlineAthleteRequest(['csrf_token' => csrf_token()]);
+
+        $response = (new ClubAreaController($this->view, $request))->updateAthleteInline($request);
+
+        self::assertSame(303, $response->status());
+        self::assertSame(
+            '/clubs/area?view=list&page=2&event=101#athlete-row-301',
+            $response->headers()['Location']
+        );
+    }
+
     public function testApplicationConvertsCsrfExceptionToControlled419Response(): void
     {
         $application = new Application(dirname(__DIR__));
@@ -182,6 +236,25 @@ final class ClubAreaCsrfTest extends TestCase
             'belt' => 'white',
             'membership_number' => 'SYNTHETIC-001',
             'notes' => '',
+        ], $overrides));
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function inlineAthleteRequest(array $overrides): Request
+    {
+        return new Request('POST', '/clubs/athletes/update-inline', [], array_merge([
+            'athlete_id' => '301',
+            'last_name' => 'Updated',
+            'first_name' => 'Athlete',
+            'gender' => 'M',
+            'birth_date' => '2010-01-01',
+            'weight_kg' => '52.5',
+            'belt' => 'white',
+            'membership_number' => 'SYNTHETIC-001',
+            'notes' => 'Updated inline',
+            'return_view' => 'list',
+            'page' => '2',
+            'event' => '101',
         ], $overrides));
     }
 

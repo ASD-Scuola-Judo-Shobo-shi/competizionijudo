@@ -40,6 +40,7 @@ return static function (App\Core\Router $router): void {
 
     $router->get('/clubs/area', [ClubAreaController::class, 'index'], AuthContext::CLUB);
     $router->post('/clubs/area', [ClubAreaController::class, 'index'], AuthContext::CLUB);
+    $router->post('/clubs/athletes/update-inline', [ClubAreaController::class, 'updateAthleteInline'], AuthContext::CLUB);
     $router->post('/clubs/delete-athlete', [ClubAreaController::class, 'deleteAthlete'], AuthContext::CLUB);
     $router->get('/clubs/athletes-export', [ClubAreaController::class, 'exportAthletes'], AuthContext::CLUB);
     $router->post('/clubs/athletes-import', [ClubAreaController::class, 'importAthletes'], AuthContext::CLUB);
@@ -58,10 +59,12 @@ return static function (App\Core\Router $router): void {
     $router->get('/admin/clubs', [\App\Controller\AdminController::class, 'manageClubs'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/athletes', [\App\Controller\AdminController::class, 'clubAthletes'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/athletes/export', [\App\Controller\AdminController::class, 'exportClubAthletes'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/clubs/update-inline', [\App\Controller\AdminController::class, 'updateClubInline'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/delete', [\App\Controller\AdminController::class, 'deleteClub'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/add', [\App\Controller\AdminController::class, 'addEvent'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/add', [\App\Controller\AdminController::class, 'addEvent'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events', [\App\Controller\AdminController::class, 'manageEvents'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/events/update-inline', [\App\Controller\AdminController::class, 'updateEventInline'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/export', [\App\Controller\AdminController::class, 'exportEventEntries'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/delete', [\App\Controller\AdminController::class, 'deleteEvent'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/edit', [\App\Controller\AdminController::class, 'editClub'], AuthContext::ADMINISTRATOR);

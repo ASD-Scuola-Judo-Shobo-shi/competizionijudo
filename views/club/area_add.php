@@ -2,6 +2,7 @@
 /** @var \App\Model\Athlete|null $edit */
 /** @var list<string> $errors */
 /** @var array<int, array{age_below: int|null, type: string, weight_category: string}> $athleteCategories */
+/** @var array{type: string, message: string}|null $athleteInlineFeedback */
 ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <div class="card">
@@ -220,6 +221,11 @@
 
 <div class="card">
     <h3><?= e(__('club.area.athlete_archive')) ?> <span class="count-badge"><?= e((string) ($pagination['total'] ?? 0)) ?></span></h3>
+    <?php if (is_array($athleteInlineFeedback ?? null)) : ?>
+        <div class="notice<?= $athleteInlineFeedback['type'] === 'success' ? ' success' : '' ?>" role="status">
+            <?= e($athleteInlineFeedback['message']) ?>
+        </div>
+    <?php endif; ?>
     <div
         class="table-scroll table-scroll--wide table-scroll--responsive"
         role="region"
@@ -229,14 +235,14 @@
         <table class="table-full responsive-table">
         <thead>
             <tr>
-                <th scope="col"><?= e(__('club.area.athlete')) ?></th>
-                <th scope="col"><?= e(__('club.area.gender')) ?></th>
-                <th scope="col"><?= e(__('club.area.birth')) ?></th>
-                <th scope="col"><?= e(__('club.area.age_class')) ?></th>
-                <th scope="col"><?= e(__('club.area.weight')) ?></th>
-                <th scope="col"><?= e(__('club.area.belt')) ?></th>
-                <th scope="col"><?= e(__('club.area.weight_category')) ?></th>
-                <th scope="col"><?= e(__('club.area.actions')) ?></th>
+                <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
+                <th scope="col"><?= e(__('club.area.table.gender')) ?></th>
+                <th scope="col"><?= e(__('club.area.table.birth')) ?></th>
+                <th scope="col"><?= e(__('club.area.table.age_class')) ?></th>
+                <th scope="col"><?= e(__('club.area.table.weight')) ?></th>
+                <th scope="col"><?= e(__('club.area.table.belt')) ?></th>
+                <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
+                <th scope="col"><?= e(__('club.area.table.actions')) ?></th>
             </tr>
         </thead>
         <tbody>
@@ -246,35 +252,74 @@
                 </tr>
             <?php else : ?>
                 <?php foreach ($athletes as $athlete) : ?>
-                    <tr>
+                    <?php
+                    $_inlineFormId = 'athlete-inline-add-' . $athlete->id;
+                    $_gender = $athlete->genderEnum();
+                    ?>
+                    <tr id="athlete-row-<?= (int) $athlete->id ?>" data-inline-edit-row>
                         <td data-label="<?= e(__('club.area.athlete')) ?>">
-                            <?= e($athlete->last_name . ' ' . $athlete->first_name) ?>
+                            <span data-inline-display><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></span>
+                            <span class="inline-edit-stack" data-inline-editor>
+                                <input class="inline-edit-control" form="<?= e($_inlineFormId) ?>" name="last_name" value="<?= e($athlete->last_name) ?>" aria-label="<?= e(__('club.area.last_name')) ?>" placeholder="<?= e(__('club.area.last_name')) ?>" required>
+                                <input class="inline-edit-control" form="<?= e($_inlineFormId) ?>" name="first_name" value="<?= e($athlete->first_name) ?>" aria-label="<?= e(__('club.area.first_name')) ?>" placeholder="<?= e(__('club.area.first_name')) ?>" required>
+                            </span>
                         </td>
                         <td data-label="<?= e(__('club.area.gender')) ?>">
-                            <?= $athlete->genderIconLabel(App\Localization::getLocale()) ?>
+                            <span data-inline-display>
+                                <span class="table-density-value" title="<?= e($athlete->genderLabel()) ?>"><?= e($_gender?->icon() ?? $athlete->gender) ?></span>
+                                <span class="card-density-value"><?= e($athlete->genderIconLabel()) ?></span>
+                            </span>
+                            <select class="inline-edit-control" data-inline-editor form="<?= e($_inlineFormId) ?>" name="gender" aria-label="<?= e(__('club.area.gender')) ?>" required>
+                                <?php foreach (App\Model\Gender::cases() as $_genderOption) : ?>
+                                    <option value="<?= e($_genderOption->value) ?>" <?= $athlete->gender === $_genderOption->value ? 'selected' : '' ?>><?= e($_genderOption->iconLabel()) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </td>
-                        <td data-label="<?= e(__('club.area.birth')) ?>"><?= e($athlete->birth_date) ?></td>
+                        <td data-label="<?= e(__('club.area.birth')) ?>">
+                            <time data-inline-display datetime="<?= e($athlete->birth_date) ?>"><?= e($athlete->birth_date) ?></time>
+                            <input class="inline-edit-control inline-edit-control--date" data-inline-editor form="<?= e($_inlineFormId) ?>" type="date" name="birth_date" value="<?= e($athlete->birth_date) ?>" aria-label="<?= e(__('club.area.birth_date')) ?>" required>
+                        </td>
                         <td data-label="<?= e(__('club.area.age_class')) ?>"><?= e($athlete->ageClassLabel()) ?></td>
                         <td data-label="<?= e(__('club.area.weight')) ?>">
-                            <?= e($athlete->weight_kg !== null
-                                ? (string) $athlete->weight_kg
-                                : __('events.no_weight')) ?>
+                            <span data-inline-display>
+                                <?= e($athlete->weight_kg !== null
+                                    ? (string) $athlete->weight_kg
+                                    : __('events.no_weight')) ?>
+                            </span>
+                            <input class="inline-edit-control inline-edit-control--number" data-inline-editor form="<?= e($_inlineFormId) ?>" type="number" name="weight_kg" min="0.1" max="200" step="0.1" value="<?= e($athlete->weight_kg !== null ? (string) $athlete->weight_kg : '') ?>" aria-label="<?= e(__('club.area.weight_kg')) ?>" required>
                         </td>
                         <td data-label="<?= e(__('club.area.belt')) ?>">
-                            <?php require dirname(__DIR__) . '/components/belt_badge.php'; ?>
+                            <span data-inline-display><?php require dirname(__DIR__) . '/components/belt_badge.php'; ?></span>
+                            <select class="inline-edit-control" data-inline-editor form="<?= e($_inlineFormId) ?>" name="belt" aria-label="<?= e(__('club.area.belt')) ?>" required>
+                                <?php foreach (App\Model\Belt::cases() as $_beltOption) : ?>
+                                    <option value="<?= e($_beltOption->value) ?>" <?= $athlete->belt === $_beltOption->value ? 'selected' : '' ?>><?= e($_beltOption->circleLabel()) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </td>
                         <td data-label="<?= e(__('club.area.weight_category')) ?>">
                             <?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?>
                         </td>
                         <td class="table-actions-cell" data-label="<?= e(__('club.area.actions')) ?>">
-                            <div class="table-actions">
-                                <a class="btn btn-sm table-action-icon" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>" aria-label="<?= e(__('club.area.edit')) ?>" title="<?= e(__('club.area.edit')) ?>">✏️</a>
+                            <div class="table-actions" data-inline-display>
+                                <button class="btn green table-action-button" type="button" data-inline-edit aria-label="<?= e(__('tables.edit_row')) ?>" title="<?= e(__('tables.edit_row')) ?>"><span aria-hidden="true">✏️</span><span class="table-action-label"><?= e(__('tables.edit_row')) ?></span></button>
+                                <a class="btn gray table-action-button" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
                                 <form method="post" action="<?= e(base_url('/clubs/delete-athlete?')) ?>" onsubmit="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="athlete_id" value="<?= e((string) $athlete->id) ?>">
-                                    <button class="btn btn-sm red table-action-icon" type="submit" aria-label="<?= e(__('club.area.delete')) ?>" title="<?= e(__('club.area.delete')) ?>">❌</button>
+                                    <button class="btn red table-action-button" type="submit" aria-label="<?= e(__('club.area.delete')) ?>" title="<?= e(__('club.area.delete')) ?>"><span aria-hidden="true">🗑️</span><span class="table-action-label"><?= e(__('club.area.delete')) ?></span></button>
                                 </form>
                             </div>
+                            <form id="<?= e($_inlineFormId) ?>" class="table-actions inline-edit-actions" data-inline-editor method="post" action="<?= e(base_url('/clubs/athletes/update-inline')) ?>">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="athlete_id" value="<?= (int) $athlete->id ?>">
+                                <input type="hidden" name="membership_number" value="<?= e($athlete->membership_number ?? '') ?>">
+                                <input type="hidden" name="notes" value="<?= e($athlete->notes ?? '') ?>">
+                                <input type="hidden" name="return_view" value="add">
+                                <input type="hidden" name="page" value="<?= (int) ($pagination['page'] ?? 1) ?>">
+                                <button class="btn green table-action-button" type="submit" aria-label="<?= e(__('tables.save')) ?>" title="<?= e(__('tables.save')) ?>"><span aria-hidden="true">💾</span><span class="table-action-label"><?= e(__('tables.save')) ?></span></button>
+                                <button class="btn gray table-action-button" type="button" data-inline-cancel aria-label="<?= e(__('tables.cancel')) ?>" title="<?= e(__('tables.cancel')) ?>"><span aria-hidden="true">↩️</span><span class="table-action-label"><?= e(__('tables.cancel')) ?></span></button>
+                                <a class="btn table-action-button" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
+                            </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>

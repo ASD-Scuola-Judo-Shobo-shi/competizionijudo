@@ -24,71 +24,81 @@
     <?php if (empty($athletes)) : ?>
         <p class="admin-list-empty"><?= e(__('admin.clubs.no_athletes')) ?></p>
     <?php else : ?>
-        <div class="admin-card-list admin-athlete-card-list" role="list">
-            <?php foreach ($athletes as $athlete) : ?>
-                <?php
-                $category = $athlete->categoryForEventDate();
-                $ageClass = $athlete->ageClassLabel(App\Localization::getLocale());
-                $weight = $athlete->weight_kg !== null
-                    ? rtrim(rtrim(number_format($athlete->weight_kg, 2, '.', ''), '0'), '.')
-                    : null;
-                ?>
-                <article class="admin-entity-card admin-athlete-card" role="listitem">
-                    <header class="admin-entity-card__header">
-                        <h3><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></h3>
-                        <?php if ($athlete->membership_number !== null) : ?>
-                            <span class="admin-code-badge"><?= e($athlete->membership_number) ?></span>
-                        <?php endif; ?>
-                    </header>
-
-                    <dl class="admin-entity-details">
-                        <div>
-                            <dt><?= e(__('club.area.gender')) ?></dt>
-                            <dd><?= e($athlete->genderIconLabel()) ?></dd>
-                        </div>
-                        <div>
-                            <dt><?= e(__('club.area.birth')) ?></dt>
-                            <dd><time datetime="<?= e($athlete->birth_date) ?>"><?= e($athlete->birth_date) ?></time></dd>
-                        </div>
-                        <div>
-                            <dt><?= e(__('club.area.age_class')) ?></dt>
-                            <dd><?= e($ageClass !== '' ? $ageClass : __('admin.common.not_available')) ?></dd>
-                        </div>
-                        <div>
-                            <dt><?= e(__('club.area.weight')) ?></dt>
-                            <dd>
+        <div
+            class="table-scroll table-scroll--wide table-scroll--responsive admin-list-table-wrap"
+            role="region"
+            tabindex="0"
+            aria-label="<?= e(__('admin.clubs.athletes_title', ['club' => $club->name])) ?>"
+        >
+            <table class="table-full responsive-table admin-list-table">
+                <thead>
+                    <tr>
+                        <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
+                        <th scope="col"><?= e(__('club.area.table.gender')) ?></th>
+                        <th scope="col"><?= e(__('club.area.table.birth')) ?></th>
+                        <th scope="col"><?= e(__('club.area.table.age_class')) ?></th>
+                        <th scope="col"><?= e(__('club.area.table.weight')) ?></th>
+                        <th scope="col"><?= e(__('club.area.table.belt')) ?></th>
+                        <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
+                        <th scope="col"><?= e(__('club.area.table.membership_number')) ?></th>
+                        <th scope="col"><?= e(__('club.area.table.notes')) ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($athletes as $athlete) : ?>
+                        <?php
+                        $category = $athlete->categoryForEventDate();
+                        $ageClass = $athlete->ageClassLabel(App\Localization::getLocale());
+                        $gender = $athlete->genderEnum();
+                        $weight = $athlete->weight_kg !== null
+                            ? rtrim(rtrim(number_format($athlete->weight_kg, 2, '.', ''), '0'), '.')
+                            : null;
+                        ?>
+                        <tr>
+                            <td class="admin-list-table__primary" data-label="<?= e(__('club.area.athlete')) ?>">
+                                <?= e($athlete->last_name . ' ' . $athlete->first_name) ?>
+                            </td>
+                            <td data-label="<?= e(__('club.area.gender')) ?>">
+                                <span class="table-density-value" title="<?= e($athlete->genderLabel()) ?>">
+                                    <?= e($gender?->icon() ?? $athlete->gender) ?>
+                                </span>
+                                <span class="card-density-value"><?= e($athlete->genderIconLabel()) ?></span>
+                            </td>
+                            <td data-label="<?= e(__('club.area.birth')) ?>">
+                                <time datetime="<?= e($athlete->birth_date) ?>"><?= e($athlete->birth_date) ?></time>
+                            </td>
+                            <td data-label="<?= e(__('club.area.age_class')) ?>">
+                                <?= e($ageClass !== '' ? $ageClass : __('admin.common.not_available')) ?>
+                            </td>
+                            <td data-label="<?= e(__('club.area.weight')) ?>">
                                 <?= e($weight !== null
                                     ? __('admin.clubs.weight_value', ['weight' => $weight])
                                     : __('events.no_weight')) ?>
-                            </dd>
-                        </div>
-                        <div>
-                            <dt><?= e(__('club.area.belt')) ?></dt>
-                            <dd class="admin-belt-value">
-                                <?php require dirname(__DIR__) . '/components/belt_badge.php'; ?>
-                            </dd>
-                        </div>
-                        <div>
-                            <dt><?= e(__('club.area.weight_category')) ?></dt>
-                            <dd>
+                            </td>
+                            <td data-label="<?= e(__('club.area.belt')) ?>">
+                                <span class="admin-belt-value">
+                                    <?php require dirname(__DIR__) . '/components/belt_badge.php'; ?>
+                                </span>
+                            </td>
+                            <td data-label="<?= e(__('club.area.weight_category')) ?>">
                                 <?= e($category['weight_category'] !== ''
                                     ? $category['weight_category']
                                     : __('admin.common.not_available')) ?>
-                            </dd>
-                        </div>
-                        <div>
-                            <dt><?= e(__('club.area.membership_number')) ?></dt>
-                            <dd>
-                                <?= e($athlete->membership_number ?? __('admin.common.not_available')) ?>
-                            </dd>
-                        </div>
-                        <div class="admin-detail-wide">
-                            <dt><?= e(__('club.area.notes')) ?></dt>
-                            <dd><?= nl2br(e($athlete->notes ?? __('admin.common.not_available'))) ?></dd>
-                        </div>
-                    </dl>
-                </article>
-            <?php endforeach; ?>
+                            </td>
+                            <td data-label="<?= e(__('club.area.membership_number')) ?>">
+                                <?php if ($athlete->membership_number !== null) : ?>
+                                    <span class="admin-code-badge"><?= e($athlete->membership_number) ?></span>
+                                <?php else : ?>
+                                    <?= e(__('admin.common.not_available')) ?>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="<?= e(__('club.area.notes')) ?>">
+                                <?= nl2br(e($athlete->notes ?? __('admin.common.not_available'))) ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
     <?php endif; ?>
 

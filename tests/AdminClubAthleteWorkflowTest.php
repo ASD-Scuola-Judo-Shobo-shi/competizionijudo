@@ -52,19 +52,26 @@ final class AdminClubAthleteWorkflowTest extends TestCase
         $_GET = [];
     }
 
-    public function testClubAdministrationUsesCardsWithAthleteActionsAndCounts(): void
+    public function testClubAdministrationUsesAResponsiveTableWithActionsAndCounts(): void
     {
         $request = new Request('GET', '/admin/clubs');
 
         $response = (new AdminController($this->view, $request))->manageClubs($request);
 
         self::assertSame(200, $response->status());
-        self::assertStringContainsString('class="admin-card-list"', $response->content());
-        self::assertStringNotContainsString('<table', $response->content());
+        self::assertStringContainsString(
+            'class="table-full responsive-table admin-list-table"',
+            $response->content()
+        );
+        self::assertStringContainsString('class="table-actions admin-table-actions"', $response->content());
         self::assertStringContainsString('Synthetic Club', $response->content());
         self::assertStringContainsString('/admin/clubs/athletes?club_id=201', $response->content());
         self::assertStringContainsString('/admin/clubs/athletes/export?club_id=201', $response->content());
-        self::assertMatchesRegularExpression('/<strong>2<\/strong>\s*athletes in archive/', $response->content());
+        self::assertStringContainsString('action="/admin/clubs/update-inline"', $response->content());
+        self::assertStringContainsString('data-inline-edit', $response->content());
+        self::assertStringContainsString('<th scope="col">Code</th>', $response->content());
+        self::assertStringContainsString('data-label="Federal code"', $response->content());
+        self::assertMatchesRegularExpression('/title="2 athletes in archive">\s*2\s*<\/strong>/', $response->content());
     }
 
     public function testAdministratorCanSeeEveryFieldForOnlyTheSelectedClubsAthletes(): void
@@ -84,10 +91,14 @@ final class AdminClubAthleteWorkflowTest extends TestCase
         self::assertStringContainsString('class="belt-badge__knot"', $response->content());
         self::assertStringContainsString('Green / Blue', $response->content());
         self::assertStringNotContainsString('Foreign Athlete', $response->content());
-        self::assertStringNotContainsString('<table', $response->content());
+        self::assertStringContainsString(
+            'class="table-full responsive-table admin-list-table"',
+            $response->content()
+        );
+        self::assertStringContainsString('data-label="Notes"', $response->content());
     }
 
-    public function testEventAdministrationUsesCardsWithFullyVisibleStatusAndCounts(): void
+    public function testEventAdministrationUsesAResponsiveTableWithStatusAndCounts(): void
     {
         $event = new Event(
             101,
@@ -112,15 +123,73 @@ final class AdminClubAthleteWorkflowTest extends TestCase
             'pagination' => paginate(1, 1, 100),
         ], $this->layoutData('/admin/events')));
 
-        self::assertStringContainsString('class="admin-card-list"', $html);
-        self::assertStringNotContainsString('<table', $html);
+        self::assertStringContainsString('class="table-full responsive-table admin-list-table"', $html);
+        self::assertStringContainsString('class="table-actions admin-table-actions"', $html);
+        self::assertStringContainsString('action="/admin/events/update-inline"', $html);
+        self::assertStringContainsString('<th scope="col">Show</th>', $html);
+        self::assertStringContainsString('data-label="Visibility"', $html);
+        self::assertStringContainsString('👁️', $html);
         self::assertStringContainsString('Synthetic International Tournament', $html);
         self::assertStringContainsString('A venue with a long mobile-visible name', $html);
         self::assertStringContainsString('Competitive', $html);
         self::assertStringContainsString('Visible', $html);
         self::assertStringContainsString('Open', $html);
-        self::assertMatchesRegularExpression('/Registered clubs<\/dt>\s*<dd><strong>3<\/strong>/', $html);
-        self::assertMatchesRegularExpression('/Registered athletes<\/dt>\s*<dd><strong>17<\/strong>/', $html);
+        self::assertMatchesRegularExpression('/data-label="Registered clubs">\s*<strong>3<\/strong>/', $html);
+        self::assertMatchesRegularExpression('/data-label="Registered athletes">\s*<strong>17<\/strong>/', $html);
+    }
+
+    public function testAdministratorCanUpdateClubSummaryFieldsInline(): void
+    {
+        $request = new Request('POST', '/admin/clubs/update-inline', [], [
+            'csrf_token' => csrf_token(),
+            'club_id' => '201',
+            'page' => '1',
+            'name' => 'Updated Synthetic Club',
+            'federal_code' => 'UPDATED-201',
+            'email' => 'UPDATED@example.test',
+            'phone' => '+39 070 7654321',
+            'contact_first_name' => 'Updated',
+            'contact_last_name' => 'Contact',
+        ]);
+
+        $response = (new AdminController($this->view, $request))->updateClubInline($request);
+        $club = $this->database->query('SELECT * FROM clubs WHERE id = 201')->fetch();
+
+        self::assertSame(303, $response->status());
+        self::assertSame('/admin/clubs?page=1#club-row-201', $response->headers()['Location']);
+        self::assertIsArray($club);
+        self::assertSame('Updated Synthetic Club', $club['name']);
+        self::assertSame('updated@example.test', $club['email']);
+        self::assertSame('Via Roma 1', $club['address_line']);
+        self::assertSame('["FIJLKAM","CSEN"]', $club['affiliation']);
+    }
+
+    public function testAdministratorCanUpdateEventSummaryFieldsInline(): void
+    {
+        $request = new Request('POST', '/admin/events/update-inline', [], [
+            'csrf_token' => csrf_token(),
+            'event_id' => '101',
+            'page' => '2',
+            'name' => 'Updated Tournament',
+            'date' => '2026-09-13',
+            'location' => 'Updated Venue',
+            'type' => 'precompetitive_and_competitive',
+            'max_participants' => '150',
+            'published' => '0',
+            'closed' => '0',
+        ]);
+
+        $response = (new AdminController($this->view, $request))->updateEventInline($request);
+        $event = $this->database->query('SELECT * FROM events WHERE id = 101')->fetch();
+
+        self::assertSame(303, $response->status());
+        self::assertSame('/admin/events?page=2#event-row-101', $response->headers()['Location']);
+        self::assertIsArray($event);
+        self::assertSame('Updated Tournament', $event['name']);
+        self::assertSame('Updated Venue', $event['location']);
+        self::assertSame('precompetitive_and_competitive', $event['type']);
+        self::assertSame(150, $event['max_participants']);
+        self::assertSame(0, $event['published']);
     }
 
     public function testEveryRemainingTableHasACompleteMobilePresentation(): void
@@ -140,11 +209,34 @@ final class AdminClubAthleteWorkflowTest extends TestCase
             '/@media \(max-width: 768px\).*?\.event-info-table td:first-child\s*\{[^}]*white-space:\s*normal;/s',
             $css
         );
+        self::assertStringContainsString('.table-scroll--responsive.is-card-view', $css);
+        self::assertStringContainsString('.is-card-view .responsive-table tbody td::before', $css);
+        self::assertStringContainsString('.table-density-value', $css);
+        self::assertStringContainsString('.card-density-value', $css);
+        self::assertStringContainsString('.table-action-label', $css);
+        self::assertMatchesRegularExpression(
+            '/\.is-card-view \.responsive-table \.table-action-label\s*\{[^}]*display:\s*inline;/s',
+            $css
+        );
+        self::assertMatchesRegularExpression(
+            '/@media \(max-width: 768px\).*?\.responsive-table \.table-action-label\s*\{[^}]*display:\s*inline;/s',
+            $css
+        );
+
+        $layout = file_get_contents($root . '/views/layouts/app.php');
+        self::assertIsString($layout);
+        self::assertStringContainsString('competizioni-judo-table-view', $layout);
+        self::assertStringContainsString("querySelectorAll('.table-scroll--responsive')", $layout);
+        self::assertStringContainsString("toolbar.className = 'table-view-toolbar'", $layout);
 
         foreach (
             [
+                'views/admin/club_athletes.php',
+                'views/admin/manage_clubs.php',
+                'views/admin/manage_events.php',
                 'views/club/area_add.php',
                 'views/club/area_list.php',
+                'views/club/list.php',
                 'views/events/entries.php',
                 'views/events/register.php',
             ] as $template
@@ -160,6 +252,21 @@ final class AdminClubAthleteWorkflowTest extends TestCase
 
         foreach (
             [
+                'views/admin/manage_clubs.php' => '/admin/clubs/update-inline',
+                'views/admin/manage_events.php' => '/admin/events/update-inline',
+                'views/club/area_add.php' => '/clubs/athletes/update-inline',
+                'views/club/area_list.php' => '/clubs/athletes/update-inline',
+            ] as $template => $endpoint
+        ) {
+            $source = file_get_contents($root . '/' . $template);
+            self::assertIsString($source);
+            self::assertStringContainsString('data-inline-edit', $source, $template);
+            self::assertStringContainsString($endpoint, $source, $template);
+            self::assertStringContainsString('class="table-action-label"', $source, $template);
+        }
+
+        foreach (
+            [
                 'views/events/details.php',
                 'views/events/register.php',
             ] as $template
@@ -168,12 +275,6 @@ final class AdminClubAthleteWorkflowTest extends TestCase
             self::assertIsString($source);
             self::assertStringContainsString('class="event-info-table"', $source, $template);
         }
-
-        $publicClubList = file_get_contents($root . '/views/club/list.php');
-        self::assertIsString($publicClubList);
-        self::assertStringContainsString('class="public-club-list"', $publicClubList);
-        self::assertStringContainsString('class="public-club-card', $publicClubList);
-        self::assertStringNotContainsString('<table', $publicClubList);
     }
 
     public function testAdministratorCanExportOnlyTheSelectedClubsAthletes(): void
@@ -236,6 +337,25 @@ final class AdminClubAthleteWorkflowTest extends TestCase
                 belt TEXT NOT NULL,
                 membership_number TEXT,
                 notes TEXT
+            );
+            CREATE TABLE events (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                date TEXT NOT NULL,
+                location TEXT NOT NULL,
+                organizer TEXT NOT NULL,
+                registration_deadline TEXT,
+                type TEXT NOT NULL,
+                description TEXT,
+                notes TEXT,
+                poster_file TEXT,
+                info_file TEXT,
+                published INTEGER NOT NULL,
+                closed INTEGER NOT NULL,
+                max_participants INTEGER,
+                sepa_account_holder TEXT,
+                sepa_iban TEXT,
+                sepa_bic TEXT
             )'
         );
     }
@@ -314,6 +434,28 @@ final class AdminClubAthleteWorkflowTest extends TestCase
             'yellow',
             'FOREIGN-001',
             'Hidden',
+        ]);
+
+        $this->database->prepare(
+            'INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([
+            101,
+            'Synthetic Tournament',
+            '2026-09-12',
+            'Synthetic Venue',
+            'Synthetic Organizer',
+            '2026-09-10',
+            'only_competitive',
+            null,
+            null,
+            null,
+            null,
+            1,
+            0,
+            120,
+            null,
+            null,
+            null,
         ]);
     }
 

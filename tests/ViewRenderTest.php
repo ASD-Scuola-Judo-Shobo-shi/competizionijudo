@@ -15,7 +15,7 @@ use PHPUnit\Framework\TestCase;
 
 final class ViewRenderTest extends TestCase
 {
-    public function testPublicClubDirectoryUsesFullyVisibleCards(): void
+    public function testPublicClubDirectoryUsesAResponsiveTableWithMobileCardRows(): void
     {
         Localization::setLocale('en');
         $_GET = [];
@@ -45,12 +45,12 @@ final class ViewRenderTest extends TestCase
             'pagination' => paginate(2, 1, 50),
         ], $this->layoutData('/clubs')));
 
-        self::assertStringContainsString('class="public-club-list"', $html);
-        self::assertSame(2, substr_count($html, '<li class="public-club-card'));
-        self::assertStringNotContainsString('<table', $html);
+        self::assertStringContainsString('class="table-full responsive-table public-club-table"', $html);
+        self::assertStringContainsString('class="table-scroll table-scroll--responsive public-club-table-wrap"', $html);
+        self::assertSame(2, substr_count($html, '<td data-label="#">'));
         self::assertStringContainsString('A very long synthetic club name that must remain visible on a phone', $html);
         self::assertStringContainsString('LONG-FEDERAL-CODE-201', $html);
-        self::assertStringContainsString('public-club-card--current', $html);
+        self::assertStringContainsString('class="club-row--current"', $html);
         self::assertStringContainsString('Your club', $html);
     }
 

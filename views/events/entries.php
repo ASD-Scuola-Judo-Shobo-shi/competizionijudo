@@ -356,12 +356,12 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
                     <table class="responsive-table">
                         <thead>
                             <tr>
-                                <th scope="col"><?= e(__('club.area.age_class')) ?></th>
-                                <th scope="col"><?= e(__('club.area.weight_category')) ?></th>
-                                <th scope="col"><?= e(__('club.area.athlete')) ?></th>
-                                <th scope="col"><?= e(__('club.area.club')) ?></th>
-                                <th scope="col"><?= e(__('club.area.gender')) ?></th>
-                                <th scope="col"><?= e(__('club.area.belt')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.age_class')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.club')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.gender')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.belt')) ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -388,7 +388,13 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
                                         <?php endif; ?>
                                     </td>
                                     <td data-label="<?= e(__('club.area.gender')) ?>">
-                                        <?= e(__('gender.' . $athlete['gender'])) ?>
+                                        <?php $gender = \App\Model\Gender::tryFromValue((string) $athlete['gender']); ?>
+                                        <span class="table-density-value" title="<?= e(__('gender.' . $athlete['gender'])) ?>">
+                                            <?= e($gender?->icon() ?? (string) $athlete['gender']) ?>
+                                        </span>
+                                        <span class="card-density-value">
+                                            <?= e($gender?->iconLabel() ?? __('gender.' . $athlete['gender'])) ?>
+                                        </span>
                                     </td>
                                     <td data-label="<?= e(__('club.area.belt')) ?>">
                                         <?= e(\App\Model\Belt::tryFromValue($athlete['belt'])?->label(\App\Localization::getLocale()) ?? $athlete['belt']) ?>

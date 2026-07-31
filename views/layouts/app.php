@@ -239,6 +239,114 @@
                 setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true);
             });
         }());
+
+        (function () {
+            const wrappers = [...document.querySelectorAll('.table-scroll--responsive')];
+            const storageKey = 'competizioni-judo-table-view';
+            const labels = {
+                cards: <?= json_encode(__('tables.show_cards'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                table: <?= json_encode(__('tables.show_table'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
+            };
+            let preferredView = 'table';
+
+            try {
+                preferredView = window.localStorage.getItem(storageKey) === 'cards' ? 'cards' : 'table';
+            } catch (error) {
+                // Use the default table view when browser storage is unavailable.
+            }
+
+            function applyView(wrapper, button, icon, label, view) {
+                const cardView = view === 'cards';
+                wrapper.classList.toggle('is-card-view', cardView);
+                button.setAttribute('aria-pressed', cardView ? 'true' : 'false');
+                button.setAttribute('aria-label', cardView ? labels.table : labels.cards);
+                button.setAttribute('title', cardView ? labels.table : labels.cards);
+                icon.textContent = cardView ? '▦' : '▤';
+                label.textContent = cardView ? labels.table : labels.cards;
+            }
+
+            wrappers.forEach((wrapper) => {
+                const toolbar = document.createElement('div');
+                const button = document.createElement('button');
+                const icon = document.createElement('span');
+                const label = document.createElement('span');
+
+                toolbar.className = 'table-view-toolbar';
+                button.className = 'table-view-toggle';
+                button.type = 'button';
+                icon.setAttribute('aria-hidden', 'true');
+                button.append(icon, label);
+                toolbar.append(button);
+                wrapper.prepend(toolbar);
+                applyView(wrapper, button, icon, label, preferredView);
+
+                button.addEventListener('click', () => {
+                    preferredView = wrapper.classList.contains('is-card-view') ? 'table' : 'cards';
+                    wrappers.forEach((candidate) => {
+                        const candidateButton = candidate.querySelector('.table-view-toggle');
+                        if (candidateButton === null) {
+                            return;
+                        }
+                        const children = candidateButton.querySelectorAll('span');
+                        applyView(candidate, candidateButton, children[0], children[1], preferredView);
+                    });
+                    try {
+                        window.localStorage.setItem(storageKey, preferredView);
+                    } catch (error) {
+                        // Keep the preference for this page only.
+                    }
+                });
+            });
+
+            function closeEditor(row, reset) {
+                if (reset) {
+                    row.querySelector('form.inline-edit-actions')?.reset();
+                }
+                row.classList.remove('is-inline-editing');
+            }
+
+            document.addEventListener('click', (event) => {
+                const editButton = event.target.closest('[data-inline-edit]');
+                if (editButton !== null) {
+                    const row = editButton.closest('[data-inline-edit-row]');
+                    if (row === null) {
+                        return;
+                    }
+                    document.querySelectorAll('[data-inline-edit-row].is-inline-editing').forEach((openRow) => {
+                        if (openRow !== row) {
+                            closeEditor(openRow, true);
+                        }
+                    });
+                    row.classList.add('is-inline-editing');
+                    const firstControl = row.querySelector(
+                        'input[data-inline-editor], select[data-inline-editor], textarea[data-inline-editor], '
+                        + '[data-inline-editor] input, [data-inline-editor] select, [data-inline-editor] textarea'
+                    );
+                    firstControl?.focus();
+                    return;
+                }
+
+                const cancelButton = event.target.closest('[data-inline-cancel]');
+                if (cancelButton !== null) {
+                    const row = cancelButton.closest('[data-inline-edit-row]');
+                    if (row !== null) {
+                        closeEditor(row, true);
+                        row.querySelector('[data-inline-edit]')?.focus();
+                    }
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key !== 'Escape') {
+                    return;
+                }
+                const row = event.target.closest('[data-inline-edit-row].is-inline-editing');
+                if (row !== null) {
+                    closeEditor(row, true);
+                    row.querySelector('[data-inline-edit]')?.focus();
+                }
+            });
+        }());
     </script>
 
 </body>

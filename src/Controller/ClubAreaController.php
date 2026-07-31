@@ -20,6 +20,7 @@ use App\Validation\AthleteInputValidator;
 final class ClubAreaController extends Controller
 {
     private const IMPORT_REPORT_LIMIT = 200;
+    private const INLINE_FEEDBACK = 'athlete_inline_feedback';
 
     public function index(Request $request): Response
     {
@@ -43,6 +44,10 @@ final class ClubAreaController extends Controller
         $athleteCsvFeedback = Session::pullFlash('athlete_csv_feedback');
         if (!is_array($athleteCsvFeedback)) {
             $athleteCsvFeedback = null;
+        }
+        $athleteInlineFeedback = Session::pullFlash(self::INLINE_FEEDBACK);
+        if (!is_array($athleteInlineFeedback)) {
+            $athleteInlineFeedback = null;
         }
         $view = (string) ($request->query('view') ?? 'list');
 
@@ -120,6 +125,7 @@ final class ClubAreaController extends Controller
                 'pagination' => $pagination,
                 'athleteCategories' => $this->athleteCategories($athletes),
                 'athleteCsvFeedback' => $athleteCsvFeedback,
+                'athleteInlineFeedback' => $athleteInlineFeedback,
                 'csvReturnView' => 'add',
             ]);
         }
@@ -150,6 +156,7 @@ final class ClubAreaController extends Controller
             'pagination' => $pagination,
             'athleteCategories' => $this->athleteCategories($athletes),
             'athleteCsvFeedback' => $athleteCsvFeedback,
+            'athleteInlineFeedback' => $athleteInlineFeedback,
             'csvReturnView' => 'list',
         ]);
     }
@@ -166,6 +173,82 @@ final class ClubAreaController extends Controller
         }
 
         return $categories;
+    }
+
+    public function updateAthleteInline(Request $request): Response
+    {
+        Session::start();
+        $clubId = AuthContext::clubId();
+        if ($clubId === null) {
+            return $this->redirect('/clubs/login');
+        }
+
+        validate_csrf((string) $request->post('csrf_token'));
+        $athleteId = (int) $request->post('athlete_id');
+        $returnView = $request->post('return_view') === 'add' ? 'add' : 'list';
+        $page = max(1, (int) $request->post('page', 1));
+        $eventFilter = max(0, (int) $request->post('event', 0));
+        $redirect = '/clubs/area?view=' . $returnView . '&page=' . $page;
+        if ($returnView === 'list' && $eventFilter > 0) {
+            $redirect .= '&event=' . $eventFilter;
+        }
+        $redirect .= '#athlete-row-' . $athleteId;
+
+        $athlete = $athleteId > 0 ? Athlete::findById($athleteId, (int) $clubId) : null;
+        if ($athlete === null) {
+            Session::flash(self::INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __('tables.update_failed'),
+            ]);
+
+            return $this->redirect($redirect, 303);
+        }
+
+        $weightInput = trim((string) $request->post('weight_kg'));
+        $data = [
+            'club_id' => (int) $clubId,
+            'last_name' => trim((string) $request->post('last_name')),
+            'first_name' => trim((string) $request->post('first_name')),
+            'gender' => trim((string) $request->post('gender')),
+            'birth_date' => trim((string) $request->post('birth_date')),
+            'weight_kg' => (float) str_replace(',', '.', $weightInput),
+            'belt' => trim((string) $request->post('belt')),
+            'membership_number' => trim((string) $request->post('membership_number')),
+            'notes' => trim((string) $request->post('notes')),
+        ];
+        $errors = AthleteInputValidator::errors(
+            $data['last_name'],
+            $data['first_name'],
+            $data['gender'],
+            $data['birth_date'],
+            $weightInput,
+            $data['belt']
+        );
+
+        if ($errors !== []) {
+            Session::flash(self::INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __($errors[0]),
+            ]);
+
+            return $this->redirect($redirect, 303);
+        }
+
+        try {
+            $athlete->update($data);
+            Session::flash(self::INLINE_FEEDBACK, [
+                'type' => 'success',
+                'message' => __('tables.update_success'),
+            ]);
+        } catch (\Throwable $exception) {
+            $this->reportFailure('club.athlete_inline_save_failed', $exception, $request);
+            Session::flash(self::INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __('tables.update_failed'),
+            ]);
+        }
+
+        return $this->redirect($redirect, 303);
     }
 
     public function deleteAthlete(Request $request): Response

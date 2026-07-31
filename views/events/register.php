@@ -101,12 +101,12 @@ foreach ($athletes as $candidateAthlete) {
                                 <table class="responsive-table">
                                 <thead>
                                     <tr>
-                                        <th scope="col"><?= e(__('admin.dashboard.actions')) ?></th>
-                                        <th scope="col"><?= e(__('club.area.athlete')) ?></th>
-                                        <th scope="col"><?= e(__('club.area.birth')) ?></th>
-                                        <th scope="col"><?= e(__('club.area.weight')) ?></th>
-                                        <th scope="col"><?= e(__('club.area.weight_category')) ?></th>
-                                        <th scope="col"><?= e(__('events.registration_option_current')) ?></th>
+                                        <th scope="col"><?= e(__('tables.select')) ?></th>
+                                        <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
+                                        <th scope="col"><?= e(__('club.area.table.birth')) ?></th>
+                                        <th scope="col"><?= e(__('club.area.table.weight')) ?></th>
+                                        <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
+                                        <th scope="col"><?= e(__('tables.option')) ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
