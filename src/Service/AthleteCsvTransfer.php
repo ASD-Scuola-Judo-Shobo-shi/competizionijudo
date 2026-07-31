@@ -178,10 +178,17 @@ final class AthleteCsvTransfer
         );
         [$headerPosition, $columns] = $this->findHeader($table);
         $athletes = Athlete::findByClub($clubId);
-        [$athletesById, $athletesByMembership, $athletesByIdentity] = $this->athleteIndexes($athletes);
+        [
+            $athletesById,
+            $athletesByMembership,
+            $athletesByIdentity,
+            $athletesByName,
+        ] = $this->athleteIndexes($athletes);
         $operations = [];
         $issues = [];
+        $reconciliations = [];
         $seenMemberships = [];
+        $seenNames = [];
         $seenTargets = [];
         $dataRows = 0;
 
@@ -234,10 +241,51 @@ final class AthleteCsvTransfer
                 );
                 continue;
             }
+
+            $nameMatches = $this->matchingAthletesByName($row, $athletesByName);
+            if ($matches === [] && $nameMatches !== []) {
+                $issues[] = new AthleteImportIssue(
+                    $sourceRow['number'],
+                    $identity,
+                    'club.area.csv.duplicate_name',
+                    [],
+                    [],
+                    count($nameMatches) === 1 ? $nameMatches[0]->id : null
+                );
+                continue;
+            }
+            if ($matches !== []) {
+                $matchedId = $matches[0]->id;
+                $hasNameConflict = array_filter(
+                    $nameMatches,
+                    static fn(Athlete $athlete): bool => $athlete->id !== $matchedId
+                ) !== [];
+                if ($hasNameConflict) {
+                    $issues[] = new AthleteImportIssue(
+                        $sourceRow['number'],
+                        $identity,
+                        'club.area.csv.ambiguous_match'
+                    );
+                    continue;
+                }
+            }
             $existing = $matches[0] ?? null;
+            $importedIdentity = $this->athleteIdentity($row);
+            $reconcilesIdentity = $existing !== null
+                && $importedIdentity !== null
+                && $importedIdentity === $this->athleteIdentity([
+                    'last_name' => $existing->last_name,
+                    'first_name' => $existing->first_name,
+                    'birth_date' => $existing->birth_date,
+                ]);
 
             $missingFields = $this->missingRequiredFields($row);
-            if ($missingFields !== [] && $existing !== null && !$mergeIncomplete) {
+            if (
+                $missingFields !== []
+                && $existing !== null
+                && !$reconcilesIdentity
+                && !$mergeIncomplete
+            ) {
                 $issues[] = new AthleteImportIssue(
                     $sourceRow['number'],
                     $identity,
@@ -249,10 +297,12 @@ final class AthleteCsvTransfer
                 continue;
             }
 
+            $resolutions = [];
             if ($existing !== null) {
                 if (
                     $row['membership_number'] === ''
                     && !ctype_digit($row['athlete_id'])
+                    && !$reconcilesIdentity
                     && !$mergeIncomplete
                 ) {
                     $issues[] = new AthleteImportIssue(
@@ -266,7 +316,11 @@ final class AthleteCsvTransfer
                     continue;
                 }
 
-                $row = $this->mergeWithExisting($row, $raw, $existing);
+                if ($reconcilesIdentity) {
+                    [$row, $resolutions] = $this->reconcileWithExisting($row, $existing);
+                } else {
+                    $row = $this->mergeWithExisting($row, $raw, $existing);
+                }
             } elseif ($row['membership_number'] === '') {
                 $issues[] = new AthleteImportIssue(
                     $sourceRow['number'],
@@ -289,6 +343,16 @@ final class AthleteCsvTransfer
                 continue;
             }
 
+            $name = $this->nameIdentity($row);
+            if ($name !== null && isset($seenNames[$name])) {
+                $issues[] = new AthleteImportIssue(
+                    $sourceRow['number'],
+                    $identity,
+                    'club.area.csv.duplicate_name'
+                );
+                continue;
+            }
+
             if ($existing !== null && isset($seenTargets[$existing->id])) {
                 $issues[] = new AthleteImportIssue(
                     $sourceRow['number'],
@@ -303,6 +367,17 @@ final class AthleteCsvTransfer
             if ($existing !== null) {
                 $seenTargets[$existing->id] = true;
             }
+            if ($name !== null) {
+                $seenNames[$name] = true;
+            }
+            if ($existing !== null && $resolutions !== []) {
+                $reconciliations[] = new AthleteImportReconciliation(
+                    $sourceRow['number'],
+                    $identity,
+                    $existing->id,
+                    $resolutions
+                );
+            }
 
             $operations[] = [
                 'existing' => $existing,
@@ -314,7 +389,7 @@ final class AthleteCsvTransfer
             throw new AthleteCsvImportException('club.area.csv.no_rows');
         }
 
-        return $this->persist($operations, $issues, $clubId);
+        return $this->persist($operations, $issues, $reconciliations, $clubId);
     }
 
     /**
@@ -392,8 +467,8 @@ final class AthleteCsvTransfer
 
         return [
             'athlete_id' => trim($raw['athlete_id'] ?? ''),
-            'last_name' => $this->cleanText($raw['last_name'] ?? ''),
-            'first_name' => $this->cleanText($raw['first_name'] ?? ''),
+            'last_name' => $this->titleCaseName($raw['last_name'] ?? ''),
+            'first_name' => $this->titleCaseName($raw['first_name'] ?? ''),
             'gender' => $gender?->value ?? trim($genderInput),
             'birth_date' => $this->birthDate($raw['birth_date'] ?? '', $excelDate1904),
             'weight_kg' => $this->weight($raw['weight_kg'] ?? ''),
@@ -408,7 +483,8 @@ final class AthleteCsvTransfer
      * @return array{
      *     0: array<int, Athlete>,
      *     1: array<string, list<Athlete>>,
-     *     2: array<string, list<Athlete>>
+     *     2: array<string, list<Athlete>>,
+     *     3: array<string, list<Athlete>>
      * }
      */
     private function athleteIndexes(array $athletes): array
@@ -416,6 +492,7 @@ final class AthleteCsvTransfer
         $byId = [];
         $byMembership = [];
         $byIdentity = [];
+        $byName = [];
 
         foreach ($athletes as $athlete) {
             $byId[$athlete->id] = $athlete;
@@ -424,18 +501,25 @@ final class AthleteCsvTransfer
                 $byMembership[$membership][] = $athlete;
             }
 
-            $identity = $this->naturalIdentity([
+            $identity = $this->athleteIdentity([
                 'last_name' => $athlete->last_name,
                 'first_name' => $athlete->first_name,
-                'gender' => $athlete->gender,
                 'birth_date' => $athlete->birth_date,
             ]);
             if ($identity !== null) {
                 $byIdentity[$identity][] = $athlete;
             }
+
+            $name = $this->nameIdentity([
+                'last_name' => $athlete->last_name,
+                'first_name' => $athlete->first_name,
+            ]);
+            if ($name !== null) {
+                $byName[$name][] = $athlete;
+            }
         }
 
-        return [$byId, $byMembership, $byIdentity];
+        return [$byId, $byMembership, $byIdentity, $byName];
     }
 
     /**
@@ -461,37 +545,73 @@ final class AthleteCsvTransfer
         array $athletesByMembership,
         array $athletesByIdentity
     ): array {
+        $matches = [];
         if (ctype_digit($row['athlete_id'])) {
             $athleteId = (int) $row['athlete_id'];
+            if (!isset($athletesById[$athleteId])) {
+                return [];
+            }
 
-            return isset($athletesById[$athleteId]) ? [$athletesById[$athleteId]] : [];
+            $matches[$athleteId] = $athletesById[$athleteId];
+        } else {
+            $membership = $this->identityValue($row['membership_number']);
+            if ($membership !== '') {
+                foreach ($athletesByMembership[$membership] ?? [] as $athlete) {
+                    $matches[$athlete->id] = $athlete;
+                }
+            }
         }
 
-        $membership = $this->identityValue($row['membership_number']);
-        if ($membership !== '') {
-            return $athletesByMembership[$membership] ?? [];
+        $identity = $this->athleteIdentity($row);
+        if ($identity !== null) {
+            foreach ($athletesByIdentity[$identity] ?? [] as $athlete) {
+                $matches[$athlete->id] = $athlete;
+            }
         }
 
-        $identity = $this->naturalIdentity($row);
+        return array_values($matches);
+    }
 
-        return $identity !== null ? ($athletesByIdentity[$identity] ?? []) : [];
+    /**
+     * @param array<string, string> $row
+     * @param array<string, list<Athlete>> $athletesByName
+     * @return list<Athlete>
+     */
+    private function matchingAthletesByName(array $row, array $athletesByName): array
+    {
+        $name = $this->nameIdentity($row);
+
+        return $name !== null ? ($athletesByName[$name] ?? []) : [];
     }
 
     /**
      * @param array<string, string> $row
      */
-    private function naturalIdentity(array $row): ?string
+    private function athleteIdentity(array $row): ?string
     {
-        $lastName = $this->identityValue($row['last_name'] ?? '');
-        $firstName = $this->identityValue($row['first_name'] ?? '');
-        $gender = strtoupper(trim($row['gender'] ?? ''));
+        $name = $this->nameIdentity($row);
         $birthDate = trim($row['birth_date'] ?? '');
 
-        if ($lastName === '' || $firstName === '' || $gender === '' || $birthDate === '') {
+        if ($name === null || $birthDate === '') {
             return null;
         }
 
-        return implode("\0", [$lastName, $firstName, $gender, $birthDate]);
+        return $name . "\0" . $birthDate;
+    }
+
+    /**
+     * @param array<string, string> $row
+     */
+    private function nameIdentity(array $row): ?string
+    {
+        $lastName = $this->identityValue($row['last_name'] ?? '');
+        $firstName = $this->identityValue($row['first_name'] ?? '');
+
+        if ($lastName === '' || $firstName === '') {
+            return null;
+        }
+
+        return implode("\0", [$lastName, $firstName]);
     }
 
     /**
@@ -538,8 +658,8 @@ final class AthleteCsvTransfer
     private function mergeWithExisting(array $row, array $raw, Athlete $existing): array
     {
         $fallbacks = [
-            'last_name' => $existing->last_name,
-            'first_name' => $existing->first_name,
+            'last_name' => $this->titleCaseName($existing->last_name),
+            'first_name' => $this->titleCaseName($existing->first_name),
             'gender' => $existing->gender,
             'birth_date' => $existing->birth_date,
             'weight_kg' => $this->formatWeight($existing->weight_kg),
@@ -558,6 +678,199 @@ final class AthleteCsvTransfer
         }
 
         return $row;
+    }
+
+    /**
+     * @param array{
+     *     athlete_id: string,
+     *     last_name: string,
+     *     first_name: string,
+     *     gender: string,
+     *     birth_date: string,
+     *     weight_kg: string,
+     *     belt: string,
+     *     membership_number: string,
+     *     notes: string
+     * } $row
+     * @return array{0: array<string, string>, 1: array<string, string>}
+     */
+    private function reconcileWithExisting(array $row, Athlete $existing): array
+    {
+        $resolutions = [];
+        $lastName = $this->titleCaseName($existing->last_name);
+        $firstName = $this->titleCaseName($existing->first_name);
+        if ($existing->last_name !== $row['last_name']) {
+            $resolutions['last_name'] = 'normalized';
+        }
+        if ($existing->first_name !== $row['first_name']) {
+            $resolutions['first_name'] = 'normalized';
+        }
+        $row['last_name'] = $lastName;
+        $row['first_name'] = $firstName;
+
+        [$row['gender'], $resolution] = $this->reconcileDatabaseValue(
+            $existing->gender,
+            $row['gender']
+        );
+        if ($resolution !== null) {
+            $resolutions['gender'] = $resolution;
+        }
+
+        [$row['weight_kg'], $resolution] = $this->reconcileWeight(
+            $existing->weight_kg,
+            $row['weight_kg']
+        );
+        if ($resolution !== null) {
+            $resolutions['weight_kg'] = $resolution;
+        }
+
+        [$row['belt'], $resolution] = $this->reconcileBelt($existing->belt, $row['belt']);
+        if ($resolution !== null) {
+            $resolutions['belt'] = $resolution;
+        }
+
+        [$row['membership_number'], $resolution] = $this->reconcileText(
+            $existing->membership_number,
+            $row['membership_number'],
+            ' / ',
+            80,
+            true
+        );
+        if ($resolution !== null) {
+            $resolutions['membership_number'] = $resolution;
+        }
+
+        [$row['notes'], $resolution] = $this->reconcileText(
+            $existing->notes,
+            $row['notes'],
+            "\n",
+            65_535,
+            false
+        );
+        if ($resolution !== null) {
+            $resolutions['notes'] = $resolution;
+        }
+
+        return [$row, $resolutions];
+    }
+
+    /** @return array{0: string, 1: string|null} */
+    private function reconcileDatabaseValue(string $existing, string $imported): array
+    {
+        if ($existing === '') {
+            return [$imported, $imported !== '' ? 'used_imported' : null];
+        }
+        if ($imported === '') {
+            return [$existing, 'used_database'];
+        }
+        if ($existing === $imported) {
+            return [$existing, null];
+        }
+
+        return [$existing, 'kept_database'];
+    }
+
+    /** @return array{0: string, 1: string|null} */
+    private function reconcileWeight(?float $existing, string $imported): array
+    {
+        if ($existing === null) {
+            return [$imported, $imported !== '' ? 'used_imported' : null];
+        }
+
+        $databaseWeight = $this->formatWeight($existing);
+        if ($imported === '') {
+            return [$databaseWeight, 'used_database'];
+        }
+        if (is_numeric($imported) && $this->sameWeight($existing, (float) $imported)) {
+            return [$databaseWeight, null];
+        }
+
+        return [$databaseWeight, 'kept_database'];
+    }
+
+    /** @return array{0: string, 1: string|null} */
+    private function reconcileBelt(string $existing, string $imported): array
+    {
+        if ($existing === '') {
+            return [$imported, $imported !== '' ? 'used_imported' : null];
+        }
+        if ($imported === '') {
+            return [$existing, 'used_database'];
+        }
+        if ($existing === $imported) {
+            return [$existing, null];
+        }
+
+        $existingRank = $this->beltRank($existing);
+        $importedRank = $this->beltRank($imported);
+        if ($existingRank === null || $importedRank === null) {
+            return [$existing, 'kept_database'];
+        }
+
+        return [
+            $importedRank > $existingRank ? $imported : $existing,
+            'higher_belt',
+        ];
+    }
+
+    /** @return array{0: string, 1: string|null} */
+    private function reconcileText(
+        ?string $existing,
+        string $imported,
+        string $separator,
+        int $maximumLength,
+        bool $caseInsensitive
+    ): array {
+        $existing = $existing !== null && trim($existing) !== '' ? trim($existing) : null;
+        $imported = trim($imported);
+        $imported = $imported !== '' ? $imported : null;
+
+        if ($existing === null) {
+            return [$imported ?? '', $imported !== null ? 'used_imported' : null];
+        }
+        if ($imported === null) {
+            return [$existing, 'used_database'];
+        }
+
+        if ($this->containsTextValue($existing, $imported, $separator, $caseInsensitive)) {
+            return [$existing, null];
+        }
+        $combined = $this->containsTextValue($imported, $existing, $separator, $caseInsensitive)
+            ? $imported
+            : $existing . $separator . $imported;
+        if ($this->length($combined) > $maximumLength) {
+            return [$existing, 'kept_database'];
+        }
+
+        return [$combined, 'combined'];
+    }
+
+    private function containsTextValue(
+        string $container,
+        string $value,
+        string $separator,
+        bool $caseInsensitive
+    ): bool {
+        $container = $separator . $container . $separator;
+        $value = $separator . $value . $separator;
+        if ($caseInsensitive) {
+            $container = mb_strtolower($container, 'UTF-8');
+            $value = mb_strtolower($value, 'UTF-8');
+        }
+
+        return str_contains($container, $value);
+    }
+
+    private function beltRank(string $value): ?int
+    {
+        $belt = Belt::tryFromValue($value);
+        if ($belt === null) {
+            return null;
+        }
+
+        $rank = array_search($belt, Belt::cases(), true);
+
+        return is_int($rank) ? $rank : null;
     }
 
     /**
@@ -654,10 +967,12 @@ final class AthleteCsvTransfer
      *     }
      * }> $operations
      * @param list<AthleteImportIssue> $issues
+     * @param list<AthleteImportReconciliation> $reconciliations
      */
     private function persist(
         array $operations,
         array $issues,
+        array $reconciliations,
         int $clubId
     ): AthleteCsvImportResult {
         $database = Database::connection();
@@ -727,7 +1042,13 @@ final class AthleteCsvTransfer
                 $database->commit();
             }
 
-            return new AthleteCsvImportResult($created, $updated, $unchanged, $issues);
+            return new AthleteCsvImportResult(
+                $created,
+                $updated,
+                $unchanged,
+                $issues,
+                $reconciliations
+            );
         } catch (\Throwable $exception) {
             if ($ownsTransaction && $database->inTransaction()) {
                 $database->rollBack();
@@ -855,6 +1176,11 @@ final class AthleteCsvTransfer
     private function cleanText(string $value): string
     {
         return trim(preg_replace('/\s+/u', ' ', $value) ?? $value);
+    }
+
+    private function titleCaseName(string $value): string
+    {
+        return mb_convert_case($this->cleanText($value), MB_CASE_TITLE, 'UTF-8');
     }
 
     private function identityValue(string $value): string

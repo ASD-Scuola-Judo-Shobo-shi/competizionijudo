@@ -15,6 +15,7 @@ use App\Model\Entry;
 use App\Service\AthleteCsvImportException;
 use App\Service\AthleteCsvTransfer;
 use App\Service\AthleteImportIssue;
+use App\Service\AthleteImportReconciliation;
 use App\Validation\AthleteInputValidator;
 
 final class ClubAreaController extends Controller
@@ -336,7 +337,6 @@ final class ClubAreaController extends Controller
                 'unchanged' => (string) $result->unchanged,
                 'skipped' => (string) $result->skipped(),
             ];
-            $reportedIssues = array_slice($result->issues, 0, self::IMPORT_REPORT_LIMIT);
             $report = array_map(
                 fn(AthleteImportIssue $issue): array => [
                     'row' => $issue->row,
@@ -344,14 +344,30 @@ final class ClubAreaController extends Controller
                     'message' => $this->importIssueMessage($issue),
                     'existing_athlete_id' => $issue->existingAthleteId,
                 ],
-                $reportedIssues
+                $result->issues
             );
-            $omitted = max(0, $result->skipped() - count($reportedIssues));
+            foreach ($result->reconciliations as $reconciliation) {
+                $report[] = [
+                    'row' => $reconciliation->row,
+                    'identity' => $reconciliation->identity,
+                    'message' => $this->reconciliationMessage($reconciliation),
+                    'existing_athlete_id' => $reconciliation->existingAthleteId,
+                ];
+            }
+            usort(
+                $report,
+                static fn(array $left, array $right): int => $left['row'] <=> $right['row']
+            );
+            $reportCount = count($report);
+            $report = array_slice($report, 0, self::IMPORT_REPORT_LIMIT);
+            $omitted = max(0, $reportCount - count($report));
 
             if ($result->issues === []) {
                 $this->flashCsvFeedback(
                     'success',
-                    __('club.area.csv.import_success', $replacements)
+                    __('club.area.csv.import_success', $replacements),
+                    $report,
+                    $omitted
                 );
             } else {
                 $hasImportedRows = $result->created + $result->updated + $result->unchanged > 0;
@@ -408,6 +424,20 @@ final class ClubAreaController extends Controller
         }
 
         return __($issue->translationKey, $replacements);
+    }
+
+    private function reconciliationMessage(AthleteImportReconciliation $reconciliation): string
+    {
+        $details = [];
+        foreach ($reconciliation->resolutions as $field => $resolution) {
+            $details[] = __('club.area.csv.headers.' . $field)
+                . ': '
+                . __('club.area.csv.reconciliation.' . $resolution);
+        }
+
+        return __('club.area.csv.reconciled', [
+            'details' => implode('; ', $details),
+        ]);
     }
 
     /**

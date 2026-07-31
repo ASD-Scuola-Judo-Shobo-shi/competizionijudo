@@ -79,7 +79,7 @@ final class AthleteCsvWorkflowTest extends TestCase
             'Membership number',
             'Notes',
         ], $rows[0]);
-        self::assertSame('ExistingOwn', $rows[1][0]);
+        self::assertSame('Existingown', $rows[1][0]);
         self::assertSame("'=SUM(1,1)", $rows[1][7]);
         self::assertStringNotContainsString('HiddenForeign', $response->content());
 
@@ -130,7 +130,7 @@ final class AthleteCsvWorkflowTest extends TestCase
 
         self::assertSame(302, $response->status());
         self::assertSame('/clubs/area?view=list', $response->headers()['Location']);
-        self::assertSame('UpdatedOwn', $this->database->query(
+        self::assertSame('Updatedown', $this->database->query(
             'SELECT last_name FROM athletes WHERE id = 301'
         )->fetchColumn());
         self::assertSame('43.5', (string) $this->database->query(
@@ -205,6 +205,7 @@ final class AthleteCsvWorkflowTest extends TestCase
         self::assertSame(0, $second->created);
         self::assertSame(0, $second->updated);
         self::assertSame(1, $second->unchanged);
+        self::assertSame([], $second->reconciliations);
         self::assertSame(1, (int) $this->database->query(
             "SELECT COUNT(*) FROM athletes WHERE membership_number = 'ITA-001'"
         )->fetchColumn());
@@ -218,6 +219,203 @@ final class AthleteCsvWorkflowTest extends TestCase
         self::assertSame('2013-06-07', $athlete['birth_date']);
         self::assertSame('44.5', (string) $athlete['weight_kg']);
         self::assertSame('blue', $athlete['belt']);
+    }
+
+    public function testImportTitleCasesNamesAndDeduplicatesThemCaseInsensitively(): void
+    {
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+            'rOSSI,mARIA lUISA,F,2013-05-06,39,yellow,NAME-001',
+            'ROSSI,Maria Luisa,M,2012-04-05,45,green,NAME-002',
+        ]));
+
+        $result = (new AthleteCsvTransfer())->import($path, 201);
+
+        self::assertSame(1, $result->created);
+        self::assertSame(0, $result->updated);
+        self::assertCount(1, $result->issues);
+        self::assertSame('club.area.csv.duplicate_name', $result->issues[0]->translationKey);
+        $athlete = $this->database->query(
+            "SELECT * FROM athletes WHERE membership_number = 'NAME-001'"
+        )->fetch();
+        self::assertIsArray($athlete);
+        self::assertSame('Rossi', $athlete['last_name']);
+        self::assertSame('Maria Luisa', $athlete['first_name']);
+        self::assertSame(0, (int) $this->database->query(
+            "SELECT COUNT(*) FROM athletes WHERE membership_number = 'NAME-002'"
+        )->fetchColumn());
+    }
+
+    public function testExactDuplicateRowsInOneFileAreSkipped(): void
+    {
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+            'Rossi,Mario,M,2012-04-05,45,green,EXACT-001',
+            'Rossi,Mario,M,2012-04-05,45,green,EXACT-001',
+        ]));
+
+        $result = (new AthleteCsvTransfer())->import($path, 201);
+
+        self::assertSame(1, $result->created);
+        self::assertSame(0, $result->updated);
+        self::assertSame(1, $result->skipped());
+        self::assertSame('club.area.csv.duplicate_membership', $result->issues[0]->translationKey);
+        self::assertSame(1, (int) $this->database->query(
+            "SELECT COUNT(*) FROM athletes WHERE membership_number = 'EXACT-001'"
+        )->fetchColumn());
+    }
+
+    public function testAnArchivedNameCollisionWithAnotherBirthDateIsSkipped(): void
+    {
+        $athlete = $this->database->prepare(
+            'INSERT INTO athletes
+             (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt,
+              membership_number, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $athlete->execute([
+            303, 201, 'Rossi', 'Mario', 'M', '2012-04-05', 42.5, 'green',
+            'ARCHIVED-NAME', null,
+        ]);
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+            'ROSSI,MARIO,M,2013-04-05,45,green,NEW-COLLISION',
+        ]));
+
+        $result = (new AthleteCsvTransfer())->import($path, 201);
+
+        self::assertSame(0, $result->created);
+        self::assertSame(0, $result->updated);
+        self::assertSame(1, $result->skipped());
+        self::assertSame('club.area.csv.duplicate_name', $result->issues[0]->translationKey);
+        self::assertSame(303, $result->issues[0]->existingAthleteId);
+        self::assertSame(0, (int) $this->database->query(
+            "SELECT COUNT(*) FROM athletes WHERE membership_number = 'NEW-COLLISION'"
+        )->fetchColumn());
+    }
+
+    public function testImportMatchesArchivedNamesCaseInsensitively(): void
+    {
+        $athlete = $this->database->prepare(
+            'INSERT INTO athletes
+             (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt,
+              membership_number, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $athlete->execute([
+            303, 201, 'rOsSi', 'mArIo', 'M', '2012-04-05', 42.5, 'green',
+            'OLD-NAME', 'archived note',
+        ]);
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number,notes',
+            'ROSSI,MARIO,F,2012-04-05,50,blue,NEW-NAME,imported note',
+        ]));
+
+        $transfer = new AthleteCsvTransfer();
+        $result = $transfer->import($path, 201);
+
+        self::assertSame(0, $result->created);
+        self::assertSame(1, $result->updated);
+        self::assertSame([], $result->issues);
+        $imported = $this->database->query('SELECT * FROM athletes WHERE id = 303')->fetch();
+        self::assertIsArray($imported);
+        self::assertSame('Rossi', $imported['last_name']);
+        self::assertSame('Mario', $imported['first_name']);
+        self::assertSame('M', $imported['gender']);
+        self::assertSame('42.5', (string) $imported['weight_kg']);
+        self::assertSame('blue', $imported['belt']);
+        self::assertSame('OLD-NAME / NEW-NAME', $imported['membership_number']);
+        self::assertSame("archived note\nimported note", $imported['notes']);
+        self::assertCount(1, $result->reconciliations);
+        self::assertSame([
+            'last_name' => 'normalized',
+            'first_name' => 'normalized',
+            'gender' => 'kept_database',
+            'weight_kg' => 'kept_database',
+            'belt' => 'higher_belt',
+            'membership_number' => 'combined',
+            'notes' => 'combined',
+        ], $result->reconciliations[0]->resolutions);
+        self::assertSame(1, (int) $this->database->query(
+            "SELECT COUNT(*) FROM athletes
+             WHERE club_id = 201 AND lower(last_name) = 'rossi' AND lower(first_name) = 'mario'"
+        )->fetchColumn());
+
+        $repeated = $transfer->import($path, 201);
+        self::assertSame(0, $repeated->created);
+        self::assertSame(0, $repeated->updated);
+        self::assertSame(1, $repeated->unchanged);
+        self::assertSame([], $repeated->issues);
+        $repeatedAthlete = $this->database->query(
+            'SELECT membership_number, notes FROM athletes WHERE id = 303'
+        )->fetch();
+        self::assertIsArray($repeatedAthlete);
+        self::assertSame('OLD-NAME / NEW-NAME', $repeatedAthlete['membership_number']);
+        self::assertSame("archived note\nimported note", $repeatedAthlete['notes']);
+    }
+
+    public function testReconciliationUsesNonNullValuesAndKeepsTheHighestArchivedBelt(): void
+    {
+        $athlete = $this->database->prepare(
+            'INSERT INTO athletes
+             (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt,
+              membership_number, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $athlete->execute([
+            303, 201, 'Bianchi', 'Anna', 'F', '2011-03-04', null, 'black',
+            null, 'archived note',
+        ]);
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number,notes',
+            'BIANCHI,ANNA,F,2011-03-04,48,white,NEW-NULL,',
+        ]));
+
+        $result = (new AthleteCsvTransfer())->import($path, 201);
+
+        self::assertSame(0, $result->created);
+        self::assertSame(1, $result->updated);
+        self::assertSame([], $result->issues);
+        $imported = $this->database->query('SELECT * FROM athletes WHERE id = 303')->fetch();
+        self::assertIsArray($imported);
+        self::assertSame('48', (string) $imported['weight_kg']);
+        self::assertSame('black', $imported['belt']);
+        self::assertSame('NEW-NULL', $imported['membership_number']);
+        self::assertSame('archived note', $imported['notes']);
+        self::assertCount(1, $result->reconciliations);
+        self::assertSame('used_imported', $result->reconciliations[0]->resolutions['weight_kg']);
+        self::assertSame('higher_belt', $result->reconciliations[0]->resolutions['belt']);
+        self::assertSame(
+            'used_imported',
+            $result->reconciliations[0]->resolutions['membership_number']
+        );
+        self::assertSame('used_database', $result->reconciliations[0]->resolutions['notes']);
+    }
+
+    public function testReconciliationDetailsAreIncludedInTheControllerReport(): void
+    {
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number,notes',
+            'EXISTINGOWN,ATHLETE,M,2012-04-05,42.5,black,OWN-001,imported note',
+        ]));
+        $request = $this->importRequest($path);
+
+        $response = (new ClubAreaController($this->view, $request))->importAthletes($request);
+
+        self::assertSame(302, $response->status());
+        $feedback = Session::pullFlash('athlete_csv_feedback');
+        self::assertIsArray($feedback);
+        self::assertSame('success', $feedback['type']);
+        self::assertCount(1, $feedback['report']);
+        self::assertSame(301, $feedback['report'][0]['existing_athlete_id']);
+        self::assertStringContainsString(
+            'Belt: kept the higher belt',
+            (string) $feedback['report'][0]['message']
+        );
+        self::assertStringContainsString(
+            'Notes: combined the archived and imported values',
+            (string) $feedback['report'][0]['message']
+        );
     }
 
     public function testRowsWithoutAnIdentityAreReportedAndNeverDuplicated(): void
@@ -256,7 +454,7 @@ final class AthleteCsvWorkflowTest extends TestCase
         self::assertSame([], $imported->issues);
         $athlete = $this->database->query('SELECT * FROM athletes WHERE id = 301')->fetch();
         self::assertIsArray($athlete);
-        self::assertSame('MergedOwn', $athlete['last_name']);
+        self::assertSame('Mergedown', $athlete['last_name']);
         self::assertSame('Athlete', $athlete['first_name']);
         self::assertSame('2012-04-05', $athlete['birth_date']);
         self::assertSame('42.5', (string) $athlete['weight_kg']);
@@ -289,7 +487,7 @@ final class AthleteCsvWorkflowTest extends TestCase
         self::assertCount(1, $withoutMerge->issues);
         self::assertSame('club.area.csv.merge_required', $withoutMerge->issues[0]->translationKey);
         self::assertSame(['belt'], $withoutMerge->issues[0]->fields);
-        self::assertSame('ExistingOwn', $this->database->query(
+        self::assertSame('Existingown', $this->database->query(
             'SELECT last_name FROM athletes WHERE id = 301'
         )->fetchColumn());
 
@@ -298,7 +496,7 @@ final class AthleteCsvWorkflowTest extends TestCase
         self::assertSame([], $merged->issues);
         $athlete = $this->database->query('SELECT * FROM athletes WHERE id = 301')->fetch();
         self::assertIsArray($athlete);
-        self::assertSame('MergedOwn', $athlete['last_name']);
+        self::assertSame('Mergedown', $athlete['last_name']);
         self::assertSame('42.5', (string) $athlete['weight_kg']);
         self::assertSame('green', $athlete['belt']);
     }
@@ -523,7 +721,7 @@ final class AthleteCsvWorkflowTest extends TestCase
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $athlete->execute([
-            301, 201, 'ExistingOwn', 'Athlete', 'M', '2012-04-05', 42.5, 'green',
+            301, 201, 'Existingown', 'Athlete', 'M', '2012-04-05', 42.5, 'green',
             'OWN-001', '=SUM(1,1)',
         ]);
         $athlete->execute([
