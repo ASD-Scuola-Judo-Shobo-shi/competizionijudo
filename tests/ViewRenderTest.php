@@ -146,7 +146,10 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('href="/clubs/athletes-export"', $html);
         self::assertStringContainsString('action="/clubs/athletes-import?"', $html);
         self::assertStringContainsString('enctype="multipart/form-data"', $html);
-        self::assertStringContainsString('name="athletes_csv"', $html);
+        self::assertStringContainsString('name="athletes_file"', $html);
+        self::assertStringContainsString('name="merge_incomplete"', $html);
+        self::assertStringContainsString('.xlsx,.csv', $html);
+        self::assertStringNotContainsString('Import athletes CSV', $html);
     }
 
     public function testPrivacyAndErrorPagesUseSharedTranslucentContentPanel(): void

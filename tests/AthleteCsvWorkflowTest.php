@@ -15,6 +15,7 @@ use App\Service\AthleteCsvTransfer;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
+use ZipArchive;
 
 final class AthleteCsvWorkflowTest extends TestCase
 {
@@ -69,14 +70,14 @@ final class AthleteCsvWorkflowTest extends TestCase
 
         $rows = $this->parseCsv($response->content());
         self::assertSame([
-            'last_name',
-            'first_name',
-            'gender',
-            'birth_date',
-            'weight_kg',
-            'belt',
-            'membership_number',
-            'notes',
+            'Last name',
+            'First name',
+            'Gender',
+            'Birth date',
+            'Weight (kg)',
+            'Belt',
+            'Membership number',
+            'Notes',
         ], $rows[0]);
         self::assertSame('ExistingOwn', $rows[1][0]);
         self::assertSame("'=SUM(1,1)", $rows[1][7]);
@@ -86,10 +87,32 @@ final class AthleteCsvWorkflowTest extends TestCase
         $result = (new AthleteCsvTransfer())->import($path, 201);
 
         self::assertSame(0, $result->created);
-        self::assertSame(1, $result->updated);
+        self::assertSame(0, $result->updated);
+        self::assertSame(1, $result->unchanged);
+        self::assertSame([], $result->issues);
         self::assertSame('=SUM(1,1)', $this->database->query(
             'SELECT notes FROM athletes WHERE id = 301'
         )->fetchColumn());
+    }
+
+    public function testExportHeadingsFollowTheItalianUiLanguage(): void
+    {
+        Localization::setLocale('it');
+        $request = new Request('GET', '/clubs/athletes-export');
+
+        $response = (new ClubAreaController($this->view, $request))->exportAthletes($request);
+        $rows = $this->parseCsv($response->content());
+
+        self::assertSame([
+            'Cognome',
+            'Nome',
+            'Genere',
+            'Data di nascita',
+            'Peso (kg)',
+            'Cintura',
+            'Numero tessera',
+            'Note',
+        ], $rows[0]);
     }
 
     public function testImportUpdatesByMembershipAndCreatesRowsOnlyInsideCurrentClub(): void
@@ -124,12 +147,17 @@ final class AthleteCsvWorkflowTest extends TestCase
         self::assertIsArray($feedback);
         self::assertSame('success', $feedback['type']);
         self::assertSame(
-            __('club.area.csv.import_success', ['created' => '2', 'updated' => '1']),
+            __('club.area.csv.import_success', [
+                'created' => '2',
+                'updated' => '1',
+                'unchanged' => '0',
+                'skipped' => '0',
+            ]),
             $feedback['message']
         );
     }
 
-    public function testInvalidImportRejectsTheEntireFileWithoutPartialChanges(): void
+    public function testInvalidRowsAreReportedWithoutDiscardingValidRows(): void
     {
         $csv = implode("\n", [
             'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number,notes',
@@ -142,13 +170,137 @@ final class AthleteCsvWorkflowTest extends TestCase
         $response = (new ClubAreaController($this->view, $request))->importAthletes($request);
 
         self::assertSame(302, $response->status());
-        self::assertSame(1, (int) $this->database->query(
+        self::assertSame(2, (int) $this->database->query(
             'SELECT COUNT(*) FROM athletes WHERE club_id = 201'
+        )->fetchColumn());
+        self::assertSame(1, (int) $this->database->query(
+            "SELECT COUNT(*) FROM athletes WHERE membership_number = 'NEW-003'"
+        )->fetchColumn());
+        self::assertSame(0, (int) $this->database->query(
+            "SELECT COUNT(*) FROM athletes WHERE membership_number = 'NEW-004'"
         )->fetchColumn());
         $feedback = Session::pullFlash('athlete_csv_feedback');
         self::assertIsArray($feedback);
-        self::assertSame('error', $feedback['type']);
-        self::assertStringContainsString('CSV row 3 is invalid', (string) $feedback['message']);
+        self::assertSame('warning', $feedback['type']);
+        self::assertStringContainsString('1 skipped', (string) $feedback['message']);
+        self::assertCount(1, $feedback['report']);
+        self::assertStringContainsString('Row 3', (string) $feedback['report'][0]['message']);
+    }
+
+    public function testItalianHeadersCanBeReorderedAndExtraColumnsAreIgnoredIdempotently(): void
+    {
+        $csv = implode("\n", [
+            'Note;Numero tessera;Cintura;Peso (kg);Data di nascita;Campo extra;Genere;Nome;Cognome',
+            'nota;ITA-001;Blu;44,5;07/06/2013;ignorato;Femmina;Giulia;Rossi',
+        ]);
+        $path = $this->temporaryCsv($csv);
+        $transfer = new AthleteCsvTransfer();
+
+        $first = $transfer->import($path, 201);
+        $second = $transfer->import($path, 201);
+
+        self::assertSame(1, $first->created);
+        self::assertSame(0, $first->updated);
+        self::assertSame([], $first->issues);
+        self::assertSame(0, $second->created);
+        self::assertSame(0, $second->updated);
+        self::assertSame(1, $second->unchanged);
+        self::assertSame(1, (int) $this->database->query(
+            "SELECT COUNT(*) FROM athletes WHERE membership_number = 'ITA-001'"
+        )->fetchColumn());
+        $athlete = $this->database->query(
+            "SELECT * FROM athletes WHERE membership_number = 'ITA-001'"
+        )->fetch();
+        self::assertIsArray($athlete);
+        self::assertSame('Rossi', $athlete['last_name']);
+        self::assertSame('Giulia', $athlete['first_name']);
+        self::assertSame('F', $athlete['gender']);
+        self::assertSame('2013-06-07', $athlete['birth_date']);
+        self::assertSame('44.5', (string) $athlete['weight_kg']);
+        self::assertSame('blue', $athlete['belt']);
+    }
+
+    public function testRowsWithoutAnIdentityAreReportedAndNeverDuplicated(): void
+    {
+        $path = $this->temporaryCsv(implode("\n", [
+            'First name,Last name,Gender,Birth date,Weight (kg),Belt,Membership number',
+            'No,Identity,M,2011-02-03,41,Green,',
+        ]));
+        $transfer = new AthleteCsvTransfer();
+
+        $first = $transfer->import($path, 201);
+        $second = $transfer->import($path, 201);
+
+        self::assertSame(0, $first->created);
+        self::assertCount(1, $first->issues);
+        self::assertSame('club.area.csv.missing_identity', $first->issues[0]->translationKey);
+        self::assertSame(0, $second->created);
+        self::assertCount(1, $second->issues);
+        self::assertSame(1, (int) $this->database->query(
+            'SELECT COUNT(*) FROM athletes WHERE club_id = 201'
+        )->fetchColumn());
+    }
+
+    public function testXlsxRegistryRowsWithoutWeightImportAndRemainIdempotent(): void
+    {
+        $path = $this->temporaryXlsx([
+            ['Campo extra', 'Nome', 'Cognome', 'Nato il', 'Sesso', 'Matricola', 'Cod.Tessera', 'Cintura'],
+            ['ignorato', 'Athlete', 'MergedOwn', 41004, 'M', 'MAT-001', 'OWN-001', 'Nera 2° Dan'],
+            ['ignorato', 'New', 'Incomplete', 41300, 'F', 'MAT-002', 'NEW-XLSX', 'Gialla'],
+        ]);
+        $transfer = new AthleteCsvTransfer();
+
+        $imported = $transfer->import($path, 201);
+        self::assertSame(1, $imported->created);
+        self::assertSame(1, $imported->updated);
+        self::assertSame([], $imported->issues);
+        $athlete = $this->database->query('SELECT * FROM athletes WHERE id = 301')->fetch();
+        self::assertIsArray($athlete);
+        self::assertSame('MergedOwn', $athlete['last_name']);
+        self::assertSame('Athlete', $athlete['first_name']);
+        self::assertSame('2012-04-05', $athlete['birth_date']);
+        self::assertSame('42.5', (string) $athlete['weight_kg']);
+        self::assertSame('black', $athlete['belt']);
+        self::assertSame('OWN-001', $athlete['membership_number']);
+        self::assertNull($this->database->query(
+            "SELECT weight_kg FROM athletes WHERE membership_number = 'NEW-XLSX'"
+        )->fetchColumn());
+
+        $repeated = $transfer->import($path, 201);
+        self::assertSame(0, $repeated->created);
+        self::assertSame(0, $repeated->updated);
+        self::assertSame(2, $repeated->unchanged);
+        self::assertSame([], $repeated->issues);
+        self::assertSame(1, (int) $this->database->query(
+            "SELECT COUNT(*) FROM athletes WHERE membership_number = 'NEW-XLSX'"
+        )->fetchColumn());
+    }
+
+    public function testExistingRowsWithOtherMissingInformationAskForMerge(): void
+    {
+        $path = $this->temporaryXlsx([
+            ['Nome', 'Cognome', 'Nato il', 'Sesso', 'Cod.Tessera'],
+            ['Athlete', 'MergedOwn', 41004, 'M', 'OWN-001'],
+        ]);
+        $transfer = new AthleteCsvTransfer();
+
+        $withoutMerge = $transfer->import($path, 201);
+        self::assertSame(0, $withoutMerge->updated);
+        self::assertCount(1, $withoutMerge->issues);
+        self::assertSame('club.area.csv.merge_required', $withoutMerge->issues[0]->translationKey);
+        self::assertSame(['belt'], $withoutMerge->issues[0]->fields);
+        self::assertSame('ExistingOwn', $this->database->query(
+            'SELECT last_name FROM athletes WHERE id = 301'
+        )->fetchColumn());
+
+        $merged = $transfer->import($path, 201, true);
+        self::assertSame(1, $merged->updated);
+        self::assertSame([], $merged->issues);
+        $athlete = $this->database->query('SELECT * FROM athletes WHERE id = 301')->fetch();
+        self::assertIsArray($athlete);
+        self::assertSame('MergedOwn', $athlete['last_name']);
+        self::assertSame('42.5', (string) $athlete['weight_kg']);
+        self::assertSame('green', $athlete['belt']);
     }
 
     public function testImportRequiresAuthenticationAndCsrfProtection(): void
@@ -164,7 +316,7 @@ final class AthleteCsvWorkflowTest extends TestCase
             [],
             [],
             null,
-            ['athletes_csv' => $this->upload($path)]
+            ['athletes_file' => $this->upload($path)]
         );
 
         $this->expectException(HttpException::class);
@@ -196,7 +348,7 @@ final class AthleteCsvWorkflowTest extends TestCase
             ],
             [],
             null,
-            ['athletes_csv' => $this->upload($path)]
+            ['athletes_file' => $this->upload($path)]
         );
     }
 
@@ -220,6 +372,86 @@ final class AthleteCsvWorkflowTest extends TestCase
         $this->temporaryFiles[] = $path;
 
         return $path;
+    }
+
+    /** @param list<list<int|string>> $rows */
+    private function temporaryXlsx(array $rows): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'athlete-xlsx-');
+        self::assertNotFalse($path);
+        $archive = new ZipArchive();
+        self::assertTrue($archive->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE));
+
+        $sheetRows = '';
+        foreach ($rows as $rowIndex => $row) {
+            $rowNumber = $rowIndex + 1;
+            $cells = '';
+            foreach ($row as $columnIndex => $value) {
+                $reference = $this->spreadsheetColumn($columnIndex) . $rowNumber;
+                if (is_int($value)) {
+                    $cells .= '<c r="' . $reference . '" t="n"><v>' . $value . '</v></c>';
+                    continue;
+                }
+
+                $escaped = htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+                $cells .= '<c r="' . $reference . '" t="inlineStr"><is><t xml:space="preserve">'
+                    . $escaped
+                    . '</t></is></c>';
+            }
+            $sheetRows .= '<row r="' . $rowNumber . '">' . $cells . '</row>';
+        }
+
+        self::assertTrue($archive->addFromString(
+            '[Content_Types].xml',
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            . '<Default Extension="xml" ContentType="application/xml"/>'
+            . '<Override PartName="/xl/workbook.xml" '
+            . 'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            . '<Override PartName="/xl/worksheets/sheet1.xml" '
+            . 'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            . '</Types>'
+        ));
+        self::assertTrue($archive->addFromString(
+            'xl/workbook.xml',
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . '<workbookPr date1904="false"/><sheets>'
+            . '<sheet name="Athletes" sheetId="1" r:id="rId1"/>'
+            . '</sheets></workbook>'
+        ));
+        self::assertTrue($archive->addFromString(
+            'xl/_rels/workbook.xml.rels',
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" '
+            . 'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
+            . 'Target="worksheets/sheet1.xml"/>'
+            . '</Relationships>'
+        ));
+        self::assertTrue($archive->addFromString(
+            'xl/worksheets/sheet1.xml',
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            . '<sheetData>' . $sheetRows . '</sheetData>'
+            . '</worksheet>'
+        ));
+        self::assertTrue($archive->close());
+        $this->temporaryFiles[] = $path;
+
+        return $path;
+    }
+
+    private function spreadsheetColumn(int $zeroBasedIndex): string
+    {
+        $column = '';
+        for ($index = $zeroBasedIndex + 1; $index > 0; $index = intdiv($index - 1, 26)) {
+            $column = chr((($index - 1) % 26) + 65) . $column;
+        }
+
+        return $column;
     }
 
     /** @return list<list<string|null>> */
@@ -262,7 +494,7 @@ final class AthleteCsvWorkflowTest extends TestCase
                 first_name TEXT NOT NULL,
                 gender TEXT NOT NULL,
                 birth_date TEXT NOT NULL,
-                weight_kg REAL NOT NULL,
+                weight_kg REAL,
                 belt TEXT NOT NULL,
                 membership_number TEXT,
                 notes TEXT

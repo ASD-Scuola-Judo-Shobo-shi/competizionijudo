@@ -63,7 +63,11 @@
                         <td data-label="<?= e(__('club.area.gender')) ?>"><?= e($athlete->genderLabel()) ?></td>
                         <td data-label="<?= e(__('club.area.birth')) ?>"><?= e($athlete->birth_date) ?></td>
                         <td data-label="<?= e(__('club.area.age_class')) ?>"><?= e($_ageClassLabel) ?></td>
-                        <td data-label="<?= e(__('club.area.weight')) ?>"><?= e((string) $athlete->weight_kg) ?></td>
+                        <td data-label="<?= e(__('club.area.weight')) ?>">
+                            <?= e($athlete->weight_kg !== null
+                                ? (string) $athlete->weight_kg
+                                : __('events.no_weight')) ?>
+                        </td>
                         <td data-label="<?= e(__('club.area.belt')) ?>">
                             <?php require dirname(__DIR__) . '/components/belt_badge.php'; ?>
                         </td>

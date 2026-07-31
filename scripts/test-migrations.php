@@ -470,6 +470,7 @@ function assertSchemaContract(PDO $database): void
     assertColumn($database, 'event_registration_options', 'is_default', 'NO');
     assertColumn($database, 'event_registration_options', 'is_active', 'NO');
     assertColumn($database, 'athletes', 'birth_date', 'NO');
+    assertColumn($database, 'athletes', 'weight_kg', 'YES');
     assertColumnMissing($database, 'athletes', 'date_of_birth');
     assertColumn($database, 'entries', 'athlete_id');
     assertColumn($database, 'entries', 'registration_option_id', 'NO');

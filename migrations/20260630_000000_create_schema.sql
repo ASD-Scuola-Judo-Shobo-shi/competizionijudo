@@ -78,7 +78,7 @@ CREATE TABLE athletes (
     first_name VARCHAR(120) NOT NULL,
     gender ENUM('M', 'F') NOT NULL,
     birth_date DATE NOT NULL,
-    weight_kg DECIMAL(6,2) NOT NULL,
+    weight_kg DECIMAL(6,2) NULL,
     belt ENUM(
         'white',
         'white_yellow',

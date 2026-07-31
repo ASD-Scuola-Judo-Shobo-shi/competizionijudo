@@ -603,6 +603,12 @@ a.btn-sm:hover {
     color: #155724;
 }
 
+.notice.warning {
+    background: #fff4d7;
+    border-color: #d5ad43;
+    color: #6b4c00;
+}
+
 .field-warning {
     display: block;
     color: #b42318;
@@ -631,6 +637,36 @@ a.btn-sm:hover {
 .csv-import-form label {
     grid-column: 1 / -1;
     margin: 0;
+}
+
+.csv-import-form .import-merge-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.csv-import-form .import-merge-option input {
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.import-report {
+    margin: 0 0 18px;
+}
+
+.import-report h4 {
+    margin: 0 0 10px;
+}
+
+.import-report table {
+    min-width: 720px;
+}
+
+.import-report th:first-child,
+.import-report td:first-child {
+    width: 72px;
 }
 
 .csv-help {
@@ -2434,6 +2470,12 @@ html[data-theme="dark"] .notice.success {
     color: #c7f0d2;
     border-color: #43825a;
     background: #193e2a;
+}
+
+html[data-theme="dark"] .notice.warning {
+    color: #f8e3a0;
+    border-color: #896e24;
+    background: #4a3c17;
 }
 
 html[data-theme="dark"] .notice-error {

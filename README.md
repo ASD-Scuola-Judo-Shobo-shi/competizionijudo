@@ -16,7 +16,7 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 | Club registration and login | `/clubs/register`, `/clubs/login` | Public |
 | Password recovery by email | `/clubs/forgot-password`, `/clubs/reset-password` | Public |
 | Club athlete archive and event registration | `/clubs/area`, `/events/register` | Authenticated club |
-| Athlete CSV import and export | `/clubs/athletes-import`, `/clubs/athletes-export` | Authenticated club; import is POST + CSRF |
+| Athlete spreadsheet import and CSV export | `/clubs/athletes-import`, `/clubs/athletes-export` | Authenticated club; import is POST + CSRF |
 | Athlete deletion | `/clubs/delete-athlete` | Authenticated club, POST + CSRF |
 | Event and club administration | `/admin/events`, `/admin/events/add`, `/admin/clubs`, `/admin/clubs/edit` | Administrator |
 | Club athlete viewing and CSV export | `/admin/clubs/athletes`, `/admin/clubs/athletes/export` | Administrator |

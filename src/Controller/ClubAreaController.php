@@ -14,10 +14,13 @@ use App\Model\Club;
 use App\Model\Entry;
 use App\Service\AthleteCsvImportException;
 use App\Service\AthleteCsvTransfer;
+use App\Service\AthleteImportIssue;
 use App\Validation\AthleteInputValidator;
 
 final class ClubAreaController extends Controller
 {
+    private const IMPORT_REPORT_LIMIT = 200;
+
     public function index(Request $request): Response
     {
         Session::start();
@@ -211,7 +214,7 @@ final class ClubAreaController extends Controller
         validate_csrf((string) $request->post('csrf_token'));
         $returnView = $request->post('return_view') === 'add' ? 'add' : 'list';
         $redirect = '/clubs/area?view=' . $returnView;
-        $file = $request->file('athletes_csv');
+        $file = $request->file('athletes_file') ?? $request->file('athletes_csv');
         $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
 
         if ($uploadError === UPLOAD_ERR_NO_FILE) {
@@ -239,11 +242,43 @@ final class ClubAreaController extends Controller
         }
 
         try {
-            $result = (new AthleteCsvTransfer())->import($temporaryPath, (int) $clubId);
-            $this->flashCsvFeedback('success', __('club.area.csv.import_success', [
+            $result = (new AthleteCsvTransfer())->import(
+                $temporaryPath,
+                (int) $clubId,
+                $request->post('merge_incomplete') === '1'
+            );
+            $replacements = [
                 'created' => (string) $result->created,
                 'updated' => (string) $result->updated,
-            ]));
+                'unchanged' => (string) $result->unchanged,
+                'skipped' => (string) $result->skipped(),
+            ];
+            $reportedIssues = array_slice($result->issues, 0, self::IMPORT_REPORT_LIMIT);
+            $report = array_map(
+                fn(AthleteImportIssue $issue): array => [
+                    'row' => $issue->row,
+                    'identity' => $issue->identity,
+                    'message' => $this->importIssueMessage($issue),
+                    'existing_athlete_id' => $issue->existingAthleteId,
+                ],
+                $reportedIssues
+            );
+            $omitted = max(0, $result->skipped() - count($reportedIssues));
+
+            if ($result->issues === []) {
+                $this->flashCsvFeedback(
+                    'success',
+                    __('club.area.csv.import_success', $replacements)
+                );
+            } else {
+                $hasImportedRows = $result->created + $result->updated + $result->unchanged > 0;
+                $this->flashCsvFeedback(
+                    $hasImportedRows ? 'warning' : 'error',
+                    __('club.area.csv.import_with_issues', $replacements),
+                    $report,
+                    $omitted
+                );
+            }
         } catch (AthleteCsvImportException $exception) {
             $this->flashCsvFeedback('error', $this->csvImportError($exception));
         } catch (\Throwable $exception) {
@@ -270,11 +305,47 @@ final class ClubAreaController extends Controller
         return __($exception->translationKey, $replacements);
     }
 
-    private function flashCsvFeedback(string $type, string $message): void
+    private function importIssueMessage(AthleteImportIssue $issue): string
     {
+        $replacements = [
+            'row' => (string) $issue->row,
+            'athlete' => $issue->identity,
+        ];
+        if ($issue->validationKeys !== []) {
+            $replacements['errors'] = implode(' ', array_map(
+                static fn(string $key): string => __($key),
+                $issue->validationKeys
+            ));
+        }
+        if ($issue->fields !== []) {
+            $replacements['fields'] = implode(', ', array_map(
+                static fn(string $field): string => __('club.area.csv.headers.' . $field),
+                $issue->fields
+            ));
+        }
+
+        return __($issue->translationKey, $replacements);
+    }
+
+    /**
+     * @param list<array{
+     *     row: int,
+     *     identity: string,
+     *     message: string,
+     *     existing_athlete_id: int|null
+     * }> $report
+     */
+    private function flashCsvFeedback(
+        string $type,
+        string $message,
+        array $report = [],
+        int $omitted = 0
+    ): void {
         Session::flash('athlete_csv_feedback', [
             'type' => $type,
             'message' => $message,
+            'report' => $report,
+            'omitted' => $omitted,
         ]);
     }
 }

@@ -90,7 +90,7 @@ final class MigrationRunnerTest extends TestCase
         $migrationQuery->method('fetchAll')->willReturn($historicalVersions);
         $recordedVersions = [];
         $recordStatement = $this->createMock(PDOStatement::class);
-        $recordStatement->expects(self::exactly(14))
+        $recordStatement->expects(self::exactly(15))
             ->method('execute')
             ->willReturnCallback(
                 static function (?array $parameters = null) use (&$recordedVersions): bool {
@@ -106,7 +106,7 @@ final class MigrationRunnerTest extends TestCase
             ->willReturn(true);
         $database = $this->createMock(PDO::class);
         $database->expects(self::exactly(3))->method('query')->willReturn($migrationQuery);
-        $database->expects(self::exactly(15))
+        $database->expects(self::exactly(16))
             ->method('prepare')
             ->willReturnOnConsecutiveCalls(
                 $recordStatement,
@@ -123,12 +123,13 @@ final class MigrationRunnerTest extends TestCase
                 $recordStatement,
                 $recordStatement,
                 $recordStatement,
+                $recordStatement,
                 $recordStatement
             );
-        $database->expects(self::atLeast(14))->method('exec');
-        $database->expects(self::exactly(14))->method('beginTransaction')->willReturn(true);
-        $database->expects(self::exactly(13))->method('inTransaction')->willReturn(true);
-        $database->expects(self::exactly(14))->method('commit')->willReturn(true);
+        $database->expects(self::atLeast(15))->method('exec');
+        $database->expects(self::exactly(15))->method('beginTransaction')->willReturn(true);
+        $database->expects(self::exactly(14))->method('inTransaction')->willReturn(true);
+        $database->expects(self::exactly(15))->method('commit')->willReturn(true);
 
         (new MigrationRunner($database))->run();
 
@@ -147,6 +148,7 @@ final class MigrationRunnerTest extends TestCase
             '20260729_000001_add_event_registration_options.sql',
             '20260729_000002_add_event_sepa_payment_details.sql',
             '20260730_000001_repair_registration_payment_schema_drift.sql',
+            '20260731_000001_allow_missing_athlete_weight.sql',
         ], $recordedVersions);
     }
 

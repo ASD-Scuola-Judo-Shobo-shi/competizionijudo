@@ -30,6 +30,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20260729_000001_add_event_registration_options.sql',
                 dirname(__DIR__) . '/migrations/20260729_000002_add_event_sepa_payment_details.sql',
                 dirname(__DIR__) . '/migrations/20260730_000001_repair_registration_payment_schema_drift.sql',
+                dirname(__DIR__) . '/migrations/20260731_000001_allow_missing_athlete_weight.sql',
             ],
             array_values($migrations)
         );
@@ -69,6 +70,7 @@ final class SchemaMigrationTest extends TestCase
         self::assertStringContainsString('snapshot_weight_category VARCHAR(50)', $migration);
         self::assertStringContainsString('snapshot_at TIMESTAMP NULL', $migration);
         self::assertStringContainsString('birth_date DATE NOT NULL', $migration);
+        self::assertStringContainsString('weight_kg DECIMAL(6,2) NULL', $migration);
         self::assertStringContainsString('snapshot_birth_date DATE NULL', $migration);
         self::assertStringNotContainsString('date_of_birth', $migration);
         self::assertDoesNotMatchRegularExpression('/^\s+(?:age_class|program|weight_category)\s/m', $migration);
@@ -271,6 +273,16 @@ final class SchemaMigrationTest extends TestCase
             $migration
         );
         self::assertStringContainsString('incomplete_birth_date_schema_repair', $migration);
+    }
+
+    public function testForwardMigrationAllowsImportedAthletesToHaveNoWeight(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260731_000001_allow_missing_athlete_weight.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString('MODIFY COLUMN weight_kg DECIMAL(6,2) NULL', $migration);
     }
 
     private function migration(): string

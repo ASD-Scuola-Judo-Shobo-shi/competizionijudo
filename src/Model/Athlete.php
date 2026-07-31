@@ -13,7 +13,7 @@ final class Athlete
         public readonly string $first_name,
         public readonly string $gender,
         public readonly string $birth_date,
-        public readonly float $weight_kg,
+        public readonly ?float $weight_kg,
         public readonly string $belt,
         public readonly ?string $membership_number,
         public readonly ?string $notes
@@ -115,7 +115,7 @@ final class Athlete
         return JudoCategory::calculate(
             $this->birth_date,
             $this->gender,
-            $this->weight_kg,
+            $this->weight_kg ?? 0.0,
             self::eventYearFromDate($eventDate)
         );
     }
@@ -130,10 +130,16 @@ final class Athlete
             (string) ($data['first_name'] ?? ''),
             (string) ($data['gender'] ?? ''),
             (string) ($data['birth_date'] ?? ''),
-            (float) ($data['weight_kg'] ?? 0.0),
+            isset($data['weight_kg']) && $data['weight_kg'] !== ''
+                ? (float) $data['weight_kg']
+                : null,
             (string) ($data['belt'] ?? ''),
-            $data['membership_number'] !== '' ? (string) $data['membership_number'] : null,
-            $data['notes'] !== '' ? (string) $data['notes'] : null,
+            isset($data['membership_number']) && $data['membership_number'] !== ''
+                ? (string) $data['membership_number']
+                : null,
+            isset($data['notes']) && $data['notes'] !== ''
+                ? (string) $data['notes']
+                : null,
         );
     }
 
@@ -230,7 +236,7 @@ final class Athlete
             $data['first_name'] ?? '',
             $data['gender'] ?? '',
             $data['birth_date'] ?? '',
-            $data['weight_kg'] ?? 0.0,
+            $data['weight_kg'] ?? null,
             $data['belt'] ?? '',
             $data['membership_number'] ?? null,
             $data['notes'] ?? null,
@@ -253,7 +259,7 @@ final class Athlete
             $data['first_name'] ?? '',
             $data['gender'] ?? '',
             $data['birth_date'] ?? '',
-            $data['weight_kg'] ?? 0.0,
+            $data['weight_kg'] ?? null,
             $data['belt'] ?? '',
             $data['membership_number'] ?? null,
             $data['notes'] ?? null,

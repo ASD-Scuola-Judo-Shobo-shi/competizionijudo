@@ -29,7 +29,9 @@
                 <?php
                 $category = $athlete->categoryForEventDate();
                 $ageClass = $athlete->ageClassLabel(App\Localization::getLocale());
-                $weight = rtrim(rtrim(number_format($athlete->weight_kg, 2, '.', ''), '0'), '.');
+                $weight = $athlete->weight_kg !== null
+                    ? rtrim(rtrim(number_format($athlete->weight_kg, 2, '.', ''), '0'), '.')
+                    : null;
                 ?>
                 <article class="admin-entity-card admin-athlete-card" role="listitem">
                     <header class="admin-entity-card__header">
@@ -54,7 +56,11 @@
                         </div>
                         <div>
                             <dt><?= e(__('club.area.weight')) ?></dt>
-                            <dd><?= e(__('admin.clubs.weight_value', ['weight' => $weight])) ?></dd>
+                            <dd>
+                                <?= e($weight !== null
+                                    ? __('admin.clubs.weight_value', ['weight' => $weight])
+                                    : __('events.no_weight')) ?>
+                            </dd>
                         </div>
                         <div>
                             <dt><?= e(__('club.area.belt')) ?></dt>
