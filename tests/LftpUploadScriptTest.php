@@ -12,12 +12,13 @@ final class LftpUploadScriptTest extends TestCase
     {
         $script = (string) file_get_contents(dirname(__DIR__) . '/scripts/lftp-upload.sh');
 
-        self::assertStringContainsString('FTPS upload wrapper v5:', $script);
+        self::assertStringContainsString('FTPS upload wrapper v6:', $script);
         self::assertStringContainsString('FTP_PASSWORD must not contain line breaks', $script);
         self::assertStringContainsString('set cmd:fail-exit true', $script);
         self::assertStringContainsString('set xfer:use-temp-file true', $script);
-        self::assertStringNotContainsString('set xfer:use-temp-file false', $script);
+        self::assertStringContainsString('set xfer:use-temp-file false', $script);
         self::assertStringContainsString('set xfer:temp-file-name .deploying-*', $script);
+        self::assertStringContainsString('set ftp:rest-stor true', $script);
         self::assertStringContainsString('set ftp:use-mode-z false', $script);
         self::assertStringContainsString('set ftp:ssl-force true', $script);
         self::assertStringContainsString("FTP_SERVER='ftplnx02.aruba.it'", $script);
@@ -73,7 +74,7 @@ final class LftpUploadScriptTest extends TestCase
             fclose($pipes[2]);
 
             self::assertSame(0, proc_close($process), $output);
-            self::assertStringContainsString('FTPS upload wrapper v5:', $output);
+            self::assertStringContainsString('FTPS upload wrapper v6:', $output);
             self::assertStringContainsString('transferring the complete artifact.', $output);
         } finally {
             unlink($fakeLftp);
@@ -126,7 +127,11 @@ while IFS= read -r download_arguments; do
   remote_path="$1"
   [[ "$2" == '-o' ]]
   destination="$3"
-  cp "$FAKE_REMOTE_ROOT/$remote_path" "$destination"
+  if [[ "${FAKE_TRUNCATE_PATH:-}" == "$remote_path" ]]; then
+    head -c "$FAKE_TRUNCATE_BYTES" "$FAKE_REMOTE_ROOT/$remote_path" > "$destination"
+  else
+    cp "$FAKE_REMOTE_ROOT/$remote_path" "$destination"
+  fi
   if [[ "${FAKE_CORRUPT_PATH:-}" == "$remote_path" ]]; then
     printf 'corrupted' > "$destination"
   fi
@@ -164,6 +169,30 @@ BASH
             self::assertStringContainsString('get "nested/example.php"', $commands);
             self::assertStringNotContainsString('get ".htaccess"', $commands);
             self::assertSame('', file_get_contents($directory . '/mismatches.txt'));
+
+            [$status, $output] = $this->runVerification(
+                $directory,
+                $fakeDirectory,
+                '',
+                false,
+                $directory . '/mismatches.txt',
+                '',
+                'nested/example.php',
+                '8'
+            );
+            self::assertSame(1, $status, $output);
+            self::assertSame("+./nested/example.php\n", file_get_contents($directory . '/mismatches.txt'));
+
+            [$status, $output] = $this->runVerification(
+                $directory,
+                $fakeDirectory,
+                '',
+                false,
+                $directory . '/mismatches.txt'
+            );
+            self::assertSame(0, $status, $output);
+            self::assertStringContainsString('FTPS targeted verification succeeded', $output);
+            self::assertSame('', file_get_contents($directory . '/mismatches.txt'));
         } finally {
             unlink($fakeLftp);
             rmdir($fakeDirectory);
@@ -184,11 +213,11 @@ BASH
         $fakeDirectory = $directory . '/fake';
         self::assertTrue(mkdir($artifact, 0700, true));
         self::assertTrue(mkdir($fakeDirectory, 0700));
-        self::assertNotFalse(file_put_contents($artifact . '/changed.php', "<?php echo 'changed';\n"));
+        self::assertNotFalse(file_put_contents($artifact . '/changed.php', str_repeat('x', 65537)));
         self::assertNotFalse(file_put_contents($artifact . '/unchanged.php', "<?php echo 'unchanged';\n"));
         $this->generateManifest($artifact);
         $mismatchFile = $directory . '/mismatches.txt';
-        self::assertNotFalse(file_put_contents($mismatchFile, "./changed.php\n"));
+        self::assertNotFalse(file_put_contents($mismatchFile, "+./changed.php\n"));
 
         $fakeLftp = $fakeDirectory . '/lftp';
         $commandLog = $fakeDirectory . '/command.log';
@@ -227,11 +256,17 @@ BASH
 
             self::assertSame(0, proc_close($process), $output);
             self::assertStringContainsString('retransferring 1 mismatched artifact files', $output);
+            self::assertStringContainsString('1 safely resumed from a verified remote prefix', $output);
             $commands = (string) file_get_contents($commandLog);
             self::assertStringContainsString(
-                'put "' . $artifact . '/changed.php" -o "site/prod/changed.php"',
+                'put -c "' . $artifact . '/changed.php" -o "site/prod/changed.php"',
                 $commands
             );
+            self::assertSame(1, substr_count(
+                $commands,
+                'put -c "' . $artifact . '/changed.php" -o "site/prod/changed.php"'
+            ));
+            self::assertStringContainsString('set xfer:use-temp-file false', $commands);
             self::assertStringNotContainsString('put "' . $artifact . '/unchanged.php"', $commands);
             self::assertStringContainsString(
                 'put "' . $artifact . '/DEPLOYMENT_MANIFEST.sha256" -o "site/prod/DEPLOYMENT_MANIFEST.sha256"',
@@ -367,7 +402,9 @@ BASH
         string $corruptPath = '',
         bool $useRelativeSourceDirectory = false,
         string $mismatchFile = '',
-        string $commandLog = ''
+        string $commandLog = '',
+        string $truncatePath = '',
+        string $truncateBytes = '0'
     ): array {
         $sourceDirectory = $useRelativeSourceDirectory ? '.' : $directory;
         $process = proc_open(
@@ -383,6 +420,8 @@ BASH
                 'FTP_PASSWORD' => 'synthetic-password',
                 'FAKE_REMOTE_ROOT' => $directory,
                 'FAKE_CORRUPT_PATH' => $corruptPath,
+                'FAKE_TRUNCATE_PATH' => $truncatePath,
+                'FAKE_TRUNCATE_BYTES' => $truncateBytes,
                 'FTP_MISMATCH_FILE' => $mismatchFile,
                 'FAKE_COMMAND_LOG' => $commandLog,
             ]

@@ -24,7 +24,7 @@ if [[ "$FTP_SERVER" == 'ftp.competizionijudo.it' ]]; then
   FTP_SERVER='ftplnx02.aruba.it'
 fi
 
-echo "FTPS upload wrapper v5: preflighting ${FTP_SERVER}:${FTP_PORT}."
+echo "FTPS upload wrapper v6: preflighting ${FTP_SERVER}:${FTP_PORT}."
 
 lftp_quote() {
   local value="$1"
@@ -51,7 +51,7 @@ trap cleanup EXIT
 # Keep the FTPS data stream uncompressed. Aruba's FTP service has returned
 # corrupt read-backs with MODE Z enabled, while ordinary binary transfers are
 # covered by the checksum verification below.
-connection_settings="set cmd:fail-exit true; set cmd:verify-path true; set net:max-retries 5; set net:timeout 45; set xfer:timeout 90; set xfer:use-temp-file true; set xfer:temp-file-name .deploying-*; set ftp:list-options -a; set ftp:use-mode-z false; set ftp:ssl-allow true; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate true;"
+connection_settings="set cmd:fail-exit true; set cmd:verify-path true; set net:max-retries 5; set net:timeout 45; set xfer:timeout 90; set xfer:use-temp-file true; set xfer:temp-file-name .deploying-*; set ftp:list-options -a; set ftp:rest-stor true; set ftp:use-mode-z false; set ftp:ssl-allow true; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate true;"
 open_command="open -p $(lftp_quote "$FTP_PORT") -u $(lftp_quote "$FTP_USERNAME"),$(lftp_quote "$FTP_PASSWORD") $(lftp_quote "$FTP_SERVER");"
 
 upload_commands() {
@@ -93,21 +93,48 @@ parse_manifest_record() {
     && "$manifest_relative_path" =~ ^\./[A-Za-z0-9._/-]+$ ]]
 }
 
+mismatch_relative_path=''
+mismatch_resume=false
+parse_mismatch_record() {
+  local record="$1"
+  mismatch_resume=false
+  if [[ "$record" == +* ]]; then
+    mismatch_resume=true
+    record="${record:1}"
+  fi
+
+  [[ "$record" =~ ^\./[A-Za-z0-9._/-]+$ ]] || return 1
+  mismatch_relative_path="$record"
+}
+
 write_mismatch_paths() {
   local manifest_path="$1"
+  local source_directory="$2"
   [[ -n "${FTP_MISMATCH_FILE:-}" ]] || return 0
   : > "$FTP_MISMATCH_FILE"
 
-  local record local_path actual_checksum
+  local record local_path source_path actual_checksum actual_size source_size mismatch_record
   while IFS= read -r record; do
     parse_manifest_record "$record" || continue
     local_path="${verification_dir}/${manifest_relative_path#./}"
+    source_path="${source_directory}/${manifest_relative_path#./}"
     actual_checksum=''
     if [[ -f "$local_path" ]]; then
       actual_checksum="$(sha256sum "$local_path" | cut -d ' ' -f 1)"
     fi
     if [[ "$actual_checksum" != "$manifest_checksum" ]]; then
-      printf '%s\n' "$manifest_relative_path" >> "$FTP_MISMATCH_FILE"
+      mismatch_record="$manifest_relative_path"
+      if [[ -f "$local_path" && -f "$source_path" ]]; then
+        actual_size="$(stat --format='%s' "$local_path")"
+        source_size="$(stat --format='%s' "$source_path")"
+        if (( actual_size > 0 && actual_size < source_size )) \
+          && cmp --silent --bytes="$actual_size" "$local_path" "$source_path"; then
+          # A leading + means the downloaded remote file is a verified prefix
+          # and can safely be resumed instead of being truncated yet again.
+          mismatch_record="+${manifest_relative_path}"
+        fi
+      fi
+      printf '%s\n' "$mismatch_record" >> "$FTP_MISMATCH_FILE"
     fi
   done < "$manifest_path"
 }
@@ -218,9 +245,14 @@ repair_mismatched_deployment_files() {
   fi
 
   local commands="mkdir -pf $(lftp_quote "$remote_dir");"
-  local relative_path local_path remote_path parent_path
-  local repaired=0 repair_manifest=false
-  while IFS= read -r relative_path; do
+  local mismatch_record relative_path local_path remote_path parent_path
+  local repaired=0 resumed=0 repair_manifest=false
+  while IFS= read -r mismatch_record; do
+    if ! parse_mismatch_record "$mismatch_record"; then
+      echo "The targeted FTP repair list contains an unsafe path: ${mismatch_record}" >&2
+      exit 2
+    fi
+    relative_path="$mismatch_relative_path"
     if [[ "$relative_path" == './DEPLOYMENT_MANIFEST.sha256' ]]; then
       repair_manifest=true
       continue
@@ -234,7 +266,15 @@ repair_mismatched_deployment_files() {
     remote_path="${remote_dir%/}/${relative_path#./}"
     parent_path="$(dirname "$remote_path")"
     [[ -f "$local_path" ]] || { echo "Repair source file is missing: ${local_path}" >&2; exit 1; }
-    commands+=" mkdir -pf $(lftp_quote "$parent_path"); put $(lftp_quote "$local_path") -o $(lftp_quote "$remote_path");"
+    commands+=" mkdir -pf $(lftp_quote "$parent_path");"
+    if [[ "$mismatch_resume" == true ]]; then
+      commands+=" set xfer:use-temp-file false; cache flush;"
+      commands+=" put -c $(lftp_quote "$local_path") -o $(lftp_quote "$remote_path");"
+      commands+=" set xfer:use-temp-file true;"
+      ((resumed += 1))
+    else
+      commands+=" put $(lftp_quote "$local_path") -o $(lftp_quote "$remote_path");"
+    fi
     ((repaired += 1))
   done < "$mismatch_file"
 
@@ -243,7 +283,8 @@ repair_mismatched_deployment_files() {
     exit 2
   fi
   commands+=" put $(lftp_quote "$local_manifest") -o $(lftp_quote "${remote_dir%/}/DEPLOYMENT_MANIFEST.sha256");"
-  echo "FTPS repair: retransferring ${repaired} mismatched artifact files and the manifest."
+  echo "FTPS repair: retransferring ${repaired} mismatched artifact files " \
+    "(${resumed} safely resumed from a verified remote prefix) and the manifest."
   if ! lftp -c "${connection_settings} ${open_command} ${commands}"; then
     echo 'FTPS targeted artifact repair failed.' >&2
     exit 1
@@ -295,8 +336,13 @@ verify_remote_files() {
 
     verification_manifest_path="${verification_dir}/target-manifest.sha256"
     : > "$verification_manifest_path"
-    local requested_path
-    while IFS= read -r requested_path; do
+    local requested_record requested_path
+    while IFS= read -r requested_record; do
+      if ! parse_mismatch_record "$requested_record"; then
+        echo "The targeted FTPS verification list contains an unsafe path: ${requested_record}" >&2
+        exit 2
+      fi
+      requested_path="$mismatch_relative_path"
       if [[ "$requested_path" == './DEPLOYMENT_MANIFEST.sha256' ]]; then
         targeted_manifest=true
         continue
@@ -358,7 +404,7 @@ verify_remote_files() {
   if [[ -s "$verification_manifest_path" ]] \
     && ! (cd "$verification_dir" && sha256sum --check --status --strict "$verification_manifest_path"); then
     checksum_failed=true
-    write_mismatch_paths "$verification_manifest_path"
+    write_mismatch_paths "$verification_manifest_path" "$source_directory"
   elif [[ -n "$mismatch_file" ]]; then
     : > "$mismatch_file"
   fi
