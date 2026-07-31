@@ -238,6 +238,37 @@ final class EventLifecycleTest extends TestCase
         );
     }
 
+    public function testRegistrationAttemptWithoutWeightIsRejectedAndWarned(): void
+    {
+        $today = date('Y-m-d');
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: $today);
+        $this->database->exec('UPDATE athletes SET weight_kg = NULL WHERE id = 303');
+        Session::set('club_id', 201);
+        $post = new Request(
+            'POST',
+            '/events/register?event=101',
+            ['event' => '101'],
+            [
+                'csrf_token' => csrf_token(),
+                'athletes' => ['303'],
+                'registration_option_id' => '501',
+            ]
+        );
+
+        $postResponse = (new EventController($this->view, $post))->register($post);
+        $get = new Request('GET', '/events/register?event=101', ['event' => '101']);
+        $feedback = (new EventController($this->view, $get))->register($get);
+
+        self::assertSame(302, $postResponse->status());
+        self::assertSame(0, $this->entryCount());
+        self::assertStringContainsString(
+            __('events.registration_missing_weight', ['count' => '1']),
+            $feedback->content()
+        );
+        self::assertStringContainsString(e(__('events.registration_missing_weight_notice')), $feedback->content());
+        self::assertMatchesRegularExpression('/value="303"[^>]*disabled/s', $feedback->content());
+    }
+
     public function testRegistrationSummaryPricesNewAndRemovedEnrollmentsFromTheirStoredOptions(): void
     {
         $today = date('Y-m-d');
@@ -454,7 +485,7 @@ final class EventLifecycleTest extends TestCase
                 first_name TEXT NOT NULL,
                 gender TEXT NOT NULL,
                 birth_date TEXT NOT NULL,
-                weight_kg REAL NOT NULL,
+                weight_kg REAL,
                 weight_category TEXT,
                 belt TEXT,
                 program TEXT NOT NULL,

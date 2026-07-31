@@ -14,6 +14,13 @@
 $showRegistrationFeedback = $registrationFeedback !== null
     && empty($registrationFeedback['option_required_error'])
     && empty($registrationFeedback['option_configuration_error']);
+$hasAthletesMissingWeight = false;
+foreach ($athletes as $candidateAthlete) {
+    if ($candidateAthlete->weight_kg === null || $candidateAthlete->weight_kg <= 0) {
+        $hasAthletesMissingWeight = true;
+        break;
+    }
+}
 ?>
 
 <?php if ($event !== null) : ?>
@@ -77,6 +84,11 @@ $showRegistrationFeedback = $registrationFeedback !== null
                     <?php if (empty($athletes)) : ?>
                         <p><?= e(__('events.register_no_athletes')) ?></p>
                     <?php elseif ($registrationOptions !== []) : ?>
+                        <?php if ($hasAthletesMissingWeight) : ?>
+                            <div class="notice warning">
+                                <?= e(__('events.registration_missing_weight_notice')) ?>
+                            </div>
+                        <?php endif; ?>
                         <form method="post" id="registration-form">
                             <?= csrf_field() ?>
                             <p><?= e(__('events.register_select')) ?></p>
@@ -102,6 +114,8 @@ $showRegistrationFeedback = $registrationFeedback !== null
                                         <?php
                                         $athleteName = $athlete->last_name . ' ' . $athlete->first_name;
                                         $isRegistered = in_array($athlete->id, $registered, true);
+                                        $hasWeight = $athlete->weight_kg !== null && $athlete->weight_kg > 0;
+                                        $cannotRegister = !$hasWeight && !$isRegistered;
                                         ?>
                                         <tr>
                                             <td data-label="<?= e(__('admin.dashboard.actions')) ?>">
@@ -109,6 +123,7 @@ $showRegistrationFeedback = $registrationFeedback !== null
                                                     name="athletes[]"
                                                     value="<?= e((string) $athlete->id) ?>"
                                                     <?= $isRegistered ? 'checked' : '' ?>
+                                                    <?= $cannotRegister ? 'disabled' : '' ?>
                                                     aria-label="<?= e(__('events.register_select') . ': ' . $athleteName) ?>"
                                                     data-registered="<?= $isRegistered ? 'true' : 'false' ?>">
                                             </td>
@@ -117,7 +132,14 @@ $showRegistrationFeedback = $registrationFeedback !== null
                                                 <?= e($athlete->birth_date) ?>
                                             </td>
                                             <td data-label="<?= e(__('club.area.weight')) ?>">
-                                                <?= e((string) $athlete->weight_kg) ?>
+                                                <?php if ($hasWeight) : ?>
+                                                    <?= e((string) $athlete->weight_kg) ?>
+                                                <?php else : ?>
+                                                    <span class="field-warning"><?= e(__('events.no_weight')) ?></span>
+                                                    <a href="<?= e(base_url('/clubs/area?view=add&edit=' . $athlete->id)) ?>">
+                                                        <?= e(__('events.registration_weight_required')) ?>
+                                                    </a>
+                                                <?php endif; ?>
                                             </td>
                                             <td data-label="<?= e(__('club.area.weight_category')) ?>">
                                                 <?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?>
@@ -180,6 +202,9 @@ $showRegistrationFeedback = $registrationFeedback !== null
                                         }
                                         if (($registrationFeedback['rejected'] ?? 0) > 0) {
                                             $parts[] = __('events.registration_rejected', ['count' => (string) $registrationFeedback['rejected']]);
+                                        }
+                                        if (($registrationFeedback['missing_weight'] ?? 0) > 0) {
+                                            $parts[] = __('events.registration_missing_weight', ['count' => (string) $registrationFeedback['missing_weight']]);
                                         }
                                         if (($registrationFeedback['capacity_exceeded'] ?? 0) > 0) {
                                             $parts[] = __('events.registration_capacity_exceeded', ['count' => (string) $registrationFeedback['capacity_exceeded']]);

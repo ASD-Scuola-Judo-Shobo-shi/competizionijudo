@@ -70,6 +70,23 @@ final class EntryRegistrationRepositoryTest extends TestCase
         self::assertSame(EntryRegistrationResult::AthleteRejected, $result);
     }
 
+    public function testAthleteWithoutWeightIsRejectedWithSpecificWarningResult(): void
+    {
+        $this->insertAthlete(301, 201, weight: null);
+        $this->insertEvent(101, false);
+
+        $result = (new EntryRegistrationRepository($this->database))->register(
+            101,
+            201,
+            301,
+            501,
+            '2026-06-28'
+        );
+
+        self::assertSame(EntryRegistrationResult::AthleteWeightMissing, $result);
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM entries')->fetchColumn());
+    }
+
     public function testOptionFromOutsideTheEventIsRejectedWithoutAnInsert(): void
     {
         $this->insertAthlete(301, 201);
@@ -219,7 +236,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
                 first_name TEXT NOT NULL,
                 gender TEXT NOT NULL,
                 birth_date TEXT NOT NULL,
-                weight_kg REAL NOT NULL,
+                weight_kg REAL,
                 belt TEXT
             )'
         );
@@ -263,12 +280,16 @@ final class EntryRegistrationRepositoryTest extends TestCase
         )->execute([$id, $code, $name]);
     }
 
-    private function insertAthlete(int $athleteId, int $clubId, string $birthDate = '2010-01-01'): void
-    {
+    private function insertAthlete(
+        int $athleteId,
+        int $clubId,
+        string $birthDate = '2010-01-01',
+        ?float $weight = 50.0
+    ): void {
         $this->database->prepare(
             'INSERT INTO athletes (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        )->execute([$athleteId, $clubId, 'Last', 'First', 'M', $birthDate, 50.0, 'white']);
+        )->execute([$athleteId, $clubId, 'Last', 'First', 'M', $birthDate, $weight, 'white']);
     }
 
     private function insertEvent(

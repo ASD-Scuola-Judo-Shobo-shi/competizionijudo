@@ -35,6 +35,12 @@ final class EntryRegistrationRepository
         if ($registrationContext === null) {
             return EntryRegistrationResult::AthleteRejected;
         }
+        if (
+            $registrationContext['weight_kg'] === null
+            || (float) $registrationContext['weight_kg'] <= 0
+        ) {
+            return EntryRegistrationResult::AthleteWeightMissing;
+        }
 
         $eventDate = (string) $registrationContext['date'];
         $eventType = (string) $registrationContext['type'];
@@ -91,6 +97,8 @@ final class EntryRegistrationRepository
                   AND registration_option.is_active = 1
                  WHERE athlete.id = :athlete_id
                    AND athlete.club_id = :athlete_club_id
+                   AND athlete.weight_kg IS NOT NULL
+                   AND athlete.weight_kg > 0
                    AND event_record.published = 1
                    AND (
                        event_record.closed = 0
@@ -164,7 +172,14 @@ final class EntryRegistrationRepository
     }
 
     /**
-     * @return array{date: string, type: string, birth_date: string, max_participants: int|string|null, current_count: int|string}|null
+     * @return array{
+     *     date: string,
+     *     type: string,
+     *     birth_date: string,
+     *     weight_kg: float|int|string|null,
+     *     max_participants: int|string|null,
+     *     current_count: int|string
+     * }|null
      */
     private function registrationContext(
         int $eventId,
@@ -174,7 +189,7 @@ final class EntryRegistrationRepository
         string $registrationDate
     ): ?array {
         $statement = $this->database->prepare(
-            'SELECT event_record.date, event_record.type, athlete.birth_date,
+            'SELECT event_record.date, event_record.type, athlete.birth_date, athlete.weight_kg,
                     event_record.max_participants,
                     (SELECT COUNT(athlete_id) FROM entries WHERE event_id = :event_id_for_count) AS current_count
              FROM events AS event_record

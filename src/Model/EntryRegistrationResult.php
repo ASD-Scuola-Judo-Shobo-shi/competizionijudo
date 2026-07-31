@@ -8,6 +8,7 @@ enum EntryRegistrationResult
 {
     case Registered;
     case AthleteRejected;
+    case AthleteWeightMissing;
     case AlreadyRegistered;
     case CapacityExceeded;
     case Unsubscribed;
