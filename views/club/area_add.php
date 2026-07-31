@@ -215,52 +215,54 @@
         background: #d4edda;
         color: #155724;
     }
-    .belt-badge {
-        display: inline-block;
-        padding: 0.2em 0.6em;
-        font-size: 0.85em;
-        font-weight: 600;
-        border-radius: 4px;
-        white-space: nowrap;
-    }
     </style>
 </div>
 
 <div class="card">
     <h3><?= e(__('club.area.athlete_archive')) ?> <span class="count-badge"><?= e((string) ($pagination['total'] ?? 0)) ?></span></h3>
-    <table class="table-full">
+    <div
+        class="table-scroll table-scroll--wide table-scroll--responsive"
+        role="region"
+        tabindex="0"
+        aria-label="<?= e(__('club.area.athlete_archive')) ?>"
+    >
+        <table class="table-full responsive-table">
         <thead>
             <tr>
-                <th><?= e(__('club.area.athlete')) ?></th>
-                <th><?= e(__('club.area.gender')) ?></th>
-                <th><?= e(__('club.area.birth')) ?></th>
-                <th><?= e(__('club.area.age_class')) ?></th>
-                <th><?= e(__('club.area.weight')) ?></th>
-                <th><?= e(__('club.area.belt')) ?></th>
-                <th><?= e(__('club.area.weight_category')) ?></th>
-                <th><?= e(__('club.area.actions')) ?></th>
+                <th scope="col"><?= e(__('club.area.athlete')) ?></th>
+                <th scope="col"><?= e(__('club.area.gender')) ?></th>
+                <th scope="col"><?= e(__('club.area.birth')) ?></th>
+                <th scope="col"><?= e(__('club.area.age_class')) ?></th>
+                <th scope="col"><?= e(__('club.area.weight')) ?></th>
+                <th scope="col"><?= e(__('club.area.belt')) ?></th>
+                <th scope="col"><?= e(__('club.area.weight_category')) ?></th>
+                <th scope="col"><?= e(__('club.area.actions')) ?></th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($athletes)) : ?>
                 <tr>
-                    <td colspan="8"><?= e(__('club.area.no_athletes')) ?></td>
+                    <td class="responsive-table__empty" colspan="8"><?= e(__('club.area.no_athletes')) ?></td>
                 </tr>
             <?php else : ?>
                 <?php foreach ($athletes as $athlete) : ?>
                     <tr>
-                        <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>
-                        <td><?= $athlete->genderIconLabel(App\Localization::getLocale()) ?></td>
-                        <td><?= e($athlete->birth_date) ?></td>
-                        <td><?= e($athlete->ageClassLabel()) ?></td>
-                        <td><?= e((string) $athlete->weight_kg) ?></td>
-                        <td>
-                            <?php foreach ($athlete->beltEnum()?->components() ?? [['label' => $athlete->beltLabel(App\Localization::getLocale()), 'color' => '#ccc', 'textColor' => '#000']] as $component) : ?>
-                                <span class="belt-badge" style="background-color: <?= e($component['color']) ?>; color: <?= e($component['textColor']) ?>"><?= e($component['label']) ?></span>
-                            <?php endforeach; ?>
+                        <td data-label="<?= e(__('club.area.athlete')) ?>">
+                            <?= e($athlete->last_name . ' ' . $athlete->first_name) ?>
                         </td>
-                        <td><?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?></td>
-                        <td class="table-actions-cell">
+                        <td data-label="<?= e(__('club.area.gender')) ?>">
+                            <?= $athlete->genderIconLabel(App\Localization::getLocale()) ?>
+                        </td>
+                        <td data-label="<?= e(__('club.area.birth')) ?>"><?= e($athlete->birth_date) ?></td>
+                        <td data-label="<?= e(__('club.area.age_class')) ?>"><?= e($athlete->ageClassLabel()) ?></td>
+                        <td data-label="<?= e(__('club.area.weight')) ?>"><?= e((string) $athlete->weight_kg) ?></td>
+                        <td data-label="<?= e(__('club.area.belt')) ?>">
+                            <?php require dirname(__DIR__) . '/components/belt_badge.php'; ?>
+                        </td>
+                        <td data-label="<?= e(__('club.area.weight_category')) ?>">
+                            <?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?>
+                        </td>
+                        <td class="table-actions-cell" data-label="<?= e(__('club.area.actions')) ?>">
                             <div class="table-actions">
                                 <a class="btn btn-sm table-action-icon" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>" aria-label="<?= e(__('club.area.edit')) ?>" title="<?= e(__('club.area.edit')) ?>">✏️</a>
                                 <form method="post" action="<?= e(base_url('/clubs/delete-athlete?')) ?>" onsubmit="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')">
@@ -274,6 +276,7 @@
                 <?php endforeach; ?>
             <?php endif; ?>
         </tbody>
-    </table>
+        </table>
+    </div>
     <?= $pagination['links'] ?? '' ?>
 </div>

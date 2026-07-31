@@ -80,33 +80,49 @@ $showRegistrationFeedback = $registrationFeedback !== null
                         <form method="post" id="registration-form">
                             <?= csrf_field() ?>
                             <p><?= e(__('events.register_select')) ?></p>
-                            <table>
+                            <div
+                                class="table-scroll table-scroll--wide table-scroll--responsive"
+                                role="region"
+                                tabindex="0"
+                                aria-label="<?= e(__('events.register_select')) ?>"
+                            >
+                                <table class="responsive-table">
                                 <thead>
                                     <tr>
-                                        <th><?= e(__('admin.dashboard.actions')) ?></th>
-                                        <th><?= e(__('club.area.athlete')) ?></th>
-                                        <th><?= e(__('club.area.birth')) ?></th>
-                                        <th><?= e(__('club.area.weight')) ?></th>
-                                        <th><?= e(__('club.area.weight_category')) ?></th>
-                                        <th><?= e(__('events.registration_option_current')) ?></th>
+                                        <th scope="col"><?= e(__('admin.dashboard.actions')) ?></th>
+                                        <th scope="col"><?= e(__('club.area.athlete')) ?></th>
+                                        <th scope="col"><?= e(__('club.area.birth')) ?></th>
+                                        <th scope="col"><?= e(__('club.area.weight')) ?></th>
+                                        <th scope="col"><?= e(__('club.area.weight_category')) ?></th>
+                                        <th scope="col"><?= e(__('events.registration_option_current')) ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($athletes as $athlete) : ?>
+                                        <?php
+                                        $athleteName = $athlete->last_name . ' ' . $athlete->first_name;
+                                        $isRegistered = in_array($athlete->id, $registered, true);
+                                        ?>
                                         <tr>
-                                            <td>
-                                                <?php $isRegistered = in_array($athlete->id, $registered, true); ?>
+                                            <td data-label="<?= e(__('admin.dashboard.actions')) ?>">
                                                 <input type="checkbox"
                                                     name="athletes[]"
                                                     value="<?= e((string) $athlete->id) ?>"
                                                     <?= $isRegistered ? 'checked' : '' ?>
+                                                    aria-label="<?= e(__('events.register_select') . ': ' . $athleteName) ?>"
                                                     data-registered="<?= $isRegistered ? 'true' : 'false' ?>">
                                             </td>
-                                            <td><?= e($athlete->last_name . ' ' . $athlete->first_name) ?></td>
-                                            <td><?= e($athlete->birth_date) ?></td>
-                                            <td><?= e((string) $athlete->weight_kg) ?></td>
-                                            <td><?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?></td>
-                                            <td>
+                                            <td data-label="<?= e(__('club.area.athlete')) ?>"><?= e($athleteName) ?></td>
+                                            <td data-label="<?= e(__('club.area.birth')) ?>">
+                                                <?= e($athlete->birth_date) ?>
+                                            </td>
+                                            <td data-label="<?= e(__('club.area.weight')) ?>">
+                                                <?= e((string) $athlete->weight_kg) ?>
+                                            </td>
+                                            <td data-label="<?= e(__('club.area.weight_category')) ?>">
+                                                <?= e($athleteCategories[$athlete->id]['weight_category'] ?? '') ?>
+                                            </td>
+                                            <td data-label="<?= e(__('events.registration_option_current')) ?>">
                                                 <?php if (isset($registeredEnrollmentDetails[$athlete->id])) : ?>
                                                     <?= e(
                                                         $registeredEnrollmentDetails[$athlete->id]['option_name']
@@ -122,7 +138,8 @@ $showRegistrationFeedback = $registrationFeedback !== null
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
-                            </table>
+                                </table>
+                            </div>
 
                             <div class="registration-option-selector">
                                 <label for="registration_option_id">

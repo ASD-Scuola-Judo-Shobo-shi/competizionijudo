@@ -123,6 +123,59 @@ final class AdminClubAthleteWorkflowTest extends TestCase
         self::assertMatchesRegularExpression('/Registered athletes<\/dt>\s*<dd><strong>17<\/strong>/', $html);
     }
 
+    public function testEveryRemainingTableHasACompleteMobilePresentation(): void
+    {
+        $root = dirname(__DIR__);
+        $css = file_get_contents($root . '/public/assets/css/app.css');
+        self::assertIsString($css);
+        self::assertMatchesRegularExpression(
+            '/@media \(max-width: 768px\).*?\.table-scroll--responsive\s*\{[^}]*overflow:\s*visible;/s',
+            $css
+        );
+        self::assertMatchesRegularExpression(
+            '/\.responsive-table tbody td::before\s*\{[^}]*content:\s*attr\(data-label\);/s',
+            $css
+        );
+        self::assertMatchesRegularExpression(
+            '/@media \(max-width: 768px\).*?\.event-info-table td:first-child\s*\{[^}]*white-space:\s*normal;/s',
+            $css
+        );
+
+        foreach (
+            [
+                'views/club/area_add.php',
+                'views/club/area_list.php',
+                'views/events/entries.php',
+                'views/events/register.php',
+            ] as $template
+        ) {
+            $source = file_get_contents($root . '/' . $template);
+            self::assertIsString($source);
+            self::assertStringContainsString('table-scroll--responsive', $source, $template);
+            self::assertStringContainsString('responsive-table', $source, $template);
+            self::assertStringContainsString('data-label=', $source, $template);
+            self::assertStringContainsString('role="region"', $source, $template);
+            self::assertStringContainsString('tabindex="0"', $source, $template);
+        }
+
+        foreach (
+            [
+                'views/events/details.php',
+                'views/events/register.php',
+            ] as $template
+        ) {
+            $source = file_get_contents($root . '/' . $template);
+            self::assertIsString($source);
+            self::assertStringContainsString('class="event-info-table"', $source, $template);
+        }
+
+        $publicClubList = file_get_contents($root . '/views/club/list.php');
+        self::assertIsString($publicClubList);
+        self::assertStringContainsString('class="public-club-list"', $publicClubList);
+        self::assertStringContainsString('class="public-club-card', $publicClubList);
+        self::assertStringNotContainsString('<table', $publicClubList);
+    }
+
     public function testAdministratorCanExportOnlyTheSelectedClubsAthletes(): void
     {
         $request = new Request('GET', '/admin/clubs/athletes/export', ['club_id' => '201']);

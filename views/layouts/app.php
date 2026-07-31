@@ -114,8 +114,26 @@
                     data-light-action="<?= e(__('a11y.use_light_theme')) ?>"
                     data-dark-action="<?= e(__('a11y.use_dark_theme')) ?>"
                     title="<?= e(__('a11y.use_dark_theme')) ?>">
-                    <svg class="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-                        <path data-theme-icon d="M12 3v2m0 14v2M3 12h2m14 0h2m-3.64-5.36-1.41 1.41M7.05 16.95l-1.41 1.41m0-12.72L7.05 7.05m10.54 10.54 1.41 1.41M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" />
+                    <svg
+                        class="theme-toggle-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                        focusable="false"
+                    >
+                        <g data-theme-icon="light">
+                            <circle cx="12" cy="12" r="3.6" />
+                            <path d="M12 2.4v2.1m0 15v2.1M2.4 12h2.1m15 0h2.1M5.2 5.2l1.5 1.5m10.6 10.6 1.5 1.5m0-13.6-1.5 1.5M6.7 17.3l-1.5 1.5" />
+                        </g>
+                        <g data-theme-icon="dark">
+                            <path d="M20.3 15.4A8.2 8.2 0 0 1 8.6 3.7a8.5 8.5 0 1 0 11.7 11.7Z" />
+                            <path d="m17.7 3.2.35.86.85.35-.85.35-.35.86-.35-.86-.85-.35.85-.35.35-.86Z" fill="currentColor" stroke="none" />
+                            <circle cx="20.2" cy="7.4" r=".65" fill="currentColor" stroke="none" />
+                        </g>
                     </svg>
                 </button>
             </div>
@@ -197,10 +215,6 @@
                 return;
             }
 
-            const iconPath = toggle.querySelector('[data-theme-icon]');
-            const sunPath = 'M12 3v2m0 14v2M3 12h2m14 0h2m-3.64-5.36-1.41 1.41M7.05 16.95l-1.41 1.41m0-12.72L7.05 7.05m10.54 10.54 1.41 1.41M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z';
-            const moonPath = 'M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5a8.5 8.5 0 1 0 12 12Z';
-
             function setTheme(theme, persist) {
                 const isDark = theme === 'dark';
                 document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
@@ -208,7 +222,6 @@
                 const action = isDark ? toggle.dataset.lightAction : toggle.dataset.darkAction;
                 toggle.setAttribute('aria-label', action);
                 toggle.setAttribute('title', action);
-                iconPath.setAttribute('d', isDark ? moonPath : sunPath);
 
                 if (!persist) {
                     return;

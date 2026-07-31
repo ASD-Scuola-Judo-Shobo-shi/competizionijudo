@@ -7,6 +7,7 @@ namespace Tests;
 use App\Core\View;
 use App\Localization;
 use App\Model\AgeClass;
+use App\Model\Club;
 use App\Model\Event;
 use App\Model\JudoCategory;
 use App\Presentation\Navigation;
@@ -14,6 +15,45 @@ use PHPUnit\Framework\TestCase;
 
 final class ViewRenderTest extends TestCase
 {
+    public function testPublicClubDirectoryUsesFullyVisibleCards(): void
+    {
+        Localization::setLocale('en');
+        $_GET = [];
+        $view = new View(dirname(__DIR__) . '/views');
+        $clubs = [
+            new Club(
+                201,
+                'A very long synthetic club name that must remain visible on a phone',
+                '',
+                '',
+                null,
+                null,
+                '',
+                '',
+                '',
+                '',
+                null,
+                '',
+                'LONG-FEDERAL-CODE-201'
+            ),
+            new Club(202, 'Current Club', '', '', null, null, '', '', '', '', null, '', 'CURRENT-202'),
+        ];
+
+        $html = $view->render('club/list', array_merge([
+            'clubs' => $clubs,
+            'loggedInClubId' => 202,
+            'pagination' => paginate(2, 1, 50),
+        ], $this->layoutData('/clubs')));
+
+        self::assertStringContainsString('class="public-club-list"', $html);
+        self::assertSame(2, substr_count($html, '<li class="public-club-card'));
+        self::assertStringNotContainsString('<table', $html);
+        self::assertStringContainsString('A very long synthetic club name that must remain visible on a phone', $html);
+        self::assertStringContainsString('LONG-FEDERAL-CODE-201', $html);
+        self::assertStringContainsString('public-club-card--current', $html);
+        self::assertStringContainsString('Your club', $html);
+    }
+
     public function testAddEventFormRendersWithoutEditorArtifacts(): void
     {
         Localization::setLocale('it');
@@ -175,8 +215,12 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('class="header-controls"', $html);
         self::assertStringContainsString('id="locale-select"', $html);
         self::assertStringContainsString('id="theme-toggle"', $html);
-        self::assertStringContainsString('<svg class="theme-toggle-icon"', $html);
-        self::assertStringContainsString('data-theme-icon', $html);
+        self::assertStringContainsString('class="theme-toggle-icon"', $html);
+        self::assertStringContainsString('data-theme-icon="light"', $html);
+        self::assertStringContainsString('data-theme-icon="dark"', $html);
+        self::assertStringContainsString('stroke="currentColor"', $html);
+        self::assertStringNotContainsString('const sunPath', $html);
+        self::assertStringNotContainsString('const moonPath', $html);
         self::assertStringContainsString('competizioni-judo-theme', $html);
         self::assertStringContainsString('html[data-theme="dark"]', $css);
         self::assertStringContainsString('.theme-toggle', $css);

@@ -269,44 +269,59 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
         <?php elseif (!$clubs) : ?>
             <p><?= e(__('events.entries_no_clubs')) ?></p>
         <?php else : ?>
-            <table>
-                <tr>
-                    <th>#</th>
-                    <th><?= e(__('events.entries_club')) ?></th>
-                    <th><?= e(__('events.entries_code')) ?></th>
-                    <th><?= e(__('events.entries_athletes')) ?></th>
-                    <th><?= e(__('events.entries_club_breakdown')) ?></th>
-                </tr>
-                <?php foreach ($clubs as $i => $club) : ?>
-                    <?php
-                    $clubTotal = $clubAthleteCounts[$club['id']] ?? 0;
-                    $isCurrentClub = $loggedInClubId !== null && (int) $club['id'] === $loggedInClubId;
-                    ?>
-                    <tr<?= $isCurrentClub ? ' class="club-row--current"' : '' ?>>
-                        <td><?= (int) $i + 1 ?></td>
-                        <td>
-                            <strong><?= e($club['club_name']) ?></strong>
-                            <?php if ($isCurrentClub) : ?>
-                                <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span>
-                            <?php endif; ?>
-                        </td>
-                        <td><?= e($club['federal_code']) ?></td>
-                        <td><?= e((string) $clubTotal) ?></td>
-                        <td>
-                            <?php if ($clubTotal > 0) : ?>
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
-                                    <?php
-                                    $renderStackedBar($categorySegments, $clubCategoryCounts[$club['id']] ?? [], $clubTotal);
-                                    $renderStackedBar($weightSegments, $clubWeightCounts[$club['id']] ?? [], $clubTotal);
-                                    $renderStackedBar($beltSegments, $clubBeltCounts[$club['id']] ?? [], $clubTotal);
-                                    $renderStackedBar($genderSegments, $clubGenderCounts[$club['id']] ?? [], $clubTotal);
-                                    ?>
-                                </div>
-                            <?php endif; ?>
-                        </td>
+            <div
+                class="table-scroll table-scroll--responsive"
+                role="region"
+                tabindex="0"
+                aria-label="<?= e(__('events.entries_clubs_heading')) ?>"
+            >
+                <table class="responsive-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col"><?= e(__('events.entries_club')) ?></th>
+                            <th scope="col"><?= e(__('events.entries_code')) ?></th>
+                            <th scope="col"><?= e(__('events.entries_athletes')) ?></th>
+                            <th scope="col"><?= e(__('events.entries_club_breakdown')) ?></th>
                         </tr>
-                <?php endforeach; ?>
-            </table>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($clubs as $i => $club) : ?>
+                        <?php
+                        $clubTotal = $clubAthleteCounts[$club['id']] ?? 0;
+                        $isCurrentClub = $loggedInClubId !== null && (int) $club['id'] === $loggedInClubId;
+                        ?>
+                        <tr<?= $isCurrentClub ? ' class="club-row--current"' : '' ?>>
+                            <td data-label="#"><?= (int) $i + 1 ?></td>
+                            <td data-label="<?= e(__('events.entries_club')) ?>">
+                                <strong><?= e($club['club_name']) ?></strong>
+                                <?php if ($isCurrentClub) : ?>
+                                    <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="<?= e(__('events.entries_code')) ?>">
+                                <?= e($club['federal_code']) ?>
+                            </td>
+                            <td data-label="<?= e(__('events.entries_athletes')) ?>">
+                                <?= e((string) $clubTotal) ?>
+                            </td>
+                            <td data-label="<?= e(__('events.entries_club_breakdown')) ?>">
+                                <?php if ($clubTotal > 0) : ?>
+                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        <?php
+                                        $renderStackedBar($categorySegments, $clubCategoryCounts[$club['id']] ?? [], $clubTotal);
+                                        $renderStackedBar($weightSegments, $clubWeightCounts[$club['id']] ?? [], $clubTotal);
+                                        $renderStackedBar($beltSegments, $clubBeltCounts[$club['id']] ?? [], $clubTotal);
+                                        $renderStackedBar($genderSegments, $clubGenderCounts[$club['id']] ?? [], $clubTotal);
+                                        ?>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php endif; ?>
     </div>
 
@@ -332,34 +347,58 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
                 }
                 usort($sortedKeys, fn($a, $b) => $a['ageMin'] <=> $b['ageMin'] ?: strcmp($a['weight'], $b['weight']));
                 ?>
-                <table>
-                    <tr>
-                        <th><?= e(__('club.area.age_class')) ?></th>
-                        <th><?= e(__('club.area.weight_category')) ?></th>
-                        <th><?= e(__('club.area.athlete')) ?></th>
-                        <th><?= e(__('club.area.club')) ?></th>
-                        <th><?= e(__('club.area.gender')) ?></th>
-                        <th><?= e(__('club.area.belt')) ?></th>
-                    </tr>
-                    <?php foreach ($sortedKeys as $groupInfo) : ?>
-                        <?php foreach ($grouped[$groupInfo['key']] as $athlete) : ?>
-                            <?php $isCurrentClub = $loggedInClubId !== null && (int) $athlete['club_id'] === $loggedInClubId; ?>
-                            <tr<?= $isCurrentClub ? ' class="club-row--current"' : '' ?>>
-                                <td><?= e($groupInfo['category']) ?></td>
-                                <td><?= e($groupInfo['weight']) ?></td>
-                                <td><?= e($athlete['last_name'] . ' ' . $athlete['first_name']) ?></td>
-                                <td>
-                                    <?= e($athlete['club_name']) ?>
-                                    <?php if ($isCurrentClub) : ?>
-                                        <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?= e(__('gender.' . $athlete['gender'])) ?></td>
-                                <td><?= e(\App\Model\Belt::tryFromValue($athlete['belt'])?->label(\App\Localization::getLocale()) ?? $athlete['belt']) ?></td>
+                <div
+                    class="table-scroll table-scroll--wide table-scroll--responsive"
+                    role="region"
+                    tabindex="0"
+                    aria-label="<?= e(__('events.entries_athletes_heading')) ?>"
+                >
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th scope="col"><?= e(__('club.area.age_class')) ?></th>
+                                <th scope="col"><?= e(__('club.area.weight_category')) ?></th>
+                                <th scope="col"><?= e(__('club.area.athlete')) ?></th>
+                                <th scope="col"><?= e(__('club.area.club')) ?></th>
+                                <th scope="col"><?= e(__('club.area.gender')) ?></th>
+                                <th scope="col"><?= e(__('club.area.belt')) ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($sortedKeys as $groupInfo) : ?>
+                            <?php foreach ($grouped[$groupInfo['key']] as $athlete) : ?>
+                                <?php
+                                $isCurrentClub = $loggedInClubId !== null
+                                    && (int) $athlete['club_id'] === $loggedInClubId;
+                                ?>
+                                <tr<?= $isCurrentClub ? ' class="club-row--current"' : '' ?>>
+                                    <td data-label="<?= e(__('club.area.age_class')) ?>">
+                                        <?= e($groupInfo['category']) ?>
+                                    </td>
+                                    <td data-label="<?= e(__('club.area.weight_category')) ?>">
+                                        <?= e($groupInfo['weight']) ?>
+                                    </td>
+                                    <td data-label="<?= e(__('club.area.athlete')) ?>">
+                                        <?= e($athlete['last_name'] . ' ' . $athlete['first_name']) ?>
+                                    </td>
+                                    <td data-label="<?= e(__('club.area.club')) ?>">
+                                        <?= e($athlete['club_name']) ?>
+                                        <?php if ($isCurrentClub) : ?>
+                                            <span class="club-badge--current"><?= e(__('club.list.current_club')) ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td data-label="<?= e(__('club.area.gender')) ?>">
+                                        <?= e(__('gender.' . $athlete['gender'])) ?>
+                                    </td>
+                                    <td data-label="<?= e(__('club.area.belt')) ?>">
+                                        <?= e(\App\Model\Belt::tryFromValue($athlete['belt'])?->label(\App\Localization::getLocale()) ?? $athlete['belt']) ?>
+                                    </td>
                                 </tr>
+                            <?php endforeach; ?>
                         <?php endforeach; ?>
-                    <?php endforeach; ?>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
     <?php endif; ?>
