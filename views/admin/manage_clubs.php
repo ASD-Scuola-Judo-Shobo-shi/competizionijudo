@@ -1,42 +1,95 @@
 <?php /** @var list<\App\Model\Club> $clubs */ ?>
+<?php /** @var array<int, int> $athlete_counts */ ?>
 <?php /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */ ?>
-<div class="card">
-    <h2><?= e(__('admin.clubs.title')) ?> <span class="count-badge"><?= e((string) $pagination['total']) ?></span></h2>
-        <table class="table-full">
-        <thead>
-            <tr>
-                <th><?= e(__('admin.clubs.name')) ?></th>
-                <th><?= e(__('admin.clubs.federal_code')) ?></th>
-                <th><?= e(__('admin.clubs.email')) ?></th>
-                <th><?= e(__('admin.clubs.phone')) ?></th>
-                <th><?= e(__('club.register.contact_name')) ?></th>
-                <th><?= e(__('admin.clubs.actions')) ?></th>
-            </tr>
-        </thead>
-        <tbody>
+<section class="card admin-list-page">
+    <header class="admin-list-heading">
+        <h2>
+            <?= e(__('admin.clubs.title')) ?>
+            <span class="count-badge"><?= e((string) $pagination['total']) ?></span>
+        </h2>
+    </header>
+
+    <?php if (empty($clubs)) : ?>
+        <p class="admin-list-empty"><?= e(__('admin.clubs.empty')) ?></p>
+    <?php else : ?>
+        <div class="admin-card-list" role="list">
             <?php foreach ($clubs as $club) : ?>
-                <tr>
-                    <td><?= e($club->name) ?></td>
-                    <td><?= e($club->federal_code) ?></td>
-                    <td><?= e($club->email) ?></td>
-                    <td><?= e($club->phone) ?></td>
-                    <td><?= e($club->contact_first_name . ' ' . $club->contact_last_name) ?></td>
-                    <td class="table-actions-cell">
-                        <div class="table-actions">
-                            <a class="btn btn-sm green table-action-icon" href="<?= e(base_url('/admin/clubs/edit?id=' . (int) $club->id)) ?>" aria-label="<?= e(__('admin.clubs.edit')) ?>" title="<?= e(__('admin.clubs.edit')) ?>">✏️</a>
-                            <form method="post" action="<?= e(base_url('/admin/clubs/delete?')) ?>" onsubmit="return confirm('<?= e(__('admin.clubs.confirm_delete')) ?>')">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="club_id" value="<?= (int) $club->id ?>">
-                                <button class="btn btn-sm red table-action-icon" type="submit" aria-label="<?= e(__('admin.clubs.delete')) ?>" title="<?= e(__('admin.clubs.delete')) ?>">❌</button>
-                            </form>
+                <?php
+                $contactName = trim($club->contact_first_name . ' ' . $club->contact_last_name);
+                $locality = trim(implode(' ', array_filter([
+                    $club->postal_code,
+                    $club->city,
+                    $club->province !== '' ? '(' . $club->province . ')' : null,
+                ])));
+                $address = implode(', ', array_filter([$club->address_line, $locality]));
+                $affiliations = implode(', ', $club->affiliations());
+                $athleteCount = $athlete_counts[$club->id] ?? 0;
+                ?>
+                <article class="admin-entity-card" role="listitem">
+                    <header class="admin-entity-card__header">
+                        <h3><?= e($club->name) ?></h3>
+                        <span class="admin-code-badge"><?= e($club->federal_code) ?></span>
+                    </header>
+
+                    <dl class="admin-entity-details">
+                        <div>
+                            <dt><?= e(__('admin.clubs.email')) ?></dt>
+                            <dd><a href="<?= e('mailto:' . $club->email) ?>"><?= e($club->email) ?></a></dd>
                         </div>
-                    </td>
-                </tr>
+                        <div>
+                            <dt><?= e(__('admin.clubs.phone')) ?></dt>
+                            <dd>
+                                <?php if ($club->phone !== '') : ?>
+                                    <a href="<?= e('tel:' . $club->phone) ?>"><?= e($club->phone) ?></a>
+                                <?php else : ?>
+                                    <?= e(__('admin.common.not_available')) ?>
+                                <?php endif; ?>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt><?= e(__('admin.clubs.contact')) ?></dt>
+                            <dd><?= e($contactName !== '' ? $contactName : __('admin.common.not_available')) ?></dd>
+                        </div>
+                        <div>
+                            <dt><?= e(__('admin.clubs.address')) ?></dt>
+                            <dd><?= e($address !== '' ? $address : __('admin.common.not_available')) ?></dd>
+                        </div>
+                        <div>
+                            <dt><?= e(__('admin.clubs.affiliation')) ?></dt>
+                            <dd><?= e($affiliations !== '' ? $affiliations : __('admin.common.not_available')) ?></dd>
+                        </div>
+                        <div>
+                            <dt><?= e(__('admin.clubs.athletes')) ?></dt>
+                            <dd>
+                                <strong><?= e((string) $athleteCount) ?></strong>
+                                <?= e(__('admin.clubs.athlete_count')) ?>
+                            </dd>
+                        </div>
+                    </dl>
+
+                    <div class="admin-card-actions">
+                        <a
+                            class="btn btn-sm"
+                            href="<?= e(base_url('/admin/clubs/athletes?club_id=' . (int) $club->id)) ?>"
+                        ><?= e(__('admin.clubs.view_athletes')) ?></a>
+                        <a
+                            class="btn btn-sm"
+                            href="<?= e(base_url('/admin/clubs/athletes/export?club_id=' . (int) $club->id)) ?>"
+                        ><?= e(__('admin.clubs.export_athletes')) ?></a>
+                        <a
+                            class="btn btn-sm green"
+                            href="<?= e(base_url('/admin/clubs/edit?id=' . (int) $club->id)) ?>"
+                        ><?= e(__('admin.clubs.edit')) ?></a>
+                        <form method="post" action="<?= e(base_url('/admin/clubs/delete?')) ?>" onsubmit="return confirm('<?= e(__('admin.clubs.confirm_delete')) ?>')">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="club_id" value="<?= (int) $club->id ?>">
+                            <button class="btn btn-sm red" type="submit"><?= e(__('admin.clubs.delete')) ?></button>
+                        </form>
+                    </div>
+                </article>
             <?php endforeach; ?>
-            <?php if (empty($clubs)) : ?>
-                <tr><td colspan="6"><?= e(__('admin.clubs.empty')) ?></td></tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
+        </div>
+    <?php endif; ?>
+
     <?= $pagination['links'] ?>
-</div>
+</section>

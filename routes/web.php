@@ -56,6 +56,8 @@ return static function (App\Core\Router $router): void {
     $router->post('/admin/login', [\App\Controller\AdminController::class, 'login']);
     $router->get('/admin', [\App\Controller\AdminController::class, 'dashboard'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs', [\App\Controller\AdminController::class, 'manageClubs'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/clubs/athletes', [\App\Controller\AdminController::class, 'clubAthletes'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/clubs/athletes/export', [\App\Controller\AdminController::class, 'exportClubAthletes'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/delete', [\App\Controller\AdminController::class, 'deleteClub'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/add', [\App\Controller\AdminController::class, 'addEvent'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/add', [\App\Controller\AdminController::class, 'addEvent'], AuthContext::ADMINISTRATOR);

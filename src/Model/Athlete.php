@@ -155,6 +155,37 @@ final class Athlete
         return (int) $stmt->fetchColumn();
     }
 
+    /**
+     * @param list<int> $clubIds
+     * @return array<int, int>
+     */
+    public static function countsByClubIds(array $clubIds): array
+    {
+        $clubIds = array_values(array_unique(array_filter(
+            array_map('intval', $clubIds),
+            static fn(int $clubId): bool => $clubId > 0
+        )));
+        if ($clubIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($clubIds), '?'));
+        $statement = Database::connection()->prepare(
+            "SELECT club_id, COUNT(*) AS athlete_count
+             FROM athletes
+             WHERE club_id IN ($placeholders)
+             GROUP BY club_id"
+        );
+        $statement->execute($clubIds);
+
+        $counts = [];
+        foreach ($statement->fetchAll() ?: [] as $row) {
+            $counts[(int) $row['club_id']] = (int) $row['athlete_count'];
+        }
+
+        return $counts;
+    }
+
     /** @return list<self> */
     public static function pageByClub(int $clubId, int $limit, int $offset): array
     {

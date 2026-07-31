@@ -12,6 +12,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
 use App\Model\Affiliation;
+use App\Model\Athlete;
 use App\Model\Club;
 use App\Model\Database;
 use App\Model\EntrySnapshotService;
@@ -22,6 +23,7 @@ use App\Security\AuthenticationThrottle;
 use App\Model\EventRegistrationException;
 use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
+use App\Service\AthleteCsvTransfer;
 use App\Service\DatabasePasswordResetRepository;
 use App\Service\EventEntriesCsvTransfer;
 use App\Service\EventUploadStorage;
@@ -128,11 +130,71 @@ final class AdminController extends Controller
         $stmt->bindValue(2, $pagination['offset'], \PDO::PARAM_INT);
         $stmt->execute();
         $clubs = array_map(fn(array $row) => Club::fromArray($row), $stmt->fetchAll() ?: []);
+        $clubIds = array_map(static fn(Club $club): int => $club->id, $clubs);
 
         return $this->view('admin/manage_clubs', [
             'title' => __('admin.clubs.title'),
             'clubs' => $clubs,
+            'athlete_counts' => Athlete::countsByClubIds($clubIds),
             'pagination' => $pagination,
+        ]);
+    }
+
+    public function clubAthletes(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+
+        $clubId = (int) ($request->query('club_id') ?? 0);
+        $club = $clubId > 0 ? Club::findById($clubId) : null;
+        if ($club === null) {
+            return $this->redirect('/admin/clubs');
+        }
+
+        $page = max(1, (int) $request->query('page', '1'));
+        $pagination = paginate(Athlete::countByClub($club->id), $page, 50);
+        $athletes = Athlete::pageByClub(
+            $club->id,
+            $pagination['per_page'],
+            $pagination['offset']
+        );
+
+        return $this->view('admin/club_athletes', [
+            'title' => __('admin.clubs.athletes_title', ['club' => $club->name]),
+            'club' => $club,
+            'athletes' => $athletes,
+            'pagination' => $pagination,
+        ]);
+    }
+
+    public function exportClubAthletes(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+
+        $clubId = (int) ($request->query('club_id') ?? 0);
+        $club = $clubId > 0 ? Club::findById($clubId) : null;
+        if ($club === null) {
+            return $this->redirect('/admin/clubs');
+        }
+
+        $slug = strtolower((string) preg_replace('/[^A-Za-z0-9]+/', '-', $club->name));
+        $slug = trim(substr($slug, 0, 40), '-');
+        if ($slug === '') {
+            $slug = 'club-' . $club->id;
+        }
+        $filename = sprintf('athletes-%s-%s.csv', $slug, date('Y-m-d'));
+        $csv = (new AthleteCsvTransfer())->export($club->id);
+
+        return new Response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

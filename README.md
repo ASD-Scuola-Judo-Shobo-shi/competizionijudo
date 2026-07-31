@@ -19,6 +19,7 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 | Athlete CSV import and export | `/clubs/athletes-import`, `/clubs/athletes-export` | Authenticated club; import is POST + CSRF |
 | Athlete deletion | `/clubs/delete-athlete` | Authenticated club, POST + CSRF |
 | Event and club administration | `/admin/events`, `/admin/events/add`, `/admin/clubs`, `/admin/clubs/edit` | Administrator |
+| Club athlete viewing and CSV export | `/admin/clubs/athletes`, `/admin/clubs/athletes/export` | Administrator |
 | Event entry CSV export | `/admin/events/export` | Administrator |
 | Event and club deletion | `/admin/events/delete`, `/admin/clubs/delete` | Administrator, POST + CSRF |
 

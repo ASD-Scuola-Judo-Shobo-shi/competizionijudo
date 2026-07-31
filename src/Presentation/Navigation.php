@@ -29,6 +29,8 @@ final class Navigation
         '/admin/login',
         '/admin',
         '/admin/clubs',
+        '/admin/clubs/athletes',
+        '/admin/clubs/athletes/export',
         '/admin/events',
         '/admin/events/add',
         '/admin/clubs/edit',
@@ -79,7 +81,11 @@ final class Navigation
             }
 
             return [
-                ['label' => translate('admin.submenu.manage_clubs'), 'url' => base_url('/admin/clubs'), 'paths' => ['/admin/clubs', '/admin/clubs/edit']],
+                [
+                    'label' => translate('admin.submenu.manage_clubs'),
+                    'url' => base_url('/admin/clubs'),
+                    'paths' => ['/admin/clubs', '/admin/clubs/edit', '/admin/clubs/athletes'],
+                ],
                 ['label' => translate('admin.submenu.manage_events'), 'url' => base_url('/admin/events'), 'paths' => ['/admin/events']],
                 ['label' => translate('admin.submenu.add_event'), 'url' => base_url('/admin/events/add'), 'paths' => ['/admin/events/add']],
                 ['label' => translate('admin.submenu.logout'), 'url' => base_url('/admin/logout'), 'paths' => ['/admin/logout'], 'method' => 'post'],
