@@ -30,6 +30,7 @@ rsync -a --no-owner --no-group \
   --include="/scripts/" \
   --include="/scripts/run-migrations.php" \
   --include="/scripts/purge-expired-data.php" \
+  --include="/scripts/reconcile-duplicate-athletes.php" \
   --exclude="/scripts/***" \
   --include="/var/" \
   --include="/var/log/" \

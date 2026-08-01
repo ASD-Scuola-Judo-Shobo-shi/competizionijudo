@@ -162,6 +162,7 @@ jobs:
           APP_WEBHOST_LOCATION: ${{ vars.APP_WEBHOST_LOCATION }}
           APP_LOG_RETENTION_DAYS: ${{ vars.APP_LOG_RETENTION_DAYS }}
           APP_BACKUP_RETENTION_DAYS: ${{ vars.APP_BACKUP_RETENTION_DAYS }}
+          ATHLETE_DUPLICATE_MAINTENANCE: ${{ vars.ATHLETE_DUPLICATE_MAINTENANCE }}
         run: php scripts/render-deploy-env.php build/runtime-env
 
       - name: Upload production runtime env
@@ -347,6 +348,7 @@ jobs:
           APP_WEBHOST_LOCATION: ${{ vars.APP_WEBHOST_LOCATION }}
           APP_LOG_RETENTION_DAYS: ${{ vars.APP_LOG_RETENTION_DAYS }}
           APP_BACKUP_RETENTION_DAYS: ${{ vars.APP_BACKUP_RETENTION_DAYS }}
+          ATHLETE_DUPLICATE_MAINTENANCE: ${{ vars.ATHLETE_DUPLICATE_MAINTENANCE }}
         run: php scripts/render-deploy-env.php build/runtime-env
 
       - name: Upload development runtime env

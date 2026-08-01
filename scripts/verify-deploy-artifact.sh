@@ -25,6 +25,7 @@ for path in \
   routes/web.php \
   scripts/run-migrations.php \
   scripts/purge-expired-data.php \
+  scripts/reconcile-duplicate-athletes.php \
   src/bootstrap.php \
   vendor/autoload.php \
   vendor/composer/ClassLoader.php \

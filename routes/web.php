@@ -8,6 +8,7 @@ use App\Controller\AboutController;
 use App\Controller\HealthController;
 use App\Controller\EventController;
 use App\Controller\MigrationWebhookController;
+use App\Controller\AthleteMaintenanceController;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\HttpException;
@@ -59,6 +60,8 @@ return static function (App\Core\Router $router): void {
     $router->get('/admin/clubs', [\App\Controller\AdminController::class, 'manageClubs'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/athletes', [\App\Controller\AdminController::class, 'clubAthletes'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/athletes/export', [\App\Controller\AdminController::class, 'exportClubAthletes'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/maintenance/athlete-duplicates', [AthleteMaintenanceController::class, 'duplicates'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/maintenance/athlete-duplicates', [AthleteMaintenanceController::class, 'duplicates'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/update-inline', [\App\Controller\AdminController::class, 'updateClubInline'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/delete', [\App\Controller\AdminController::class, 'deleteClub'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/add', [\App\Controller\AdminController::class, 'addEvent'], AuthContext::ADMINISTRATOR);

@@ -90,6 +90,10 @@ this flow. Deployment concurrency queues a newer run instead of cancelling an
 active one, so an in-progress migration request is not interrupted by a new
 push.
 
+`ATHLETE_DUPLICATE_MAINTENANCE` is an optional, temporary boolean environment
+variable. It defaults to `false`; set it through the applicable GitHub Actions
+environment only for the supervised repair procedure below.
+
 The runner records each successfully completed migration in
 `schema_migrations`, so repeating a completed deployment is a no-op. Forward
 migrations must also guard their individual schema changes, allowing a retry to
@@ -129,6 +133,43 @@ existing application tables without a migration ledger, as well as partial
 pre-squash histories. Back up the database and investigate its migration records
 instead of bypassing this guard.
 
+### Historical athlete duplicate cleanup on Aruba
+
+Aruba Linux Basic has no SSH, so historical athlete reconciliation runs through
+a temporary administrator-only application page rather than through the CLI or
+a full database replacement. The page is disabled by default and fails closed.
+
+1. Export and verify a current MySQL backup. Stop athlete imports and event
+   registrations for the maintenance window.
+2. Set the GitHub Actions `production` environment variable
+   `ATHLETE_DUPLICATE_MAINTENANCE=true` and deploy `main`.
+3. Sign in as the application administrator and open the canonical production
+   path `/prod/admin/maintenance/athlete-duplicates` (or append
+   `/admin/maintenance/athlete-duplicates` to the deployed production
+   `APP_URL`).
+4. Select one club and run the read-only preview. Review safe merges, field
+   reconciliation, blocked same-event registrations, and same-name athletes
+   with different birth dates.
+5. For the same selection, confirm the verified backup, type
+   `APPLY ATHLETE CLEANUP`, and apply within 30 minutes of the preview. The
+   operation re-evaluates and locks current rows in its database transaction;
+   safe groups are applied while blocked groups remain unchanged.
+6. Run another preview for the club. It should show no safe duplicate groups.
+   Save the report only in the controller's restricted maintenance records,
+   without placing athlete details in tickets or public CI logs.
+7. Set `ATHLETE_DUPLICATE_MAINTENANCE=false` (or remove the variable) and deploy
+   again. Confirm the submenu item disappears and the authenticated route
+   returns 404.
+8. Verify athlete lists and affected event entries, then take a post-repair
+   backup.
+
+The page requires an administrator session, the route-level administrator
+policy, CSRF validation, the recent matching preview, the backup confirmation,
+and the exact phrase. Its responses are private and non-cacheable. Do not leave
+the feature flag enabled after the maintenance window. Aruba's MySQL panel can
+export and import SQL files, but a dump-edit-replace cycle is only a fallback
+because any production writes after the dump would be lost.
+
 Rotating credentials is now a GitHub environment operation: update the affected
 environment variable or secret, redeploy the branch, and verify `/health`.
 Do not commit generated `.env` files, workflow artifacts, ticket attachments,
@@ -141,7 +182,8 @@ first deployment.
 `.env.example` is the authoritative non-secret inventory. The deploy workflow
 expects GitHub environment entries with the same names for all blank required
 keys and reuses the template defaults for `APP_NAME`, `APP_LOCALE`,
-`APP_TEST_RESET_LINKS`, `EVENTS_UPCOMING_LIMIT`, and
+`APP_TEST_RESET_LINKS`, `EVENTS_UPCOMING_LIMIT`,
+`ATHLETE_DUPLICATE_MAINTENANCE=false`, and
 `PASSWORD_RESET_MAILER=aruba` unless a future workflow override is added.
 Startup requires `APP_URL`, all four `DB_*` settings, `ADMIN_USER`,
 `ADMIN_PASS_HASH`, `MIGRATIONS_TOKEN`, `PASSWORD_RESET_MAILER`,

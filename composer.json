@@ -30,6 +30,7 @@
   },
   "scripts": {
     "analyse": "phpstan analyse --debug --memory-limit=256M",
+    "athletes:deduplicate": "php scripts/reconcile-duplicate-athletes.php",
     "check": [
       "@quality",
       "@test"

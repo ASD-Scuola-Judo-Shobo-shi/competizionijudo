@@ -54,6 +54,7 @@ final class RenderDeployEnvScriptTest extends TestCase
             'APP_WEBHOST_LOCATION' => 'European Union',
             'APP_LOG_RETENTION_DAYS' => '30',
             'APP_BACKUP_RETENTION_DAYS' => '30',
+            'ATHLETE_DUPLICATE_MAINTENANCE' => 'true',
         ]);
 
         self::assertSame(0, $status, $output);
@@ -66,6 +67,7 @@ final class RenderDeployEnvScriptTest extends TestCase
         self::assertStringContainsString('DB_NAME=competizionijudo_dev', $contents);
         self::assertStringContainsString('PASSWORD_RESET_MAILER=aruba', $contents);
         self::assertStringContainsString('APP_OWNER=Synthetic Sports Association', $contents);
+        self::assertStringContainsString('ATHLETE_DUPLICATE_MAINTENANCE=true', $contents);
         self::assertSame(0600, fileperms($this->directory . '/.env') & 0777);
     }
 

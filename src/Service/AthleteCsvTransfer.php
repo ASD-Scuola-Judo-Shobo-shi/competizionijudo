@@ -21,6 +21,13 @@ final class AthleteCsvTransfer
 
     private const HEADER_SCAN_ROWS = 25;
 
+    private readonly AthleteFieldReconciler $fieldReconciler;
+
+    public function __construct(?AthleteFieldReconciler $fieldReconciler = null)
+    {
+        $this->fieldReconciler = $fieldReconciler ?? new AthleteFieldReconciler();
+    }
+
     /** @var list<string> */
     private const EXPORT_FIELDS = [
         'last_name',
@@ -467,8 +474,8 @@ final class AthleteCsvTransfer
 
         return [
             'athlete_id' => trim($raw['athlete_id'] ?? ''),
-            'last_name' => $this->titleCaseName($raw['last_name'] ?? ''),
-            'first_name' => $this->titleCaseName($raw['first_name'] ?? ''),
+            'last_name' => $this->fieldReconciler->titleCaseName($raw['last_name'] ?? ''),
+            'first_name' => $this->fieldReconciler->titleCaseName($raw['first_name'] ?? ''),
             'gender' => $gender?->value ?? trim($genderInput),
             'birth_date' => $this->birthDate($raw['birth_date'] ?? '', $excelDate1904),
             'weight_kg' => $this->weight($raw['weight_kg'] ?? ''),
@@ -658,8 +665,8 @@ final class AthleteCsvTransfer
     private function mergeWithExisting(array $row, array $raw, Athlete $existing): array
     {
         $fallbacks = [
-            'last_name' => $this->titleCaseName($existing->last_name),
-            'first_name' => $this->titleCaseName($existing->first_name),
+            'last_name' => $this->fieldReconciler->titleCaseName($existing->last_name),
+            'first_name' => $this->fieldReconciler->titleCaseName($existing->first_name),
             'gender' => $existing->gender,
             'birth_date' => $existing->birth_date,
             'weight_kg' => $this->formatWeight($existing->weight_kg),
@@ -696,181 +703,18 @@ final class AthleteCsvTransfer
      */
     private function reconcileWithExisting(array $row, Athlete $existing): array
     {
-        $resolutions = [];
-        $lastName = $this->titleCaseName($existing->last_name);
-        $firstName = $this->titleCaseName($existing->first_name);
-        if ($existing->last_name !== $row['last_name']) {
-            $resolutions['last_name'] = 'normalized';
-        }
-        if ($existing->first_name !== $row['first_name']) {
-            $resolutions['first_name'] = 'normalized';
-        }
-        $row['last_name'] = $lastName;
-        $row['first_name'] = $firstName;
+        [$reconciled, $resolutions] = $this->fieldReconciler->reconcile([
+            'last_name' => $existing->last_name,
+            'first_name' => $existing->first_name,
+            'gender' => $existing->gender,
+            'birth_date' => $existing->birth_date,
+            'weight_kg' => $existing->weight_kg,
+            'belt' => $existing->belt,
+            'membership_number' => $existing->membership_number,
+            'notes' => $existing->notes,
+        ], $row);
 
-        [$row['gender'], $resolution] = $this->reconcileDatabaseValue(
-            $existing->gender,
-            $row['gender']
-        );
-        if ($resolution !== null) {
-            $resolutions['gender'] = $resolution;
-        }
-
-        [$row['weight_kg'], $resolution] = $this->reconcileWeight(
-            $existing->weight_kg,
-            $row['weight_kg']
-        );
-        if ($resolution !== null) {
-            $resolutions['weight_kg'] = $resolution;
-        }
-
-        [$row['belt'], $resolution] = $this->reconcileBelt($existing->belt, $row['belt']);
-        if ($resolution !== null) {
-            $resolutions['belt'] = $resolution;
-        }
-
-        [$row['membership_number'], $resolution] = $this->reconcileText(
-            $existing->membership_number,
-            $row['membership_number'],
-            ' / ',
-            80,
-            true
-        );
-        if ($resolution !== null) {
-            $resolutions['membership_number'] = $resolution;
-        }
-
-        [$row['notes'], $resolution] = $this->reconcileText(
-            $existing->notes,
-            $row['notes'],
-            "\n",
-            65_535,
-            false
-        );
-        if ($resolution !== null) {
-            $resolutions['notes'] = $resolution;
-        }
-
-        return [$row, $resolutions];
-    }
-
-    /** @return array{0: string, 1: string|null} */
-    private function reconcileDatabaseValue(string $existing, string $imported): array
-    {
-        if ($existing === '') {
-            return [$imported, $imported !== '' ? 'used_imported' : null];
-        }
-        if ($imported === '') {
-            return [$existing, 'used_database'];
-        }
-        if ($existing === $imported) {
-            return [$existing, null];
-        }
-
-        return [$existing, 'kept_database'];
-    }
-
-    /** @return array{0: string, 1: string|null} */
-    private function reconcileWeight(?float $existing, string $imported): array
-    {
-        if ($existing === null) {
-            return [$imported, $imported !== '' ? 'used_imported' : null];
-        }
-
-        $databaseWeight = $this->formatWeight($existing);
-        if ($imported === '') {
-            return [$databaseWeight, 'used_database'];
-        }
-        if (is_numeric($imported) && $this->sameWeight($existing, (float) $imported)) {
-            return [$databaseWeight, null];
-        }
-
-        return [$databaseWeight, 'kept_database'];
-    }
-
-    /** @return array{0: string, 1: string|null} */
-    private function reconcileBelt(string $existing, string $imported): array
-    {
-        if ($existing === '') {
-            return [$imported, $imported !== '' ? 'used_imported' : null];
-        }
-        if ($imported === '') {
-            return [$existing, 'used_database'];
-        }
-        if ($existing === $imported) {
-            return [$existing, null];
-        }
-
-        $existingRank = $this->beltRank($existing);
-        $importedRank = $this->beltRank($imported);
-        if ($existingRank === null || $importedRank === null) {
-            return [$existing, 'kept_database'];
-        }
-
-        return [
-            $importedRank > $existingRank ? $imported : $existing,
-            'higher_belt',
-        ];
-    }
-
-    /** @return array{0: string, 1: string|null} */
-    private function reconcileText(
-        ?string $existing,
-        string $imported,
-        string $separator,
-        int $maximumLength,
-        bool $caseInsensitive
-    ): array {
-        $existing = $existing !== null && trim($existing) !== '' ? trim($existing) : null;
-        $imported = trim($imported);
-        $imported = $imported !== '' ? $imported : null;
-
-        if ($existing === null) {
-            return [$imported ?? '', $imported !== null ? 'used_imported' : null];
-        }
-        if ($imported === null) {
-            return [$existing, 'used_database'];
-        }
-
-        if ($this->containsTextValue($existing, $imported, $separator, $caseInsensitive)) {
-            return [$existing, null];
-        }
-        $combined = $this->containsTextValue($imported, $existing, $separator, $caseInsensitive)
-            ? $imported
-            : $existing . $separator . $imported;
-        if ($this->length($combined) > $maximumLength) {
-            return [$existing, 'kept_database'];
-        }
-
-        return [$combined, 'combined'];
-    }
-
-    private function containsTextValue(
-        string $container,
-        string $value,
-        string $separator,
-        bool $caseInsensitive
-    ): bool {
-        $container = $separator . $container . $separator;
-        $value = $separator . $value . $separator;
-        if ($caseInsensitive) {
-            $container = mb_strtolower($container, 'UTF-8');
-            $value = mb_strtolower($value, 'UTF-8');
-        }
-
-        return str_contains($container, $value);
-    }
-
-    private function beltRank(string $value): ?int
-    {
-        $belt = Belt::tryFromValue($value);
-        if ($belt === null) {
-            return null;
-        }
-
-        $rank = array_search($belt, Belt::cases(), true);
-
-        return is_int($rank) ? $rank : null;
+        return [array_replace($row, $reconciled), $resolutions];
     }
 
     /**
@@ -1176,11 +1020,6 @@ final class AthleteCsvTransfer
     private function cleanText(string $value): string
     {
         return trim(preg_replace('/\s+/u', ' ', $value) ?? $value);
-    }
-
-    private function titleCaseName(string $value): string
-    {
-        return mb_convert_case($this->cleanText($value), MB_CASE_TITLE, 'UTF-8');
     }
 
     private function identityValue(string $value): string

@@ -34,6 +34,7 @@ final class AdvertisedRoutesTest extends TestCase
             '/admin/clubs/edit' => 'get',
             '/admin/clubs/athletes' => 'get',
             '/admin/clubs/athletes/export' => 'get',
+            '/admin/maintenance/athlete-duplicates' => 'get',
             '/admin/events/delete' => 'post',
             '/admin/clubs/delete' => 'post',
         ];
@@ -42,5 +43,10 @@ final class AdvertisedRoutesTest extends TestCase
             self::assertStringContainsString('`' . $path . '`', $readme, $path);
             self::assertStringContainsString("\$router->{$method}('{$path}'", $routes, $path);
         }
+
+        self::assertStringContainsString(
+            "\$router->post('/admin/maintenance/athlete-duplicates'",
+            $routes
+        );
     }
 }

@@ -31,6 +31,7 @@ final class Navigation
         '/admin/clubs',
         '/admin/clubs/athletes',
         '/admin/clubs/athletes/export',
+        '/admin/maintenance/athlete-duplicates',
         '/admin/events',
         '/admin/events/add',
         '/admin/clubs/edit',
@@ -80,7 +81,7 @@ final class Navigation
                 return [['label' => translate('nav.login'), 'url' => base_url('/admin/login'), 'paths' => ['/admin/login']]];
             }
 
-            return [
+            $items = [
                 [
                     'label' => translate('admin.submenu.manage_clubs'),
                     'url' => base_url('/admin/clubs'),
@@ -88,8 +89,22 @@ final class Navigation
                 ],
                 ['label' => translate('admin.submenu.manage_events'), 'url' => base_url('/admin/events'), 'paths' => ['/admin/events']],
                 ['label' => translate('admin.submenu.add_event'), 'url' => base_url('/admin/events/add'), 'paths' => ['/admin/events/add']],
-                ['label' => translate('admin.submenu.logout'), 'url' => base_url('/admin/logout'), 'paths' => ['/admin/logout'], 'method' => 'post'],
             ];
+            if (\App\Controller\AthleteMaintenanceController::enabled()) {
+                $items[] = [
+                    'label' => translate('admin.submenu.athlete_cleanup'),
+                    'url' => base_url('/admin/maintenance/athlete-duplicates'),
+                    'paths' => ['/admin/maintenance/athlete-duplicates'],
+                ];
+            }
+            $items[] = [
+                'label' => translate('admin.submenu.logout'),
+                'url' => base_url('/admin/logout'),
+                'paths' => ['/admin/logout'],
+                'method' => 'post',
+            ];
+
+            return $items;
         }
 
         $items = [

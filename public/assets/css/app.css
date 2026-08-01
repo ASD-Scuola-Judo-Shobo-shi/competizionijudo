@@ -704,6 +704,58 @@ a.btn-sm:hover {
     line-height: 1.45;
 }
 
+.athlete-cleanup-form {
+    display: grid;
+    gap: 16px;
+    max-width: 760px;
+}
+
+.athlete-cleanup-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.athlete-cleanup-actions .btn {
+    margin: 0;
+}
+
+.athlete-cleanup-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 0 0 20px;
+}
+
+.athlete-cleanup-summary > div {
+    padding: 14px;
+    border: 1px solid #cfd7e3;
+    border-radius: 10px;
+    background: #f7f9fc;
+}
+
+.athlete-cleanup-summary dt {
+    color: #334b68;
+    font-size: .85rem;
+    font-weight: 700;
+}
+
+.athlete-cleanup-summary dd {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    font-weight: 900;
+}
+
+.athlete-cleanup-resolution-list {
+    min-width: 260px;
+    margin: 0;
+    padding-left: 18px;
+}
+
+.athlete-cleanup-report h3 {
+    margin-top: 26px;
+}
+
 .event-payment-fieldset {
     min-width: 0;
     margin: 18px 0;
@@ -2752,6 +2804,7 @@ html[data-theme="dark"] .notice-error {
 }
 
 html[data-theme="dark"] .event-payment-fieldset,
+html[data-theme="dark"] .athlete-cleanup-summary > div,
 html[data-theme="dark"] .registration-option-row,
 html[data-theme="dark"] .registration-payment-summary,
 html[data-theme="dark"] .registration-change-grid > div,
@@ -2763,8 +2816,13 @@ html[data-theme="dark"] .sepa-payment-layout {
 }
 
 html[data-theme="dark"] .registration-option-row,
+html[data-theme="dark"] .athlete-cleanup-summary > div,
 html[data-theme="dark"] .registration-payment-summary {
     background: #203653;
+}
+
+html[data-theme="dark"] .athlete-cleanup-summary dt {
+    color: #c4d1e2;
 }
 
 html[data-theme="dark"] .registration-change-grid > div {

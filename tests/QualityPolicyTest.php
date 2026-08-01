@@ -76,6 +76,10 @@ final class QualityPolicyTest extends TestCase
         $deploy = (string) file_get_contents(dirname(__DIR__) . '/.github/workflows/deploy.yml');
         self::assertStringContainsString('uses: ./.github/workflows/ci.yml', $deploy);
         self::assertSame(1, substr_count($deploy, 'run: bash scripts/stage-root-router.sh build/root-router'));
+        self::assertSame(2, substr_count(
+            $deploy,
+            'ATHLETE_DUPLICATE_MAINTENANCE: ${{ vars.ATHLETE_DUPLICATE_MAINTENANCE }}'
+        ));
     }
 
     public function testCiRunsOnlyThePhp84QualityMatrixEntry(): void

@@ -20,6 +20,7 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 | Athlete deletion | `/clubs/delete-athlete` | Authenticated club, POST + CSRF |
 | Event and club administration | `/admin/events`, `/admin/events/add`, `/admin/clubs`, `/admin/clubs/edit` | Administrator |
 | Club athlete viewing and CSV export | `/admin/clubs/athletes`, `/admin/clubs/athletes/export` | Administrator |
+| Temporary historical duplicate repair | `/admin/maintenance/athlete-duplicates` | Administrator, feature flag + CSRF + explicit confirmation |
 | Event entry CSV export | `/admin/events/export` | Administrator |
 | Event and club deletion | `/admin/events/delete`, `/admin/clubs/delete` | Administrator, POST + CSRF |
 
@@ -79,6 +80,34 @@ Closing an event atomically stores its event snapshot. Schedule
 `composer privacy:purge` daily to remove closed-event entry snapshots after at
 most one year. Event uploads are deleted when replaced or when their event is deleted.
 Administrators are warned to export live athlete records before deleting a club.
+
+### Repairing historical athlete duplicates
+
+Imports made before the case-insensitive identity reconciliation was introduced
+may have left duplicate athletes. On Aruba production, set the GitHub production
+environment variable `ATHLETE_DUPLICATE_MAINTENANCE=true`, deploy, sign in as the
+administrator, and open `/prod/admin/maintenance/athlete-duplicates`. Preview
+one club at a time before applying. The page requires the same selection to have
+been previewed during the previous 30 minutes, a verified-backup confirmation,
+CSRF validation, and the exact displayed confirmation phrase. Set the variable
+back to `false` and redeploy immediately after the repair.
+
+For local or other command-line environments, use:
+
+```sh
+composer athletes:deduplicate -- --club-id=201
+composer athletes:deduplicate -- --club-id=201 --apply
+```
+
+Run it for all clubs by omitting `--club-id`. Before either production method,
+stop athlete imports and event registrations and take a verified database
+backup. The cleanup keeps the lowest athlete ID, reconciles fields using the
+same rules as import, reassigns safe
+event entries, and reports every decision. Groups where both athlete IDs are
+registered for the same event are left unchanged for manual review; an apply
+CLI run exits with status 2 while any such groups remain. Same-name athletes
+with different birth dates are reported but never merged automatically.
+Re-running either method is idempotent.
 
 The application uses only its technical session cookie and does not load
 analytics or profiling cookies. Authentication is server-side, destructive
