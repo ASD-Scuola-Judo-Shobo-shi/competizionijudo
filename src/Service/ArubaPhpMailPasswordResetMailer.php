@@ -25,45 +25,47 @@ final class ArubaPhpMailPasswordResetMailer implements PasswordResetMailer
 
     public function sendResetLink(string $recipient, string $resetUrl): void
     {
-        $sender = trim((string) env('MAIL_FROM_ADDRESS', ''));
-        if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
-            throw new RuntimeException('Password reset recipient is invalid.');
-        }
-        if (filter_var($sender, FILTER_VALIDATE_EMAIL) === false) {
-            throw new RuntimeException('Password reset sender is invalid.');
-        }
         if (filter_var($resetUrl, FILTER_VALIDATE_URL) === false || !str_starts_with($resetUrl, 'https://')) {
             throw new RuntimeException('Password reset URL must use HTTPS.');
         }
 
-        $headers = [
-            'From' => $sender,
-            'MIME-Version' => '1.0',
-            'Content-Type' => 'text/plain; charset=UTF-8',
-            'Content-Transfer-Encoding' => 'quoted-printable',
-        ];
-        $sent = ($this->send)(
+        $this->sendPlainText(
             $recipient,
-            $this->encodeSubject(__('club.reset_email.subject')),
-            $this->encodeBody(__('club.reset_email.body', ['url' => $resetUrl])),
-            $headers
+            __('club.reset_email.subject'),
+            __('club.reset_email.body', ['url' => $resetUrl])
         );
-        if (!$sent) {
-            throw new RuntimeException('Aruba PHP mail rejected the password reset message.');
-        }
     }
 
     public function sendRegistrationConfirmationLink(string $recipient, string $confirmationUrl): void
     {
-        $sender = trim((string) env('MAIL_FROM_ADDRESS', ''));
-        if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
-            throw new RuntimeException('Registration confirmation recipient is invalid.');
-        }
-        if (filter_var($sender, FILTER_VALIDATE_EMAIL) === false) {
-            throw new RuntimeException('Registration confirmation sender is invalid.');
-        }
         if (filter_var($confirmationUrl, FILTER_VALIDATE_URL) === false || !str_starts_with($confirmationUrl, 'https://')) {
             throw new RuntimeException('Registration confirmation URL must use HTTPS.');
+        }
+
+        $this->sendPlainText(
+            $recipient,
+            __('club.registration_confirmation_email.subject'),
+            __('club.registration_confirmation_email.body', ['url' => $confirmationUrl])
+        );
+    }
+
+    public function sendRegistrationRecap(string $recipient, string $subject, string $message): void
+    {
+        $this->sendPlainText($recipient, $subject, $message);
+    }
+
+    private function sendPlainText(string $recipient, string $subject, string $message): void
+    {
+        $sender = trim((string) env('MAIL_FROM_ADDRESS', ''));
+        if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
+            throw new RuntimeException('Mail recipient is invalid.');
+        }
+        if (filter_var($sender, FILTER_VALIDATE_EMAIL) === false) {
+            throw new RuntimeException('Mail sender is invalid.');
+        }
+        $subject = trim(preg_replace('/[\r\n]+/', ' ', $subject) ?? '');
+        if ($subject === '' || trim($message) === '') {
+            throw new RuntimeException('Mail subject and message are required.');
         }
 
         $headers = [
@@ -74,12 +76,12 @@ final class ArubaPhpMailPasswordResetMailer implements PasswordResetMailer
         ];
         $sent = ($this->send)(
             $recipient,
-            $this->encodeSubject(__('club.registration_confirmation_email.subject')),
-            $this->encodeBody(__('club.registration_confirmation_email.body', ['url' => $confirmationUrl])),
+            $this->encodeSubject($subject),
+            $this->encodeBody($message),
             $headers
         );
         if (!$sent) {
-            throw new RuntimeException('Aruba PHP mail rejected the registration confirmation message.');
+            throw new RuntimeException('Aruba PHP mail rejected the message.');
         }
     }
 

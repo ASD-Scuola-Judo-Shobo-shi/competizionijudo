@@ -30,6 +30,18 @@ final class RegistrationPaymentService
         ];
     }
 
+    /**
+     * @return array{account_holder:string, iban:string, bic:string}|null
+     */
+    public static function completePaymentInfoForEvent(Event $event): ?array
+    {
+        $paymentInfo = self::paymentInfoForEvent($event);
+
+        return $paymentInfo['account_holder'] !== '' && $paymentInfo['iban'] !== ''
+            ? $paymentInfo
+            : null;
+    }
+
     public static function formatAmount(int $feeCents): string
     {
         $sign = $feeCents < 0 ? '-' : '';
@@ -60,9 +72,9 @@ final class RegistrationPaymentService
             throw new InvalidArgumentException('The EPC transfer amount is outside the supported range.');
         }
 
-        $paymentInfo = self::paymentInfoForEvent($event);
+        $paymentInfo = self::completePaymentInfoForEvent($event);
         if (
-            $paymentInfo['account_holder'] === ''
+            $paymentInfo === null
             || mb_strlen($paymentInfo['account_holder']) > 70
             || preg_match('/\A[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}\z/', $paymentInfo['iban']) !== 1
             || (

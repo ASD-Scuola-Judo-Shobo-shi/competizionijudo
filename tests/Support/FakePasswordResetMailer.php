@@ -15,6 +15,9 @@ final class FakePasswordResetMailer implements PasswordResetMailer
     /** @var list<array{recipient: string, confirmation_url: string}> */
     public array $confirmationSent = [];
 
+    /** @var list<array{recipient: string, subject: string, message: string}> */
+    public array $registrationRecaps = [];
+
     public function __construct(private readonly bool $fail = false)
     {
     }
@@ -41,5 +44,14 @@ final class FakePasswordResetMailer implements PasswordResetMailer
             'recipient' => $recipient,
             'confirmation_url' => $confirmationUrl,
         ];
+    }
+
+    public function sendRegistrationRecap(string $recipient, string $subject, string $message): void
+    {
+        if ($this->fail) {
+            throw new RuntimeException('Synthetic mail transport failure.');
+        }
+
+        $this->registrationRecaps[] = compact('recipient', 'subject', 'message');
     }
 }

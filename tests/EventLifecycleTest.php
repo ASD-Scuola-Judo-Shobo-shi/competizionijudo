@@ -21,6 +21,7 @@ use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
+use Tests\Support\FakePasswordResetMailer;
 
 final class EventLifecycleTest extends TestCase
 {
@@ -220,7 +221,8 @@ final class EventLifecycleTest extends TestCase
         $postResponse = (new EventController(
             $this->view,
             $post,
-            new FileLogger($this->logPath)
+            new FileLogger($this->logPath),
+            new FakePasswordResetMailer(true)
         ))->register($post);
         $get = new Request('GET', '/events/register?event=101', ['event' => '101']);
         $firstGet = (new EventController($this->view, $get))->register($get);
@@ -231,9 +233,14 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('Aggiunti: 1', $firstGet->content());
         self::assertStringContainsString('Rifiutati: 2', $firstGet->content());
         self::assertStringContainsString('Non riusciti: 1', $firstGet->content());
+        self::assertStringContainsString(__('events.registration_recap_delivery_failed'), $firstGet->content());
         self::assertStringNotContainsString('registration-results', $secondGet->content());
         self::assertStringContainsString(
             '"event":"event.registration_failed"',
+            (string) file_get_contents($this->logPath)
+        );
+        self::assertStringContainsString(
+            '"event":"event.registration_recap_delivery_failed"',
             (string) file_get_contents($this->logPath)
         );
     }
@@ -304,7 +311,8 @@ final class EventLifecycleTest extends TestCase
                 'registration_option_id' => '502',
             ]
         );
-        $postResponse = (new EventController($this->view, $post))->register($post);
+        $mailer = new FakePasswordResetMailer();
+        $postResponse = (new EventController($this->view, $post, null, $mailer))->register($post);
         $get = new Request('GET', '/events/register?event=101', ['event' => '101']);
         $summary = (new EventController($this->view, $get))->register($get);
 
@@ -333,6 +341,64 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('€10.00', $plainText);
         self::assertStringContainsString('IT60X0542811101000000123456', $plainText);
         self::assertStringContainsString('data:image/svg+xml;base64,', $summary->content());
+
+        self::assertCount(1, $mailer->registrationRecaps);
+        self::assertSame('own@example.test', $mailer->registrationRecaps[0]['recipient']);
+        self::assertStringContainsString('Synthetic Event', $mailer->registrationRecaps[0]['subject']);
+        self::assertStringContainsString(
+            __('events.registration_recap_event'),
+            $mailer->registrationRecaps[0]['message']
+        );
+        self::assertStringContainsString('Synthetic Venue', $mailer->registrationRecaps[0]['message']);
+        self::assertStringContainsString('FailureFamily FailureGiven — Premium', $mailer->registrationRecaps[0]['message']);
+        self::assertStringContainsString('OwnFamily OwnGiven — Standard', $mailer->registrationRecaps[0]['message']);
+        self::assertStringContainsString('IT60X0542811101000000123456', $mailer->registrationRecaps[0]['message']);
+    }
+
+    public function testPaidRegistrationWithoutIbanOmitsSepaDetailsAndEmailsTheRecap(): void
+    {
+        $today = date('Y-m-d');
+        $eventDate = date('Y-m-d', strtotime('+1 day'));
+        $this->insertEvent(date: $eventDate, deadline: $today);
+        Session::set('club_id', 201);
+        $mailer = new FakePasswordResetMailer();
+        $post = new Request(
+            'POST',
+            '/events/register?event=101',
+            ['event' => '101'],
+            [
+                'csrf_token' => csrf_token(),
+                'athletes' => ['301'],
+                'registration_option_id' => '501',
+            ]
+        );
+
+        $postResponse = (new EventController($this->view, $post, null, $mailer))->register($post);
+        $get = new Request('GET', '/events/register?event=101', ['event' => '101']);
+        $summary = (new EventController($this->view, $get))->register($get);
+        $plainText = preg_replace(
+            '/\s+/u',
+            ' ',
+            html_entity_decode(strip_tags($summary->content()), ENT_QUOTES | ENT_HTML5, 'UTF-8')
+        );
+
+        self::assertSame(302, $postResponse->status());
+        self::assertIsString($plainText);
+        self::assertStringContainsString(__('events.amount_due') . ' €15.00', $plainText);
+        self::assertStringNotContainsString(__('events.payment_info'), $plainText);
+        self::assertStringNotContainsString(__('events.payment_iban'), $plainText);
+        self::assertStringNotContainsString(__('events.payment_qr_code_unavailable'), $plainText);
+        self::assertStringNotContainsString('data:image/svg+xml;base64,', $summary->content());
+
+        self::assertCount(1, $mailer->registrationRecaps);
+        $message = $mailer->registrationRecaps[0]['message'];
+        self::assertStringContainsString('Synthetic Event', $message);
+        self::assertStringContainsString($eventDate, $message);
+        self::assertStringContainsString('Synthetic Venue', $message);
+        self::assertStringContainsString('OwnFamily OwnGiven — Standard', $message);
+        self::assertStringContainsString(__('events.amount_due') . ': €15.00', $message);
+        self::assertStringNotContainsString(__('events.payment_info'), $message);
+        self::assertStringNotContainsString(__('events.payment_iban'), $message);
     }
 
     public function testRegistrationRejectsChangesWhenNoActiveOptionIsSelected(): void

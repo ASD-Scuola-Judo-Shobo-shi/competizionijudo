@@ -227,7 +227,9 @@ foreach ($athletes as $candidateAthlete) {
                                 $paymentSummary = $registrationFeedback['payment_summary'];
                                 $newEnrollments = $paymentSummary['new_enrollments'] ?? [];
                                 $removedEnrollments = $paymentSummary['removed_enrollments'] ?? [];
-                                $paymentInfo = $paymentSummary['payment_info'] ?? [];
+                                $paymentInfo = is_array($paymentSummary['payment_info'] ?? null)
+                                    ? $paymentSummary['payment_info']
+                                    : null;
                                 $amountDueCents = (int) ($paymentSummary['amount_due_cents'] ?? 0);
                                 ?>
                                 <section class="registration-payment-summary" aria-labelledby="payment-summary-title">
@@ -316,7 +318,7 @@ foreach ($athletes as $candidateAthlete) {
                                         </div>
                                     </dl>
 
-                                    <?php if ($amountDueCents > 0) : ?>
+                                    <?php if ($amountDueCents > 0 && $paymentInfo !== null) : ?>
                                         <div class="sepa-payment-layout">
                                             <div>
                                                 <h4><?= e(__('events.payment_info')) ?></h4>
@@ -361,10 +363,16 @@ foreach ($athletes as $candidateAthlete) {
                                                 </p>
                                             <?php endif; ?>
                                         </div>
-                                    <?php else : ?>
+                                    <?php elseif ($amountDueCents === 0) : ?>
                                         <p class="notice success"><?= e(__('events.payment_not_required')) ?></p>
                                     <?php endif; ?>
                                 </section>
+                            <?php endif; ?>
+
+                            <?php if (!empty($registrationFeedback['recap_delivery_failed'])) : ?>
+                                <p class="notice warning">
+                                    <?= e(__('events.registration_recap_delivery_failed')) ?>
+                                </p>
                             <?php endif; ?>
                         </form>
                     <?php endif; ?>

@@ -175,7 +175,7 @@ final class InputValidatorTest extends TestCase
         }
     }
 
-    public function testEventValidatorEnforcesFeeDefaultsAndDatabaseSepaDetails(): void
+    public function testEventValidatorEnforcesFeeDefaultsAndOptionalSepaDetails(): void
     {
         $validPaidOption = [[
             'id' => null,
@@ -189,6 +189,12 @@ final class InputValidatorTest extends TestCase
             $validPaidOption,
             'Synthetic Beneficiary',
             'IT60 X054 2811 1010 0000 0123 456',
+            ''
+        ));
+        self::assertSame([], EventInputValidator::registrationConfigurationErrors(
+            $validPaidOption,
+            '',
+            '',
             ''
         ));
         self::assertSame(1525, EventInputValidator::registrationFeeCents('15,25'));

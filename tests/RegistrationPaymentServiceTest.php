@@ -51,8 +51,11 @@ final class RegistrationPaymentServiceTest extends TestCase
 
     public function testQrCodeIsNotCreatedWithoutDatabaseBackedSepaDetailsOrPositiveAmount(): void
     {
+        $eventWithoutSepaDetails = $this->event(accountHolder: null, iban: null, bic: null);
+
+        self::assertNull(RegistrationPaymentService::completePaymentInfoForEvent($eventWithoutSepaDetails));
         self::assertNull(RegistrationPaymentService::buildQrCodeDataUri(
-            $this->event(accountHolder: null, iban: null, bic: null),
+            $eventWithoutSepaDetails,
             $this->club(),
             1500
         ));
@@ -61,6 +64,11 @@ final class RegistrationPaymentServiceTest extends TestCase
             $this->club(),
             0
         ));
+        self::assertSame([
+            'account_holder' => 'Synthetic Beneficiary',
+            'iban' => 'IT60X0542811101000000123456',
+            'bic' => 'UNCRITMMXXX',
+        ], RegistrationPaymentService::completePaymentInfoForEvent($this->event()));
     }
 
     private function event(

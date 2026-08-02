@@ -104,7 +104,6 @@ final class EventInputValidator
 
         $defaultCount = 0;
         $names = [];
-        $hasPaidOption = false;
         foreach ($options as $option) {
             $name = trim($option['name']);
             if ($name === '' || mb_strlen($name) > 120) {
@@ -124,8 +123,6 @@ final class EventInputValidator
                 || $feeCents > self::MAX_REGISTRATION_FEE_CENTS
             ) {
                 $errors[] = 'validation.event_registration_option_fee_invalid';
-            } elseif ($feeCents > 0) {
-                $hasPaidOption = true;
             }
 
             if ($option['is_default']) {
@@ -141,7 +138,7 @@ final class EventInputValidator
         $iban = self::normalizeIban($iban);
         $bic = self::normalizeBic($bic);
         $hasAnySepaValue = $accountHolder !== '' || $iban !== '' || $bic !== '';
-        if ($hasPaidOption || $hasAnySepaValue) {
+        if ($hasAnySepaValue) {
             if ($accountHolder === '' || mb_strlen($accountHolder) > 70) {
                 $errors[] = 'validation.event_sepa_account_holder_invalid';
             }

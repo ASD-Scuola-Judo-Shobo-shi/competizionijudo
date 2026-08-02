@@ -6,9 +6,11 @@ namespace App\Controller;
 
 use App\Core\Controller;
 use App\Core\AuthContext;
+use App\Core\Logger;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
+use App\Core\View;
 use App\Model\AgeClass;
 use App\Model\Athlete;
 use App\Model\Club;
@@ -19,12 +21,24 @@ use App\Model\Event;
 use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
 use App\Model\JudoCategory;
+use App\Service\PasswordResetMailer;
+use App\Service\PasswordResetMailerFactory;
 use App\Service\RegistrationPaymentService;
+use App\Service\RegistrationRecapFormatter;
 use Throwable;
 
 final class EventController extends Controller
 {
     private const REGISTRATION_FEEDBACK_PREFIX = 'event_registration_';
+
+    public function __construct(
+        View $view,
+        Request $request,
+        ?Logger $logger = null,
+        private ?PasswordResetMailer $registrationMailer = null
+    ) {
+        parent::__construct($view, $request, $logger);
+    }
 
     public function index(Request $request): Response
     {
@@ -277,11 +291,11 @@ final class EventController extends Controller
             $amountDueCents = max(0, $changeBalanceCents);
             $creditCents = max(0, -$changeBalanceCents);
             $club = Club::findById($clubId);
-            $paymentInfo = RegistrationPaymentService::paymentInfoForEvent($event);
-            $paymentReason = $club !== null
+            $paymentInfo = RegistrationPaymentService::completePaymentInfoForEvent($event);
+            $paymentReason = $club !== null && $paymentInfo !== null
                 ? RegistrationPaymentService::buildPaymentReason($event, $club)
                 : '';
-            $qrCodeDataUri = $club !== null && $amountDueCents > 0
+            $qrCodeDataUri = $club !== null && $paymentInfo !== null && $amountDueCents > 0
                 ? RegistrationPaymentService::buildQrCodeDataUri($event, $club, $amountDueCents)
                 : null;
             $paymentSummary = [
@@ -299,6 +313,20 @@ final class EventController extends Controller
                 'qr_code_data_uri' => $qrCodeDataUri,
             ];
 
+            $recapDeliveryFailed = false;
+            if ($club !== null && ($feedback['added'] > 0 || $feedback['removed'] > 0)) {
+                try {
+                    $this->registrationMailer()->sendRegistrationRecap(
+                        $club->email,
+                        RegistrationRecapFormatter::subject($event),
+                        RegistrationRecapFormatter::plainText($event, $club, $feedback, $paymentSummary)
+                    );
+                } catch (Throwable $exception) {
+                    $recapDeliveryFailed = true;
+                    $this->reportFailure('event.registration_recap_delivery_failed', $exception, $request);
+                }
+            }
+
             $flashFeedback = [
                 'added' => $feedback['added'],
                 'already_registered' => $feedback['already_registered'],
@@ -307,6 +335,7 @@ final class EventController extends Controller
                 'missing_weight' => $feedback['missing_weight'],
                 'capacity_exceeded' => $feedback['capacity_exceeded'],
                 'failed' => $feedback['failed'],
+                'recap_delivery_failed' => $recapDeliveryFailed,
                 'option_required_error' => false,
                 'option_configuration_error' => false,
                 'payment_summary' => $paymentSummary,
@@ -571,7 +600,16 @@ final class EventController extends Controller
         $paymentSummary = null;
         if (isset($feedback['payment_summary']) && is_array($feedback['payment_summary'])) {
             $ps = $feedback['payment_summary'];
-            $paymentInfo = is_array($ps['payment_info'] ?? null) ? $ps['payment_info'] : [];
+            $rawPaymentInfo = is_array($ps['payment_info'] ?? null) ? $ps['payment_info'] : null;
+            $paymentInfo = $rawPaymentInfo !== null
+                && trim((string) ($rawPaymentInfo['account_holder'] ?? '')) !== ''
+                && trim((string) ($rawPaymentInfo['iban'] ?? '')) !== ''
+                ? [
+                    'account_holder' => (string) $rawPaymentInfo['account_holder'],
+                    'iban' => (string) $rawPaymentInfo['iban'],
+                    'bic' => (string) ($rawPaymentInfo['bic'] ?? ''),
+                ]
+                : null;
             $qrCodeDataUri = is_string($ps['qr_code_data_uri'] ?? null)
                 ? $ps['qr_code_data_uri']
                 : '';
@@ -588,11 +626,7 @@ final class EventController extends Controller
                 'removed_enrollment_cents' => max(0, (int) ($ps['removed_enrollment_cents'] ?? 0)),
                 'amount_due_cents' => max(0, (int) ($ps['amount_due_cents'] ?? 0)),
                 'credit_cents' => max(0, (int) ($ps['credit_cents'] ?? 0)),
-                'payment_info' => [
-                    'account_holder' => (string) ($paymentInfo['account_holder'] ?? ''),
-                    'iban' => (string) ($paymentInfo['iban'] ?? ''),
-                    'bic' => (string) ($paymentInfo['bic'] ?? ''),
-                ],
+                'payment_info' => $paymentInfo,
                 'payment_reason' => (string) ($ps['payment_reason'] ?? ''),
                 'qr_code_data_uri' => $qrCodeDataUri,
             ];
@@ -605,6 +639,7 @@ final class EventController extends Controller
             'missing_weight' => max(0, (int) ($feedback['missing_weight'] ?? 0)),
             'capacity_exceeded' => max(0, (int) ($feedback['capacity_exceeded'] ?? 0)),
             'failed' => max(0, (int) ($feedback['failed'] ?? 0)),
+            'recap_delivery_failed' => !empty($feedback['recap_delivery_failed']),
             'removed' => max(0, (int) ($feedback['removed'] ?? 0)),
             'unsubscribed_failed' => max(0, (int) ($feedback['unsubscribed_failed'] ?? 0)),
             'option_required_error' => !empty($feedback['option_required_error']),
@@ -635,5 +670,10 @@ final class EventController extends Controller
         }
 
         return $sanitized;
+    }
+
+    private function registrationMailer(): PasswordResetMailer
+    {
+        return $this->registrationMailer ??= PasswordResetMailerFactory::fromEnvironment();
     }
 }
