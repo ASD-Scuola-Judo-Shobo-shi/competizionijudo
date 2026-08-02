@@ -328,6 +328,8 @@ return [
         'full_edit' => 'Full edit',
         'select' => 'Pick',
         'option' => 'Option',
+        'sort_ascending' => 'Sort {column} ascending',
+        'sort_descending' => 'Sort {column} descending',
         'update_success' => 'Changes saved.',
         'update_failed' => 'Unable to save the changes.',
     ],

@@ -2,6 +2,8 @@
 <?php /** @var array<int, array{clubs: int, athletes: int}> $entry_counts */ ?>
 <?php /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */ ?>
 <?php /** @var array{type: string, message: string}|null $inlineFeedback */ ?>
+<?php /** @var array{column:string, direction:'asc'|'desc'}|null $tableSort */ ?>
+<?php $tableSort ??= ['column' => 'date', 'direction' => 'desc']; ?>
 <section class="card admin-list-page">
     <header class="admin-list-heading">
         <h2>
@@ -25,19 +27,25 @@
             tabindex="0"
             aria-label="<?= e(__('admin.events.title')) ?>"
         >
-            <table class="table-full responsive-table admin-list-table">
+            <table
+                class="table-full responsive-table admin-list-table"
+                data-sort-mode="server"
+                data-sort-page-parameter="page"
+                data-sort-default="date"
+                data-sort-default-direction="desc"
+            >
                 <thead>
                     <tr>
-                        <th scope="col"><?= e(__('admin.events.table.name')) ?></th>
-                        <th scope="col"><?= e(__('admin.events.table.date')) ?></th>
-                        <th scope="col"><?= e(__('admin.events.table.location')) ?></th>
-                        <th scope="col"><?= e(__('admin.events.table.type')) ?></th>
-                        <th scope="col"><?= e(__('admin.events.table.visibility')) ?></th>
-                        <th scope="col"><?= e(__('admin.events.table.registration_status')) ?></th>
-                        <th scope="col"><?= e(__('admin.events.table.clubs')) ?></th>
-                        <th scope="col"><?= e(__('admin.events.table.athletes')) ?></th>
-                        <th scope="col"><?= e(__('admin.events.table.max_participants')) ?></th>
-                        <th scope="col"><?= e(__('admin.events.table.actions')) ?></th>
+                        <th scope="col" data-sort-key="name"><?= e(__('admin.events.table.name')) ?></th>
+                        <th scope="col" data-sort-key="date"><?= e(__('admin.events.table.date')) ?></th>
+                        <th scope="col" data-sort-key="location"><?= e(__('admin.events.table.location')) ?></th>
+                        <th scope="col" data-sort-key="type"><?= e(__('admin.events.table.type')) ?></th>
+                        <th scope="col" data-sort-key="visibility"><?= e(__('admin.events.table.visibility')) ?></th>
+                        <th scope="col" data-sort-key="registration_status"><?= e(__('admin.events.table.registration_status')) ?></th>
+                        <th scope="col" data-sort-key="clubs"><?= e(__('admin.events.table.clubs')) ?></th>
+                        <th scope="col" data-sort-key="athletes"><?= e(__('admin.events.table.athletes')) ?></th>
+                        <th scope="col" data-sort-key="max_participants"><?= e(__('admin.events.table.max_participants')) ?></th>
+                        <th scope="col" data-sortable="false"><?= e(__('admin.events.table.actions')) ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,6 +181,8 @@
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="event_id" value="<?= (int) $event->id ?>">
                                     <input type="hidden" name="page" value="<?= (int) $pagination['page'] ?>">
+                                    <input type="hidden" name="sort" value="<?= e($tableSort['column']) ?>">
+                                    <input type="hidden" name="direction" value="<?= e($tableSort['direction']) ?>">
                                     <button class="btn green table-action-button" type="submit" aria-label="<?= e(__('tables.save')) ?>" title="<?= e(__('tables.save')) ?>"><span aria-hidden="true">💾</span><span class="table-action-label"><?= e(__('tables.save')) ?></span></button>
                                     <button class="btn gray table-action-button" type="button" data-inline-cancel aria-label="<?= e(__('tables.cancel')) ?>" title="<?= e(__('tables.cancel')) ?>"><span aria-hidden="true">↩️</span><span class="table-action-label"><?= e(__('tables.cancel')) ?></span></button>
                                     <a class="btn table-action-button" href="<?= e(base_url('/admin/events/details?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>

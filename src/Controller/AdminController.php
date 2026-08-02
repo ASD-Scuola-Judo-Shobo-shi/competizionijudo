@@ -124,17 +124,22 @@ final class AdminController extends Controller
             return $this->redirect('/admin/login');
         }
 
-        $db = \App\Model\Database::connection();
-
-        $total = (int) $db->query('SELECT COUNT(*) FROM clubs')->fetchColumn();
+        $total = Club::count();
         $page = max(1, (int) ($request->query('page', '1')));
-        $pagination = paginate($total, $page, 100);
+        $pagination = paginate($total, $page, 100, 'page', $request->queryParameters());
 
-        $stmt = $db->prepare('SELECT * FROM clubs ORDER BY name LIMIT ? OFFSET ?');
-        $stmt->bindValue(1, $pagination['per_page'], \PDO::PARAM_INT);
-        $stmt->bindValue(2, $pagination['offset'], \PDO::PARAM_INT);
-        $stmt->execute();
-        $clubs = array_map(fn(array $row) => Club::fromArray($row), $stmt->fetchAll() ?: []);
+        $sort = resolve_table_sort(
+            $request->query('sort'),
+            $request->query('direction'),
+            ['name', 'federal_code', 'email', 'phone', 'contact', 'address', 'affiliation', 'athletes'],
+            'name'
+        );
+        $clubs = Club::adminPage(
+            $pagination['per_page'],
+            $pagination['offset'],
+            $sort['column'],
+            $sort['direction']
+        );
         $clubIds = array_map(static fn(Club $club): int => $club->id, $clubs);
 
         return $this->view('admin/manage_clubs', [
@@ -142,6 +147,7 @@ final class AdminController extends Controller
             'clubs' => $clubs,
             'athlete_counts' => Athlete::countsByClubIds($clubIds),
             'pagination' => $pagination,
+            'tableSort' => $sort,
             'inlineFeedback' => Session::pullFlash(self::CLUB_INLINE_FEEDBACK),
         ]);
     }
@@ -156,7 +162,18 @@ final class AdminController extends Controller
         validate_csrf((string) $request->post('csrf_token'));
         $clubId = (int) $request->post('club_id');
         $page = max(1, (int) $request->post('page', 1));
-        $redirect = '/admin/clubs?page=' . $page . '#club-row-' . $clubId;
+        $redirect = '/admin/clubs?page=' . $page;
+        if ($request->post('sort') !== null || $request->post('direction') !== null) {
+            $sort = resolve_table_sort(
+                $request->post('sort'),
+                $request->post('direction'),
+                ['name', 'federal_code', 'email', 'phone', 'contact', 'address', 'affiliation', 'athletes'],
+                'name'
+            );
+            $redirect .= '&sort=' . rawurlencode($sort['column'])
+                . '&direction=' . rawurlencode($sort['direction']);
+        }
+        $redirect .= '#club-row-' . $clubId;
         $club = $clubId > 0 ? Club::findById($clubId) : null;
 
         if ($club === null) {
@@ -225,11 +242,35 @@ final class AdminController extends Controller
         }
 
         $page = max(1, (int) $request->query('page', '1'));
-        $pagination = paginate(Athlete::countByClub($club->id), $page, 50);
+        $pagination = paginate(
+            Athlete::countByClub($club->id),
+            $page,
+            50,
+            'page',
+            $request->queryParameters()
+        );
+        $sort = resolve_table_sort(
+            $request->query('sort'),
+            $request->query('direction'),
+            [
+                'athlete',
+                'gender',
+                'birth',
+                'age_class',
+                'weight',
+                'belt',
+                'weight_category',
+                'membership_number',
+                'notes',
+            ],
+            'athlete'
+        );
         $athletes = Athlete::pageByClub(
             $club->id,
             $pagination['per_page'],
-            $pagination['offset']
+            $pagination['offset'],
+            $sort['column'],
+            $sort['direction']
         );
 
         return $this->view('admin/club_athletes', [
@@ -292,21 +333,33 @@ final class AdminController extends Controller
             return $this->redirect('/admin/login');
         }
 
-        $db = \App\Model\Database::connection();
-
-        $total = (int) $db->query('SELECT COUNT(*) FROM events')->fetchColumn();
+        $total = Event::count();
         $page = max(1, (int) ($request->query('page', '1')));
-        $pagination = paginate($total, $page, 100);
+        $pagination = paginate($total, $page, 100, 'page', $request->queryParameters());
 
-        $stmt = $db->prepare('SELECT * FROM events ORDER BY date DESC LIMIT ? OFFSET ?');
-        $stmt->bindValue(1, $pagination['per_page'], \PDO::PARAM_INT);
-        $stmt->bindValue(2, $pagination['offset'], \PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll();
-        $events = [];
-        foreach ($rows as $r) {
-            $events[] = Event::fromArray($r);
-        }
+        $sort = resolve_table_sort(
+            $request->query('sort'),
+            $request->query('direction'),
+            [
+                'name',
+                'date',
+                'location',
+                'type',
+                'visibility',
+                'registration_status',
+                'clubs',
+                'athletes',
+                'max_participants',
+            ],
+            'date',
+            'desc'
+        );
+        $events = Event::adminPage(
+            $pagination['per_page'],
+            $pagination['offset'],
+            $sort['column'],
+            $sort['direction']
+        );
 
         $eventIds = array_map(static fn(Event $event): int => $event->id, $events);
         $counts = \App\Model\Entry::countsByEventIds($eventIds);
@@ -316,6 +369,7 @@ final class AdminController extends Controller
             'events' => $events,
             'entry_counts' => $counts,
             'pagination' => $pagination,
+            'tableSort' => $sort,
             'inlineFeedback' => Session::pullFlash(self::EVENT_INLINE_FEEDBACK),
         ]);
     }
@@ -330,7 +384,29 @@ final class AdminController extends Controller
         validate_csrf((string) $request->post('csrf_token'));
         $eventId = (int) $request->post('event_id');
         $page = max(1, (int) $request->post('page', 1));
-        $redirect = '/admin/events?page=' . $page . '#event-row-' . $eventId;
+        $redirect = '/admin/events?page=' . $page;
+        if ($request->post('sort') !== null || $request->post('direction') !== null) {
+            $sort = resolve_table_sort(
+                $request->post('sort'),
+                $request->post('direction'),
+                [
+                    'name',
+                    'date',
+                    'location',
+                    'type',
+                    'visibility',
+                    'registration_status',
+                    'clubs',
+                    'athletes',
+                    'max_participants',
+                ],
+                'date',
+                'desc'
+            );
+            $redirect .= '&sort=' . rawurlencode($sort['column'])
+                . '&direction=' . rawurlencode($sort['direction']);
+        }
+        $redirect .= '#event-row-' . $eventId;
         $event = $eventId > 0 ? Event::findById($eventId) : null;
 
         if ($event === null) {
@@ -505,16 +581,24 @@ final class AdminController extends Controller
             $request->queryParameters(),
             __('admin.event_details.enrolled_athletes')
         );
+        $enrollmentFields = EventEntriesCsvTransfer::headers();
+        $enrollmentSort = resolve_table_sort(
+            $request->query('enrollment_sort'),
+            $request->query('enrollment_direction'),
+            $enrollmentFields,
+            'club_name'
+        );
         $enrolledAthletes = $event !== null
             ? Entry::pageByEvent(
                 $event->id,
                 $selectedEnrollmentClubId,
                 $event->closed,
                 $enrollmentPagination['per_page'],
-                $enrollmentPagination['offset']
+                $enrollmentPagination['offset'],
+                $enrollmentSort['column'],
+                $enrollmentSort['direction']
             )
             : [];
-        $enrollmentFields = EventEntriesCsvTransfer::headers();
 
         $locations = array_unique(array_map(function ($r) {
             return (string) $r['location'];
@@ -743,6 +827,7 @@ final class AdminController extends Controller
             'enrolledAthletes' => $enrolledAthletes,
             'enrollmentPagination' => $enrollmentPagination,
             'enrollmentFields' => $enrollmentFields,
+            'enrollmentSort' => $enrollmentSort,
             'selectedEnrollmentClubId' => $selectedEnrollmentClubId,
             'exceptionClubIds' => $exceptionClubIds,
             'formRegistrationOptions' => $formRegistrationOptions,

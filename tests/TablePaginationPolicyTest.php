@@ -55,4 +55,61 @@ final class TablePaginationPolicyTest extends TestCase
         self::assertStringContainsString("'+5',", $layout);
         self::assertStringContainsString("labels.last + ' »»'", $layout);
     }
+
+    public function testEveryInformationalTableHeaderUsesSharedSorting(): void
+    {
+        $root = dirname(__DIR__);
+        $layout = file_get_contents($root . '/views/layouts/app.php');
+        $css = file_get_contents($root . '/public/assets/css/app.css');
+
+        self::assertIsString($layout);
+        self::assertIsString($css);
+        self::assertStringContainsString(
+            "querySelectorAll('table:not(.event-info-table)')",
+            $layout
+        );
+        self::assertStringContainsString("header.dataset.sortable === 'false'", $layout);
+        self::assertStringContainsString("header.setAttribute('aria-sort', 'none')", $layout);
+        self::assertStringContainsString("table.dispatchEvent(new CustomEvent('table:sorted'))", $layout);
+        self::assertStringContainsString("table.dataset.sortMode === 'server'", $layout);
+        self::assertStringContainsString("target.searchParams.delete(pageParameter)", $layout);
+        self::assertStringContainsString('.table-sort-button', $css);
+        self::assertStringContainsString('.table-sort-indicator', $css);
+
+        foreach (
+            [
+                'views/admin/manage_clubs.php',
+                'views/admin/manage_events.php',
+                'views/club/_athlete_csv_tools.php',
+                'views/club/area_add.php',
+                'views/club/area_list.php',
+                'views/events/register.php',
+            ] as $template
+        ) {
+            $source = file_get_contents($root . '/' . $template);
+            self::assertIsString($source);
+            self::assertStringContainsString('data-sortable="false"', $source, $template);
+        }
+
+        foreach (
+            [
+                'views/admin/_event_enrolled_athletes.php',
+                'views/admin/club_athletes.php',
+                'views/admin/manage_clubs.php',
+                'views/admin/manage_events.php',
+                'views/club/area_add.php',
+                'views/club/area_list.php',
+                'views/club/list.php',
+                'views/events/_entries_athletes.php',
+                'views/events/_entries_clubs.php',
+                'views/events/_entries_current_club.php',
+                'views/events/register.php',
+            ] as $template
+        ) {
+            $source = file_get_contents($root . '/' . $template);
+            self::assertIsString($source);
+            self::assertStringContainsString('data-sort-mode="server"', $source, $template);
+            self::assertStringContainsString('data-sort-key=', $source, $template);
+        }
+    }
 }

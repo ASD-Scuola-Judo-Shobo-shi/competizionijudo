@@ -328,6 +328,8 @@ return [
         'full_edit' => 'Modifica completa',
         'select' => 'Sel.',
         'option' => 'Opzione',
+        'sort_ascending' => 'Ordina {column} in modo crescente',
+        'sort_descending' => 'Ordina {column} in modo decrescente',
         'update_success' => 'Modifiche salvate.',
         'update_failed' => 'Impossibile salvare le modifiche.',
     ],

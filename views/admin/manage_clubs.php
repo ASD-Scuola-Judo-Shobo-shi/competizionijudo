@@ -2,6 +2,8 @@
 <?php /** @var array<int, int> $athlete_counts */ ?>
 <?php /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */ ?>
 <?php /** @var array{type: string, message: string}|null $inlineFeedback */ ?>
+<?php /** @var array{column:string, direction:'asc'|'desc'}|null $tableSort */ ?>
+<?php $tableSort ??= ['column' => 'name', 'direction' => 'asc']; ?>
 <section class="card admin-list-page">
     <header class="admin-list-heading">
         <h2>
@@ -25,18 +27,23 @@
             tabindex="0"
             aria-label="<?= e(__('admin.clubs.title')) ?>"
         >
-            <table class="table-full responsive-table admin-list-table">
+            <table
+                class="table-full responsive-table admin-list-table"
+                data-sort-mode="server"
+                data-sort-page-parameter="page"
+                data-sort-default="name"
+            >
                 <thead>
                     <tr>
-                        <th scope="col"><?= e(__('admin.clubs.table.name')) ?></th>
-                        <th scope="col"><?= e(__('admin.clubs.table.federal_code')) ?></th>
-                        <th scope="col"><?= e(__('admin.clubs.table.email')) ?></th>
-                        <th scope="col"><?= e(__('admin.clubs.table.phone')) ?></th>
-                        <th scope="col"><?= e(__('admin.clubs.table.contact')) ?></th>
-                        <th scope="col"><?= e(__('admin.clubs.table.address')) ?></th>
-                        <th scope="col"><?= e(__('admin.clubs.table.affiliation')) ?></th>
-                        <th scope="col"><?= e(__('admin.clubs.table.athletes')) ?></th>
-                        <th scope="col"><?= e(__('admin.clubs.table.actions')) ?></th>
+                        <th scope="col" data-sort-key="name"><?= e(__('admin.clubs.table.name')) ?></th>
+                        <th scope="col" data-sort-key="federal_code"><?= e(__('admin.clubs.table.federal_code')) ?></th>
+                        <th scope="col" data-sort-key="email"><?= e(__('admin.clubs.table.email')) ?></th>
+                        <th scope="col" data-sort-key="phone"><?= e(__('admin.clubs.table.phone')) ?></th>
+                        <th scope="col" data-sort-key="contact"><?= e(__('admin.clubs.table.contact')) ?></th>
+                        <th scope="col" data-sort-key="address"><?= e(__('admin.clubs.table.address')) ?></th>
+                        <th scope="col" data-sort-key="affiliation"><?= e(__('admin.clubs.table.affiliation')) ?></th>
+                        <th scope="col" data-sort-key="athletes"><?= e(__('admin.clubs.table.athletes')) ?></th>
+                        <th scope="col" data-sortable="false"><?= e(__('admin.clubs.table.actions')) ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -160,6 +167,8 @@
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="club_id" value="<?= (int) $club->id ?>">
                                     <input type="hidden" name="page" value="<?= (int) $pagination['page'] ?>">
+                                    <input type="hidden" name="sort" value="<?= e($tableSort['column']) ?>">
+                                    <input type="hidden" name="direction" value="<?= e($tableSort['direction']) ?>">
                                     <button class="btn green table-action-button" type="submit" aria-label="<?= e(__('tables.save')) ?>" title="<?= e(__('tables.save')) ?>"><span aria-hidden="true">💾</span><span class="table-action-label"><?= e(__('tables.save')) ?></span></button>
                                     <button class="btn gray table-action-button" type="button" data-inline-cancel aria-label="<?= e(__('tables.cancel')) ?>" title="<?= e(__('tables.cancel')) ?>"><span aria-hidden="true">↩️</span><span class="table-action-label"><?= e(__('tables.cancel')) ?></span></button>
                                     <a class="btn table-action-button" href="<?= e(base_url('/admin/clubs/edit?id=' . (int) $club->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>

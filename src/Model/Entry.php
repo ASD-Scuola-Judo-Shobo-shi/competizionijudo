@@ -39,7 +39,7 @@ final class Entry
         ?int $clubId,
         ?bool $eventClosed = null
     ): array {
-        return self::queryByEvent($eventId, $clubId, $eventClosed, null, 0);
+        return self::queryByEvent($eventId, $clubId, $eventClosed, null, 0, 'club_name', 'asc');
     }
 
     public static function countByEvent(int $eventId, ?int $clubId): int
@@ -63,14 +63,18 @@ final class Entry
         ?int $clubId,
         ?bool $eventClosed,
         int $limit,
-        int $offset
+        int $offset,
+        string $sort = 'club_name',
+        string $direction = 'asc'
     ): array {
         return self::queryByEvent(
             $eventId,
             $clubId,
             $eventClosed,
             max(1, $limit),
-            max(0, $offset)
+            max(0, $offset),
+            $sort,
+            $direction
         );
     }
 
@@ -80,7 +84,9 @@ final class Entry
         ?int $clubId,
         ?bool $eventClosed,
         ?int $limit,
-        int $offset
+        int $offset,
+        string $sort,
+        string $direction
     ): array {
         $eventClosed ??= self::eventIsClosed($eventId);
         $lastName = self::athleteValueExpression($eventClosed, 'snapshot_last_name', 'last_name');
@@ -136,7 +142,40 @@ final class Entry
             $params[] = $clubId;
         }
 
-        $sql .= ' ORDER BY club_name, last_name, first_name, a.id';
+        $dynamicType = '(CASE WHEN (SUBSTR(' . $birthDate . ', 1, 4) + 0)'
+            . ' >= (SUBSTR(e.date, 1, 4) + 0) - 11'
+            . " THEN 'pre-competitive' ELSE 'competitive' END)";
+        $dynamicWeightCategory = $eventClosed
+            ? '(CASE WHEN ' . $weightCategory . " LIKE '+%' THEN 10000"
+                . ' WHEN ' . $weightCategory . " LIKE '-%' THEN 0 ELSE 20000 END)"
+                . ' + COALESCE(CAST(REPLACE(REPLACE(REPLACE('
+                . $weightCategory . ", '+', ''), '-', ''), ' kg', '') AS DECIMAL(10, 2)), 0)"
+            : $weight;
+        $sortExpression = match ($sort) {
+            'federal_code' => 'federal_code',
+            'last_name' => 'last_name',
+            'first_name' => 'first_name',
+            'gender' => 'gender',
+            'birth_date' => 'birth_date',
+            'weight_kg' => 'weight_kg',
+            'belt' => self::beltSortExpression($belt),
+            'membership_number' => 'membership_number',
+            'type' => $eventClosed ? $type : $dynamicType,
+            'weight_category' => $dynamicWeightCategory,
+            default => 'club_name',
+        };
+        $sortDirection = strtolower($direction) === 'desc' ? 'DESC' : 'ASC';
+        $sql .= ' ORDER BY ' . $sortExpression . ' ' . $sortDirection;
+        if ($sortExpression !== 'club_name' || $sortDirection !== 'ASC') {
+            $sql .= ', club_name ASC';
+        }
+        if ($sortExpression !== 'last_name') {
+            $sql .= ', last_name ASC';
+        }
+        if ($sortExpression !== 'first_name') {
+            $sql .= ', first_name ASC';
+        }
+        $sql .= ', a.id ASC';
         if ($limit !== null) {
             $sql .= ' LIMIT ? OFFSET ?';
         }
@@ -180,6 +219,21 @@ final class Entry
         }
 
         return sprintf('COALESCE(en.%s, a.%s)', $snapshotColumn, $athleteColumn);
+    }
+
+    private static function beltSortExpression(string $expression): string
+    {
+        $order = array_map(
+            static fn(Belt $belt, int $position): string => sprintf(
+                "WHEN '%s' THEN %d",
+                $belt->value,
+                $position
+            ),
+            Belt::cases(),
+            array_keys(Belt::cases())
+        );
+
+        return 'CASE ' . $expression . ' ' . implode(' ', $order) . ' ELSE 999 END';
     }
 
     private static function eventIsClosed(int $eventId): bool

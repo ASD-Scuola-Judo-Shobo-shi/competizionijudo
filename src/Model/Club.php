@@ -163,11 +163,20 @@ final class Club
     }
 
     /** @return list<self> */
-    public static function page(int $limit, int $offset): array
-    {
+    public static function page(
+        int $limit,
+        int $offset,
+        string $sort = 'name',
+        string $direction = 'asc'
+    ): array {
+        $sortExpression = match ($sort) {
+            'federal_code' => 'federal_code',
+            default => 'name',
+        };
+        $direction = strtolower($direction) === 'desc' ? 'DESC' : 'ASC';
         $stmt = Database::connection()->prepare(
             'SELECT id, federal_code, name '
-            . 'FROM clubs ORDER BY name ASC, id ASC LIMIT ? OFFSET ?'
+            . 'FROM clubs ORDER BY ' . $sortExpression . ' ' . $direction . ', id ASC LIMIT ? OFFSET ?'
         );
         $stmt->bindValue(1, max(1, $limit), \PDO::PARAM_INT);
         $stmt->bindValue(2, max(0, $offset), \PDO::PARAM_INT);
@@ -175,5 +184,34 @@ final class Club
         $rows = $stmt->fetchAll();
 
         return array_map(fn(array $row) => self::fromArray($row), $rows ?: []);
+    }
+
+    /** @return list<self> */
+    public static function adminPage(
+        int $limit,
+        int $offset,
+        string $sort = 'name',
+        string $direction = 'asc'
+    ): array {
+        $sortExpression = match ($sort) {
+            'federal_code' => 'c.federal_code',
+            'email' => 'c.email',
+            'phone' => 'c.phone',
+            'contact' => 'c.contact_last_name',
+            'address' => 'c.city',
+            'affiliation' => 'c.affiliation',
+            'athletes' => '(SELECT COUNT(*) FROM athletes a WHERE a.club_id = c.id)',
+            default => 'c.name',
+        };
+        $direction = strtolower($direction) === 'desc' ? 'DESC' : 'ASC';
+        $statement = Database::connection()->prepare(
+            'SELECT c.* FROM clubs c ORDER BY ' . $sortExpression . ' ' . $direction . ', c.id ASC'
+            . ' LIMIT ? OFFSET ?'
+        );
+        $statement->bindValue(1, max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(2, max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(fn(array $row) => self::fromArray($row), $statement->fetchAll() ?: []);
     }
 }

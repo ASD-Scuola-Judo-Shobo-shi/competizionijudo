@@ -110,11 +110,25 @@ final class ClubAreaController extends Controller
             }
 
             $page = max(1, (int) ($request->query('page', '1')));
-            $pagination = paginate(Athlete::countByClub($club->id), $page, 50);
+            $pagination = paginate(
+                Athlete::countByClub($club->id),
+                $page,
+                50,
+                'page',
+                $request->queryParameters()
+            );
+            $sort = resolve_table_sort(
+                $request->query('sort'),
+                $request->query('direction'),
+                ['athlete', 'gender', 'birth', 'age_class', 'weight', 'belt', 'weight_category'],
+                'athlete'
+            );
             $athletes = Athlete::pageByClub(
                 $club->id,
                 $pagination['per_page'],
-                $pagination['offset']
+                $pagination['offset'],
+                $sort['column'],
+                $sort['direction']
             );
 
             return $this->view('club/area_add', [
@@ -124,6 +138,7 @@ final class ClubAreaController extends Controller
                 'edit' => $edit,
                 'errors' => $errors,
                 'pagination' => $pagination,
+                'tableSort' => $sort,
                 'athleteCategories' => $this->athleteCategories($athletes),
                 'athleteCsvFeedback' => $athleteCsvFeedback,
                 'athleteInlineFeedback' => $athleteInlineFeedback,
@@ -132,13 +147,37 @@ final class ClubAreaController extends Controller
         }
 
         $page = max(1, (int) ($request->query('page', '1')));
-        $pagination = paginate(Athlete::countByClub($club->id), $page, 50);
+        $pagination = paginate(
+            Athlete::countByClub($club->id),
+            $page,
+            50,
+            'page',
+            $request->queryParameters()
+        );
+        $eventFilter = (int) ($request->query('event') ?? 0);
+        $sort = resolve_table_sort(
+            $request->query('sort'),
+            $request->query('direction'),
+            [
+                'athlete',
+                'gender',
+                'birth',
+                'age_class',
+                'weight',
+                'belt',
+                'weight_category',
+                'registrations',
+            ],
+            'athlete'
+        );
         $athletes = Athlete::pageByClub(
             $club->id,
             $pagination['per_page'],
-            $pagination['offset']
+            $pagination['offset'],
+            $sort['column'],
+            $sort['direction'],
+            $eventFilter > 0 ? $eventFilter : null
         );
-        $eventFilter = (int) ($request->query('event') ?? 0);
         $athleteIds = array_map(static fn(Athlete $athlete): int => $athlete->id, $athletes);
         $registrationCounts = Entry::registrationCountsByAthletes(
             $club->id,
@@ -155,6 +194,7 @@ final class ClubAreaController extends Controller
             'events' => $events,
             'eventFilter' => $eventFilter,
             'pagination' => $pagination,
+            'tableSort' => $sort,
             'athleteCategories' => $this->athleteCategories($athletes),
             'athleteCsvFeedback' => $athleteCsvFeedback,
             'athleteInlineFeedback' => $athleteInlineFeedback,
@@ -192,6 +232,20 @@ final class ClubAreaController extends Controller
         $redirect = '/clubs/area?view=' . $returnView . '&page=' . $page;
         if ($returnView === 'list' && $eventFilter > 0) {
             $redirect .= '&event=' . $eventFilter;
+        }
+        if ($request->post('sort') !== null || $request->post('direction') !== null) {
+            $allowedSorts = ['athlete', 'gender', 'birth', 'age_class', 'weight', 'belt', 'weight_category'];
+            if ($returnView === 'list') {
+                $allowedSorts[] = 'registrations';
+            }
+            $sort = resolve_table_sort(
+                $request->post('sort'),
+                $request->post('direction'),
+                $allowedSorts,
+                'athlete'
+            );
+            $redirect .= '&sort=' . rawurlencode($sort['column'])
+                . '&direction=' . rawurlencode($sort['direction']);
         }
         $redirect .= '#athlete-row-' . $athleteId;
 

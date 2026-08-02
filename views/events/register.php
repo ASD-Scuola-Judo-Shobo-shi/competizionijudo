@@ -12,6 +12,8 @@
 /** @var int|null $defaultRegistrationOptionId */
 /** @var array<int, array{athlete_id:int, athlete_name:string, option_id:int, option_name:string, fee_cents:int}> $registeredEnrollmentDetails */
 $athletePagination ??= paginate(count($athletes), 1, 50, 'athletes_page');
+$registrationSort ??= ['column' => 'athlete', 'direction' => 'asc'];
+$preserveRegistrationSort ??= false;
 $showRegistrationFeedback = $registrationFeedback !== null
     && empty($registrationFeedback['option_required_error'])
     && empty($registrationFeedback['option_configuration_error']);
@@ -25,6 +27,10 @@ foreach ($athletes as $candidateAthlete) {
 $registrationFormUrl = '/events/register?event=' . rawurlencode((string) ($event?->id ?? ''));
 if ($athletePagination['page'] > 1) {
     $registrationFormUrl .= '&athletes_page=' . $athletePagination['page'];
+}
+if ($preserveRegistrationSort) {
+    $registrationFormUrl .= '&registration_sort=' . rawurlencode($registrationSort['column'])
+        . '&registration_direction=' . rawurlencode($registrationSort['direction']);
 }
 ?>
 
@@ -103,15 +109,22 @@ if ($athletePagination['page'] > 1) {
                                 tabindex="0"
                                 aria-label="<?= e(__('events.register_select')) ?>"
                             >
-                                <table class="responsive-table">
+                                <table
+                                    class="responsive-table"
+                                    data-sort-mode="server"
+                                    data-sort-parameter="registration_sort"
+                                    data-sort-direction-parameter="registration_direction"
+                                    data-sort-page-parameter="athletes_page"
+                                    data-sort-default="athlete"
+                                >
                                 <thead>
                                     <tr>
-                                        <th scope="col"><?= e(__('tables.select')) ?></th>
-                                        <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
-                                        <th scope="col"><?= e(__('club.area.table.birth')) ?></th>
-                                        <th scope="col"><?= e(__('club.area.table.weight')) ?></th>
-                                        <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
-                                        <th scope="col"><?= e(__('tables.option')) ?></th>
+                                        <th scope="col" data-sortable="false"><?= e(__('tables.select')) ?></th>
+                                        <th scope="col" data-sort-key="athlete"><?= e(__('club.area.table.athlete')) ?></th>
+                                        <th scope="col" data-sort-key="birth"><?= e(__('club.area.table.birth')) ?></th>
+                                        <th scope="col" data-sort-key="weight"><?= e(__('club.area.table.weight')) ?></th>
+                                        <th scope="col" data-sort-key="weight_category"><?= e(__('club.area.table.weight_category')) ?></th>
+                                        <th scope="col" data-sort-key="current_option"><?= e(__('tables.option')) ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>

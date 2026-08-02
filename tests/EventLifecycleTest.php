@@ -225,6 +225,11 @@ final class EventLifecycleTest extends TestCase
                 $plainText,
                 $field
             );
+            self::assertStringContainsString(
+                'data-sort-key="' . $field . '"',
+                (string) ($matches['entries'] ?? ''),
+                $field
+            );
         }
         self::assertStringContainsString(__('admin.event_details.enrolled_athletes') . ' (2)', $plainText);
         self::assertStringContainsString(__('admin.event_details.all_clubs'), $plainText);
@@ -254,6 +259,18 @@ final class EventLifecycleTest extends TestCase
             $response->content()
         );
         self::assertStringNotContainsString('href="/events/details?event=102"', $response->content());
+
+        $sortedRequest = new Request('GET', '/admin/events/details', [
+            'event_id' => '101',
+            'enrollment_sort' => 'last_name',
+            'enrollment_direction' => 'asc',
+        ]);
+        $sortedResponse = (new AdminController($this->view, $sortedRequest))->eventDetails($sortedRequest);
+        $foreignPosition = strpos($sortedResponse->content(), 'SnapshotForeign');
+        $ownPosition = strpos($sortedResponse->content(), 'SnapshotOwn');
+        self::assertIsInt($foreignPosition);
+        self::assertIsInt($ownPosition);
+        self::assertLessThan($ownPosition, $foreignPosition);
 
         $filteredRequest = new Request('GET', '/admin/events/details', [
             'event_id' => '101',

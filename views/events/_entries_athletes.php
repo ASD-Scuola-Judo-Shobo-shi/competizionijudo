@@ -17,15 +17,22 @@
             tabindex="0"
             aria-label="<?= e(__('events.entries_athletes_heading')) ?>"
         >
-            <table class="responsive-table">
+            <table
+                class="responsive-table"
+                data-sort-mode="server"
+                data-sort-parameter="athletes_sort"
+                data-sort-direction-parameter="athletes_direction"
+                data-sort-page-parameter="athletes_page"
+                data-sort-default="age_class"
+            >
                 <thead>
                     <tr>
-                        <th scope="col"><?= e(__('club.area.table.age_class')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.club')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.gender')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.belt')) ?></th>
+                        <th scope="col" data-sort-key="age_class"><?= e(__('club.area.table.age_class')) ?></th>
+                        <th scope="col" data-sort-key="weight_category"><?= e(__('club.area.table.weight_category')) ?></th>
+                        <th scope="col" data-sort-key="athlete"><?= e(__('club.area.table.athlete')) ?></th>
+                        <th scope="col" data-sort-key="club"><?= e(__('club.area.table.club')) ?></th>
+                        <th scope="col" data-sort-key="gender"><?= e(__('club.area.table.gender')) ?></th>
+                        <th scope="col" data-sort-key="belt"><?= e(__('club.area.table.belt')) ?></th>
                     </tr>
                 </thead>
                 <tbody>

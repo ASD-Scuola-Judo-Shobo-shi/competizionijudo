@@ -19,14 +19,21 @@
             tabindex="0"
             aria-label="<?= e(__('events.entries_clubs_heading')) ?>"
         >
-            <table class="responsive-table">
+            <table
+                class="responsive-table"
+                data-sort-mode="server"
+                data-sort-parameter="clubs_sort"
+                data-sort-direction-parameter="clubs_direction"
+                data-sort-page-parameter="clubs_page"
+                data-sort-default="club"
+            >
                 <thead>
                     <tr>
-                        <th scope="col">#</th>
-                        <th scope="col"><?= e(__('events.entries_club')) ?></th>
-                        <th scope="col"><?= e(__('events.entries_code')) ?></th>
-                        <th scope="col"><?= e(__('events.entries_athletes')) ?></th>
-                        <th scope="col"><?= e(__('events.entries_club_breakdown')) ?></th>
+                        <th scope="col" data-sortable="false">#</th>
+                        <th scope="col" data-sort-key="club"><?= e(__('events.entries_club')) ?></th>
+                        <th scope="col" data-sort-key="federal_code"><?= e(__('events.entries_code')) ?></th>
+                        <th scope="col" data-sort-key="athletes"><?= e(__('events.entries_athletes')) ?></th>
+                        <th scope="col" data-sort-key="breakdown"><?= e(__('events.entries_club_breakdown')) ?></th>
                     </tr>
                 </thead>
                 <tbody>

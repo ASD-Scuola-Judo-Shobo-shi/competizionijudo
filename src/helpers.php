@@ -264,3 +264,29 @@ function paginate(
         'links' => $links,
     ];
 }
+
+/**
+ * Resolve a table sort request against an explicit allowlist.
+ *
+ * @param list<string> $allowedColumns
+ * @return array{column:string, direction:'asc'|'desc'}
+ */
+function resolve_table_sort(
+    mixed $requestedColumn,
+    mixed $requestedDirection,
+    array $allowedColumns,
+    string $defaultColumn,
+    string $defaultDirection = 'asc'
+): array {
+    $column = is_string($requestedColumn) && in_array($requestedColumn, $allowedColumns, true)
+        ? $requestedColumn
+        : $defaultColumn;
+    $direction = is_string($requestedDirection) && in_array($requestedDirection, ['asc', 'desc'], true)
+        ? $requestedDirection
+        : (strtolower($defaultDirection) === 'desc' ? 'desc' : 'asc');
+
+    return [
+        'column' => $column,
+        'direction' => $direction,
+    ];
+}

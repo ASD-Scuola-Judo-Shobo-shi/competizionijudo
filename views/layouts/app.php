@@ -354,6 +354,191 @@
 
         (function() {
             const labels = {
+                ascending: <?= json_encode(__('tables.sort_ascending'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                descending: <?= json_encode(__('tables.sort_descending'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
+            };
+            const collator = new Intl.Collator(document.documentElement.lang, {
+                numeric: true,
+                sensitivity: 'base'
+            });
+
+            function actionLabel(template, column) {
+                return template.replace('{column}', column);
+            }
+
+            function cellValue(cell) {
+                if (cell.dataset.sortValue !== undefined) {
+                    return cell.dataset.sortValue.trim();
+                }
+
+                const display = cell.querySelector('[data-inline-display]') ?? cell;
+                const denseValue = display.querySelector('.table-density-value');
+                if (denseValue !== null) {
+                    return denseValue.getAttribute('aria-label')
+                        ?? denseValue.getAttribute('title')
+                        ?? denseValue.textContent?.trim()
+                        ?? '';
+                }
+                const time = display.querySelector('time[datetime]');
+                if (time !== null) {
+                    return time.getAttribute('datetime') ?? '';
+                }
+
+                return (display.textContent ?? '').replace(/\s+/g, ' ').trim();
+            }
+
+            function numberValue(value) {
+                const normalized = value
+                    .replace(/\s+/g, '')
+                    .replace(',', '.')
+                    .replace(/^€/, '')
+                    .replace(/^#/, '')
+                    .replace(/(?:kg|%)$/i, '');
+
+                return /^[+-]?\d+(?:\.\d+)?$/.test(normalized)
+                    ? Number.parseFloat(normalized)
+                    : null;
+            }
+
+            document.querySelectorAll('table:not(.event-info-table)').forEach((table) => {
+                const body = table.tBodies.item(0);
+                const headers = [...table.querySelectorAll('thead th')];
+                if (body === null || headers.length === 0) {
+                    return;
+                }
+
+                const serverMode = table.dataset.sortMode === 'server';
+                const sortParameter = table.dataset.sortParameter ?? 'sort';
+                const directionParameter = table.dataset.sortDirectionParameter ?? 'direction';
+                const pageParameter = table.dataset.sortPageParameter ?? 'page';
+                const defaultSort = table.dataset.sortDefault ?? '';
+                const defaultDirection = table.dataset.sortDefaultDirection === 'desc' ? 'desc' : 'asc';
+                const currentUrl = new URL(window.location.href);
+                const requestedSort = currentUrl.searchParams.get(sortParameter) ?? defaultSort;
+                const availableSorts = headers.map((header) => header.dataset.sortKey ?? '');
+                const currentSort = availableSorts.includes(requestedSort) ? requestedSort : defaultSort;
+                const requestedDirection = currentUrl.searchParams.get(directionParameter);
+                const currentDirection = requestedDirection === 'asc' || requestedDirection === 'desc'
+                    ? requestedDirection
+                    : defaultDirection;
+                let activeColumn = -1;
+                let ascending = true;
+                headers.forEach((header, column) => {
+                    if (header.dataset.sortable === 'false') {
+                        return;
+                    }
+                    const sortKey = header.dataset.sortKey ?? '';
+                    if (serverMode && sortKey === '') {
+                        return;
+                    }
+                    table.classList.add('table-is-sortable');
+
+                    const visibleColumnLabel = (header.textContent ?? '').replace(/\s+/g, ' ').trim();
+                    const columnLabel = header.getAttribute('title')?.trim() || visibleColumnLabel;
+                    const control = document.createElement(serverMode ? 'a' : 'button');
+                    const indicator = document.createElement('span');
+                    if (control instanceof HTMLButtonElement) {
+                        control.type = 'button';
+                    }
+                    control.className = 'table-sort-button';
+                    control.dataset.sortLabel = columnLabel;
+                    indicator.className = 'table-sort-indicator';
+                    indicator.textContent = '↕';
+                    indicator.setAttribute('aria-hidden', 'true');
+                    control.append(...header.childNodes, indicator);
+                    header.append(control);
+                    header.setAttribute('aria-sort', 'none');
+
+                    if (serverMode && control instanceof HTMLAnchorElement) {
+                        const isActive = sortKey === currentSort;
+                        const nextDirection = isActive && currentDirection === 'asc' ? 'desc' : 'asc';
+                        const target = new URL(currentUrl);
+                        target.searchParams.set(sortParameter, sortKey);
+                        target.searchParams.set(directionParameter, nextDirection);
+                        target.searchParams.delete(pageParameter);
+                        control.href = target.pathname + target.search + target.hash;
+                        const nextAction = nextDirection === 'asc'
+                            ? labels.ascending
+                            : labels.descending;
+                        const nextLabel = actionLabel(nextAction, columnLabel);
+                        control.setAttribute('aria-label', nextLabel);
+                        control.title = nextLabel;
+                        header.setAttribute(
+                            'aria-sort',
+                            isActive ? (currentDirection === 'asc' ? 'ascending' : 'descending') : 'none'
+                        );
+                        indicator.textContent = isActive
+                            ? (currentDirection === 'asc' ? '▲' : '▼')
+                            : '↕';
+                        return;
+                    }
+
+                    control.setAttribute('aria-label', actionLabel(labels.ascending, columnLabel));
+                    control.title = actionLabel(labels.ascending, columnLabel);
+
+                    control.addEventListener('click', () => {
+                        ascending = activeColumn !== column || !ascending;
+                        activeColumn = column;
+                        const rows = [...body.rows];
+                        const sortableRows = rows.filter((row) => (
+                            row.cells.length > column
+                            && row.querySelector('.responsive-table__empty') === null
+                        ));
+                        const fixedRows = rows.filter((row) => !sortableRows.includes(row));
+
+                        sortableRows.sort((leftRow, rightRow) => {
+                            const left = cellValue(leftRow.cells[column]);
+                            const right = cellValue(rightRow.cells[column]);
+                            if (left === '' && right !== '') {
+                                return 1;
+                            }
+                            if (right === '' && left !== '') {
+                                return -1;
+                            }
+
+                            const leftNumber = numberValue(left);
+                            const rightNumber = numberValue(right);
+                            const comparison = leftNumber !== null && rightNumber !== null
+                                ? leftNumber - rightNumber
+                                : collator.compare(left, right);
+
+                            return ascending ? comparison : -comparison;
+                        });
+                        body.append(...sortableRows, ...fixedRows);
+
+                        headers.forEach((candidate, candidateColumn) => {
+                            const candidateButton = candidate.querySelector('.table-sort-button');
+                            if (candidateButton === null) {
+                                return;
+                            }
+                            const candidateIndicator = candidate.querySelector('.table-sort-indicator');
+                            const candidateLabel = candidateButton.dataset.sortLabel ?? '';
+                            const isActive = candidateColumn === activeColumn;
+                            candidate.setAttribute(
+                                'aria-sort',
+                                isActive ? (ascending ? 'ascending' : 'descending') : 'none'
+                            );
+                            if (candidateIndicator !== null) {
+                                candidateIndicator.textContent = isActive
+                                    ? (ascending ? '▲' : '▼')
+                                    : '↕';
+                            }
+                            const nextAction = isActive && ascending
+                                ? labels.descending
+                                : labels.ascending;
+                            const nextLabel = actionLabel(nextAction, candidateLabel);
+                            candidateButton.setAttribute('aria-label', nextLabel);
+                            candidateButton.title = nextLabel;
+                        });
+
+                        table.dispatchEvent(new CustomEvent('table:sorted'));
+                    });
+                });
+            });
+        }());
+
+        (function() {
+            const labels = {
                 nav: <?= json_encode(__('pagination.label'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
                 first: <?= json_encode(__('pagination.first'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
                 prev: <?= json_encode(__('pagination.prev'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
@@ -374,7 +559,7 @@
 
             document.querySelectorAll('table[data-client-pagination]').forEach((table) => {
                 const body = table.tBodies.item(0);
-                const rows = body === null ? [] : [...body.rows];
+                let rows = body === null ? [] : [...body.rows];
                 const requestedPageSize = Number.parseInt(table.dataset.clientPagination ?? '', 10);
                 const pageSize = Number.isFinite(requestedPageSize) && requestedPageSize > 0
                     ? requestedPageSize
@@ -457,6 +642,11 @@
                     nav.replaceChildren(...controls);
                 }
 
+                table.addEventListener('table:sorted', () => {
+                    rows = body === null ? [] : [...body.rows];
+                    page = 1;
+                    render();
+                });
                 render();
             });
         }());

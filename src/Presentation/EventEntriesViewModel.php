@@ -310,6 +310,149 @@ final class EventEntriesViewModel
         return $groups;
     }
 
+    /** @return list<array<string, mixed>> */
+    public function sortedClubs(string $sort, string $direction): array
+    {
+        $clubs = $this->clubs;
+        usort($clubs, function (array $left, array $right) use ($sort, $direction): int {
+            $leftId = (int) ($left['id'] ?? 0);
+            $rightId = (int) ($right['id'] ?? 0);
+            $leftValue = match ($sort) {
+                'federal_code' => (string) ($left['federal_code'] ?? ''),
+                'athletes', 'breakdown' => $this->clubAthleteCounts[$leftId] ?? 0,
+                default => (string) ($left['club_name'] ?? ''),
+            };
+            $rightValue = match ($sort) {
+                'federal_code' => (string) ($right['federal_code'] ?? ''),
+                'athletes', 'breakdown' => $this->clubAthleteCounts[$rightId] ?? 0,
+                default => (string) ($right['club_name'] ?? ''),
+            };
+            $comparison = self::compareSortValues($leftValue, $rightValue);
+            if ($comparison === 0) {
+                $comparison = strnatcasecmp(
+                    (string) ($left['club_name'] ?? ''),
+                    (string) ($right['club_name'] ?? '')
+                ) ?: ($leftId <=> $rightId);
+            }
+
+            return $direction === 'desc' ? -$comparison : $comparison;
+        });
+
+        return $clubs;
+    }
+
+    /**
+     * Sort all athletes before paging, then rebuild the visual category/weight runs.
+     *
+     * @return list<array{
+     *     category:string,
+     *     weight:string,
+     *     ageMin:int,
+     *     athletes:list<array<string, mixed>>
+     * }>
+     */
+    public function athleteGroupsSortedPage(
+        string $sort,
+        string $direction,
+        int $offset,
+        int $limit
+    ): array {
+        $entries = $this->sortedEntries($this->entries, $sort, $direction);
+        $entries = array_slice($entries, max(0, $offset), max(1, $limit));
+        $groups = [];
+
+        foreach ($entries as $entry) {
+            $groupIndex = count($groups) - 1;
+            $category = (string) $entry['age_category'];
+            $weight = (string) $entry['weight_label'];
+            if (
+                $groupIndex < 0
+                || $groups[$groupIndex]['category'] !== $category
+                || $groups[$groupIndex]['weight'] !== $weight
+            ) {
+                $groups[] = [
+                    'category' => $category,
+                    'weight' => $weight,
+                    'ageMin' => (int) $entry['age_min'],
+                    'athletes' => [],
+                ];
+                $groupIndex++;
+            }
+            $groups[$groupIndex]['athletes'][] = $entry;
+        }
+
+        return $groups;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function sortedCurrentClubEntries(string $sort, string $direction): array
+    {
+        return $this->sortedEntries($this->currentClubEntries, $sort, $direction);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $entries
+     * @return list<array<string, mixed>>
+     */
+    private function sortedEntries(array $entries, string $sort, string $direction): array
+    {
+        usort($entries, static function (array $left, array $right) use ($sort, $direction): int {
+            $leftValue = self::entrySortValue($left, $sort);
+            $rightValue = self::entrySortValue($right, $sort);
+            $comparison = self::compareSortValues($leftValue, $rightValue);
+            if ($comparison === 0 && $sort === 'age_class') {
+                $comparison = self::weightCategoryValue((string) ($left['weight_category'] ?? ''))
+                    <=> self::weightCategoryValue((string) ($right['weight_category'] ?? ''));
+            }
+            if ($comparison === 0) {
+                $comparison = strnatcasecmp(
+                    (string) ($left['athlete_name'] ?? ''),
+                    (string) ($right['athlete_name'] ?? '')
+                ) ?: ((int) ($left['entry_id'] ?? 0) <=> (int) ($right['entry_id'] ?? 0));
+            }
+
+            return $direction === 'desc' ? -$comparison : $comparison;
+        });
+
+        return $entries;
+    }
+
+    /** @param array<string, mixed> $entry */
+    private static function entrySortValue(array $entry, string $sort): string|int|float
+    {
+        return match ($sort) {
+            'age_class' => (int) ($entry['age_min'] ?? PHP_INT_MAX),
+            'weight' => (float) ($entry['weight_kg'] ?? 0.0),
+            'weight_category' => self::weightCategoryValue(
+                (string) ($entry['weight_category'] ?? '')
+            ),
+            'club' => (string) ($entry['club_name'] ?? ''),
+            'gender' => (string) ($entry['gender'] ?? ''),
+            'belt' => self::beltSortValue((string) ($entry['belt'] ?? '')),
+            default => (string) ($entry['athlete_name'] ?? ''),
+        };
+    }
+
+    private static function compareSortValues(string|int|float $left, string|int|float $right): int
+    {
+        if (is_int($left) || is_float($left)) {
+            return $left <=> $right;
+        }
+
+        return strnatcasecmp($left, (string) $right);
+    }
+
+    private static function beltSortValue(string $belt): int
+    {
+        foreach (Belt::cases() as $position => $candidate) {
+            if ($candidate->value === $belt) {
+                return $position;
+            }
+        }
+
+        return PHP_INT_MAX;
+    }
+
     /**
      * @param array<string, mixed> $row
      * @return array<string, mixed>

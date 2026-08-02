@@ -4,6 +4,7 @@
 /** @var list<array<string, mixed>> $enrolledAthletes */
 /** @var list<array<string, mixed>> $enrolledClubs */
 /** @var list<string> $enrollmentFields */
+/** @var array{column:string, direction:'asc'|'desc'} $enrollmentSort */
 /** @var int|null $selectedEnrollmentClubId */
 /** @var array{page:int, per_page:int, total:int, last_page:int, offset:int, links:string} $enrollmentPagination */
 $entryTypePresentation = static function (string $value): array {
@@ -32,6 +33,16 @@ $entryTypePresentation = static function (string $value): array {
             class="closed-event-club-filter"
         >
             <input type="hidden" name="event_id" value="<?= e((string) $event->id) ?>">
+            <input
+                type="hidden"
+                name="enrollment_sort"
+                value="<?= e($enrollmentSort['column']) ?>"
+            >
+            <input
+                type="hidden"
+                name="enrollment_direction"
+                value="<?= e($enrollmentSort['direction']) ?>"
+            >
             <div class="closed-event-club-filter__field">
                 <label for="event-enrollment-club-filter">
                     <?= e(__('admin.event_details.filter_club')) ?>
@@ -59,12 +70,19 @@ $entryTypePresentation = static function (string $value): array {
             tabindex="0"
             aria-label="<?= e(__('admin.event_details.enrolled_athletes')) ?>"
         >
-            <table class="responsive-table">
+            <table
+                class="responsive-table"
+                data-sort-mode="server"
+                data-sort-parameter="enrollment_sort"
+                data-sort-direction-parameter="enrollment_direction"
+                data-sort-page-parameter="enrollment_page"
+                data-sort-default="club_name"
+            >
                 <thead>
                     <tr>
                         <?php foreach ($enrollmentFields as $field) : ?>
                             <?php $fieldLabel = __('admin.event_details.enrollment_fields.' . $field); ?>
-                            <th scope="col" title="<?= e($fieldLabel) ?>">
+                            <th scope="col" title="<?= e($fieldLabel) ?>" data-sort-key="<?= e($field) ?>">
                                 <abbr title="<?= e($fieldLabel) ?>">
                                     <?= e(__('admin.event_details.enrollment_field_abbreviations.' . $field)) ?>
                                 </abbr>

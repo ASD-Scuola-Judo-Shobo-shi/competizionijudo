@@ -163,10 +163,21 @@ final class EventController extends Controller
             $request->queryParameters(),
             __('events.register_select')
         );
+        $registrationSort = resolve_table_sort(
+            $request->query('registration_sort'),
+            $request->query('registration_direction'),
+            ['athlete', 'birth', 'weight', 'weight_category', 'current_option'],
+            'athlete'
+        );
+        $preserveRegistrationSort = $request->query('registration_sort') !== null
+            || $request->query('registration_direction') !== null;
         $athletes = Athlete::pageByClub(
             $clubId,
             $athletePagination['per_page'],
-            $athletePagination['offset']
+            $athletePagination['offset'],
+            $registrationSort['column'],
+            $registrationSort['direction'],
+            $eventId
         );
         $editableAthleteIds = array_map(
             static fn(Athlete $athlete): int => $athlete->id,
@@ -175,6 +186,10 @@ final class EventController extends Controller
         $registrationRedirect = '/events/register?event=' . $eventId;
         if ($athletePagination['page'] > 1) {
             $registrationRedirect .= '&athletes_page=' . $athletePagination['page'];
+        }
+        if ($preserveRegistrationSort) {
+            $registrationRedirect .= '&registration_sort=' . rawurlencode($registrationSort['column'])
+                . '&registration_direction=' . rawurlencode($registrationSort['direction']);
         }
 
         if ($request->method() === 'POST') {
@@ -405,6 +420,8 @@ final class EventController extends Controller
             'defaultRegistrationOptionId' => $defaultRegistrationOptionId,
             'registeredEnrollmentDetails' => $registeredEnrollmentDetails,
             'athletePagination' => $athletePagination,
+            'registrationSort' => $registrationSort,
+            'preserveRegistrationSort' => $preserveRegistrationSort,
         ]);
     }
 
@@ -455,6 +472,24 @@ final class EventController extends Controller
             $event->closed ? $clubId : null,
             trim((string) $request->query('weight_category', ''))
         );
+        $entryClubsSort = resolve_table_sort(
+            $request->query('clubs_sort'),
+            $request->query('clubs_direction'),
+            ['club', 'federal_code', 'athletes', 'breakdown'],
+            'club'
+        );
+        $entryAthletesSort = resolve_table_sort(
+            $request->query('athletes_sort'),
+            $request->query('athletes_direction'),
+            ['age_class', 'weight_category', 'athlete', 'club', 'gender', 'belt'],
+            'age_class'
+        );
+        $currentClubSort = resolve_table_sort(
+            $request->query('club_entries_sort'),
+            $request->query('club_entries_direction'),
+            ['athlete', 'gender', 'weight', 'weight_category', 'belt'],
+            'weight'
+        );
         $entryClubsPagination = paginate(
             count($entryReport->clubs),
             max(1, (int) $request->query('clubs_page', '1')),
@@ -481,28 +516,41 @@ final class EventController extends Controller
         );
 
         $upcomingEvents = $this->resolveUpcomingEvents($eventId, $date, $limit);
+        $sortedEntryClubs = $entryReport->sortedClubs(
+            $entryClubsSort['column'],
+            $entryClubsSort['direction']
+        );
+        $sortedCurrentClubEntries = $entryReport->sortedCurrentClubEntries(
+            $currentClubSort['column'],
+            $currentClubSort['direction']
+        );
 
         return $this->view('events/entries', [
             'title' => __('events.entries') . ' - ' . $event->name,
             'event' => $event,
             'entryReport' => $entryReport,
             'entryClubs' => array_slice(
-                $entryReport->clubs,
+                $sortedEntryClubs,
                 $entryClubsPagination['offset'],
                 $entryClubsPagination['per_page']
             ),
-            'entryAthleteGroups' => $entryReport->athleteGroupsPage(
+            'entryAthleteGroups' => $entryReport->athleteGroupsSortedPage(
+                $entryAthletesSort['column'],
+                $entryAthletesSort['direction'],
                 $entryAthletesPagination['offset'],
                 $entryAthletesPagination['per_page']
             ),
             'currentClubEntries' => array_slice(
-                $entryReport->currentClubEntries,
+                $sortedCurrentClubEntries,
                 $currentClubPagination['offset'],
                 $currentClubPagination['per_page']
             ),
             'entryClubsPagination' => $entryClubsPagination,
             'entryAthletesPagination' => $entryAthletesPagination,
             'currentClubPagination' => $currentClubPagination,
+            'entryClubsSort' => $entryClubsSort,
+            'entryAthletesSort' => $entryAthletesSort,
+            'currentClubSort' => $currentClubSort,
             'loggedInClubId' => $clubId !== null ? (int) $clubId : null,
             'hasRegistrationException' => $hasRegistrationException,
             'upcomingEvents' => $upcomingEvents,

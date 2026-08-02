@@ -23,7 +23,7 @@ $importReport = is_array($csvFeedback['report'] ?? null) ? $csvFeedback['report'
                                 <th scope="col"><?= e(__('club.area.csv.report_row')) ?></th>
                                 <th scope="col"><?= e(__('club.area.csv.report_athlete')) ?></th>
                                 <th scope="col"><?= e(__('club.area.csv.report_problem')) ?></th>
-                                <th scope="col"><?= e(__('club.area.actions')) ?></th>
+                                <th scope="col" data-sortable="false"><?= e(__('club.area.actions')) ?></th>
                             </tr>
                         </thead>
                         <tbody>

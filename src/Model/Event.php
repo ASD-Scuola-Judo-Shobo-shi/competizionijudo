@@ -246,6 +246,41 @@ final class Event
         $statement->execute([$id]);
     }
 
+    public static function count(): int
+    {
+        return (int) Database::connection()->query('SELECT COUNT(*) FROM events')->fetchColumn();
+    }
+
+    /** @return list<self> */
+    public static function adminPage(
+        int $limit,
+        int $offset,
+        string $sort = 'date',
+        string $direction = 'desc'
+    ): array {
+        $sortExpression = match ($sort) {
+            'name' => 'e.name',
+            'location' => 'e.location',
+            'type' => 'e.type',
+            'visibility' => 'e.published',
+            'registration_status' => 'e.closed',
+            'clubs' => '(SELECT COUNT(DISTINCT en.club_id) FROM entries en WHERE en.event_id = e.id)',
+            'athletes' => '(SELECT COUNT(*) FROM entries en WHERE en.event_id = e.id)',
+            'max_participants' => 'e.max_participants',
+            default => 'e.date',
+        };
+        $direction = strtolower($direction) === 'desc' ? 'DESC' : 'ASC';
+        $statement = Database::connection()->prepare(
+            'SELECT e.* FROM events e ORDER BY ' . $sortExpression . ' ' . $direction . ', e.id ASC'
+            . ' LIMIT ? OFFSET ?'
+        );
+        $statement->bindValue(1, max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(2, max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(fn(array $row) => self::fromArray($row), $statement->fetchAll() ?: []);
+    }
+
     /** @return list<self> */
     public static function allPublishedIncludingClosed(string $onDate, int $limit): array
     {

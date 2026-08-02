@@ -254,8 +254,19 @@ final class ClubController extends Controller
     public function list(Request $request): Response
     {
         $page = max(1, (int) $request->query('page', '1'));
-        $pagination = paginate(Club::count(), $page, 50);
-        $clubs = Club::page($pagination['per_page'], $pagination['offset']);
+        $pagination = paginate(Club::count(), $page, 50, 'page', $request->queryParameters());
+        $sort = resolve_table_sort(
+            $request->query('sort'),
+            $request->query('direction'),
+            ['name', 'federal_code'],
+            'name'
+        );
+        $clubs = Club::page(
+            $pagination['per_page'],
+            $pagination['offset'],
+            $sort['column'],
+            $sort['direction']
+        );
 
         return $this->view('club/list', [
             'title' => __('club.list.title'),

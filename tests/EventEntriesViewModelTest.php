@@ -118,6 +118,34 @@ final class EventEntriesViewModelTest extends TestCase
         self::assertSame('Third Athlete', $page[1]['athletes'][0]['athlete_name']);
     }
 
+    public function testTableSortsAreAppliedBeforeEntryPagesAreSliced(): void
+    {
+        $clubs = [
+            ['id' => 201, 'club_name' => 'Club Uno', 'federal_code' => 'ONE'],
+            ['id' => 202, 'club_name' => 'Club Due', 'federal_code' => 'TWO'],
+        ];
+        $report = EventEntriesViewModel::fromRows([
+            $this->entry(201, 'Alpha', 'Athlete', 'F', 21.0, '-24 kg', 'white'),
+            $this->entry(201, 'Charlie', 'Athlete', 'M', 26.0, '-28 kg', 'yellow'),
+            $this->entry(202, 'Bravo', 'Athlete', 'F', 23.0, '-24 kg', 'green'),
+        ], $clubs, 201);
+
+        $page = $report->athleteGroupsSortedPage('athlete', 'desc', 1, 1);
+
+        self::assertSame('Bravo Athlete', $page[0]['athletes'][0]['athlete_name']);
+        self::assertSame(
+            [201, 202],
+            array_map(
+                static fn(array $club): int => (int) $club['id'],
+                $report->sortedClubs('athletes', 'desc')
+            )
+        );
+        self::assertSame(
+            ['Charlie Athlete', 'Alpha Athlete'],
+            array_column($report->sortedCurrentClubEntries('weight', 'desc'), 'athlete_name')
+        );
+    }
+
     /** @return array<string, mixed> */
     private function entry(
         int $clubId,

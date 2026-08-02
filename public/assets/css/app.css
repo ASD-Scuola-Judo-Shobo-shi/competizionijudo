@@ -1781,6 +1781,34 @@ button.submenu-item {
     display: none !important;
 }
 
+.table-sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    text-align: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.table-sort-button:focus-visible {
+    outline: 2px solid #0056b3;
+    outline-offset: 3px;
+    border-radius: 3px;
+}
+
+.table-sort-indicator {
+    flex: 0 0 auto;
+    color: #6c757d;
+    font-size: 0.8em;
+}
+
 .pagination-link:hover {
     background: #f0f0f0;
     border-color: #ccc;
@@ -3288,6 +3316,10 @@ html[data-theme="dark"] .pagination-link.disabled:hover {
     background: transparent;
 }
 
+html[data-theme="dark"] .table-sort-indicator {
+    color: #adb5bd;
+}
+
 html[data-theme="dark"] .next-event-details {
     background: #203653;
 }
@@ -3330,6 +3362,43 @@ html[data-theme="dark"] .table-actions button.table-action-icon:hover {
         clip: rect(0, 0, 0, 0);
         white-space: nowrap;
         border: 0;
+    }
+
+    .responsive-table.table-is-sortable thead {
+        position: static;
+        display: block;
+        width: auto;
+        height: auto;
+        padding: 0;
+        margin: 0 0 10px;
+        overflow: visible;
+        clip: auto;
+        white-space: normal;
+    }
+
+    .responsive-table.table-is-sortable thead tr {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .responsive-table.table-is-sortable thead th {
+        display: block;
+        width: auto;
+        padding: 6px 9px;
+        border: 1px solid #cbd6e4;
+        border-radius: 999px;
+        background: #eef3f8;
+        font-size: .78rem;
+    }
+
+    .responsive-table.table-is-sortable thead th[data-sortable="false"] {
+        display: none;
+    }
+
+    .responsive-table.table-is-sortable .table-sort-button {
+        gap: 5px;
+        width: auto;
     }
 
     .responsive-table tbody {
@@ -3498,6 +3567,11 @@ html[data-theme="dark"] .table-actions button.table-action-icon:hover {
 
     html[data-theme="dark"] .responsive-table tbody td::before {
         color: #afbed2;
+    }
+
+    html[data-theme="dark"] .responsive-table.table-is-sortable thead th {
+        border-color: #526b8d;
+        background: #203653;
     }
 
     .admin-list-heading--with-actions {

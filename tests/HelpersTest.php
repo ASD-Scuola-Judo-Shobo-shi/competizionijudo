@@ -161,6 +161,22 @@ final class HelpersTest extends TestCase
         self::assertSame(3, substr_count($lastPageLinks, 'pagination-link disabled'));
     }
 
+    public function testTableSortResolutionAcceptsOnlyAllowlistedColumnsAndDirections(): void
+    {
+        self::assertSame(
+            ['column' => 'weight', 'direction' => 'desc'],
+            resolve_table_sort('weight', 'desc', ['athlete', 'weight'], 'athlete')
+        );
+        self::assertSame(
+            ['column' => 'athlete', 'direction' => 'asc'],
+            resolve_table_sort('DROP TABLE athletes', 'sideways', ['athlete', 'weight'], 'athlete')
+        );
+        self::assertSame(
+            ['column' => 'date', 'direction' => 'desc'],
+            resolve_table_sort(null, null, ['date'], 'date', 'desc')
+        );
+    }
+
     public function testBasePath(): void
     {
         $path = base_path();

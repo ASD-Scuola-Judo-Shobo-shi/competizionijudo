@@ -3,6 +3,8 @@
 /** @var list<string> $errors */
 /** @var array<int, array{age_below: int|null, type: string, weight_category: string}> $athleteCategories */
 /** @var array{type: string, message: string}|null $athleteInlineFeedback */
+/** @var array{column:string, direction:'asc'|'desc'}|null $tableSort */
+$tableSort ??= ['column' => 'athlete', 'direction' => 'asc'];
 ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <div class="card">
@@ -232,17 +234,22 @@
         tabindex="0"
         aria-label="<?= e(__('club.area.athlete_archive')) ?>"
     >
-        <table class="table-full responsive-table">
+        <table
+            class="table-full responsive-table"
+            data-sort-mode="server"
+            data-sort-page-parameter="page"
+            data-sort-default="athlete"
+        >
         <thead>
             <tr>
-                <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
-                <th scope="col"><?= e(__('club.area.table.gender')) ?></th>
-                <th scope="col"><?= e(__('club.area.table.birth')) ?></th>
-                <th scope="col"><?= e(__('club.area.table.age_class')) ?></th>
-                <th scope="col"><?= e(__('club.area.table.weight')) ?></th>
-                <th scope="col"><?= e(__('club.area.table.belt')) ?></th>
-                <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
-                <th scope="col"><?= e(__('club.area.table.actions')) ?></th>
+                <th scope="col" data-sort-key="athlete"><?= e(__('club.area.table.athlete')) ?></th>
+                <th scope="col" data-sort-key="gender"><?= e(__('club.area.table.gender')) ?></th>
+                <th scope="col" data-sort-key="birth"><?= e(__('club.area.table.birth')) ?></th>
+                <th scope="col" data-sort-key="age_class"><?= e(__('club.area.table.age_class')) ?></th>
+                <th scope="col" data-sort-key="weight"><?= e(__('club.area.table.weight')) ?></th>
+                <th scope="col" data-sort-key="belt"><?= e(__('club.area.table.belt')) ?></th>
+                <th scope="col" data-sort-key="weight_category"><?= e(__('club.area.table.weight_category')) ?></th>
+                <th scope="col" data-sortable="false"><?= e(__('club.area.table.actions')) ?></th>
             </tr>
         </thead>
         <tbody>
@@ -319,6 +326,8 @@
                                 <input type="hidden" name="notes" value="<?= e($athlete->notes ?? '') ?>">
                                 <input type="hidden" name="return_view" value="add">
                                 <input type="hidden" name="page" value="<?= (int) ($pagination['page'] ?? 1) ?>">
+                                <input type="hidden" name="sort" value="<?= e($tableSort['column']) ?>">
+                                <input type="hidden" name="direction" value="<?= e($tableSort['direction']) ?>">
                                 <button class="btn green table-action-button" type="submit" aria-label="<?= e(__('tables.save')) ?>" title="<?= e(__('tables.save')) ?>"><span aria-hidden="true">💾</span><span class="table-action-label"><?= e(__('tables.save')) ?></span></button>
                                 <button class="btn gray table-action-button" type="button" data-inline-cancel aria-label="<?= e(__('tables.cancel')) ?>" title="<?= e(__('tables.cancel')) ?>"><span aria-hidden="true">↩️</span><span class="table-action-label"><?= e(__('tables.cancel')) ?></span></button>
                                 <a class="btn table-action-button" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>

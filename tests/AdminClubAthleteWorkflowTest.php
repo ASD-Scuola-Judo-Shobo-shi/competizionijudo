@@ -69,9 +69,23 @@ final class AdminClubAthleteWorkflowTest extends TestCase
         self::assertStringContainsString('/admin/clubs/athletes/export?club_id=201', $response->content());
         self::assertStringContainsString('action="/admin/clubs/update-inline"', $response->content());
         self::assertStringContainsString('data-inline-edit', $response->content());
-        self::assertStringContainsString('<th scope="col">Code</th>', $response->content());
+        self::assertStringContainsString(
+            '<th scope="col" data-sort-key="federal_code">Code</th>',
+            $response->content()
+        );
         self::assertStringContainsString('data-label="Federal code"', $response->content());
         self::assertMatchesRegularExpression('/title="2 athletes in archive">\s*2\s*<\/strong>/', $response->content());
+
+        $sortedRequest = new Request('GET', '/admin/clubs', [
+            'sort' => 'athletes',
+            'direction' => 'desc',
+        ]);
+        $sortedResponse = (new AdminController($this->view, $sortedRequest))->manageClubs($sortedRequest);
+        $ownClubPosition = strpos($sortedResponse->content(), 'Synthetic Club');
+        $foreignClubPosition = strpos($sortedResponse->content(), 'Foreign Club');
+        self::assertIsInt($ownClubPosition);
+        self::assertIsInt($foreignClubPosition);
+        self::assertLessThan($foreignClubPosition, $ownClubPosition);
     }
 
     public function testAdministratorCanSeeEveryFieldForOnlyTheSelectedClubsAthletes(): void
@@ -126,7 +140,10 @@ final class AdminClubAthleteWorkflowTest extends TestCase
         self::assertStringContainsString('class="table-full responsive-table admin-list-table"', $html);
         self::assertStringContainsString('class="table-actions admin-table-actions"', $html);
         self::assertStringContainsString('action="/admin/events/update-inline"', $html);
-        self::assertStringContainsString('<th scope="col">Show</th>', $html);
+        self::assertStringContainsString(
+            '<th scope="col" data-sort-key="visibility">Show</th>',
+            $html
+        );
         self::assertStringContainsString('data-label="Visibility"', $html);
         self::assertStringContainsString('👁️', $html);
         self::assertStringContainsString('Synthetic International Tournament', $html);

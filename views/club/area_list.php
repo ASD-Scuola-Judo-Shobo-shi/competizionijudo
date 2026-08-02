@@ -5,6 +5,8 @@
 /** @var list<array{id: int, name: string, date: string}> $events */
 /** @var int $eventFilter */
 /** @var array{type: string, message: string}|null $athleteInlineFeedback */
+/** @var array{column:string, direction:'asc'|'desc'}|null $tableSort */
+$tableSort ??= ['column' => 'athlete', 'direction' => 'asc'];
 ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <?php if (!empty($events)) : ?>
@@ -12,6 +14,8 @@
     <h3><?= e(__('club.area.filter_by_event')) ?></h3>
     <form method="get" class="form-inline">
         <input type="hidden" name="view" value="list">
+        <input type="hidden" name="sort" value="<?= e($tableSort['column']) ?>">
+        <input type="hidden" name="direction" value="<?= e($tableSort['direction']) ?>">
         <label><?= e(__('club.area.event')) ?></label>
         <select name="event" onchange="this.form.submit()">
             <option value="0"><?= e(__('club.area.all_events')) ?></option>
@@ -44,18 +48,23 @@
             tabindex="0"
             aria-label="<?= e(__('club.area.athlete_archive')) ?>"
         >
-            <table class="table-full responsive-table">
+            <table
+                class="table-full responsive-table"
+                data-sort-mode="server"
+                data-sort-page-parameter="page"
+                data-sort-default="athlete"
+            >
             <thead>
                 <tr>
-                    <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
-                    <th scope="col"><?= e(__('club.area.table.gender')) ?></th>
-                    <th scope="col"><?= e(__('club.area.table.birth')) ?></th>
-                    <th scope="col"><?= e(__('club.area.table.age_class')) ?></th>
-                    <th scope="col"><?= e(__('club.area.table.weight')) ?></th>
-                    <th scope="col"><?= e(__('club.area.table.belt')) ?></th>
-                    <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
-                    <th scope="col"><?= e(__('club.area.table.registrations')) ?></th>
-                    <th scope="col"><?= e(__('club.area.table.actions')) ?></th>
+                    <th scope="col" data-sort-key="athlete"><?= e(__('club.area.table.athlete')) ?></th>
+                    <th scope="col" data-sort-key="gender"><?= e(__('club.area.table.gender')) ?></th>
+                    <th scope="col" data-sort-key="birth"><?= e(__('club.area.table.birth')) ?></th>
+                    <th scope="col" data-sort-key="age_class"><?= e(__('club.area.table.age_class')) ?></th>
+                    <th scope="col" data-sort-key="weight"><?= e(__('club.area.table.weight')) ?></th>
+                    <th scope="col" data-sort-key="belt"><?= e(__('club.area.table.belt')) ?></th>
+                    <th scope="col" data-sort-key="weight_category"><?= e(__('club.area.table.weight_category')) ?></th>
+                    <th scope="col" data-sort-key="registrations"><?= e(__('club.area.table.registrations')) ?></th>
+                    <th scope="col" data-sortable="false"><?= e(__('club.area.table.actions')) ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -134,6 +143,8 @@
                                 <input type="hidden" name="return_view" value="list">
                                 <input type="hidden" name="page" value="<?= (int) $pagination['page'] ?>">
                                 <input type="hidden" name="event" value="<?= (int) $eventFilter ?>">
+                                <input type="hidden" name="sort" value="<?= e($tableSort['column']) ?>">
+                                <input type="hidden" name="direction" value="<?= e($tableSort['direction']) ?>">
                                 <button class="btn green table-action-button" type="submit" aria-label="<?= e(__('tables.save')) ?>" title="<?= e(__('tables.save')) ?>"><span aria-hidden="true">💾</span><span class="table-action-label"><?= e(__('tables.save')) ?></span></button>
                                 <button class="btn gray table-action-button" type="button" data-inline-cancel aria-label="<?= e(__('tables.cancel')) ?>" title="<?= e(__('tables.cancel')) ?>"><span aria-hidden="true">↩️</span><span class="table-action-label"><?= e(__('tables.cancel')) ?></span></button>
                                 <a class="btn table-action-button" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>

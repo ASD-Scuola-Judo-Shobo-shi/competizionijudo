@@ -30,18 +30,23 @@
             tabindex="0"
             aria-label="<?= e(__('admin.clubs.athletes_title', ['club' => $club->name])) ?>"
         >
-            <table class="table-full responsive-table admin-list-table">
+            <table
+                class="table-full responsive-table admin-list-table"
+                data-sort-mode="server"
+                data-sort-page-parameter="page"
+                data-sort-default="athlete"
+            >
                 <thead>
                     <tr>
-                        <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.gender')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.birth')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.age_class')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.weight')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.belt')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.membership_number')) ?></th>
-                        <th scope="col"><?= e(__('club.area.table.notes')) ?></th>
+                        <th scope="col" data-sort-key="athlete"><?= e(__('club.area.table.athlete')) ?></th>
+                        <th scope="col" data-sort-key="gender"><?= e(__('club.area.table.gender')) ?></th>
+                        <th scope="col" data-sort-key="birth"><?= e(__('club.area.table.birth')) ?></th>
+                        <th scope="col" data-sort-key="age_class"><?= e(__('club.area.table.age_class')) ?></th>
+                        <th scope="col" data-sort-key="weight"><?= e(__('club.area.table.weight')) ?></th>
+                        <th scope="col" data-sort-key="belt"><?= e(__('club.area.table.belt')) ?></th>
+                        <th scope="col" data-sort-key="weight_category"><?= e(__('club.area.table.weight_category')) ?></th>
+                        <th scope="col" data-sort-key="membership_number"><?= e(__('club.area.table.membership_number')) ?></th>
+                        <th scope="col" data-sort-key="notes"><?= e(__('club.area.table.notes')) ?></th>
                     </tr>
                 </thead>
                 <tbody>

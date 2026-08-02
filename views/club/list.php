@@ -16,12 +16,17 @@
             tabindex="0"
             aria-label="<?= e(__('club.list.title')) ?>"
         >
-            <table class="table-full responsive-table public-club-table">
+            <table
+                class="table-full responsive-table public-club-table"
+                data-sort-mode="server"
+                data-sort-page-parameter="page"
+                data-sort-default="name"
+            >
                 <thead>
                     <tr>
-                        <th scope="col">#</th>
-                        <th scope="col"><?= e(__('club.list.table_name')) ?></th>
-                        <th scope="col"><?= e(__('club.list.table_code')) ?></th>
+                        <th scope="col" data-sortable="false">#</th>
+                        <th scope="col" data-sort-key="name"><?= e(__('club.list.table_name')) ?></th>
+                        <th scope="col" data-sort-key="federal_code"><?= e(__('club.list.table_code')) ?></th>
                     </tr>
                 </thead>
                 <tbody>

@@ -104,8 +104,41 @@ final class ListQueryBoundsTest extends TestCase
 
         self::assertSame([101 => ['clubs' => 1, 'athletes' => 2]], Entry::countsByEventIds([101]));
         self::assertSame([301 => 1], Entry::registrationCountsByAthletes(201, [301], 101));
+        self::assertSame(
+            [101],
+            array_map(
+                static fn(Event $event): int => $event->id,
+                Event::adminPage(1, 0, 'athletes', 'desc')
+            )
+        );
         self::assertSame([], Entry::countsByEventIds([]));
         self::assertSame([], Entry::registrationCountsByAthletes(201, [], 101));
+    }
+
+    public function testPagesSortTheCompleteDatasetBeforeApplyingTheirLimit(): void
+    {
+        $this->insertEvent(101, 'Synthetic Event', '2026-07-01', true, false);
+        for ($id = 1; $id <= 12; $id++) {
+            $this->insertClub($id, sprintf('Club %02d', $id));
+            $this->insertAthlete(1000 + $id, 1, sprintf('Athlete %02d', $id));
+            $this->insertEntry($id, 101, 1, 1000 + $id);
+        }
+
+        self::assertSame(
+            [12, 11, 10],
+            array_map(static fn(Club $club): int => $club->id, Club::page(3, 0, 'name', 'desc'))
+        );
+        self::assertSame(
+            [1012, 1011, 1010],
+            array_map(
+                static fn(Athlete $athlete): int => $athlete->id,
+                Athlete::pageByClub(1, 3, 0, 'athlete', 'desc')
+            )
+        );
+        self::assertSame(
+            [12, 11, 10],
+            array_column(Entry::pageByEvent(101, 1, false, 3, 0, 'last_name', 'desc'), 'entry_id')
+        );
     }
 
     private function createSchema(): void
