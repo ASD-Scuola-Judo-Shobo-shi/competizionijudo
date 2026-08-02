@@ -94,7 +94,7 @@ final class EventCategorySnapshotTest extends TestCase
 
     private function closeEventRequest(): \App\Core\Response
     {
-        $request = new Request('POST', '/admin_add_event.php', [], [
+        $request = new Request('POST', '/admin/events/details', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '101',
             'name' => '2026 Event',
@@ -113,7 +113,7 @@ final class EventCategorySnapshotTest extends TestCase
             'registration_option_default' => '0',
         ]);
 
-        return (new AdminController(new View(dirname(__DIR__) . '/views'), $request))->addEvent($request);
+        return (new AdminController(new View(dirname(__DIR__) . '/views'), $request))->eventDetails($request);
     }
 
     private function createSchemaAndData(): void

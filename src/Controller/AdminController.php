@@ -15,6 +15,7 @@ use App\Model\Affiliation;
 use App\Model\Athlete;
 use App\Model\Club;
 use App\Model\Database;
+use App\Model\Entry;
 use App\Model\EntrySnapshotService;
 use App\Model\Event;
 use App\Model\EventRegistrationOption;
@@ -460,7 +461,7 @@ final class AdminController extends Controller
         ]);
     }
 
-    public function addEvent(Request $request): Response
+    public function eventDetails(Request $request): Response
     {
         Session::start();
         if (!AuthContext::isAdministrator()) {
@@ -479,6 +480,22 @@ final class AdminController extends Controller
                 $event = \App\Model\Event::fromArray($row);
             }
         }
+
+        $enrolledClubs = $event !== null
+            ? Entry::findClubsByEvent($event->id, null)
+            : [];
+        $requestedEnrollmentClubId = (int) $request->query('club_id', 0);
+        $enrolledClubIds = array_map(
+            static fn(array $club): int => (int) ($club['id'] ?? 0),
+            $enrolledClubs
+        );
+        $selectedEnrollmentClubId = in_array($requestedEnrollmentClubId, $enrolledClubIds, true)
+            ? $requestedEnrollmentClubId
+            : null;
+        $enrolledAthletes = $event !== null
+            ? Entry::findByEvent($event->id, $selectedEnrollmentClubId, $event->closed)
+            : [];
+        $enrollmentFields = EventEntriesCsvTransfer::headers();
 
         $locations = array_unique(array_map(function ($r) {
             return (string) $r['location'];
@@ -689,12 +706,18 @@ final class AdminController extends Controller
                 }
             }
 
-            return $this->view('admin/add_event', [
-                'title' => $event !== null ? __('admin.edit.title') . ' - ' . $event->name : __('admin.add.title'),
+            return $this->view('admin/event_details', [
+                'title' => $event !== null
+                    ? __('admin.edit.title') . ' - ' . $event->name
+                    : __('admin.event_details.title'),
                 'event' => $event,
                 'error' => $error,
                 'locations' => $locations,
                 'clubs' => $clubs,
+                'enrolledClubs' => $enrolledClubs,
+                'enrolledAthletes' => $enrolledAthletes,
+                'enrollmentFields' => $enrollmentFields,
+                'selectedEnrollmentClubId' => $selectedEnrollmentClubId,
                 'exceptionClubIds' => $exceptionClubIds,
                 'formRegistrationOptions' => $formRegistrationOptions,
                 'formSepaAccountHolder' => $formSepaAccountHolder,
@@ -703,12 +726,18 @@ final class AdminController extends Controller
             ]);
         }
 
-        return $this->view('admin/add_event', [
-            'title' => $event !== null ? __('admin.edit.title') . ' - ' . $event->name : __('admin.add.title'),
+        return $this->view('admin/event_details', [
+            'title' => $event !== null
+                ? __('admin.edit.title') . ' - ' . $event->name
+                : __('admin.event_details.title'),
             'event' => $event,
             'error' => $error,
             'locations' => $locations,
             'clubs' => $clubs,
+            'enrolledClubs' => $enrolledClubs,
+            'enrolledAthletes' => $enrolledAthletes,
+            'enrollmentFields' => $enrollmentFields,
+            'selectedEnrollmentClubId' => $selectedEnrollmentClubId,
             'exceptionClubIds' => $exceptionClubIds,
             'formRegistrationOptions' => $formRegistrationOptions,
             'formSepaAccountHolder' => $formSepaAccountHolder,
@@ -910,20 +939,5 @@ final class AdminController extends Controller
         Session::destroy();
 
         return $this->redirect('/admin/login');
-    }
-
-    public function editEvent(Request $request): Response
-    {
-        Session::start();
-        if (!AuthContext::isAdministrator()) {
-            return $this->redirect('/admin/login');
-        }
-
-        $id = (int) ($request->input('id') ?? $request->query('id'));
-        if ($id <= 0) {
-            return $this->redirect('/admin/events');
-        }
-
-        return $this->redirect('/admin/events/add?event_id=' . $id);
     }
 }

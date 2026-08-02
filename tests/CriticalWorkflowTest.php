@@ -209,7 +209,7 @@ final class CriticalWorkflowTest extends TestCase
         self::assertTrue((bool) Session::get('is_admin'));
 
         $eventDate = '2098-07-01';
-        $createEvent = $this->request('POST', '/admin/events/add', [], [
+        $createEvent = $this->request('POST', '/admin/events/details', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '',
             'name' => 'Synthetic Event',
@@ -242,7 +242,7 @@ final class CriticalWorkflowTest extends TestCase
              ORDER BY sort_order, id'
         )->fetchAll();
 
-        $updateEvent = $this->request('POST', '/admin/events/add', [], [
+        $updateEvent = $this->request('POST', '/admin/events/details', [], [
             'csrf_token' => csrf_token(),
             'event_id' => (string) $eventId,
             'name' => 'Synthetic Event Updated',
@@ -279,7 +279,7 @@ final class CriticalWorkflowTest extends TestCase
         foreach (
             [
                 ['/admin/events', []],
-                ['/admin/events/add', ['event_id' => (string) $eventId]],
+                ['/admin/events/details', ['event_id' => (string) $eventId]],
                 ['/admin/clubs', []],
                 ['/admin/clubs/edit', ['id' => (string) $clubId]],
             ] as [$path, $query]

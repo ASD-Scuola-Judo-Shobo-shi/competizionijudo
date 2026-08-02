@@ -77,8 +77,11 @@
                         </td>
                         <td data-label="<?= e(__('club.area.gender')) ?>">
                             <span data-inline-display>
-                                <span class="table-density-value" title="<?= e($athlete->genderLabel()) ?>"><?= e($_gender?->icon() ?? $athlete->gender) ?></span>
-                                <span class="card-density-value"><?= e($athlete->genderIconLabel()) ?></span>
+                                <?php
+                                $genderBadge = $_gender;
+                                $genderBadgeFallback = $athlete->gender;
+                                require dirname(__DIR__) . '/components/gender_badge.php';
+                                ?>
                             </span>
                             <select class="inline-edit-control" data-inline-editor form="<?= e($_inlineFormId) ?>" name="gender" aria-label="<?= e(__('club.area.gender')) ?>" required>
                                 <?php foreach (App\Model\Gender::cases() as $_genderOption) : ?>

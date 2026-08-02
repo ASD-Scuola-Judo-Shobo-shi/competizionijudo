@@ -19,7 +19,7 @@ $registrationOptions ??= [];
         __('events.name')                  => $event->name,
         __('events.date')                  => $event->date,
         __('events.location')              => $event->location,
-        __('admin.add.organizer')          => $event->organizer,
+        __('admin.event_details.organizer')          => $event->organizer,
         __('events.type_label')            => __('events.type.' . $event->type),
         __('events.registration_deadline') => $event->registration_deadline,
     ]);

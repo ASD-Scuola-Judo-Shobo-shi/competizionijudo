@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Controller\AdminController;
 use App\Controller\EventController;
 use App\Core\Application;
 use App\Core\FileLogger;
@@ -17,6 +18,7 @@ use App\Model\EntryRegistrationRepository;
 use App\Model\EntryRegistrationResult;
 use App\Model\EventRegistrationException;
 use App\Model\Event;
+use App\Service\EventEntriesCsvTransfer;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -167,6 +169,94 @@ final class EventLifecycleTest extends TestCase
         $response = $this->dispatchEntries(['event' => '101', 'club' => '202']);
 
         self::assertSame(200, $response->status());
+    }
+
+    public function testAdminEventDetailsListsEnrolledAthletesWithTheirClubs(): void
+    {
+        $this->insertEvent(closed: true);
+        $statement = $this->database->prepare(
+            'INSERT INTO entries (
+                event_id, club_id, athlete_id, snapshot_last_name, snapshot_first_name,
+                snapshot_gender, snapshot_birth_date, snapshot_weight_kg, snapshot_belt,
+                snapshot_membership_number, snapshot_program, snapshot_weight_category
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $statement->execute([
+            101, 201, 301, 'SnapshotOwn', 'Athlete', 'M', '2012-01-01', 42.5,
+            'green', 'SNAPSHOT-OWN', 'competitive', '-46 kg',
+        ]);
+        $statement->execute([
+            101, 202, 302, 'SnapshotForeign', 'Athlete', 'F', '2013-02-03', 39,
+            'yellow', 'SNAPSHOT-FOREIGN', 'competitive', '-40 kg',
+        ]);
+        Session::set('is_admin', true);
+        $request = new Request('GET', '/admin/events/details', ['event_id' => '101']);
+
+        $response = (new AdminController($this->view, $request))->eventDetails($request);
+        self::assertMatchesRegularExpression(
+            '/<section class="card admin-event-enrollments">(?<entries>.*?)<\/section>/s',
+            $response->content()
+        );
+        preg_match(
+            '/<section class="card admin-event-enrollments">(?<entries>.*?)<\/section>/s',
+            $response->content(),
+            $matches
+        );
+        $plainText = preg_replace(
+            '/\s+/u',
+            ' ',
+            html_entity_decode(strip_tags((string) ($matches['entries'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8')
+        );
+
+        self::assertSame(200, $response->status());
+        self::assertIsString($plainText);
+        foreach (EventEntriesCsvTransfer::headers() as $field) {
+            self::assertStringContainsString(
+                e(__('admin.event_details.enrollment_fields.' . $field)),
+                (string) ($matches['entries'] ?? ''),
+                $field
+            );
+            self::assertStringContainsString(
+                __('admin.event_details.enrollment_field_abbreviations.' . $field),
+                $plainText,
+                $field
+            );
+        }
+        self::assertStringContainsString(__('admin.event_details.enrolled_athletes') . ' (2)', $plainText);
+        self::assertStringContainsString(__('admin.event_details.all_clubs'), $plainText);
+        self::assertStringContainsString('SnapshotOwn Athlete', $plainText);
+        self::assertStringContainsString('Own Club', $plainText);
+        self::assertStringContainsString('OWN-201', $plainText);
+        self::assertStringContainsString('2012-01-01', $plainText);
+        self::assertStringContainsString('42.5', $plainText);
+        self::assertStringContainsString(__('belt.green'), $plainText);
+        self::assertStringContainsString('SNAPSHOT-OWN', $plainText);
+        self::assertStringContainsString(__('gender.M'), $plainText);
+        self::assertStringContainsString('♂', $plainText);
+        self::assertStringContainsString('gender-badge--male', $response->content());
+        self::assertStringContainsString('gender-badge--female', $response->content());
+        self::assertStringContainsString(__('admin.events.type_tooltip.competitive'), $plainText);
+        self::assertStringContainsString('class="belt-badge"', $response->content());
+        self::assertStringContainsString('class="belt-badge__visual"', $response->content());
+        self::assertStringContainsString('-46 kg', $plainText);
+        self::assertStringContainsString('SnapshotForeign Athlete', $plainText);
+        self::assertStringContainsString('Foreign Club', $plainText);
+        self::assertStringNotContainsString('OwnFamily OwnGiven', $plainText);
+        self::assertStringNotContainsString('ForeignFamily ForeignGiven', $plainText);
+
+        $filteredRequest = new Request('GET', '/admin/events/details', [
+            'event_id' => '101',
+            'club_id' => '201',
+        ]);
+        $filteredResponse = (new AdminController($this->view, $filteredRequest))->eventDetails($filteredRequest);
+
+        self::assertSame(200, $filteredResponse->status());
+        self::assertStringContainsString('SnapshotOwn', $filteredResponse->content());
+        self::assertStringNotContainsString('SnapshotForeign', $filteredResponse->content());
+        self::assertMatchesRegularExpression(
+            '/<option\s+value="201"\s+selected\s*>Own Club<\/option>/',
+            $filteredResponse->content()
+        );
     }
 
     public function testOpenEntryReadDoesNotRequireClosedEventSnapshotColumns(): void

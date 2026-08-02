@@ -55,18 +55,18 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('Your club', $html);
     }
 
-    public function testAddEventFormRendersWithoutEditorArtifacts(): void
+    public function testEventDetailsFormRendersWithoutEditorArtifacts(): void
     {
         Localization::setLocale('it');
         $_GET = [];
 
         $view = new View(dirname(__DIR__) . '/views');
-        $html = $view->render('admin/add_event', array_merge([
-            'currentPath' => '/admin/events/add',
+        $html = $view->render('admin/event_details', array_merge([
+            'currentPath' => '/admin/events/details',
             'event' => null,
             'error' => '',
             'locations' => [],
-        ], $this->layoutData('/admin/events/add')));
+        ], $this->layoutData('/admin/events/details')));
 
         self::assertStringNotContainsString('</parameter>', $html);
         self::assertStringNotContainsString('</write_to_file>', $html);
@@ -76,6 +76,21 @@ final class ViewRenderTest extends TestCase
         );
         self::assertSame(4, substr_count($html, 'class="required-marker"'));
         self::assertSame(substr_count($html, '<form'), substr_count($html, '</form>'));
+    }
+
+    public function testAdminNavigationUsesTheCompetitionDetailsRouteAndLabel(): void
+    {
+        Localization::setLocale('en');
+
+        $items = Navigation::submenu('/admin/events/details', true, false);
+        $detailsItems = array_values(array_filter(
+            $items,
+            static fn(array $item): bool => $item['url'] === '/admin/events/details'
+        ));
+
+        self::assertCount(1, $detailsItems);
+        self::assertSame('Competition Details', $detailsItems[0]['label']);
+        self::assertSame(['/admin/events/details'], $detailsItems[0]['paths']);
     }
 
     public function testEventEntriesLinkIsVisibleToAllVisitors(): void
@@ -227,6 +242,14 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('var(--chart-swatch-lower) 0 50%', $css);
         self::assertStringContainsString('var(--chart-swatch-upper) 50% 100%', $css);
         self::assertMatchesRegularExpression(
+            '/\.gender-badge--male\s*\{[^}]*background:\s*#dbeafe;/s',
+            $css
+        );
+        self::assertMatchesRegularExpression(
+            '/\.gender-badge--female\s*\{[^}]*background:\s*#fce7f3;/s',
+            $css
+        );
+        self::assertMatchesRegularExpression(
             '/\.entries-category-weight-chart__track\s*\{[^}]*display:\s*flex;[^}]*width:\s*100%;/s',
             $css
         );
@@ -268,6 +291,9 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('name="athletes_file"', $html);
         self::assertStringContainsString('name="merge_incomplete"', $html);
         self::assertStringContainsString('.xlsx,.csv', $html);
+        self::assertStringContainsString('class="notice info csv-federal-import-notice"', $html);
+        self::assertStringContainsString('Import federation XLSX exports directly', $html);
+        self::assertStringContainsString('exported by your federation&#039;s management system', $html);
         self::assertStringNotContainsString('Import athletes CSV', $html);
     }
 

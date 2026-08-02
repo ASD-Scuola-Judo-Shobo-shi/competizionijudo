@@ -137,14 +137,14 @@ final class IntegrationTest extends TestCase
         self::assertCount(1, $throttle->recorded);
     }
 
-    public function testAdminAddEventRequiresAuth(): void
+    public function testAdminEventDetailsRequiresAuth(): void
     {
         Session::destroy();
 
-        $request = new Request('GET', '/admin/events/add');
+        $request = new Request('GET', '/admin/events/details');
         $controller = new AdminController($this->view, $request);
 
-        $response = $controller->addEvent($request);
+        $response = $controller->eventDetails($request);
         self::assertSame(302, $response->status());
     }
 

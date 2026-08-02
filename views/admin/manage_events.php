@@ -162,7 +162,7 @@
                                 <div class="table-actions admin-table-actions" data-inline-display>
                                     <button class="btn green table-action-button" type="button" data-inline-edit aria-label="<?= e(__('tables.edit_row')) ?>" title="<?= e(__('tables.edit_row')) ?>"><span aria-hidden="true">✏️</span><span class="table-action-label"><?= e(__('tables.edit_row')) ?></span></button>
                                     <a class="btn table-action-button" href="<?= e(base_url('/admin/events/export?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__('admin.events.export')) ?>" title="<?= e(__('admin.events.export')) ?>"><span aria-hidden="true">⬇️</span><span class="table-action-label"><?= e(__('admin.events.export')) ?></span></a>
-                                    <a class="btn gray table-action-button" href="<?= e(base_url('/admin/events/add?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
+                                    <a class="btn gray table-action-button" href="<?= e(base_url('/admin/events/details?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
                                     <form method="post" action="<?= e(base_url('/admin/events/delete?')) ?>" onsubmit="return confirm('<?= e(__('admin.events.confirm_delete')) ?>')">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="event_id" value="<?= (int) $event->id ?>">
@@ -175,7 +175,7 @@
                                     <input type="hidden" name="page" value="<?= (int) $pagination['page'] ?>">
                                     <button class="btn green table-action-button" type="submit" aria-label="<?= e(__('tables.save')) ?>" title="<?= e(__('tables.save')) ?>"><span aria-hidden="true">💾</span><span class="table-action-label"><?= e(__('tables.save')) ?></span></button>
                                     <button class="btn gray table-action-button" type="button" data-inline-cancel aria-label="<?= e(__('tables.cancel')) ?>" title="<?= e(__('tables.cancel')) ?>"><span aria-hidden="true">↩️</span><span class="table-action-label"><?= e(__('tables.cancel')) ?></span></button>
-                                    <a class="btn table-action-button" href="<?= e(base_url('/admin/events/add?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
+                                    <a class="btn table-action-button" href="<?= e(base_url('/admin/events/details?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
                                 </form>
                             </td>
                         </tr>

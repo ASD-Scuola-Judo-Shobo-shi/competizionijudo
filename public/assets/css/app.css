@@ -640,6 +640,30 @@ a.btn-sm:hover {
     color: #6b4c00;
 }
 
+.notice.info {
+    border-color: #83b9ed;
+    background: #e7f4ff;
+    color: #173e69;
+}
+
+.csv-federal-import-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    border-inline-start: 5px solid #0a63d8;
+}
+
+.csv-federal-import-notice__icon {
+    flex: 0 0 auto;
+    font-size: 1.3rem;
+    line-height: 1.2;
+}
+
+.csv-federal-import-notice p {
+    margin: 3px 0 0;
+    line-height: 1.45;
+}
+
 .field-warning {
     display: block;
     color: #b42318;
@@ -2197,6 +2221,36 @@ button.submenu-item {
     display: none;
 }
 
+.gender-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: 999px;
+    background: #e5e7eb;
+    color: #334155;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.gender-badge--male {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.gender-badge--female {
+    background: #fce7f3;
+    color: #be185d;
+}
+
+.card-density-value .gender-badge {
+    margin-inline-end: 5px;
+}
+
 .status-symbol {
     display: inline-flex;
     align-items: center;
@@ -2972,6 +3026,21 @@ html[data-theme="dark"] .belt-badge__knot {
         0 1px 3px rgba(0, 0, 0, .42);
 }
 
+html[data-theme="dark"] .gender-badge {
+    background: #3b4758;
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .gender-badge--male {
+    background: #1e3a5f;
+    color: #bfdbfe;
+}
+
+html[data-theme="dark"] .gender-badge--female {
+    background: #5b2945;
+    color: #fbcfe8;
+}
+
 html[data-theme="dark"] .recap-summary {
     border: 1px solid #405675;
     background: #203653;
@@ -3149,6 +3218,12 @@ html[data-theme="dark"] .notice.warning {
     color: #f8e3a0;
     border-color: #896e24;
     background: #4a3c17;
+}
+
+html[data-theme="dark"] .notice.info {
+    color: #dce9fa;
+    border-color: #527da9;
+    background: #203e63;
 }
 
 html[data-theme="dark"] .notice-error {

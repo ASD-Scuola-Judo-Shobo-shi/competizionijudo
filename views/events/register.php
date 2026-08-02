@@ -42,7 +42,7 @@ foreach ($athletes as $candidateAthlete) {
                     </tr>
                     <?php if ($event->organizer) : ?>
                         <tr>
-                            <td><strong><?= e(__('admin.add.organizer')) ?>:</strong></td>
+                            <td><strong><?= e(__('admin.event_details.organizer')) ?>:</strong></td>
                             <td><?= e($event->organizer) ?></td>
                         </tr>
                     <?php endif; ?>

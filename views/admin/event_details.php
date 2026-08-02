@@ -4,6 +4,10 @@
 /** @var string|null $error */
 /** @var list<string> $locations */
 /** @var list<array{id: int, name: string}> $clubs */
+/** @var list<array<string, mixed>>|null $enrolledClubs */
+/** @var list<array<string, mixed>>|null $enrolledAthletes */
+/** @var list<string>|null $enrollmentFields */
+/** @var int|null $selectedEnrollmentClubId */
 /** @var list<int> $exceptionClubIds */
 /** @var list<array{id:int|null, name:string, fee_amount:string, fee_cents:int|null, is_default:bool}>|null $formRegistrationOptions */
 /** @var string|null $formSepaAccountHolder */
@@ -20,9 +24,13 @@ $formRegistrationOptions ??= [[
 $formSepaAccountHolder ??= $event?->sepa_account_holder ?? '';
 $formSepaIban ??= $event?->sepa_iban ?? '';
 $formSepaBic ??= $event?->sepa_bic ?? '';
+$enrolledAthletes ??= [];
+$enrolledClubs ??= [];
+$enrollmentFields ??= [];
+$selectedEnrollmentClubId ??= null;
 ?>
 <div class="card">
-    <h2><?= $isEdit ? e(__('admin.edit.title')) . ' - ' . e($event->name) : e(__('admin.add.title')) ?></h2>
+    <h2><?= $isEdit ? e(__('admin.edit.title')) . ' - ' . e($event->name) : e(__('admin.event_details.title')) ?></h2>
 
     <?php if ($error) : ?>
         <div class="notice"><?= e($error) ?></div>
@@ -33,13 +41,13 @@ $formSepaBic ??= $event?->sepa_bic ?? '';
         <input type="hidden" name="MAX_FILE_SIZE" value="<?= \App\Validation\EventInputValidator::MAX_UPLOAD_BYTES ?>">
         <input type="hidden" name="event_id" value="<?= e($event?->id ?? '') ?>">
 
-        <label><?= e($isEdit ? __('admin.edit.name') : __('admin.add.name')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+        <label><?= e($isEdit ? __('admin.edit.name') : __('admin.event_details.name')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <input name="name" value="<?= e($event?->name ?? '') ?>" required>
 
-        <label><?= e($isEdit ? __('admin.edit.date') : __('admin.add.date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+        <label><?= e($isEdit ? __('admin.edit.date') : __('admin.event_details.date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <input type="date" name="date" value="<?= e($event?->date ?? '') ?>" required>
 
-        <label><?= e($isEdit ? __('admin.edit.location') : __('admin.add.location')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+        <label><?= e($isEdit ? __('admin.edit.location') : __('admin.event_details.location')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <input name="location" value="<?= e($event?->location ?? '') ?>" list="locations_list" required>
         <datalist id="locations_list">
             <?php foreach ($locations as $loc) : ?>
@@ -47,13 +55,13 @@ $formSepaBic ??= $event?->sepa_bic ?? '';
             <?php endforeach; ?>
         </datalist>
 
-        <label><?= e($isEdit ? __('admin.edit.organizer') : __('admin.add.organizer')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.organizer') : __('admin.event_details.organizer')) ?></label>
         <input name="organizer" value="<?= e($event?->organizer ?? '') ?>">
 
-        <label><?= e($isEdit ? __('admin.edit.registration_deadline') : __('admin.add.registration_deadline')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.registration_deadline') : __('admin.event_details.registration_deadline')) ?></label>
         <input type="date" name="registration_deadline" value="<?= e($event?->registration_deadline ?? '') ?>">
 
-        <label><?= e($isEdit ? __('admin.edit.type') : __('admin.add.type')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+        <label><?= e($isEdit ? __('admin.edit.type') : __('admin.event_details.type')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <select name="type" required>
             <option value="">—</option>
             <option value="only_precompetitive" <?= ($event?->type ?? '') === 'only_precompetitive' ? 'selected' : '' ?>><?= e(__('events.type.only_precompetitive')) ?></option>
@@ -61,18 +69,18 @@ $formSepaBic ??= $event?->sepa_bic ?? '';
             <option value="precompetitive_and_competitive" <?= ($event?->type ?? '') === 'precompetitive_and_competitive' ? 'selected' : '' ?>><?= e(__('events.type.precompetitive_and_competitive')) ?></option>
         </select>
 
-        <label><?= e($isEdit ? __('admin.edit.description') : __('admin.add.description')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.description') : __('admin.event_details.description')) ?></label>
         <textarea name="description" rows="3"><?= e($event?->description ?? '') ?></textarea>
 
-        <label><?= e($isEdit ? __('admin.edit.notes') : __('admin.add.notes')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.notes') : __('admin.event_details.notes')) ?></label>
         <textarea name="notes" rows="3"><?= e($event?->notes ?? '') ?></textarea>
 
-        <label><?= e($isEdit ? __('admin.edit.max_participants') : __('admin.add.max_participants')) ?></label>
-        <input type="number" name="max_participants" value="<?= e($event?->max_participants ? (string) $event->max_participants : '') ?>" min="1" placeholder="<?= e(__('admin.add.max_participants_placeholder')) ?>">
+        <label><?= e($isEdit ? __('admin.edit.max_participants') : __('admin.event_details.max_participants')) ?></label>
+        <input type="number" name="max_participants" value="<?= e($event?->max_participants ? (string) $event->max_participants : '') ?>" min="1" placeholder="<?= e(__('admin.event_details.max_participants_placeholder')) ?>">
 
         <fieldset class="event-payment-fieldset">
-            <legend><?= e(__('admin.add.registration_options')) ?></legend>
-            <p class="field-help"><?= e(__('admin.add.registration_options_help')) ?></p>
+            <legend><?= e(__('admin.event_details.registration_options')) ?></legend>
+            <p class="field-help"><?= e(__('admin.event_details.registration_options_help')) ?></p>
             <div id="registration-options-list">
                 <?php foreach ($formRegistrationOptions as $index => $option) : ?>
                     <div class="registration-option-row" data-option-index="<?= e((string) $index) ?>">
@@ -83,7 +91,7 @@ $formSepaBic ??= $event?->sepa_bic ?? '';
                         >
                         <div>
                             <label for="registration-option-name-<?= e((string) $index) ?>">
-                                <?= e(__('admin.add.registration_option_name')) ?>
+                                <?= e(__('admin.event_details.registration_option_name')) ?>
                             </label>
                             <input
                                 id="registration-option-name-<?= e((string) $index) ?>"
@@ -96,7 +104,7 @@ $formSepaBic ??= $event?->sepa_bic ?? '';
                         </div>
                         <div>
                             <label for="registration-option-fee-<?= e((string) $index) ?>">
-                                <?= e(__('admin.add.registration_option_fee')) ?>
+                                <?= e(__('admin.event_details.registration_option_fee')) ?>
                             </label>
                             <input
                                 id="registration-option-fee-<?= e((string) $index) ?>"
@@ -118,22 +126,22 @@ $formSepaBic ??= $event?->sepa_bic ?? '';
                                 <?= $option['is_default'] ? 'checked' : '' ?>
                                 required
                             >
-                            <?= e(__('admin.add.registration_option_default')) ?>
+                            <?= e(__('admin.event_details.registration_option_default')) ?>
                         </label>
                         <button type="button" class="btn gray btn-sm registration-option-remove">
-                            <?= e(__('admin.add.registration_option_remove')) ?>
+                            <?= e(__('admin.event_details.registration_option_remove')) ?>
                         </button>
                     </div>
                 <?php endforeach; ?>
             </div>
             <button type="button" class="btn btn-sm" id="add-registration-option-btn">
-                <?= e(__('admin.add.registration_option_add')) ?>
+                <?= e(__('admin.event_details.registration_option_add')) ?>
             </button>
         </fieldset>
 
         <fieldset class="event-payment-fieldset">
-            <legend><?= e(__('admin.add.sepa_payment_details')) ?></legend>
-            <p class="field-help"><?= e(__('admin.add.sepa_payment_details_help')) ?></p>
+            <legend><?= e(__('admin.event_details.sepa_payment_details')) ?></legend>
+            <p class="field-help"><?= e(__('admin.event_details.sepa_payment_details_help')) ?></p>
 
             <label for="sepa-account-holder"><?= e(__('events.payment_account_holder')) ?></label>
             <input
@@ -163,29 +171,29 @@ $formSepaBic ??= $event?->sepa_bic ?? '';
             >
         </fieldset>
 
-        <label><?= e($isEdit ? __('admin.edit.poster') : __('admin.add.poster')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.poster') : __('admin.event_details.poster')) ?></label>
         <input type="file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->poster_file)) : ?>
             <p><a href="<?= e(base_url((string) $event->poster_file)) ?>" target="_blank"><?= e(__('events.view_current_poster')) ?></a></p>
         <?php endif; ?>
 
-        <label><?= e($isEdit ? __('admin.edit.info_file') : __('admin.add.info_file')) ?></label>
+        <label><?= e($isEdit ? __('admin.edit.info_file') : __('admin.event_details.info_file')) ?></label>
         <input type="file" name="info_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->info_file)) : ?>
             <p><a href="<?= e(base_url((string) $event->info_file)) ?>" target="_blank"><?= e(__('events.view_current_info')) ?></a></p>
         <?php endif; ?>
 
         <p class="checkbox-group">
-            <label><input type="checkbox" name="published" value="1" <?= $isEdit && !empty($event->published) ? 'checked' : '' ?>> <?= e($isEdit ? __('admin.edit.published') : __('admin.add.published')) ?></label>
-            <label><input type="checkbox" name="closed" value="1" <?= $isEdit && !empty($event->closed) ? 'checked' : '' ?>> <?= e($isEdit ? __('admin.edit.closed') : __('admin.add.closed')) ?></label>
+            <label><input type="checkbox" name="published" value="1" <?= $isEdit && !empty($event->published) ? 'checked' : '' ?>> <?= e($isEdit ? __('admin.edit.published') : __('admin.event_details.published')) ?></label>
+            <label><input type="checkbox" name="closed" value="1" <?= $isEdit && !empty($event->closed) ? 'checked' : '' ?>> <?= e($isEdit ? __('admin.edit.closed') : __('admin.event_details.closed')) ?></label>
         </p>
 
         <?php if (!empty($clubs)) : ?>
-            <label><?= e(__('admin.add.registration_exceptions')) ?></label>
-            <p style="font-size: 0.9em; color: #666; margin-bottom: 0.5rem;"><?= e(__('admin.add.registration_exceptions_help')) ?></p>
+            <label><?= e(__('admin.event_details.registration_exceptions')) ?></label>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 0.5rem;"><?= e(__('admin.event_details.registration_exceptions_help')) ?></p>
             <div class="checkbox-dropdown">
                 <button type="button" class="dropdown-toggle btn btn-sm" onclick="toggleDropdown(this)">
-                    <span><?= e(__('admin.add.select_clubs')) ?></span>
+                    <span><?= e(__('admin.event_details.select_clubs')) ?></span>
                     <span class="dropdown-arrow">▼</span>
                 </button>
                 <div class="dropdown-menu" style="display: none;">
@@ -200,9 +208,12 @@ $formSepaBic ??= $event?->sepa_bic ?? '';
             </div>
         <?php endif; ?>
 
-        <button class="btn green" type="submit"><?= e($isEdit ? __('admin.edit.save') : __('admin.add.save')) ?></button>
+        <button class="btn green" type="submit"><?= e($isEdit ? __('admin.edit.save') : __('admin.event_details.save')) ?></button>
     </form>
 </div>
+<?php if ($isEdit) : ?>
+    <?php require __DIR__ . '/_event_enrolled_athletes.php'; ?>
+<?php endif; ?>
 <script>
     let registrationOptionIndex = <?= count($formRegistrationOptions) ?>;
 
@@ -232,20 +243,20 @@ $formSepaBic ??= $event?->sepa_bic ?? '';
         row.innerHTML =
             '<input type="hidden" name="registration_options[' + index + '][id]" value="">' +
             '<div><label for="registration-option-name-' + index + '">' +
-                <?= json_encode(__('admin.add.registration_option_name'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
+                <?= json_encode(__('admin.event_details.registration_option_name'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
             '</label><input id="registration-option-name-' + index + '" type="text" ' +
                 'name="registration_options[' + index + '][name]" maxlength="120" required></div>' +
             '<div><label for="registration-option-fee-' + index + '">' +
-                <?= json_encode(__('admin.add.registration_option_fee'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
+                <?= json_encode(__('admin.event_details.registration_option_fee'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
             '</label><input id="registration-option-fee-' + index + '" type="number" ' +
                 'name="registration_options[' + index + '][fee_amount]" min="0" max="42949672.95" ' +
                 'step="0.01" inputmode="decimal" required></div>' +
             '<label class="registration-option-default"><input type="radio" ' +
                 'name="registration_option_default" value="' + index + '" required> ' +
-                <?= json_encode(__('admin.add.registration_option_default'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
+                <?= json_encode(__('admin.event_details.registration_option_default'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
             '</label>' +
             '<button type="button" class="btn gray btn-sm registration-option-remove">' +
-                <?= json_encode(__('admin.add.registration_option_remove'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
+                <?= json_encode(__('admin.event_details.registration_option_remove'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> +
             '</button>';
         container.appendChild(row);
         refreshRegistrationOptionRows();

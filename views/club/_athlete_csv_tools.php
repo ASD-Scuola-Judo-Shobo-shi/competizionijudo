@@ -60,6 +60,13 @@ $importReport = is_array($csvFeedback['report'] ?? null) ? $csvFeedback['report'
         <?php endif; ?>
     <?php endif; ?>
     <p><?= e(__('club.area.csv.description')) ?></p>
+    <div class="notice info csv-federal-import-notice" role="note">
+        <span class="csv-federal-import-notice__icon" aria-hidden="true">ℹ️</span>
+        <div>
+            <strong><?= e(__('club.area.csv.federal_import_title')) ?></strong>
+            <p><?= e(__('club.area.csv.federal_import_help')) ?></p>
+        </div>
+    </div>
     <div class="csv-actions">
         <a class="btn" href="<?= e(base_url('/clubs/athletes-export')) ?>"><?= e(__('club.area.csv.export')) ?></a>
         <form

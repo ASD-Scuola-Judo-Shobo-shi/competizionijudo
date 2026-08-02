@@ -50,13 +50,11 @@
                                     <?php endif; ?>
                                 </td>
                                 <td data-label="<?= e(__('club.area.gender')) ?>">
-                                    <span
-                                        class="table-density-value"
-                                        title="<?= e((string) $athlete['gender_label']) ?>"
-                                    ><?= e((string) $athlete['gender_icon']) ?></span>
-                                    <span class="card-density-value">
-                                        <?= e((string) $athlete['gender_label']) ?>
-                                    </span>
+                                    <?php
+                                    $genderBadge = \App\Model\Gender::tryFromValue((string) $athlete['gender']);
+                                    $genderBadgeFallback = (string) $athlete['gender'];
+                                    require dirname(__DIR__) . '/components/gender_badge.php';
+                                    ?>
                                 </td>
                                 <td data-label="<?= e(__('club.area.belt')) ?>">
                                     <?= e((string) $athlete['belt_label']) ?>

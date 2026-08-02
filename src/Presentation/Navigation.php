@@ -33,9 +33,8 @@ final class Navigation
         '/admin/clubs/athletes/export',
         '/admin/maintenance/athlete-duplicates',
         '/admin/events',
-        '/admin/events/add',
+        '/admin/events/details',
         '/admin/clubs/edit',
-        '/admin/events/edit',
         '/admin/logout',
     ];
 
@@ -88,7 +87,11 @@ final class Navigation
                     'paths' => ['/admin/clubs', '/admin/clubs/edit', '/admin/clubs/athletes'],
                 ],
                 ['label' => translate('admin.submenu.manage_events'), 'url' => base_url('/admin/events'), 'paths' => ['/admin/events']],
-                ['label' => translate('admin.submenu.add_event'), 'url' => base_url('/admin/events/add'), 'paths' => ['/admin/events/add']],
+                [
+                    'label' => translate('admin.submenu.event_details'),
+                    'url' => base_url('/admin/events/details'),
+                    'paths' => ['/admin/events/details'],
+                ],
             ];
             if (\App\Controller\AthleteMaintenanceController::enabled()) {
                 $items[] = [

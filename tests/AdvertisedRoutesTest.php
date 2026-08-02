@@ -28,7 +28,7 @@ final class AdvertisedRoutesTest extends TestCase
             '/events/register' => 'get',
             '/clubs/delete-athlete' => 'post',
             '/admin/events' => 'get',
-            '/admin/events/add' => 'get',
+            '/admin/events/details' => 'get',
             '/admin/events/export' => 'get',
             '/admin/clubs' => 'get',
             '/admin/clubs/edit' => 'get',
@@ -48,5 +48,7 @@ final class AdvertisedRoutesTest extends TestCase
             "\$router->post('/admin/maintenance/athlete-duplicates'",
             $routes
         );
+        self::assertStringContainsString("\$router->post('/admin/events/details'", $routes);
+        self::assertStringNotContainsString('/admin/events/add', $routes);
     }
 }

@@ -160,7 +160,7 @@ final class InputValidationControllerTest extends TestCase
             'size' => EventInputValidator::MAX_UPLOAD_BYTES + 1,
             'tmp_name' => '/not-read-for-oversized-controller-upload',
         ];
-        $request = new Request('POST', '/admin_add_event.php', [], [
+        $request = new Request('POST', '/admin/events/details', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '',
             'name' => 'Synthetic Event',
@@ -170,7 +170,7 @@ final class InputValidationControllerTest extends TestCase
             'type' => 'only_competitive',
         ]);
 
-        $response = (new AdminController($this->view, $request))->addEvent($request);
+        $response = (new AdminController($this->view, $request))->eventDetails($request);
 
         self::assertSame(200, $response->status());
         self::assertStringContainsString(e(__('validation.event_upload_too_large')), $response->content());

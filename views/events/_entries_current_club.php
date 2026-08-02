@@ -64,7 +64,11 @@ if ($entryReport->selectedWeightCategory !== '') {
                                 <?= e((string) $athlete['athlete_name']) ?>
                             </td>
                             <td data-label="<?= e(__('club.area.gender')) ?>">
-                                <?= e((string) $athlete['gender_label']) ?>
+                                <?php
+                                $genderBadge = \App\Model\Gender::tryFromValue((string) $athlete['gender']);
+                                $genderBadgeFallback = (string) $athlete['gender'];
+                                require dirname(__DIR__) . '/components/gender_badge.php';
+                                ?>
                             </td>
                             <td data-label="<?= e(__('club.area.weight')) ?>">
                                 <?= e((string) $athlete['weight_display']) ?>

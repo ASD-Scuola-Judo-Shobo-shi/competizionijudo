@@ -24,6 +24,12 @@ final class EventEntriesCsvTransfer
         'weight_category',
     ];
 
+    /** @return list<string> */
+    public static function headers(): array
+    {
+        return self::HEADERS;
+    }
+
     public function export(
         int $eventId,
         bool $eventClosed,
@@ -37,7 +43,7 @@ final class EventEntriesCsvTransfer
 
         try {
             fwrite($stream, "\xEF\xBB\xBF");
-            $this->writeRow($stream, self::HEADERS);
+            $this->writeRow($stream, self::headers());
 
             foreach (Entry::findByEvent($eventId, $clubId, $eventClosed) as $entry) {
                 if (

@@ -59,10 +59,11 @@
                                 <?= e($athlete->last_name . ' ' . $athlete->first_name) ?>
                             </td>
                             <td data-label="<?= e(__('club.area.gender')) ?>">
-                                <span class="table-density-value" title="<?= e($athlete->genderLabel()) ?>">
-                                    <?= e($gender?->icon() ?? $athlete->gender) ?>
-                                </span>
-                                <span class="card-density-value"><?= e($athlete->genderIconLabel()) ?></span>
+                                <?php
+                                $genderBadge = $gender;
+                                $genderBadgeFallback = $athlete->gender;
+                                require dirname(__DIR__) . '/components/gender_badge.php';
+                                ?>
                             </td>
                             <td data-label="<?= e(__('club.area.birth')) ?>">
                                 <time datetime="<?= e($athlete->birth_date) ?>"><?= e($athlete->birth_date) ?></time>

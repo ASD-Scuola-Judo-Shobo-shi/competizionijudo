@@ -1,7 +1,19 @@
 <?php
-/** @var \App\Model\Athlete $athlete */
-$_beltComponents = $athlete->beltEnum()?->components(App\Localization::getLocale()) ?? [[
-    'label' => $athlete->beltLabel(App\Localization::getLocale()),
+/** @var \App\Model\Athlete|null $athlete */
+/** @var \App\Model\Belt|null $beltBadge */
+/** @var string|null $beltBadgeFallback */
+if (isset($beltBadgeFallback)) {
+    $_belt = $beltBadge ?? null;
+    $_beltFallbackLabel = $beltBadgeFallback;
+} elseif (isset($athlete)) {
+    $_belt = $athlete->beltEnum();
+    $_beltFallbackLabel = $athlete->beltLabel(App\Localization::getLocale());
+} else {
+    $_belt = null;
+    $_beltFallbackLabel = '';
+}
+$_beltComponents = $_belt?->components(App\Localization::getLocale()) ?? [[
+    'label' => $_beltFallbackLabel,
     'color' => '#9ca3af',
     'textColor' => '#ffffff',
     'circle' => '',
@@ -29,3 +41,4 @@ $_beltLabel = implode(' / ', array_column($_beltComponents, 'label'));
     </span>
     <span class="belt-badge__label"><?= e($_beltLabel) ?></span>
 </span>
+<?php unset($beltBadge, $beltBadgeFallback); ?>

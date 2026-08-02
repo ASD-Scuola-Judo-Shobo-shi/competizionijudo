@@ -65,17 +65,14 @@ return static function (App\Core\Router $router): void {
     $router->post('/admin/maintenance/athlete-duplicates', [AthleteMaintenanceController::class, 'duplicates'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/update-inline', [\App\Controller\AdminController::class, 'updateClubInline'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/delete', [\App\Controller\AdminController::class, 'deleteClub'], AuthContext::ADMINISTRATOR);
-    $router->get('/admin/events/add', [\App\Controller\AdminController::class, 'addEvent'], AuthContext::ADMINISTRATOR);
-    $router->post('/admin/events/add', [\App\Controller\AdminController::class, 'addEvent'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events', [\App\Controller\AdminController::class, 'manageEvents'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/update-inline', [\App\Controller\AdminController::class, 'updateEventInline'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/export', [\App\Controller\AdminController::class, 'exportEventEntries'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/delete', [\App\Controller\AdminController::class, 'deleteEvent'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/edit', [\App\Controller\AdminController::class, 'editClub'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/edit', [\App\Controller\AdminController::class, 'editClub'], AuthContext::ADMINISTRATOR);
-    $router->get('/admin/events/edit', [\App\Controller\AdminController::class, 'editEvent'], AuthContext::ADMINISTRATOR);
-    $router->post('/admin/events/edit', [\App\Controller\AdminController::class, 'editEvent'], AuthContext::ADMINISTRATOR);
-
     $router->post('/admin/logout', [\App\Controller\AdminController::class, 'logout'], AuthContext::AUTHENTICATED);
 
     $router->get('/language/switch', [App\Controller\LanguageController::class, 'switch']);

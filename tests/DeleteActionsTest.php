@@ -183,7 +183,7 @@ final class DeleteActionsTest extends TestCase
             'error' => UPLOAD_ERR_OK,
             'size' => filesize($temporaryUpload),
         ];
-        $request = new Request('POST', '/admin/events/add', [], [
+        $request = new Request('POST', '/admin/events/details', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '502',
             'name' => 'Synthetic event',
@@ -216,7 +216,7 @@ final class DeleteActionsTest extends TestCase
                 null,
                 null,
                 $storage
-            ))->addEvent($request);
+            ))->eventDetails($request);
 
             self::assertSame(302, $response->status(), strip_tags($response->content()));
             self::assertFileDoesNotExist($publicRoot . '/uploads/events/old-poster.png');
@@ -362,6 +362,29 @@ final class DeleteActionsTest extends TestCase
                 club_id INTEGER NOT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (event_id, club_id)
+            )'
+        );
+        $database->exec(
+            'CREATE TABLE athletes (
+                id INTEGER PRIMARY KEY,
+                club_id INTEGER NOT NULL,
+                last_name TEXT NOT NULL,
+                first_name TEXT NOT NULL,
+                gender TEXT NOT NULL,
+                birth_date TEXT NOT NULL,
+                weight_kg REAL,
+                belt TEXT,
+                membership_number TEXT
+            )'
+        );
+        $database->exec(
+            'CREATE TABLE entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                club_id INTEGER NOT NULL,
+                athlete_id INTEGER NOT NULL,
+                snapshot_last_name TEXT,
+                snapshot_first_name TEXT
             )'
         );
     }
