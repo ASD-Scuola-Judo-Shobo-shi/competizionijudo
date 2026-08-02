@@ -3,11 +3,32 @@
 /** @var \App\Model\Event|null $event */
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var array<int, bool> $eventExceptions */
-/** @var 'details'|'entries'|'registration' $upcomingEventAction */
+/** @var 'admin_details'|'details'|'entries'|'registration' $upcomingEventAction */
 $actionConfig = match ($upcomingEventAction) {
-    'details' => ['path' => '/events/details', 'label' => __('events.details'), 'class' => 'btn'],
-    'registration' => ['path' => '/events/register', 'label' => __('events.registration'), 'class' => 'btn green'],
-    default => ['path' => '/events/entries', 'label' => __('events.entries'), 'class' => 'btn'],
+    'admin_details' => [
+        'path' => '/admin/events/details',
+        'query' => 'event_id',
+        'label' => __('events.details'),
+        'class' => 'btn',
+    ],
+    'details' => [
+        'path' => '/events/details',
+        'query' => 'event',
+        'label' => __('events.details'),
+        'class' => 'btn',
+    ],
+    'registration' => [
+        'path' => '/events/register',
+        'query' => 'event',
+        'label' => __('events.registration'),
+        'class' => 'btn green',
+    ],
+    default => [
+        'path' => '/events/entries',
+        'query' => 'event',
+        'label' => __('events.entries'),
+        'class' => 'btn',
+    ],
 };
 ?>
 
@@ -40,7 +61,13 @@ $actionConfig = match ($upcomingEventAction) {
                     <?php if ($showAction) : ?>
                         <a
                             class="<?= e($actionConfig['class']) ?> btn-sm event-details-btn"
-                            href="<?= e(base_url($actionConfig['path'] . '?event=' . (string) $next->id)) ?>"
+                            href="<?= e(base_url(
+                                $actionConfig['path']
+                                . '?'
+                                . $actionConfig['query']
+                                . '='
+                                . (string) $next->id
+                            )) ?>"
                         ><?= e($actionConfig['label']) ?></a>
                     <?php endif; ?>
                 </div>

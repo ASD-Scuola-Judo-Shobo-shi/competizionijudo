@@ -55,6 +55,13 @@ final class ListQueryBoundsTest extends TestCase
                 Event::nextUpcomingPublished(102, '2026-06-29', 2)
             )
         );
+        self::assertSame(
+            [103, 104],
+            array_map(
+                static fn(Event $event): int => $event->id,
+                Event::nextUpcomingPublishedIncludingClosed(102, '2026-06-29', 2)
+            )
+        );
     }
 
     public function testClubAndAthletePagesBoundReturnedRows(): void

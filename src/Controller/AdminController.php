@@ -705,26 +705,12 @@ final class AdminController extends Controller
                     $error = __('errors.save_failed');
                 }
             }
-
-            return $this->view('admin/event_details', [
-                'title' => $event !== null
-                    ? __('admin.edit.title') . ' - ' . $event->name
-                    : __('admin.event_details.title'),
-                'event' => $event,
-                'error' => $error,
-                'locations' => $locations,
-                'clubs' => $clubs,
-                'enrolledClubs' => $enrolledClubs,
-                'enrolledAthletes' => $enrolledAthletes,
-                'enrollmentFields' => $enrollmentFields,
-                'selectedEnrollmentClubId' => $selectedEnrollmentClubId,
-                'exceptionClubIds' => $exceptionClubIds,
-                'formRegistrationOptions' => $formRegistrationOptions,
-                'formSepaAccountHolder' => $formSepaAccountHolder,
-                'formSepaIban' => $formSepaIban,
-                'formSepaBic' => $formSepaBic,
-            ]);
         }
+
+        $upcomingEventLimit = max(1, (int) config('app.events_upcoming_limit'));
+        $upcomingEvents = $event !== null
+            ? Event::nextUpcomingPublishedIncludingClosed($event->id, date('Y-m-d'), $upcomingEventLimit)
+            : Event::upcomingPublishedIncludingClosed(date('Y-m-d'), $upcomingEventLimit);
 
         return $this->view('admin/event_details', [
             'title' => $event !== null
@@ -743,6 +729,7 @@ final class AdminController extends Controller
             'formSepaAccountHolder' => $formSepaAccountHolder,
             'formSepaIban' => $formSepaIban,
             'formSepaBic' => $formSepaBic,
+            'upcomingEvents' => $upcomingEvents,
         ]);
     }
 

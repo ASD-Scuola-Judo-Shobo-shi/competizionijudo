@@ -66,6 +66,7 @@ final class ViewRenderTest extends TestCase
             'event' => null,
             'error' => '',
             'locations' => [],
+            'upcomingEvents' => [],
         ], $this->layoutData('/admin/events/details')));
 
         self::assertStringNotContainsString('</parameter>', $html);

@@ -13,6 +13,7 @@
 /** @var string|null $formSepaAccountHolder */
 /** @var string|null $formSepaIban */
 /** @var string|null $formSepaBic */
+/** @var list<\App\Model\Event> $upcomingEvents */
 $isEdit = !empty($event);
 $formRegistrationOptions ??= [[
     'id' => null,
@@ -214,6 +215,11 @@ $selectedEnrollmentClubId ??= null;
 <?php if ($isEdit) : ?>
     <?php require __DIR__ . '/_event_enrolled_athletes.php'; ?>
 <?php endif; ?>
+<?php
+$eventExceptions = [];
+$upcomingEventAction = 'admin_details';
+require dirname(__DIR__) . '/components/upcoming_events.php';
+?>
 <script>
     let registrationOptionIndex = <?= count($formRegistrationOptions) ?>;
 

@@ -76,6 +76,7 @@ final class EventLifecycleTest extends TestCase
     public function testPublicDetailsShowEveryRegistrationFeeAndTheDefaultOption(): void
     {
         $this->insertEvent();
+        $this->insertAdditionalEvent(102, 'Future Public Event');
         $this->database->exec(
             "INSERT INTO event_registration_options (
                 id, event_id, name, fee_cents, is_default, is_active, sort_order
@@ -95,6 +96,8 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('Standard €15.00', $plainText);
         self::assertStringContainsString('Premium €25.00', $plainText);
         self::assertStringContainsString(__('events.registration_option_default'), $plainText);
+        self::assertStringContainsString('Future Public Event', $plainText);
+        self::assertStringContainsString('href="/events/details?event=102"', $response->content());
     }
 
     /**
@@ -174,6 +177,7 @@ final class EventLifecycleTest extends TestCase
     public function testAdminEventDetailsListsEnrolledAthletesWithTheirClubs(): void
     {
         $this->insertEvent(closed: true);
+        $this->insertAdditionalEvent(102, 'Future Admin Event');
         $statement = $this->database->prepare(
             'INSERT INTO entries (
                 event_id, club_id, athlete_id, snapshot_last_name, snapshot_first_name,
@@ -243,6 +247,13 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('Foreign Club', $plainText);
         self::assertStringNotContainsString('OwnFamily OwnGiven', $plainText);
         self::assertStringNotContainsString('ForeignFamily ForeignGiven', $plainText);
+        self::assertStringContainsString('class="card upcoming-events-card"', $response->content());
+        self::assertStringContainsString('Future Admin Event', $response->content());
+        self::assertStringContainsString(
+            'href="/admin/events/details?event_id=102"',
+            $response->content()
+        );
+        self::assertStringNotContainsString('href="/events/details?event=102"', $response->content());
 
         $filteredRequest = new Request('GET', '/admin/events/details', [
             'event_id' => '101',
@@ -847,6 +858,31 @@ final class EventLifecycleTest extends TestCase
                 id, event_id, name, fee_cents, is_default, is_active, sort_order
              ) VALUES (?, ?, ?, ?, ?, ?, ?)'
         )->execute([501, 101, 'Standard', 1500, 1, 1, 0]);
+    }
+
+    private function insertAdditionalEvent(int $id, string $name): void
+    {
+        $statement = $this->database->prepare(
+            'INSERT INTO events (
+                id, name, date, location, organizer, registration_deadline,
+                type, description, notes, poster_file, info_file, published, closed
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $statement->execute([
+            $id,
+            $name,
+            '2099-01-02',
+            'Future Synthetic Venue',
+            'Future Synthetic Organizer',
+            '2099-01-01',
+            'only_competitive',
+            null,
+            null,
+            null,
+            null,
+            1,
+            0,
+        ]);
     }
 
     private function seedEntriesForTwoClubs(): void

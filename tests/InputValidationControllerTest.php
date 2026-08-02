@@ -144,15 +144,23 @@ final class InputValidationControllerTest extends TestCase
         self::assertStringContainsString(e(__('validation.athlete_weight_invalid')), $response->content());
     }
 
-    public function testOversizedEventUploadIsRejectedBeforeSqlOrFileWrites(): void
+    public function testOversizedEventUploadIsRejectedBeforeDatabaseOrFileWrites(): void
     {
         $locations = $this->createMock(PDOStatement::class);
         $locations->method('fetchAll')->willReturn([]);
         $clubs = $this->createMock(PDOStatement::class);
         $clubs->method('fetchAll')->willReturn([]);
+        $upcomingEvents = $this->createMock(PDOStatement::class);
+        $upcomingEvents->method('bindValue')->willReturn(true);
+        $upcomingEvents->expects(self::once())->method('execute')->willReturn(true);
+        $upcomingEvents->method('fetchAll')->willReturn([]);
         $database = $this->createMock(PDO::class);
         $database->expects(self::exactly(2))->method('query')->willReturn($locations, $clubs);
-        $database->expects(self::never())->method('prepare');
+        $database->expects(self::once())
+            ->method('prepare')
+            ->with(self::stringContains('WHERE published = 1 AND date >= ?'))
+            ->willReturn($upcomingEvents);
+        $database->expects(self::never())->method('beginTransaction');
         $this->setDatabase($database);
         Session::set('is_admin', true);
         $_FILES['poster_file'] = [
