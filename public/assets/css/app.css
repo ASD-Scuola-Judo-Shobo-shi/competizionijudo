@@ -1668,6 +1668,41 @@ button.submenu-item {
     flex-wrap: wrap;
 }
 
+.upcoming-events-list {
+    display: grid;
+    gap: 10px;
+}
+
+.upcoming-events-list .event-line {
+    margin-bottom: 0;
+}
+
+.event-line__summary {
+    flex: 1 1 280px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.event-closed-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #6c757d;
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.event-closed-badge--corner {
+    position: absolute;
+    z-index: 2;
+    top: 10px;
+    right: 10px;
+    padding: 4px 8px;
+    font-size: .75rem;
+}
+
 .event-details-btn {
     margin-left: auto;
     white-space: nowrap;
@@ -2543,7 +2578,25 @@ html[data-theme="dark"] .theme-toggle:hover .theme-toggle-icon {
 }
 
 .recap-summary {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
     background: #f7f9fc;
+}
+
+.recap-summary > h4 {
+    margin-top: 0;
+}
+
+.event-entries-summary {
+    position: relative;
+}
+
+.event-entries-summary__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 1rem;
 }
 
 .closed-event-club-filter {
@@ -2561,6 +2614,41 @@ html[data-theme="dark"] .theme-toggle:hover .theme-toggle-icon {
 .closed-event-club-entries__count {
     color: #526176;
     font-weight: 700;
+}
+
+.entries-club-breakdowns {
+    display: grid;
+    gap: 4px;
+}
+
+.entries-breakdown {
+    position: relative;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e5e9ef;
+}
+
+.entries-breakdown__segment {
+    position: absolute;
+    inset-block: 0;
+    left: var(--entry-segment-start);
+    width: var(--entry-segment-width);
+    background: var(--entry-segment-color);
+}
+
+.entries-breakdown__segment--split {
+    background: repeating-linear-gradient(
+        135deg,
+        var(--entry-segment-color) 0,
+        var(--entry-segment-color) 5px,
+        var(--entry-segment-color-alt) 5px,
+        var(--entry-segment-color-alt) 10px
+    );
+}
+
+.entries-breakdown__segment--bordered {
+    border: 1px solid #aeb8c5;
 }
 
 @media (max-width: 700px) {
@@ -2789,6 +2877,10 @@ html[data-theme="dark"] .entries-chart-card {
 
 html[data-theme="dark"] .entries-chart__swatch--bordered {
     border-color: #8496ad;
+}
+
+html[data-theme="dark"] .entries-breakdown {
+    background: #405675;
 }
 
 html[data-theme="dark"] .error-description,

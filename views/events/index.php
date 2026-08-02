@@ -11,7 +11,9 @@
 <?php foreach ($events as $ev) : ?>
         <div class="event-card-public">
             <?php if ($ev->closed) : ?>
-                <div class="event-badge-closed" style="position: absolute; top: 10px; right: 10px; background: #6c757d; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold;"><?= e(__('events.closed')) ?></div>
+                <div class="event-badge-closed event-closed-badge event-closed-badge--corner">
+                    <?= e(__('events.closed')) ?>
+                </div>
             <?php endif; ?>
             <div class="event-poster">
     <?php if ($ev->poster_file) : ?>

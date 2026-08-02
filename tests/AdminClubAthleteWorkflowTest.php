@@ -237,7 +237,9 @@ final class AdminClubAthleteWorkflowTest extends TestCase
                 'views/club/area_add.php',
                 'views/club/area_list.php',
                 'views/club/list.php',
-                'views/events/entries.php',
+                'views/events/_entries_athletes.php',
+                'views/events/_entries_clubs.php',
+                'views/events/_entries_current_club.php',
                 'views/events/register.php',
             ] as $template
         ) {

@@ -2,6 +2,7 @@
 
 /** @var \App\Model\Event|null $event */
 /** @var list<\App\Model\Event> $upcomingEvents */
+/** @var array<int, bool> $eventExceptions */
 /** @var bool $canViewEntries */
 /** @var bool $hasRegistrationException */
 /** @var list<\App\Model\EventRegistrationOption>|null $registrationOptions */
@@ -46,8 +47,8 @@ $registrationOptions ??= [];
             </div>
 
             <?php if ($event->closed) : ?>
-                <div class="badge-container" style="position: relative;">
-                    <span class="badge badge-closed" style="background-color: #6c757d; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
+                <div class="badge-container">
+                    <span class="badge badge-closed event-closed-badge">
                         <?= e(__('events.closed')) ?>
                     </span>
                 </div>
@@ -110,30 +111,7 @@ $registrationOptions ??= [];
     </div>
 <?php endif; ?>
 
-<!-- Bottom Upcoming / Next Events Section -->
-<?php if ($event === null && empty($upcomingEvents)) : ?>
-    <div class="card">
-        <p><?= e(__('events.none')) ?></p>
-    </div>
-<?php elseif (!empty($upcomingEvents)) : ?>
-    <div class="card">
-        <?php if ($event === null) : ?>
-            <p><?= e(__('events.select_event')) ?></p>
-        <?php endif; ?>
-
-        <h3><?= e($event !== null ? __('events.upcoming_events') : __('events.upcoming_heading')) ?></h3>
-
-        <?php foreach ($upcomingEvents as $next) : ?>
-            <div class="event-line">
-                <a class="btn btn-sm event-details-btn" href="<?= e(base_url('/events/details?event=' . (string) $next->id)) ?>"><?= e(__('events.details')) ?></a>
-                <!-- Display Closed Badge if closed -->
-                <?php if ($next->closed) : ?>
-                    <span class="badge badge-closed" style="background-color: #6c757d; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
-                        <?= e(__('events.closed')) ?>
-                    </span>
-                <?php endif; ?>
-                <?= e($next->date) ?> - <?= e($next->name) ?> - <?= e($next->location) ?> - (<?= e(__('events.registration_deadline')) ?>: <?= e($next->registration_deadline) ?>)
-            </div>
-        <?php endforeach; ?>
-    </div>
-<?php endif; ?>
+<?php
+$upcomingEventAction = 'details';
+require dirname(__DIR__) . '/components/upcoming_events.php';
+?>

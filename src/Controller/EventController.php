@@ -11,16 +11,14 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
-use App\Model\AgeClass;
 use App\Model\Athlete;
 use App\Model\Club;
-use App\Model\Database;
 use App\Model\Entry;
 use App\Model\EntryRegistrationResult;
 use App\Model\Event;
 use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
-use App\Model\JudoCategory;
+use App\Presentation\EventEntriesViewModel;
 use App\Service\EventEntriesCsvTransfer;
 use App\Service\PasswordResetMailer;
 use App\Service\PasswordResetMailerFactory;
@@ -390,26 +388,11 @@ final class EventController extends Controller
             return $this->view('events/entries', [
                 'title' => __('events.entries'),
                 'event' => null,
-                'clubs' => [],
-                'rows' => [],
-                'isAdmin' => $isAdmin,
                 'loggedInClubId' => null,
                 'hasRegistrationException' => false,
-                'grouped' => [],
-                'categoryCounts' => [],
-                'weightCounts' => [],
-                'beltCounts' => [],
-                'genderCounts' => [],
-                'clubAthleteCounts' => [],
-                'clubCategoryCounts' => [],
-                'clubWeightCounts' => [],
-                'clubBeltCounts' => [],
-                'clubGenderCounts' => [],
+                'entryReport' => EventEntriesViewModel::empty(),
                 'upcomingEvents' => $upcomingEvents,
                 'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
-                'currentClubEntries' => [],
-                'currentClubWeightCategories' => [],
-                'selectedWeightCategory' => '',
             ]);
         }
 
@@ -432,115 +415,23 @@ final class EventController extends Controller
 
         $clubs = Entry::findClubsByEvent($eventId, null);
         $rows = Entry::findByEvent($eventId, null, $event->closed);
-        $currentClubEntries = [];
-        $currentClubWeightCategories = [];
-        $selectedWeightCategory = '';
-        if ($event->closed && $clubId !== null) {
-            $currentClubEntries = array_values(array_filter(
-                $rows,
-                static fn(array $entry): bool => (int) ($entry['club_id'] ?? 0) === $clubId
-            ));
-            usort($currentClubEntries, static function (array $left, array $right): int {
-                $byWeight = (float) ($left['weight_kg'] ?? 0) <=> (float) ($right['weight_kg'] ?? 0);
-
-                return $byWeight !== 0
-                    ? $byWeight
-                    : strcasecmp(
-                        (string) ($left['last_name'] ?? '') . (string) ($left['first_name'] ?? ''),
-                        (string) ($right['last_name'] ?? '') . (string) ($right['first_name'] ?? '')
-                    );
-            });
-            $currentClubWeightCategories = self::entryWeightCategories($currentClubEntries);
-            $requestedWeightCategory = trim((string) $request->query('weight_category', ''));
-            if (in_array($requestedWeightCategory, $currentClubWeightCategories, true)) {
-                $selectedWeightCategory = $requestedWeightCategory;
-                $currentClubEntries = array_values(array_filter(
-                    $currentClubEntries,
-                    static fn(array $entry): bool =>
-                        (string) ($entry['weight_category'] ?? '') === $selectedWeightCategory
-                ));
-            }
-        }
-
-        $grouped = [];
-        $categoryCounts = [];
-        $weightCounts = [];
-        $beltCounts = [];
-        $genderCounts = [];
-        $clubCategoryCounts = [];
-        $clubWeightCounts = [];
-        $clubBeltCounts = [];
-        $clubGenderCounts = [];
-
-        foreach ($rows as $row) {
-            $birthDate = $row['birth_date'] ?? '';
-            $eventDate = $row['event_date'] ?? '';
-            $birthYear = JudoCategory::extractBirthYear($birthDate);
-            $eventYear = $eventDate !== '' ? (int) substr($eventDate, 0, 4) : (int) date('Y');
-            $category = $birthYear !== null ? AgeClass::calculate($birthYear, $eventYear)['label'] : '';
-            $weight = $row['weight_category'] ?? '';
-            $belt = $row['belt'] ?? '';
-            $gender = $row['gender'] ?? '';
-            $rowClubId = (int) ($row['club_id'] ?? 0);
-
-            if ($category === '') {
-                $category = __('events.no_category');
-            }
-            if ($weight === '') {
-                $weight = __('events.no_weight');
-            }
-
-            $groupedKey = $category . ' | ' . $weight;
-            $grouped[$groupedKey][] = $row;
-
-            $categoryCounts[$category] = ($categoryCounts[$category] ?? 0) + 1;
-            $weightGroup = self::groupWeight($weight);
-            $weightCounts[$weightGroup] = ($weightCounts[$weightGroup] ?? 0) + 1;
-            $beltCounts[$belt] = ($beltCounts[$belt] ?? 0) + 1;
-            $genderCounts[$gender] = ($genderCounts[$gender] ?? 0) + 1;
-
-            if ($rowClubId > 0) {
-                $clubCategoryCounts[$rowClubId][$category] = ($clubCategoryCounts[$rowClubId][$category] ?? 0) + 1;
-                $clubWeightCounts[$rowClubId][$weightGroup] = ($clubWeightCounts[$rowClubId][$weightGroup] ?? 0) + 1;
-                $clubBeltCounts[$rowClubId][$belt] = ($clubBeltCounts[$rowClubId][$belt] ?? 0) + 1;
-                $clubGenderCounts[$rowClubId][$gender] = ($clubGenderCounts[$rowClubId][$gender] ?? 0) + 1;
-            }
-        }
-
-        $clubAthleteCounts = [];
-        foreach ($clubs as $club) {
-            $stmt = Database::connection()->prepare(
-                'SELECT COUNT(*) FROM entries WHERE event_id = ? AND club_id = ?'
-            );
-            $stmt->execute([$eventId, $club['id']]);
-            $clubAthleteCounts[$club['id']] = (int) $stmt->fetchColumn();
-        }
+        $entryReport = EventEntriesViewModel::fromRows(
+            $rows,
+            $clubs,
+            $event->closed ? $clubId : null,
+            trim((string) $request->query('weight_category', ''))
+        );
 
         $upcomingEvents = $this->resolveUpcomingEvents($eventId, $date, $limit);
 
         return $this->view('events/entries', [
             'title' => __('events.entries') . ' - ' . $event->name,
             'event' => $event,
-            'clubs' => $clubs,
-            'clubAthleteCounts' => $clubAthleteCounts,
-            'clubCategoryCounts' => $clubCategoryCounts,
-            'clubWeightCounts' => $clubWeightCounts,
-            'clubBeltCounts' => $clubBeltCounts,
-            'clubGenderCounts' => $clubGenderCounts,
-            'rows' => $rows,
-            'grouped' => $grouped,
-            'categoryCounts' => $categoryCounts,
-            'weightCounts' => $weightCounts,
-            'beltCounts' => $beltCounts,
-            'genderCounts' => $genderCounts,
-            'isAdmin' => $isAdmin,
+            'entryReport' => $entryReport,
             'loggedInClubId' => $clubId !== null ? (int) $clubId : null,
             'hasRegistrationException' => $hasRegistrationException,
             'upcomingEvents' => $upcomingEvents,
             'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
-            'currentClubEntries' => $currentClubEntries,
-            'currentClubWeightCategories' => $currentClubWeightCategories,
-            'selectedWeightCategory' => $selectedWeightCategory,
         ]);
     }
 
@@ -563,7 +454,7 @@ final class EventController extends Controller
             return $this->redirect('/events/entries?event=' . $eventId);
         }
 
-        $weightCategories = self::entryWeightCategories(Entry::findByEvent($eventId, $clubId, true));
+        $weightCategories = EventEntriesViewModel::weightCategories(Entry::findByEvent($eventId, $clubId, true));
         $weightCategory = trim((string) $request->query('weight_category', ''));
         if ($weightCategory !== '' && !in_array($weightCategory, $weightCategories, true)) {
             return $this->redirect('/events/entries?event=' . $eventId);
@@ -647,59 +538,6 @@ final class EventController extends Controller
         }
 
         return $categories;
-    }
-
-    /**
-     * @param list<array<string, mixed>> $entries
-     * @return list<string>
-     */
-    private static function entryWeightCategories(array $entries): array
-    {
-        $categories = [];
-        foreach ($entries as $entry) {
-            $category = trim((string) ($entry['weight_category'] ?? ''));
-            if ($category !== '') {
-                $categories[$category] = true;
-            }
-        }
-
-        $categories = array_keys($categories);
-        usort($categories, static function (string $left, string $right): int {
-            preg_match('/\d+(?:[.,]\d+)?/', $left, $leftMatch);
-            preg_match('/\d+(?:[.,]\d+)?/', $right, $rightMatch);
-            $leftWeight = isset($leftMatch[0]) ? (float) str_replace(',', '.', $leftMatch[0]) : INF;
-            $rightWeight = isset($rightMatch[0]) ? (float) str_replace(',', '.', $rightMatch[0]) : INF;
-            $byWeight = $leftWeight <=> $rightWeight;
-
-            return $byWeight !== 0 ? $byWeight : strcasecmp($left, $right);
-        });
-
-        return $categories;
-    }
-
-    private static function groupWeight(string $weight): string
-    {
-        $weight = ltrim(trim($weight, ' kg'), '-+');
-
-        if (!is_numeric($weight)) {
-            return 'unspecified';
-        }
-        $w = (int) $weight;
-
-        if ($w < 12) {
-            return 'under-12kg';
-        }
-
-        $lowerBound = 12;
-        while ($lowerBound + 4 <= $w) {
-            $lowerBound += 4;
-        }
-
-        if ($lowerBound >= 100) {
-            return '100+kg';
-        }
-
-        return $lowerBound . '-' . ($lowerBound + 4) . 'kg';
     }
 
     /** @return array<string, mixed>|null */

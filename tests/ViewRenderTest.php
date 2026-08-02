@@ -10,6 +10,7 @@ use App\Model\AgeClass;
 use App\Model\Club;
 use App\Model\Event;
 use App\Model\JudoCategory;
+use App\Presentation\EventEntriesViewModel;
 use App\Presentation\Navigation;
 use PHPUnit\Framework\TestCase;
 
@@ -142,28 +143,60 @@ final class ViewRenderTest extends TestCase
             false,
             100
         );
+        $entryReport = EventEntriesViewModel::fromRows([
+            [
+                'club_id' => 201,
+                'last_name' => 'Rossi',
+                'first_name' => 'Anna',
+                'gender' => 'F',
+                'birth_date' => '2021-01-01',
+                'event_date' => '2026-08-02',
+                'weight_kg' => 21.5,
+                'weight_category' => '-24 kg',
+                'belt' => 'white_yellow',
+            ],
+            [
+                'club_id' => 201,
+                'last_name' => 'Bianchi',
+                'first_name' => 'Luca',
+                'gender' => 'M',
+                'birth_date' => '2021-02-01',
+                'event_date' => '2026-08-02',
+                'weight_kg' => 22.0,
+                'weight_category' => '-24 kg',
+                'belt' => 'white_yellow',
+            ],
+            [
+                'club_id' => 202,
+                'last_name' => 'Verdi',
+                'first_name' => 'Giulia',
+                'gender' => 'F',
+                'birth_date' => '2021-03-01',
+                'event_date' => '2026-08-02',
+                'weight_kg' => 22.5,
+                'weight_category' => '-24 kg',
+                'belt' => 'green_blue',
+            ],
+            [
+                'club_id' => 202,
+                'last_name' => 'Neri',
+                'first_name' => 'Marco',
+                'gender' => 'M',
+                'birth_date' => '2021-04-01',
+                'event_date' => '2026-08-02',
+                'weight_kg' => 23.0,
+                'weight_category' => '-24 kg',
+                'belt' => 'green_blue',
+            ],
+        ], [], null);
 
         $html = $view->render('events/entries', array_merge([
             'event' => $event,
-            'clubs' => [],
+            'entryReport' => $entryReport,
             'loggedInClubId' => null,
-            'clubAthleteCounts' => [],
-            'clubCategoryCounts' => [],
-            'clubBeltCounts' => [],
-            'clubGenderCounts' => [],
-            'clubWeightCounts' => [],
-            'categoryCounts' => ['Bambini A 4-5 anni' => 4],
-            'beltCounts' => ['white_yellow' => 2, 'green_blue' => 2],
-            'genderCounts' => ['F' => 2, 'M' => 2],
-            'weightCounts' => ['20-24kg' => 4],
-            'grouped' => [],
-            'rows' => [[], [], [], []],
-            'isAdmin' => false,
             'hasRegistrationException' => false,
             'upcomingEvents' => [],
-            'currentClubEntries' => [],
-            'currentClubWeightCategories' => [],
-            'selectedWeightCategory' => '',
+            'eventExceptions' => [],
         ], $this->layoutData('/events/entries')));
         $css = file_get_contents(dirname(__DIR__) . '/public/assets/css/app.css');
 
