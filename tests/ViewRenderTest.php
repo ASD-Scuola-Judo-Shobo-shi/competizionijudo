@@ -161,6 +161,9 @@ final class ViewRenderTest extends TestCase
             'isAdmin' => false,
             'hasRegistrationException' => false,
             'upcomingEvents' => [],
+            'currentClubEntries' => [],
+            'currentClubWeightCategories' => [],
+            'selectedWeightCategory' => '',
         ], $this->layoutData('/events/entries')));
         $css = file_get_contents(dirname(__DIR__) . '/public/assets/css/app.css');
 

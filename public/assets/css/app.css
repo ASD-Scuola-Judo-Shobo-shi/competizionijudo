@@ -256,6 +256,7 @@ html[data-theme="dark"] .landing-copy {
 
 .landing-copy p {
     max-width: 640px;
+    margin: 0 auto;
     font-size: 21px;
     line-height: 1.45;
 }
@@ -2545,6 +2546,29 @@ html[data-theme="dark"] .theme-toggle:hover .theme-toggle-icon {
     background: #f7f9fc;
 }
 
+.closed-event-club-filter {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) auto auto;
+    gap: 12px;
+    align-items: end;
+    margin: 18px 0 12px;
+}
+
+.closed-event-club-filter__field label {
+    margin-bottom: 6px;
+}
+
+.closed-event-club-entries__count {
+    color: #526176;
+    font-weight: 700;
+}
+
+@media (max-width: 700px) {
+    .closed-event-club-filter {
+        grid-template-columns: 1fr;
+    }
+}
+
 .entries-chart-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
@@ -2770,6 +2794,7 @@ html[data-theme="dark"] .entries-chart__swatch--bordered {
 html[data-theme="dark"] .error-description,
 html[data-theme="dark"] .event-info p,
 html[data-theme="dark"] .csv-help,
+html[data-theme="dark"] .closed-event-club-entries__count,
 html[data-theme="dark"] .field-help,
 html[data-theme="dark"] .next-event-item .location {
     color: #c4d1e2;

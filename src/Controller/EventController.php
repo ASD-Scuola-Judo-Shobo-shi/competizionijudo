@@ -21,6 +21,7 @@ use App\Model\Event;
 use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
 use App\Model\JudoCategory;
+use App\Service\EventEntriesCsvTransfer;
 use App\Service\PasswordResetMailer;
 use App\Service\PasswordResetMailerFactory;
 use App\Service\RegistrationPaymentService;
@@ -406,6 +407,9 @@ final class EventController extends Controller
                 'clubGenderCounts' => [],
                 'upcomingEvents' => $upcomingEvents,
                 'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
+                'currentClubEntries' => [],
+                'currentClubWeightCategories' => [],
+                'selectedWeightCategory' => '',
             ]);
         }
 
@@ -428,6 +432,35 @@ final class EventController extends Controller
 
         $clubs = Entry::findClubsByEvent($eventId, null);
         $rows = Entry::findByEvent($eventId, null, $event->closed);
+        $currentClubEntries = [];
+        $currentClubWeightCategories = [];
+        $selectedWeightCategory = '';
+        if ($event->closed && $clubId !== null) {
+            $currentClubEntries = array_values(array_filter(
+                $rows,
+                static fn(array $entry): bool => (int) ($entry['club_id'] ?? 0) === $clubId
+            ));
+            usort($currentClubEntries, static function (array $left, array $right): int {
+                $byWeight = (float) ($left['weight_kg'] ?? 0) <=> (float) ($right['weight_kg'] ?? 0);
+
+                return $byWeight !== 0
+                    ? $byWeight
+                    : strcasecmp(
+                        (string) ($left['last_name'] ?? '') . (string) ($left['first_name'] ?? ''),
+                        (string) ($right['last_name'] ?? '') . (string) ($right['first_name'] ?? '')
+                    );
+            });
+            $currentClubWeightCategories = self::entryWeightCategories($currentClubEntries);
+            $requestedWeightCategory = trim((string) $request->query('weight_category', ''));
+            if (in_array($requestedWeightCategory, $currentClubWeightCategories, true)) {
+                $selectedWeightCategory = $requestedWeightCategory;
+                $currentClubEntries = array_values(array_filter(
+                    $currentClubEntries,
+                    static fn(array $entry): bool =>
+                        (string) ($entry['weight_category'] ?? '') === $selectedWeightCategory
+                ));
+            }
+        }
 
         $grouped = [];
         $categoryCounts = [];
@@ -505,6 +538,58 @@ final class EventController extends Controller
             'hasRegistrationException' => $hasRegistrationException,
             'upcomingEvents' => $upcomingEvents,
             'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
+            'currentClubEntries' => $currentClubEntries,
+            'currentClubWeightCategories' => $currentClubWeightCategories,
+            'selectedWeightCategory' => $selectedWeightCategory,
+        ]);
+    }
+
+    public function exportClubEntries(Request $request): Response
+    {
+        Session::start();
+        $clubId = AuthContext::clubId();
+        if ($clubId === null) {
+            return $this->redirect('/clubs/login');
+        }
+
+        $eventId = (int) ($request->query('event') ?? $request->input('event') ?? 0);
+        $event = $eventId > 0
+            ? Event::findPublishedByIdOrClosedWithEntries($eventId, $clubId)
+            : null;
+        if ($event === null) {
+            return $this->redirect('/events');
+        }
+        if (!$event->closed) {
+            return $this->redirect('/events/entries?event=' . $eventId);
+        }
+
+        $weightCategories = self::entryWeightCategories(Entry::findByEvent($eventId, $clubId, true));
+        $weightCategory = trim((string) $request->query('weight_category', ''));
+        if ($weightCategory !== '' && !in_array($weightCategory, $weightCategories, true)) {
+            return $this->redirect('/events/entries?event=' . $eventId);
+        }
+
+        $csv = (new EventEntriesCsvTransfer())->export(
+            $eventId,
+            true,
+            $clubId,
+            $weightCategory !== '' ? $weightCategory : null
+        );
+        $eventSlug = trim(strtolower(preg_replace('/[^A-Za-z0-9]+/', '-', $event->name) ?? ''), '-');
+        $eventSlug = substr($eventSlug !== '' ? $eventSlug : 'event-' . $eventId, 0, 24);
+        $weightSlug = trim(strtolower(preg_replace('/[^A-Za-z0-9]+/', '-', $weightCategory) ?? ''), '-');
+        $filename = sprintf(
+            'club-athletes-%s-%s%s.csv',
+            str_replace('-', '', $event->date),
+            $eventSlug,
+            $weightSlug !== '' ? '-' . $weightSlug : ''
+        );
+
+        return new Response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 
@@ -560,6 +645,34 @@ final class EventController extends Controller
         foreach ($athletes as $athlete) {
             $categories[$athlete->id] = $athlete->categoryForEventDate($eventDate);
         }
+
+        return $categories;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $entries
+     * @return list<string>
+     */
+    private static function entryWeightCategories(array $entries): array
+    {
+        $categories = [];
+        foreach ($entries as $entry) {
+            $category = trim((string) ($entry['weight_category'] ?? ''));
+            if ($category !== '') {
+                $categories[$category] = true;
+            }
+        }
+
+        $categories = array_keys($categories);
+        usort($categories, static function (string $left, string $right): int {
+            preg_match('/\d+(?:[.,]\d+)?/', $left, $leftMatch);
+            preg_match('/\d+(?:[.,]\d+)?/', $right, $rightMatch);
+            $leftWeight = isset($leftMatch[0]) ? (float) str_replace(',', '.', $leftMatch[0]) : INF;
+            $rightWeight = isset($rightMatch[0]) ? (float) str_replace(',', '.', $rightMatch[0]) : INF;
+            $byWeight = $leftWeight <=> $rightWeight;
+
+            return $byWeight !== 0 ? $byWeight : strcasecmp($left, $right);
+        });
 
         return $categories;
     }

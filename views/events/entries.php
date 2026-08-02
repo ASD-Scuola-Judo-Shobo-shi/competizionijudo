@@ -17,6 +17,9 @@
 /** @var bool $isAdmin */
 /** @var bool $hasRegistrationException */
 /** @var list<\App\Model\Event> $upcomingEvents */
+/** @var list<array<string, mixed>> $currentClubEntries */
+/** @var list<string> $currentClubWeightCategories */
+/** @var string $selectedWeightCategory */
 
 // Helper closures for rendering UI components cleanly
 $renderPieChart = function (array $segments, string $chartKey, string $title) {
@@ -313,6 +316,93 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
             <?php endif; ?>
         </p>
     </div>
+
+    <?php if ($event->closed && $loggedInClubId !== null) : ?>
+        <?php
+        $clubExportUrl = '/events/entries/export?event=' . rawurlencode((string) $event->id);
+        if ($selectedWeightCategory !== '') {
+            $clubExportUrl .= '&weight_category=' . rawurlencode($selectedWeightCategory);
+        }
+        ?>
+        <section class="card closed-event-club-entries">
+            <h2><?= e(__('events.entries_current_club_title')) ?></h2>
+            <p><?= e(__('events.entries_current_club_help')) ?></p>
+
+            <form method="get" action="<?= e(base_url('/events/entries')) ?>" class="closed-event-club-filter">
+                <input type="hidden" name="event" value="<?= e((string) $event->id) ?>">
+                <div class="closed-event-club-filter__field">
+                    <label for="club-weight-category"><?= e(__('events.entries_weight_filter')) ?></label>
+                    <select id="club-weight-category" name="weight_category">
+                        <option value=""><?= e(__('events.entries_all_weights')) ?></option>
+                        <?php foreach ($currentClubWeightCategories as $weightCategory) : ?>
+                            <option
+                                value="<?= e($weightCategory) ?>"
+                                <?= $selectedWeightCategory === $weightCategory ? 'selected' : '' ?>
+                            ><?= e($weightCategory) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button class="btn" type="submit"><?= e(__('events.entries_apply_weight_filter')) ?></button>
+                <a class="btn green" href="<?= e(base_url($clubExportUrl)) ?>">
+                    <?= e(__('events.entries_download_filtered')) ?>
+                </a>
+            </form>
+
+            <p class="closed-event-club-entries__count">
+                <?= e(__('events.entries_filtered_count', ['count' => (string) count($currentClubEntries)])) ?>
+            </p>
+
+            <?php if ($currentClubEntries === []) : ?>
+                <p><?= e(__('club.area.no_entries')) ?></p>
+            <?php else : ?>
+                <div
+                    class="table-scroll table-scroll--responsive"
+                    role="region"
+                    tabindex="0"
+                    aria-label="<?= e(__('events.entries_current_club_title')) ?>"
+                >
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th scope="col"><?= e(__('club.area.table.athlete')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.gender')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.weight')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.weight_category')) ?></th>
+                                <th scope="col"><?= e(__('club.area.table.belt')) ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($currentClubEntries as $athlete) : ?>
+                                <?php
+                                $gender = \App\Model\Gender::tryFromValue((string) ($athlete['gender'] ?? ''));
+                                $weight = $athlete['weight_kg'] ?? null;
+                                $formattedWeight = is_numeric($weight)
+                                    ? rtrim(rtrim(number_format((float) $weight, 2, '.', ''), '0'), '.') . ' kg'
+                                    : '—';
+                                $belt = (string) ($athlete['belt'] ?? '');
+                                ?>
+                                <tr>
+                                    <td data-label="<?= e(__('club.area.athlete')) ?>">
+                                        <?= e((string) ($athlete['last_name'] ?? '') . ' ' . (string) ($athlete['first_name'] ?? '')) ?>
+                                    </td>
+                                    <td data-label="<?= e(__('club.area.gender')) ?>">
+                                        <?= e($gender?->iconLabel() ?? (string) ($athlete['gender'] ?? '')) ?>
+                                    </td>
+                                    <td data-label="<?= e(__('club.area.weight')) ?>"><?= e($formattedWeight) ?></td>
+                                    <td data-label="<?= e(__('club.area.weight_category')) ?>">
+                                        <?= e((string) ($athlete['weight_category'] ?? '')) ?>
+                                    </td>
+                                    <td data-label="<?= e(__('club.area.belt')) ?>">
+                                        <?= e(\App\Model\Belt::tryFromValue($belt)?->label(\App\Localization::getLocale()) ?? $belt) ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
 
     <!-- Clubs Overview Table -->
     <div class="card">

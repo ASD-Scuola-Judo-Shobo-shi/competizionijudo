@@ -455,6 +455,61 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('-42 kg', $response->content());
     }
 
+    public function testClosedEntriesCanFilterTheCurrentClubByWeightCategory(): void
+    {
+        $this->insertEvent(closed: true);
+        $insert = $this->database->prepare(
+            'INSERT INTO entries (
+                event_id, club_id, athlete_id, snapshot_weight_kg, snapshot_weight_category
+             ) VALUES (?, ?, ?, ?, ?)'
+        );
+        $insert->execute([101, 201, 301, 40, '-42 kg']);
+        $insert->execute([101, 201, 303, 55, '-55 kg']);
+        $insert->execute([101, 202, 302, 40, '-42 kg']);
+        Session::set('club_id', 201);
+
+        $response = $this->dispatchEntries([
+            'event' => '101',
+            'weight_category' => '-42 kg',
+        ]);
+
+        self::assertSame(200, $response->status());
+        self::assertMatchesRegularExpression(
+            '/<section class="card closed-event-club-entries">(?<club>.*?)<\/section>/s',
+            $response->content()
+        );
+        preg_match(
+            '/<section class="card closed-event-club-entries">(?<club>.*?)<\/section>/s',
+            $response->content(),
+            $matches
+        );
+        $clubSection = (string) ($matches['club'] ?? '');
+        self::assertStringContainsString('OwnFamily OwnGiven', $clubSection);
+        self::assertStringNotContainsString('FailureFamily FailureGiven', $clubSection);
+        self::assertStringNotContainsString('ForeignFamily ForeignGiven', $clubSection);
+        self::assertMatchesRegularExpression('/value="-42 kg"\s+selected/', $clubSection);
+        self::assertStringContainsString(
+            '/events/entries/export?event=101&amp;weight_category=-42%20kg',
+            $clubSection
+        );
+    }
+
+    public function testCurrentClubWeightToolsAreHiddenWhileTheEventIsOpen(): void
+    {
+        $today = date('Y-m-d');
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: $today);
+        $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        )->execute([101, 201, 301]);
+        Session::set('club_id', 201);
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(200, $response->status());
+        self::assertStringNotContainsString('closed-event-club-entries', $response->content());
+        self::assertStringNotContainsString('/events/entries/export', $response->content());
+    }
+
     public function testClosedEventExceptionRegistrationCreatesAnEntrySnapshot(): void
     {
         $this->insertEvent(closed: true);

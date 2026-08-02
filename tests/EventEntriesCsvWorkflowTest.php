@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Controller\AdminController;
+use App\Controller\EventController;
 use App\Core\Request;
 use App\Core\Session;
 use App\Core\View;
@@ -117,6 +118,62 @@ final class EventEntriesCsvWorkflowTest extends TestCase
         ], $rows[1]);
     }
 
+    public function testClubCanExportOnlyItsClosedEventEntriesForTheSelectedWeight(): void
+    {
+        $this->database->exec(
+            "INSERT INTO clubs (id, federal_code, name) VALUES (202, 'SYN-202', 'Foreign Club');
+             INSERT INTO athletes
+                (id, last_name, first_name, gender, birth_date, weight_kg, belt, membership_number)
+             VALUES (302, 'Foreign', 'Athlete', 'F', '2012-06-07', 42, 'blue', 'FOREIGN-001');
+             INSERT INTO entries
+                (id, event_id, club_id, athlete_id, snapshot_last_name, snapshot_first_name, snapshot_gender,
+                 snapshot_weight_kg, snapshot_belt, snapshot_membership_number, snapshot_birth_date,
+                 snapshot_program, snapshot_weight_category)
+             VALUES (802, 701, 202, 302, 'Foreign', 'Athlete', 'F', 42, 'blue', 'FOREIGN-001',
+                     '2012-06-07', 'competitive', '-42 kg')"
+        );
+        Session::set('club_id', 201);
+        $request = new Request('GET', '/events/entries/export', [
+            'event' => '701',
+            'weight_category' => '-42 kg',
+        ]);
+
+        $response = (new EventController($this->view, $request))->exportClubEntries($request);
+
+        self::assertSame(200, $response->status());
+        self::assertSame(
+            'attachment; filename="club-athletes-20260701-synthetic-event-42-kg.csv"',
+            $response->headers()['Content-Disposition']
+        );
+        $rows = $this->parseCsv($response->content());
+        self::assertCount(2, $rows);
+        self::assertSame('Snapshot', $rows[1][2]);
+        self::assertSame("'-42 kg", $rows[1][10]);
+        self::assertStringNotContainsString('Foreign', $response->content());
+    }
+
+    public function testClubEntryExportIsUnavailableUntilTheEventCloses(): void
+    {
+        $this->database->exec('UPDATE events SET closed = 0 WHERE id = 701');
+        Session::set('club_id', 201);
+        $request = new Request('GET', '/events/entries/export', ['event' => '701']);
+
+        $response = (new EventController($this->view, $request))->exportClubEntries($request);
+
+        self::assertSame(302, $response->status());
+        self::assertSame('/events/entries?event=701', $response->headers()['Location']);
+    }
+
+    public function testClubEntryExportRedirectsAnonymousUsersToLogin(): void
+    {
+        $request = new Request('GET', '/events/entries/export', ['event' => '701']);
+
+        $response = (new EventController($this->view, $request))->exportClubEntries($request);
+
+        self::assertSame(302, $response->status());
+        self::assertSame('/clubs/login', $response->headers()['Location']);
+    }
+
     public function testExportRedirectsAnonymousAdministratorsToLogin(): void
     {
         $request = new Request('GET', '/admin/events/export', ['event_id' => '701']);
@@ -176,6 +233,10 @@ final class EventEntriesCsvWorkflowTest extends TestCase
                 info_file TEXT,
                 published INTEGER NOT NULL DEFAULT 0,
                 closed INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE event_registration_exceptions (
+                event_id INTEGER NOT NULL,
+                club_id INTEGER NOT NULL
             );
             CREATE TABLE entries (
                 id INTEGER PRIMARY KEY,

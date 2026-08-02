@@ -24,8 +24,12 @@ final class EventEntriesCsvTransfer
         'weight_category',
     ];
 
-    public function export(int $eventId, bool $eventClosed): string
-    {
+    public function export(
+        int $eventId,
+        bool $eventClosed,
+        ?int $clubId = null,
+        ?string $weightCategory = null
+    ): string {
         $stream = fopen('php://temp', 'w+b');
         if ($stream === false) {
             throw new RuntimeException('Unable to open the event entries CSV export stream.');
@@ -35,7 +39,13 @@ final class EventEntriesCsvTransfer
             fwrite($stream, "\xEF\xBB\xBF");
             $this->writeRow($stream, self::HEADERS);
 
-            foreach (Entry::findByEvent($eventId, null, $eventClosed) as $entry) {
+            foreach (Entry::findByEvent($eventId, $clubId, $eventClosed) as $entry) {
+                if (
+                    $weightCategory !== null
+                    && (string) ($entry['weight_category'] ?? '') !== $weightCategory
+                ) {
+                    continue;
+                }
                 $this->writeRow($stream, [
                     $this->spreadsheetSafe((string) ($entry['club_name'] ?? '')),
                     $this->spreadsheetSafe((string) ($entry['federal_code'] ?? '')),

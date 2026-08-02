@@ -50,6 +50,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/events', [EventController::class, 'index']);
     $router->get('/events/details', [EventController::class, 'details']);
     $router->get('/events/entries', [EventController::class, 'entries']);
+    $router->get('/events/entries/export', [EventController::class, 'exportClubEntries'], AuthContext::CLUB);
     $router->get('/events/register', [EventController::class, 'register'], AuthContext::CLUB);
     $router->post('/events/register', [EventController::class, 'register'], AuthContext::CLUB);
 
