@@ -2,11 +2,13 @@
 
 /** @var \App\Presentation\EventEntriesViewModel $entryReport */
 /** @var int|null $loggedInClubId */
+/** @var list<array{category:string, weight:string, ageMin:int, athletes:list<array<string, mixed>>}> $entryAthleteGroups */
+/** @var array{page:int, per_page:int, total:int, last_page:int, offset:int, links:string} $entryAthletesPagination */
 ?>
 
 <section class="card">
     <h2><?= e(__('events.entries_athletes_heading')) ?></h2>
-    <?php if ($entryReport->athleteGroups === []) : ?>
+    <?php if ($entryAthleteGroups === []) : ?>
         <p><?= e(__('club.area.no_entries')) ?></p>
     <?php else : ?>
         <div
@@ -27,7 +29,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($entryReport->athleteGroups as $group) : ?>
+                    <?php foreach ($entryAthleteGroups as $group) : ?>
                         <?php foreach ($group['athletes'] as $athlete) : ?>
                             <?php
                             $isCurrentClub = $loggedInClubId !== null
@@ -65,5 +67,6 @@
                 </tbody>
             </table>
         </div>
+        <?= $entryAthletesPagination['links'] ?>
     <?php endif; ?>
 </section>

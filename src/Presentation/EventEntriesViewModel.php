@@ -268,6 +268,49 @@ final class EventEntriesViewModel
     }
 
     /**
+     * Return one page of athletes while retaining the category and weight group headings.
+     *
+     * @return list<array{
+     *     category:string,
+     *     weight:string,
+     *     ageMin:int,
+     *     athletes:list<array<string, mixed>>
+     * }>
+     */
+    public function athleteGroupsPage(int $offset, int $limit): array
+    {
+        $offset = max(0, $offset);
+        $remaining = max(1, $limit);
+        $groups = [];
+
+        foreach ($this->athleteGroups as $group) {
+            $groupSize = count($group['athletes']);
+            if ($offset >= $groupSize) {
+                $offset -= $groupSize;
+                continue;
+            }
+
+            $athletes = array_slice($group['athletes'], $offset, $remaining);
+            if ($athletes !== []) {
+                $groups[] = [
+                    'category' => $group['category'],
+                    'weight' => $group['weight'],
+                    'ageMin' => $group['ageMin'],
+                    'athletes' => $athletes,
+                ];
+                $remaining -= count($athletes);
+            }
+
+            if ($remaining === 0) {
+                break;
+            }
+            $offset = 0;
+        }
+
+        return $groups;
+    }
+
+    /**
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */

@@ -11,6 +11,7 @@
 /** @var list<\App\Model\EventRegistrationOption> $registrationOptions */
 /** @var int|null $defaultRegistrationOptionId */
 /** @var array<int, array{athlete_id:int, athlete_name:string, option_id:int, option_name:string, fee_cents:int}> $registeredEnrollmentDetails */
+$athletePagination ??= paginate(count($athletes), 1, 50, 'athletes_page');
 $showRegistrationFeedback = $registrationFeedback !== null
     && empty($registrationFeedback['option_required_error'])
     && empty($registrationFeedback['option_configuration_error']);
@@ -20,6 +21,10 @@ foreach ($athletes as $candidateAthlete) {
         $hasAthletesMissingWeight = true;
         break;
     }
+}
+$registrationFormUrl = '/events/register?event=' . rawurlencode((string) ($event?->id ?? ''));
+if ($athletePagination['page'] > 1) {
+    $registrationFormUrl .= '&athletes_page=' . $athletePagination['page'];
 }
 ?>
 
@@ -89,7 +94,7 @@ foreach ($athletes as $candidateAthlete) {
                                 <?= e(__('events.registration_missing_weight_notice')) ?>
                             </div>
                         <?php endif; ?>
-                        <form method="post" id="registration-form">
+                        <form method="post" action="<?= e(base_url($registrationFormUrl)) ?>" id="registration-form">
                             <?= csrf_field() ?>
                             <p><?= e(__('events.register_select')) ?></p>
                             <div
@@ -162,6 +167,7 @@ foreach ($athletes as $candidateAthlete) {
                                 </tbody>
                                 </table>
                             </div>
+                            <?= $athletePagination['links'] ?>
 
                             <div class="registration-option-selector">
                                 <label for="registration_option_id">

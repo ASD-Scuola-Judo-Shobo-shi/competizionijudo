@@ -8,6 +8,7 @@
 /** @var list<array<string, mixed>>|null $enrolledAthletes */
 /** @var list<string>|null $enrollmentFields */
 /** @var int|null $selectedEnrollmentClubId */
+/** @var array{page:int, per_page:int, total:int, last_page:int, offset:int, links:string}|null $enrollmentPagination */
 /** @var list<int> $exceptionClubIds */
 /** @var list<array{id:int|null, name:string, fee_amount:string, fee_cents:int|null, is_default:bool}>|null $formRegistrationOptions */
 /** @var string|null $formSepaAccountHolder */
@@ -29,6 +30,7 @@ $enrolledAthletes ??= [];
 $enrolledClubs ??= [];
 $enrollmentFields ??= [];
 $selectedEnrollmentClubId ??= null;
+$enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
 ?>
 <div class="card">
     <h2><?= $isEdit ? e(__('admin.edit.title')) . ' - ' . e($event->name) : e(__('admin.event_details.title')) ?></h2>

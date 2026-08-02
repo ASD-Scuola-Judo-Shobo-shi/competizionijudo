@@ -153,48 +153,104 @@ function load_env(string $path): void
 /**
  * Build pagination metadata and links.
  *
- * @param int  $totalItems Total number of items
- * @param int  $currentPage Current page (1-based)
- * @param int  $perPage    Items per page
+ * @param int                       $totalItems      Total number of items
+ * @param int                       $currentPage     Current page (1-based)
+ * @param int                       $perPage         Items per page
+ * @param string                    $pageParameter   Query parameter used for the page
+ * @param array<string, mixed>|null $queryParameters Query parameters to preserve in links
  * @return array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string}
  */
-function paginate(int $totalItems, int $currentPage, int $perPage = 50): array
-{
+function paginate(
+    int $totalItems,
+    int $currentPage,
+    int $perPage = 50,
+    string $pageParameter = 'page',
+    ?array $queryParameters = null,
+    ?string $ariaLabel = null
+): array {
     $lastPage = max(1, (int) ceil($totalItems / $perPage));
     $page = max(1, min($currentPage, $lastPage));
     $offset = ($page - 1) * $perPage;
 
-    $query = $_GET;
+    $query = $queryParameters ?? $_GET;
+    $ariaLabel ??= __('pagination.label');
     $links = '';
     if ($lastPage > 1) {
-        $links .= '<nav class="pagination" role="navigation" aria-label="Pagination">';
+        $links .= '<nav class="pagination" role="navigation" aria-label="' . e($ariaLabel) . '">';
 
-        // Prev
-        $prevDisabled = $page <= 1 ? ' disabled' : '';
-        $prevUrl = '#';
-        if ($page > 1) {
-            $query['page'] = $page - 1;
-            $prevUrl = '?' . http_build_query($query);
-        }
-        $links .= '<a class="pagination-link' . $prevDisabled . '" href="' . e($prevUrl) . '" aria-label="Previous page">&laquo; ' . translate('pagination.prev') . '</a>';
+        $link = static function (
+            int $targetPage,
+            string $content,
+            string $linkAriaLabel,
+            bool $disabled = false,
+            bool $active = false
+        ) use (
+            $query,
+            $pageParameter
+        ): string {
+            $linkQuery = $query;
+            $linkQuery[$pageParameter] = $targetPage;
+            $url = $disabled ? '#' : '?' . http_build_query($linkQuery);
+            $classes = 'pagination-link' . ($disabled ? ' disabled' : '') . ($active ? ' active' : '');
+            $ariaCurrent = $active ? ' aria-current="page"' : '';
+            $disabledAttributes = $disabled ? ' aria-disabled="true" tabindex="-1"' : '';
+
+            return '<a class="' . $classes . '" href="' . e($url) . '" aria-label="'
+                . e($linkAriaLabel) . '"' . $ariaCurrent . $disabledAttributes . '>' . $content . '</a>';
+        };
+
+        $atFirstPage = $page === 1;
+        $atLastPage = $page === $lastPage;
+        $links .= $link(
+            1,
+            '&laquo;&laquo; ' . e(__('pagination.first')),
+            __('pagination.first_page'),
+            $atFirstPage
+        );
+        $links .= $link(
+            max(1, $page - 5),
+            '&minus;5',
+            __('pagination.previous_five_pages'),
+            $atFirstPage
+        );
+        $links .= $link(
+            max(1, $page - 1),
+            '&lsaquo; ' . e(__('pagination.prev')),
+            __('pagination.previous_page'),
+            $atFirstPage
+        );
 
         // Page numbers
         $start = max(1, $page - 2);
         $end = min($lastPage, $page + 2);
         for ($i = $start; $i <= $end; $i++) {
-            $query['page'] = $i;
-            $active = $i === $page ? ' active' : '';
-            $links .= '<a class="pagination-link' . $active . '" href="?' . e(http_build_query($query)) . '">' . $i . '</a>';
+            $links .= $link(
+                $i,
+                (string) $i,
+                __('pagination.page_number', ['page' => (string) $i]),
+                false,
+                $i === $page
+            );
         }
 
-        // Next
-        $nextDisabled = $page >= $lastPage ? ' disabled' : '';
-        $nextUrl = '#';
-        if ($page < $lastPage) {
-            $query['page'] = $page + 1;
-            $nextUrl = '?' . http_build_query($query);
-        }
-        $links .= '<a class="pagination-link' . $nextDisabled . '" href="' . e($nextUrl) . '" aria-label="Next page">' . translate('pagination.next') . ' &raquo;</a>';
+        $links .= $link(
+            min($lastPage, $page + 1),
+            e(__('pagination.next')) . ' &rsaquo;',
+            __('pagination.next_page'),
+            $atLastPage
+        );
+        $links .= $link(
+            min($lastPage, $page + 5),
+            '+5',
+            __('pagination.next_five_pages'),
+            $atLastPage
+        );
+        $links .= $link(
+            $lastPage,
+            e(__('pagination.last')) . ' &raquo;&raquo;',
+            __('pagination.last_page'),
+            $atLastPage
+        );
 
         $links .= '</nav>';
     }

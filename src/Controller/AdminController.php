@@ -37,6 +37,7 @@ final class AdminController extends Controller
 {
     private const CLUB_INLINE_FEEDBACK = 'admin_club_inline_feedback';
     private const EVENT_INLINE_FEEDBACK = 'admin_event_inline_feedback';
+    private const EVENT_ENROLLMENTS_PER_PAGE = 50;
 
     private ?AuthenticationThrottle $authenticationThrottle;
     private ?PasswordResetRepository $passwordResetRepository;
@@ -492,8 +493,26 @@ final class AdminController extends Controller
         $selectedEnrollmentClubId = in_array($requestedEnrollmentClubId, $enrolledClubIds, true)
             ? $requestedEnrollmentClubId
             : null;
+        $enrollmentTotal = $event !== null
+            ? Entry::countByEvent($event->id, $selectedEnrollmentClubId)
+            : 0;
+        $enrollmentPage = max(1, (int) $request->query('enrollment_page', '1'));
+        $enrollmentPagination = paginate(
+            $enrollmentTotal,
+            $enrollmentPage,
+            self::EVENT_ENROLLMENTS_PER_PAGE,
+            'enrollment_page',
+            $request->queryParameters(),
+            __('admin.event_details.enrolled_athletes')
+        );
         $enrolledAthletes = $event !== null
-            ? Entry::findByEvent($event->id, $selectedEnrollmentClubId, $event->closed)
+            ? Entry::pageByEvent(
+                $event->id,
+                $selectedEnrollmentClubId,
+                $event->closed,
+                $enrollmentPagination['per_page'],
+                $enrollmentPagination['offset']
+            )
             : [];
         $enrollmentFields = EventEntriesCsvTransfer::headers();
 
@@ -722,6 +741,7 @@ final class AdminController extends Controller
             'clubs' => $clubs,
             'enrolledClubs' => $enrolledClubs,
             'enrolledAthletes' => $enrolledAthletes,
+            'enrollmentPagination' => $enrollmentPagination,
             'enrollmentFields' => $enrollmentFields,
             'selectedEnrollmentClubId' => $selectedEnrollmentClubId,
             'exceptionClubIds' => $exceptionClubIds,

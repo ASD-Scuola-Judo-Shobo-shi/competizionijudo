@@ -129,7 +129,7 @@ foreach ($clubs as $clubOption) {
         <?php if ($result->groups !== []) : ?>
             <h3><?= e(__('admin.athlete_cleanup.safe_heading')) ?></h3>
             <div class="table-scroll table-scroll--wide table-scroll--responsive" role="region" tabindex="0" aria-label="<?= e(__('admin.athlete_cleanup.safe_heading')) ?>">
-                <table class="table-full responsive-table">
+                <table class="table-full responsive-table" data-client-pagination="50">
                     <thead>
                         <tr>
                             <th scope="col"><?= e(__('admin.athlete_cleanup.table.club')) ?></th>
@@ -185,7 +185,7 @@ foreach ($clubs as $clubOption) {
             <h3><?= e(__('admin.athlete_cleanup.blocked_heading')) ?></h3>
             <p><?= e(__('admin.athlete_cleanup.blocked_help')) ?></p>
             <div class="table-scroll table-scroll--wide table-scroll--responsive" role="region" tabindex="0" aria-label="<?= e(__('admin.athlete_cleanup.blocked_heading')) ?>">
-                <table class="table-full responsive-table">
+                <table class="table-full responsive-table" data-client-pagination="50">
                     <thead>
                         <tr>
                             <th scope="col"><?= e(__('admin.athlete_cleanup.table.club')) ?></th>
@@ -222,7 +222,7 @@ foreach ($clubs as $clubOption) {
             <h3><?= e(__('admin.athlete_cleanup.manual_heading')) ?></h3>
             <p><?= e(__('admin.athlete_cleanup.manual_help')) ?></p>
             <div class="table-scroll table-scroll--wide table-scroll--responsive" role="region" tabindex="0" aria-label="<?= e(__('admin.athlete_cleanup.manual_heading')) ?>">
-                <table class="table-full responsive-table">
+                <table class="table-full responsive-table" data-client-pagination="50">
                     <thead>
                         <tr>
                             <th scope="col"><?= e(__('admin.athlete_cleanup.table.club')) ?></th>

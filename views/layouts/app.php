@@ -351,6 +351,115 @@
                 }
             });
         }());
+
+        (function() {
+            const labels = {
+                nav: <?= json_encode(__('pagination.label'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                first: <?= json_encode(__('pagination.first'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                prev: <?= json_encode(__('pagination.prev'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                next: <?= json_encode(__('pagination.next'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                last: <?= json_encode(__('pagination.last'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                firstPage: <?= json_encode(__('pagination.first_page'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                previousPage: <?= json_encode(__('pagination.previous_page'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                previousFivePages: <?= json_encode(__('pagination.previous_five_pages'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                nextFivePages: <?= json_encode(__('pagination.next_five_pages'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                nextPage: <?= json_encode(__('pagination.next_page'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                lastPage: <?= json_encode(__('pagination.last_page'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>,
+                pageNumber: <?= json_encode(__('pagination.page_number'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
+            };
+
+            function pageLabel(page) {
+                return labels.pageNumber.replace('{page}', String(page));
+            }
+
+            document.querySelectorAll('table[data-client-pagination]').forEach((table) => {
+                const body = table.tBodies.item(0);
+                const rows = body === null ? [] : [...body.rows];
+                const requestedPageSize = Number.parseInt(table.dataset.clientPagination ?? '', 10);
+                const pageSize = Number.isFinite(requestedPageSize) && requestedPageSize > 0
+                    ? requestedPageSize
+                    : 50;
+                const lastPage = Math.ceil(rows.length / pageSize);
+                if (lastPage <= 1) {
+                    return;
+                }
+
+                const nav = document.createElement('nav');
+                const wrapper = table.closest('.table-scroll');
+                let page = 1;
+                nav.className = 'pagination';
+                nav.setAttribute('role', 'navigation');
+                nav.setAttribute('aria-label', wrapper?.getAttribute('aria-label') || labels.nav);
+                (wrapper ?? table).insertAdjacentElement('afterend', nav);
+
+                function button(text, ariaLabel, targetPage, disabled, active = false) {
+                    const control = document.createElement('button');
+                    control.type = 'button';
+                    control.className = 'pagination-link';
+                    control.textContent = text;
+                    control.setAttribute('aria-label', ariaLabel);
+                    control.disabled = disabled;
+                    control.classList.toggle('disabled', disabled);
+                    control.classList.toggle('active', active);
+                    if (active) {
+                        control.setAttribute('aria-current', 'page');
+                    }
+                    control.addEventListener('click', () => {
+                        page = Math.max(1, Math.min(targetPage, lastPage));
+                        render();
+                    });
+
+                    return control;
+                }
+
+                function render() {
+                    const firstRow = (page - 1) * pageSize;
+                    rows.forEach((row, index) => {
+                        row.hidden = index < firstRow || index >= firstRow + pageSize;
+                    });
+
+                    const atFirstPage = page === 1;
+                    const atLastPage = page === lastPage;
+                    const controls = [
+                        button('«« ' + labels.first, labels.firstPage, 1, atFirstPage),
+                        button('−5', labels.previousFivePages, page - 5, atFirstPage),
+                        button('‹ ' + labels.prev, labels.previousPage, page - 1, atFirstPage)
+                    ];
+                    const firstPage = Math.max(1, page - 2);
+                    const finalPage = Math.min(lastPage, page + 2);
+                    for (let candidate = firstPage; candidate <= finalPage; candidate += 1) {
+                        controls.push(button(
+                            String(candidate),
+                            pageLabel(candidate),
+                            candidate,
+                            false,
+                            candidate === page
+                        ));
+                    }
+                    controls.push(button(
+                        labels.next + ' ›',
+                        labels.nextPage,
+                        page + 1,
+                        atLastPage
+                    ));
+                    controls.push(button(
+                        '+5',
+                        labels.nextFivePages,
+                        page + 5,
+                        atLastPage
+                    ));
+                    controls.push(button(
+                        labels.last + ' »»',
+                        labels.lastPage,
+                        lastPage,
+                        atLastPage
+                    ));
+                    nav.replaceChildren(...controls);
+                }
+
+                render();
+            });
+        }());
     </script>
 
 </body>

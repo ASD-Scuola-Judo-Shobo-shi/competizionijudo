@@ -17,7 +17,7 @@ $importReport = is_array($csvFeedback['report'] ?? null) ? $csvFeedback['report'
             <div class="import-report">
                 <h4><?= e(__('club.area.csv.report_title')) ?></h4>
                 <div class="table-scroll" role="region" tabindex="0" aria-label="<?= e(__('club.area.csv.report_title')) ?>">
-                    <table class="table-full">
+                    <table class="table-full" data-client-pagination="50">
                         <thead>
                             <tr>
                                 <th scope="col"><?= e(__('club.area.csv.report_row')) ?></th>

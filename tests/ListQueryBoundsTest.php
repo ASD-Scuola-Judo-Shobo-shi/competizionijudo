@@ -66,9 +66,11 @@ final class ListQueryBoundsTest extends TestCase
 
     public function testClubAndAthletePagesBoundReturnedRows(): void
     {
+        $this->insertEvent(101, 'Synthetic Event', '2026-07-01', true, false);
         for ($id = 1; $id <= 55; $id++) {
             $this->insertClub($id, sprintf('Club %02d', $id));
             $this->insertAthlete(1000 + $id, 1, sprintf('Athlete %02d', $id));
+            $this->insertEntry($id, 101, 1, 1000 + $id);
         }
 
         self::assertSame(55, Club::count());
@@ -80,6 +82,12 @@ final class ListQueryBoundsTest extends TestCase
         self::assertSame(
             [1051, 1052, 1053, 1054, 1055],
             array_map(static fn(Athlete $athlete): int => $athlete->id, Athlete::pageByClub(1, 50, 50))
+        );
+        self::assertSame(55, Entry::countByEvent(101, null));
+        self::assertSame(55, Entry::countByEvent(101, 1));
+        self::assertSame(
+            [51, 52, 53, 54, 55],
+            array_column(Entry::pageByEvent(101, 1, false, 50, 50), 'entry_id')
         );
     }
 

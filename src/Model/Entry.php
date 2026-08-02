@@ -39,6 +39,49 @@ final class Entry
         ?int $clubId,
         ?bool $eventClosed = null
     ): array {
+        return self::queryByEvent($eventId, $clubId, $eventClosed, null, 0);
+    }
+
+    public static function countByEvent(int $eventId, ?int $clubId): int
+    {
+        $sql = 'SELECT COUNT(*) FROM entries WHERE event_id = ?';
+        $parameters = [$eventId];
+        if ($clubId !== null) {
+            $sql .= ' AND club_id = ?';
+            $parameters[] = $clubId;
+        }
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($parameters);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /** @return list<array<string, mixed>> */
+    public static function pageByEvent(
+        int $eventId,
+        ?int $clubId,
+        ?bool $eventClosed,
+        int $limit,
+        int $offset
+    ): array {
+        return self::queryByEvent(
+            $eventId,
+            $clubId,
+            $eventClosed,
+            max(1, $limit),
+            max(0, $offset)
+        );
+    }
+
+    /** @return list<array<string, mixed>> */
+    private static function queryByEvent(
+        int $eventId,
+        ?int $clubId,
+        ?bool $eventClosed,
+        ?int $limit,
+        int $offset
+    ): array {
         $eventClosed ??= self::eventIsClosed($eventId);
         $lastName = self::athleteValueExpression($eventClosed, 'snapshot_last_name', 'last_name');
         $firstName = self::athleteValueExpression($eventClosed, 'snapshot_first_name', 'first_name');
@@ -94,9 +137,21 @@ final class Entry
         }
 
         $sql .= ' ORDER BY club_name, last_name, first_name, a.id';
+        if ($limit !== null) {
+            $sql .= ' LIMIT ? OFFSET ?';
+        }
 
         $stmt = Database::connection()->prepare($sql);
-        $stmt->execute($params);
+        if ($limit === null) {
+            $stmt->execute($params);
+        } else {
+            foreach ($params as $index => $parameter) {
+                $stmt->bindValue($index + 1, $parameter, \PDO::PARAM_INT);
+            }
+            $stmt->bindValue(count($params) + 1, $limit, \PDO::PARAM_INT);
+            $stmt->bindValue(count($params) + 2, $offset, \PDO::PARAM_INT);
+            $stmt->execute();
+        }
         $rows = $stmt->fetchAll() ?: [];
         foreach ($rows as &$row) {
             if (!$eventClosed || empty($row['weight_category'])) {

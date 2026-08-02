@@ -786,7 +786,17 @@ return [
         'red' => 'Red',
     ],
     'pagination' => [
+        'first' => 'First',
         'prev' => 'Prev',
         'next' => 'Next',
+        'last' => 'Last',
+        'label' => 'Pagination',
+        'first_page' => 'First page',
+        'previous_page' => 'Previous page',
+        'previous_five_pages' => 'Go back 5 pages',
+        'next_five_pages' => 'Go forward 5 pages',
+        'next_page' => 'Next page',
+        'last_page' => 'Last page',
+        'page_number' => 'Page {page}',
     ],
 ];

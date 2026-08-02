@@ -103,6 +103,21 @@ final class EventEntriesViewModelTest extends TestCase
         self::assertCount(2, $report->currentClubEntries);
     }
 
+    public function testAthletePagesRetainGroupHeadingsAcrossPageBoundaries(): void
+    {
+        $report = EventEntriesViewModel::fromRows([
+            $this->entry(201, 'First', 'Athlete', 'F', 21.0, '-24 kg', 'white'),
+            $this->entry(201, 'Second', 'Athlete', 'M', 22.0, '-24 kg', 'yellow'),
+            $this->entry(201, 'Third', 'Athlete', 'F', 25.0, '-28 kg', 'green'),
+        ], [], null);
+
+        $page = $report->athleteGroupsPage(1, 2);
+
+        self::assertSame(['-24 kg', '-28 kg'], array_column($page, 'weight'));
+        self::assertSame('Second Athlete', $page[0]['athletes'][0]['athlete_name']);
+        self::assertSame('Third Athlete', $page[1]['athletes'][0]['athlete_name']);
+    }
+
     /** @return array<string, mixed> */
     private function entry(
         int $clubId,

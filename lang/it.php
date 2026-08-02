@@ -786,7 +786,17 @@ return [
         'red' => 'Rossa',
     ],
     'pagination' => [
+        'first' => 'Prima',
         'prev' => 'Prec',
         'next' => 'Succ',
+        'last' => 'Ultima',
+        'label' => 'Paginazione',
+        'first_page' => 'Prima pagina',
+        'previous_page' => 'Pagina precedente',
+        'previous_five_pages' => 'Indietro di 5 pagine',
+        'next_five_pages' => 'Avanti di 5 pagine',
+        'next_page' => 'Pagina successiva',
+        'last_page' => 'Ultima pagina',
+        'page_number' => 'Pagina {page}',
     ],
 ];

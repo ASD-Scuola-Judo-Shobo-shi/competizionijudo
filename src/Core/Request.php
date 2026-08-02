@@ -82,6 +82,12 @@ final class Request
         return $this->query[$key] ?? $default;
     }
 
+    /** @return array<string, mixed> */
+    public function queryParameters(): array
+    {
+        return $this->query;
+    }
+
     public function post(string $key, mixed $default = null): mixed
     {
         return $this->post[$key] ?? $default;

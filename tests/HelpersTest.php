@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Localization;
 use PHPUnit\Framework\TestCase;
 
 final class HelpersTest extends TestCase
@@ -102,6 +103,62 @@ final class HelpersTest extends TestCase
         $result = paginate(100, 0, 50);
         self::assertSame(1, $result['page']);
         self::assertSame(0, $result['offset']);
+    }
+
+    public function testPaginateUsesAnIndependentPageParameterAndPreservesFilters(): void
+    {
+        $result = paginate(
+            120,
+            2,
+            50,
+            'athletes_page',
+            ['event' => '101', 'club_id' => '201'],
+            'Enrolled athletes'
+        );
+
+        self::assertStringContainsString('event=101', $result['links']);
+        self::assertStringContainsString('club_id=201', $result['links']);
+        self::assertStringContainsString('athletes_page=3', $result['links']);
+        self::assertStringNotContainsString('?page=', $result['links']);
+        self::assertStringContainsString('aria-label="Enrolled athletes"', $result['links']);
+        self::assertStringContainsString('aria-current="page"', $result['links']);
+    }
+
+    public function testPaginateProvidesFirstLastAndFivePageJumps(): void
+    {
+        Localization::setLocale('en');
+
+        $links = paginate(1_000, 10, 50, 'page', [])['links'];
+
+        self::assertStringContainsString(
+            'href="?page=1" aria-label="First page"',
+            $links
+        );
+        self::assertStringContainsString(
+            'href="?page=5" aria-label="Go back 5 pages"',
+            $links
+        );
+        self::assertStringContainsString(
+            'href="?page=9" aria-label="Previous page"',
+            $links
+        );
+        self::assertStringContainsString(
+            'href="?page=11" aria-label="Next page"',
+            $links
+        );
+        self::assertStringContainsString(
+            'href="?page=15" aria-label="Go forward 5 pages"',
+            $links
+        );
+        self::assertStringContainsString(
+            'href="?page=20" aria-label="Last page"',
+            $links
+        );
+
+        $firstPageLinks = paginate(1_000, 1, 50, 'page', [])['links'];
+        $lastPageLinks = paginate(1_000, 20, 50, 'page', [])['links'];
+        self::assertSame(3, substr_count($firstPageLinks, 'pagination-link disabled'));
+        self::assertSame(3, substr_count($lastPageLinks, 'pagination-link disabled'));
     }
 
     public function testBasePath(): void

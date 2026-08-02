@@ -5,6 +5,7 @@
 /** @var list<array<string, mixed>> $enrolledClubs */
 /** @var list<string> $enrollmentFields */
 /** @var int|null $selectedEnrollmentClubId */
+/** @var array{page:int, per_page:int, total:int, last_page:int, offset:int, links:string} $enrollmentPagination */
 $entryTypePresentation = static function (string $value): array {
     $typeKey = match (mb_strtolower(trim($value), 'UTF-8')) {
         'pre-competitive', 'precompetitive',
@@ -22,7 +23,7 @@ $entryTypePresentation = static function (string $value): array {
 <section class="card admin-event-enrollments">
     <h2>
         <?= e(__('admin.event_details.enrolled_athletes')) ?>
-        (<?= e((string) count($enrolledAthletes)) ?>)
+        (<?= e((string) $enrollmentPagination['total']) ?>)
     </h2>
     <?php if ($enrolledClubs !== []) : ?>
         <form
@@ -113,5 +114,6 @@ $entryTypePresentation = static function (string $value): array {
                 </tbody>
             </table>
         </div>
+        <?= $enrollmentPagination['links'] ?>
     <?php endif; ?>
 </section>

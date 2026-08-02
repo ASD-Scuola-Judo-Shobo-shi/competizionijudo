@@ -270,6 +270,38 @@ final class EventLifecycleTest extends TestCase
         );
     }
 
+    public function testAdminEventEnrollmentTableUsesAFilteredBoundedPage(): void
+    {
+        $this->insertEvent();
+        $entry = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        $entry->execute([101, 201, 301]);
+        for ($index = 1; $index <= 50; $index++) {
+            $athleteId = 399 + $index;
+            $this->insertOwnAthlete($athleteId, sprintf('Paged%02d', $index), 'Athlete');
+            $entry->execute([101, 201, $athleteId]);
+        }
+        Session::set('is_admin', true);
+        $request = new Request('GET', '/admin/events/details', [
+            'event_id' => '101',
+            'club_id' => '201',
+            'enrollment_page' => '2',
+        ]);
+
+        $response = (new AdminController($this->view, $request))->eventDetails($request);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(
+            __('admin.event_details.enrolled_athletes') . ' (51)',
+            preg_replace('/\s+/u', ' ', strip_tags($response->content())) ?? ''
+        );
+        self::assertStringContainsString('Paged50', $response->content());
+        self::assertStringNotContainsString('OwnFamily', $response->content());
+        self::assertStringContainsString('enrollment_page=1', $response->content());
+        self::assertStringContainsString('club_id=201', $response->content());
+    }
+
     public function testOpenEntryReadDoesNotRequireClosedEventSnapshotColumns(): void
     {
         $this->seedEntriesForTwoClubs();
@@ -343,6 +375,60 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString(
             '"event":"event.registration_recap_delivery_failed"',
             (string) file_get_contents($this->logPath)
+        );
+    }
+
+    public function testRegistrationOnASecondAthletePagePreservesHiddenRegistrations(): void
+    {
+        $today = date('Y-m-d');
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: $today);
+        for ($index = 1; $index <= 50; $index++) {
+            $this->insertOwnAthlete(
+                399 + $index,
+                sprintf('Paged%02d', $index),
+                'Athlete'
+            );
+        }
+        $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        )->execute([101, 201, 301]);
+        Session::set('club_id', 201);
+
+        $get = new Request('GET', '/events/register', [
+            'event' => '101',
+            'athletes_page' => '2',
+        ]);
+        $page = (new EventController($this->view, $get))->register($get);
+
+        self::assertSame(200, $page->status());
+        self::assertStringContainsString('Paged50 Athlete', $page->content());
+        self::assertStringNotContainsString('OwnFamily OwnGiven', $page->content());
+        self::assertStringContainsString('athletes_page=1', $page->content());
+
+        $post = new Request(
+            'POST',
+            '/events/register',
+            ['event' => '101', 'athletes_page' => '2'],
+            [
+                'csrf_token' => csrf_token(),
+                'athletes' => ['449'],
+                'registration_option_id' => '501',
+            ]
+        );
+        $response = (new EventController(
+            $this->view,
+            $post,
+            null,
+            new FakePasswordResetMailer()
+        ))->register($post);
+
+        self::assertSame(302, $response->status());
+        self::assertSame('/events/register?event=101&athletes_page=2', $response->headers()['Location']);
+        self::assertSame(
+            [301, 449],
+            $this->database->query(
+                'SELECT athlete_id FROM entries WHERE event_id = 101 ORDER BY athlete_id'
+            )->fetchAll(PDO::FETCH_COLUMN)
         );
     }
 
@@ -554,6 +640,32 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('OwnFamily', $response->content());
         self::assertStringContainsString('Bianca', $response->content());
         self::assertStringContainsString('-42 kg', $response->content());
+    }
+
+    public function testClosedEntryTablesHaveIndependentPagination(): void
+    {
+        $this->insertEvent(closed: true);
+        $entry = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        $entry->execute([101, 201, 301]);
+        for ($index = 1; $index <= 50; $index++) {
+            $athleteId = 399 + $index;
+            $this->insertOwnAthlete($athleteId, sprintf('Paged%02d', $index), 'Athlete');
+            $entry->execute([101, 201, $athleteId]);
+        }
+        Session::set('club_id', 201);
+
+        $response = $this->dispatchEntries([
+            'event' => '101',
+            'athletes_page' => '2',
+            'club_entries_page' => '2',
+        ]);
+
+        self::assertSame(200, $response->status());
+        self::assertSame(2, substr_count($response->content(), 'Paged50 Athlete'));
+        self::assertStringContainsString('athletes_page=1', $response->content());
+        self::assertStringContainsString('club_entries_page=1', $response->content());
     }
 
     public function testClosedEntriesCanFilterTheCurrentClubByWeightCategory(): void
@@ -882,6 +994,30 @@ final class EventLifecycleTest extends TestCase
             null,
             1,
             0,
+        ]);
+    }
+
+    private function insertOwnAthlete(int $id, string $lastName, string $firstName): void
+    {
+        $statement = $this->database->prepare(
+            'INSERT INTO athletes (
+                id, club_id, last_name, first_name, gender, birth_date,
+                weight_kg, weight_category, belt, program, membership_number, notes
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $statement->execute([
+            $id,
+            201,
+            $lastName,
+            $firstName,
+            'M',
+            '2012-01-01',
+            40.0,
+            '-40',
+            'white',
+            'competitive',
+            'OWN-' . $id,
+            null,
         ]);
     }
 

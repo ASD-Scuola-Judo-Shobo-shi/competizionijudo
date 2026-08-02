@@ -2,6 +2,8 @@
 
 /** @var \App\Model\Event $event */
 /** @var \App\Presentation\EventEntriesViewModel $entryReport */
+/** @var list<array<string, mixed>> $currentClubEntries */
+/** @var array{page:int, per_page:int, total:int, last_page:int, offset:int, links:string} $currentClubPagination */
 $clubExportUrl = '/events/entries/export?event=' . rawurlencode((string) $event->id);
 if ($entryReport->selectedWeightCategory !== '') {
     $clubExportUrl .= '&weight_category=' . rawurlencode($entryReport->selectedWeightCategory);
@@ -34,11 +36,11 @@ if ($entryReport->selectedWeightCategory !== '') {
 
     <p class="closed-event-club-entries__count">
         <?= e(__('events.entries_filtered_count', [
-            'count' => (string) count($entryReport->currentClubEntries),
+            'count' => (string) $currentClubPagination['total'],
         ])) ?>
     </p>
 
-    <?php if ($entryReport->currentClubEntries === []) : ?>
+    <?php if ($currentClubEntries === []) : ?>
         <p><?= e(__('club.area.no_entries')) ?></p>
     <?php else : ?>
         <div
@@ -58,7 +60,7 @@ if ($entryReport->selectedWeightCategory !== '') {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($entryReport->currentClubEntries as $athlete) : ?>
+                    <?php foreach ($currentClubEntries as $athlete) : ?>
                         <tr>
                             <td data-label="<?= e(__('club.area.athlete')) ?>">
                                 <?= e((string) $athlete['athlete_name']) ?>
@@ -84,5 +86,6 @@ if ($entryReport->selectedWeightCategory !== '') {
                 </tbody>
             </table>
         </div>
+        <?= $currentClubPagination['links'] ?>
     <?php endif; ?>
 </section>

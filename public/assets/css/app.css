@@ -1773,6 +1773,12 @@ button.submenu-item {
     text-decoration: none;
     font-size: 0.9rem;
     transition: background 0.15s, border-color 0.15s;
+    background: transparent;
+    font-family: inherit;
+}
+
+[data-client-pagination] tbody > tr[hidden] {
+    display: none !important;
 }
 
 .pagination-link:hover {

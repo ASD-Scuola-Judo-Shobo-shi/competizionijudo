@@ -29,6 +29,8 @@ use Throwable;
 final class EventController extends Controller
 {
     private const REGISTRATION_FEEDBACK_PREFIX = 'event_registration_';
+    private const REGISTRATION_ATHLETES_PER_PAGE = 50;
+    private const ENTRIES_PER_PAGE = 50;
 
     public function __construct(
         View $view,
@@ -152,6 +154,29 @@ final class EventController extends Controller
             ]);
         }
 
+        $athletePage = max(1, (int) $request->query('athletes_page', '1'));
+        $athletePagination = paginate(
+            Athlete::countByClub($clubId),
+            $athletePage,
+            self::REGISTRATION_ATHLETES_PER_PAGE,
+            'athletes_page',
+            $request->queryParameters(),
+            __('events.register_select')
+        );
+        $athletes = Athlete::pageByClub(
+            $clubId,
+            $athletePagination['per_page'],
+            $athletePagination['offset']
+        );
+        $editableAthleteIds = array_map(
+            static fn(Athlete $athlete): int => $athlete->id,
+            $athletes
+        );
+        $registrationRedirect = '/events/register?event=' . $eventId;
+        if ($athletePagination['page'] > 1) {
+            $registrationRedirect .= '&athletes_page=' . $athletePagination['page'];
+        }
+
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
 
@@ -175,7 +200,7 @@ final class EventController extends Controller
                     'payment_summary' => null,
                 ]);
 
-                return $this->redirect('/events/register?event=' . $eventId);
+                return $this->redirect($registrationRedirect);
             }
 
             // Handle registration/unregistration action based on checkbox states
@@ -192,7 +217,11 @@ final class EventController extends Controller
             $validAthleteIds = [];
             $rejectedCount = 0;
             foreach ($athleteIds as $athleteId) {
-                if (is_numeric($athleteId) && (int) $athleteId > 0) {
+                if (
+                    is_numeric($athleteId)
+                    && (int) $athleteId > 0
+                    && in_array((int) $athleteId, $editableAthleteIds, true)
+                ) {
                     $validAthleteIds[] = (int) $athleteId;
                 } else {
                     $rejectedCount++;
@@ -200,9 +229,14 @@ final class EventController extends Controller
             }
             $validAthleteIds = array_values(array_unique($validAthleteIds));
 
-            // Determine which athletes to register and which to unregister
+            // Only the displayed, server-resolved page is editable. Registrations
+            // on other pages must remain unchanged when their checkboxes are absent.
+            $currentlyRegisteredOnPage = array_values(array_intersect(
+                $currentlyRegistered,
+                $editableAthleteIds
+            ));
             $toRegister = array_values(array_diff($validAthleteIds, $currentlyRegistered));
-            $toUnregister = array_values(array_diff($currentlyRegistered, $validAthleteIds));
+            $toUnregister = array_values(array_diff($currentlyRegisteredOnPage, $validAthleteIds));
 
             $feedback = [
                 'added' => 0,
@@ -265,7 +299,7 @@ final class EventController extends Controller
             }
 
             // Count athletes that were already registered and still checked (no change)
-            $stillChecked = array_intersect($currentlyRegistered, $validAthleteIds);
+            $stillChecked = array_intersect($currentlyRegisteredOnPage, $validAthleteIds);
             $feedback['already_registered'] += count($stillChecked);
 
             // Read back the snapshots so the summary reflects the exact option
@@ -342,10 +376,9 @@ final class EventController extends Controller
 
             Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $eventId, $flashFeedback);
 
-            return $this->redirect('/events/register?event=' . $eventId);
+            return $this->redirect($registrationRedirect);
         }
 
-        $athletes = Athlete::findByClub($clubId);
         $registeredEnrollmentDetails = Entry::enrollmentDetailsByClubEvent($eventId, $clubId);
         $registered = array_keys($registeredEnrollmentDetails);
         $registrationFeedback = $this->registrationFeedback($eventId);
@@ -371,6 +404,7 @@ final class EventController extends Controller
             'registrationOptions' => $registrationOptions,
             'defaultRegistrationOptionId' => $defaultRegistrationOptionId,
             'registeredEnrollmentDetails' => $registeredEnrollmentDetails,
+            'athletePagination' => $athletePagination,
         ]);
     }
 
@@ -421,6 +455,30 @@ final class EventController extends Controller
             $event->closed ? $clubId : null,
             trim((string) $request->query('weight_category', ''))
         );
+        $entryClubsPagination = paginate(
+            count($entryReport->clubs),
+            max(1, (int) $request->query('clubs_page', '1')),
+            self::ENTRIES_PER_PAGE,
+            'clubs_page',
+            $request->queryParameters(),
+            __('events.entries_clubs_heading')
+        );
+        $entryAthletesPagination = paginate(
+            count($entryReport->entries),
+            max(1, (int) $request->query('athletes_page', '1')),
+            self::ENTRIES_PER_PAGE,
+            'athletes_page',
+            $request->queryParameters(),
+            __('events.entries_athletes_heading')
+        );
+        $currentClubPagination = paginate(
+            count($entryReport->currentClubEntries),
+            max(1, (int) $request->query('club_entries_page', '1')),
+            self::ENTRIES_PER_PAGE,
+            'club_entries_page',
+            $request->queryParameters(),
+            __('events.entries_current_club_title')
+        );
 
         $upcomingEvents = $this->resolveUpcomingEvents($eventId, $date, $limit);
 
@@ -428,6 +486,23 @@ final class EventController extends Controller
             'title' => __('events.entries') . ' - ' . $event->name,
             'event' => $event,
             'entryReport' => $entryReport,
+            'entryClubs' => array_slice(
+                $entryReport->clubs,
+                $entryClubsPagination['offset'],
+                $entryClubsPagination['per_page']
+            ),
+            'entryAthleteGroups' => $entryReport->athleteGroupsPage(
+                $entryAthletesPagination['offset'],
+                $entryAthletesPagination['per_page']
+            ),
+            'currentClubEntries' => array_slice(
+                $entryReport->currentClubEntries,
+                $currentClubPagination['offset'],
+                $currentClubPagination['per_page']
+            ),
+            'entryClubsPagination' => $entryClubsPagination,
+            'entryAthletesPagination' => $entryAthletesPagination,
+            'currentClubPagination' => $currentClubPagination,
             'loggedInClubId' => $clubId !== null ? (int) $clubId : null,
             'hasRegistrationException' => $hasRegistrationException,
             'upcomingEvents' => $upcomingEvents,

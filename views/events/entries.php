@@ -6,6 +6,15 @@
 /** @var bool $hasRegistrationException */
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var array<int, bool> $eventExceptions */
+/** @var list<array<string, mixed>>|null $entryClubs */
+/** @var list<array{category:string, weight:string, ageMin:int, athletes:list<array<string, mixed>>}>|null $entryAthleteGroups */
+/** @var list<array<string, mixed>>|null $currentClubEntries */
+$entryClubs ??= $entryReport->clubs;
+$entryAthleteGroups ??= $entryReport->athleteGroups;
+$currentClubEntries ??= $entryReport->currentClubEntries;
+$entryClubsPagination ??= paginate(count($entryClubs), 1, 50, 'clubs_page');
+$entryAthletesPagination ??= paginate(count($entryReport->entries), 1, 50, 'athletes_page');
+$currentClubPagination ??= paginate(count($currentClubEntries), 1, 50, 'club_entries_page');
 ?>
 
 <?php if ($event !== null) : ?>
