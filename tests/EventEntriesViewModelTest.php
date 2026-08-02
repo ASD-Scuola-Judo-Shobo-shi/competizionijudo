@@ -36,6 +36,47 @@ final class EventEntriesViewModelTest extends TestCase
         self::assertSame(['category', 'weight', 'belt', 'gender'], array_column($report->dimensions, 'key'));
         self::assertSame(2, $report->dimensions[0]['clubCounts'][201]['Bambini A 4-5 anni']);
         self::assertCount(2, $report->athleteGroups);
+        self::assertCount(1, $report->categoryWeightBars);
+        self::assertSame(3, $report->categoryWeightBars[0]['total']);
+        self::assertSame(
+            ['-24 kg', '-28 kg'],
+            array_column($report->categoryWeightBars[0]['segments'], 'label')
+        );
+        self::assertSame([2, 1], array_column($report->categoryWeightBars[0]['segments'], 'count'));
+        self::assertEqualsWithDelta(
+            [66.6667, 33.3333],
+            array_column($report->categoryWeightBars[0]['segments'], 'percentage'),
+            0.0001
+        );
+    }
+
+    public function testItBuildsOneStackedWeightBarForEachAgeCategory(): void
+    {
+        Localization::setLocale('it');
+        $olderAthlete = $this->entry(202, 'Verdi', 'Giulia', 'F', 28.0, '-32 kg', 'yellow');
+        $olderAthlete['birth_date'] = '2018-01-01';
+
+        $report = EventEntriesViewModel::fromRows([
+            $this->entry(201, 'Rossi', 'Anna', 'F', 21.5, '-24 kg', 'white'),
+            $this->entry(201, 'Bianchi', 'Luca', 'M', 25.0, '-28 kg', 'yellow'),
+            $olderAthlete,
+        ], [], null);
+
+        self::assertSame(
+            ['Bambini A 4-5 anni', 'Fanciulli 8-9 anni'],
+            array_column($report->categoryWeightBars, 'category')
+        );
+        self::assertSame([2, 1], array_column($report->categoryWeightBars, 'total'));
+        self::assertCount(2, $report->categoryWeightBars[0]['segments']);
+        self::assertCount(1, $report->categoryWeightBars[1]['segments']);
+        self::assertSame(
+            [50.0, 50.0],
+            array_column($report->categoryWeightBars[0]['segments'], 'percentage')
+        );
+        self::assertSame(
+            [50.0],
+            array_column($report->categoryWeightBars[1]['segments'], 'percentage')
+        );
     }
 
     public function testItIgnoresUnknownFiltersAndSortsWeightCategoriesNumerically(): void

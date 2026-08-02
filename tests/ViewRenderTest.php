@@ -184,8 +184,8 @@ final class ViewRenderTest extends TestCase
                 'gender' => 'M',
                 'birth_date' => '2021-04-01',
                 'event_date' => '2026-08-02',
-                'weight_kg' => 23.0,
-                'weight_category' => '-24 kg',
+                'weight_kg' => 26.0,
+                'weight_category' => '-28 kg',
                 'belt' => 'green_blue',
             ],
         ], [], null);
@@ -201,6 +201,16 @@ final class ViewRenderTest extends TestCase
         $css = file_get_contents(dirname(__DIR__) . '/public/assets/css/app.css');
 
         self::assertIsString($css);
+        $barChartPosition = strpos($html, 'class="entries-category-weight-chart"');
+        $pieChartPosition = strpos($html, 'class="entries-chart-grid"');
+        self::assertIsInt($barChartPosition);
+        self::assertIsInt($pieChartPosition);
+        self::assertLessThan($pieChartPosition, $barChartPosition);
+        self::assertSame(1, substr_count($html, 'class="entries-category-weight-chart__row"'));
+        self::assertSame(2, substr_count($html, 'class="entries-category-weight-chart__segment"'));
+        self::assertStringContainsString('--entry-segment-width: 75.00%;', $html);
+        self::assertStringContainsString('--entry-segment-width: 25.00%;', $html);
+        self::assertStringContainsString('Atleti per classe d&#039;età e categoria di peso', $html);
         self::assertSame(4, substr_count($html, 'class="entries-chart-card"'));
         self::assertSame(4, substr_count($html, 'class="entries-chart__legend"'));
         self::assertStringContainsString('patternTransform="rotate(45)"', $html);
@@ -216,6 +226,18 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('linear-gradient(', $css);
         self::assertStringContainsString('var(--chart-swatch-lower) 0 50%', $css);
         self::assertStringContainsString('var(--chart-swatch-upper) 50% 100%', $css);
+        self::assertMatchesRegularExpression(
+            '/\.entries-category-weight-chart__track\s*\{[^}]*display:\s*flex;[^}]*width:\s*100%;/s',
+            $css
+        );
+        self::assertMatchesRegularExpression(
+            '/\.entries-category-weight-chart__segment\s*\{[^}]*flex:\s*0 0 var\(--entry-segment-width\);/s',
+            $css
+        );
+        self::assertMatchesRegularExpression(
+            '/@media \(max-width: 700px\).*?\.entries-category-weight-chart__row\s*\{[^}]*grid-template-columns:\s*1fr;/s',
+            $css
+        );
     }
 
     public function testAthletePreviewEmbedsSharedCategoryDefinitions(): void

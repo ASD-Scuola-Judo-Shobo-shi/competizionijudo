@@ -33,6 +33,8 @@
                 <?php endif; ?>
             </p>
 
+            <?php require __DIR__ . '/_entries_category_weight_chart.php'; ?>
+
             <div class="entries-chart-grid">
                 <?php foreach ($entryReport->dimensions as $dimension) : ?>
                     <?php require __DIR__ . '/_entries_chart.php'; ?>

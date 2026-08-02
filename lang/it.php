@@ -421,6 +421,8 @@ return [
         'entries_recap' => 'Riepilogo iscrizioni',
         'entries_subscribed' => 'Atleti iscritti',
         'entries_free_spots' => 'Posti disponibili',
+        'entries_class_weight_breakdown' => 'Atleti per classe d\'età e categoria di peso',
+        'entries_category_total' => 'Totale: {count}',
         'entries_category_breakdown' => 'Partecipanti per categoria',
         'entries_weight_breakdown' => 'Partecipanti per peso',
         'entries_belt_breakdown' => 'Partecipanti per cintura',

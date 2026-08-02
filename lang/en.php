@@ -421,6 +421,8 @@ return [
         'entries_recap' => 'Registration recap',
         'entries_subscribed' => 'Athletes subscribed',
         'entries_free_spots' => 'Free spots',
+        'entries_class_weight_breakdown' => 'Athletes by age class and weight category',
+        'entries_category_total' => 'Total: {count}',
         'entries_category_breakdown' => 'Participants by category',
         'entries_weight_breakdown' => 'Participants by weight',
         'entries_belt_breakdown' => 'Participants by belt',

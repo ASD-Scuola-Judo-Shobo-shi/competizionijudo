@@ -71,6 +71,16 @@ final class EventEntriesViewModel
      * }> $dimensions
      * @param list<array{
      *     category:string,
+     *     total:int,
+     *     segments:list<array{
+     *         label:string,
+     *         count:int,
+     *         percentage:float,
+     *         color:string
+     *     }>
+     * }> $categoryWeightBars
+     * @param list<array{
+     *     category:string,
      *     weight:string,
      *     ageMin:int,
      *     athletes:list<array<string, mixed>>
@@ -83,6 +93,7 @@ final class EventEntriesViewModel
         public readonly array $clubs,
         public readonly array $clubAthleteCounts,
         public readonly array $dimensions,
+        public readonly array $categoryWeightBars,
         public readonly array $athleteGroups,
         public readonly array $currentClubEntries,
         public readonly array $currentClubWeightCategories,
@@ -92,7 +103,7 @@ final class EventEntriesViewModel
 
     public static function empty(): self
     {
-        return new self([], [], [], [], [], [], [], '');
+        return new self([], [], [], [], [], [], [], [], '');
     }
 
     /**
@@ -118,6 +129,7 @@ final class EventEntriesViewModel
             'belt' => [],
             'gender' => [],
         ];
+        $categoryWeightCounts = [];
         $groups = [];
 
         foreach ($entries as $entry) {
@@ -138,6 +150,8 @@ final class EventEntriesViewModel
             $groups[$groupKey]['athletes'][] = $entry;
 
             $categoryCounts[$category] = ($categoryCounts[$category] ?? 0) + 1;
+            $categoryWeightCounts[$category][$weightLabel] =
+                ($categoryWeightCounts[$category][$weightLabel] ?? 0) + 1;
             $categoryMeta[$category] = [
                 'key' => (string) $entry['age_key'],
                 'ageMin' => (int) $entry['age_min'],
@@ -161,6 +175,7 @@ final class EventEntriesViewModel
             static fn(array $left, array $right): int =>
                 $left['ageMin'] <=> $right['ageMin'] ?: strcmp($left['weight'], $right['weight'])
         );
+        $categoryWeightBars = self::categoryWeightBars($categoryWeightCounts, $categoryMeta);
 
         $dimensions = array_values(array_filter([
             self::dimension(
@@ -220,6 +235,7 @@ final class EventEntriesViewModel
             $clubs,
             $clubAthleteCounts,
             $dimensions,
+            $categoryWeightBars,
             $athleteGroups,
             $currentClubEntries,
             $weightCategories,
@@ -334,6 +350,56 @@ final class EventEntriesViewModel
         }
 
         return self::segments($counts, $colors);
+    }
+
+    /**
+     * @param array<string, array<string, int>> $counts
+     * @param array<string, array{key:string, ageMin:int}> $meta
+     * @return list<array<string, mixed>>
+     */
+    private static function categoryWeightBars(array $counts, array $meta): array
+    {
+        $categories = array_keys($counts);
+        usort(
+            $categories,
+            static fn(string $left, string $right): int =>
+                ($meta[$left]['ageMin'] ?? PHP_INT_MAX) <=> ($meta[$right]['ageMin'] ?? PHP_INT_MAX)
+        );
+        $largestCategoryTotal = 0;
+        foreach ($counts as $weightCounts) {
+            $largestCategoryTotal = max($largestCategoryTotal, array_sum($weightCounts));
+        }
+
+        $bars = [];
+        foreach ($categories as $category) {
+            $weightCounts = $counts[$category];
+            $weights = array_keys($weightCounts);
+            usort($weights, static function (string $left, string $right): int {
+                $byWeight = self::weightCategoryValue($left) <=> self::weightCategoryValue($right);
+
+                return $byWeight !== 0 ? $byWeight : strcasecmp($left, $right);
+            });
+            $total = array_sum($weightCounts);
+            $segments = [];
+            foreach ($weights as $weight) {
+                $count = $weightCounts[$weight];
+                $segments[] = [
+                    'label' => $weight,
+                    'count' => $count,
+                    'percentage' => $largestCategoryTotal > 0
+                        ? (float) (($count / $largestCategoryTotal) * 100)
+                        : 0.0,
+                    'color' => self::WEIGHT_COLORS[self::groupWeight($weight)] ?? '#b39ddb',
+                ];
+            }
+            $bars[] = [
+                'category' => $category,
+                'total' => $total,
+                'segments' => $segments,
+            ];
+        }
+
+        return $bars;
     }
 
     /**
