@@ -470,6 +470,7 @@ final class AdminClubAthleteWorkflowTest extends TestCase
             'clubEmail' => null,
             'privacyControllerName' => 'Synthetic Controller',
             'privacyControllerAddress' => 'Synthetic Address',
+            'privacyControllerEmail' => 'privacy@example.test',
             'privacyControllerFiscalCode' => 'SYNTHETIC-FISCAL-CODE',
         ], Navigation::context($currentPath, '', true, false));
     }

@@ -24,6 +24,10 @@ return [
         'title' => 'About',
         'headline' => 'JUDO EVENTS',
         'description' => 'Portal for sports clubs to browse published events, register their club, manage athletes, and submit event registrations.',
+        'banner' => [
+            'text' => 'Do you want to use this website to manage your own competition?',
+            'link' => 'Let us know',
+        ],
     ],
     'about_info' => [
         'clubs' => 'Registered clubs',

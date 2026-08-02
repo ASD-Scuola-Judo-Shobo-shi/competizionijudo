@@ -24,6 +24,10 @@ return [
         'title' => 'Informazioni',
         'headline' => 'COMPETIZIONI JUDO',
         'description' => 'Portale dedicato alle società sportive per consultare le competizioni pubblicate, registrare la società, gestire gli atleti e inviare le iscrizioni alle competizioni.',
+        'banner' => [
+            'text' => 'Vuoi usare questo sito per gestire la tua competizione?',
+            'link' => 'Contattaci',
+        ],
     ],
     'about_info' => [
         'clubs' => 'Società registrate',

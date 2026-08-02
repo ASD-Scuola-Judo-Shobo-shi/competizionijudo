@@ -19,13 +19,46 @@
 /** @var list<\App\Model\Event> $upcomingEvents */
 
 // Helper closures for rendering UI components cleanly
-$renderPieChart = function (array $segments, float $chartWidth) {
+$renderPieChart = function (array $segments, string $chartKey, string $title) {
     if (empty($segments)) {
         return;
     }
+
+    $patternIds = [];
+    foreach ($segments as $index => $segment) {
+        $colors = $segment['colors'] ?? [$segment['color']];
+        if (count($colors) > 1) {
+            $patternIds[$index] = 'pie-pattern-' . $chartKey . '-' . (string) $index;
+        }
+    }
+
     $startAngle = 0;
-    echo '<svg viewBox="0 0 100 100" style="width: ' . e((string)$chartWidth) . '%; max-width: 240px; height: auto; aspect-ratio: 1 / 1;">';
-    foreach ($segments as $segment) {
+    echo '<svg class="entries-chart__pie" viewBox="0 0 100 100" role="img" aria-label="' . e($title) . '">';
+    echo '<title>' . e($title) . '</title>';
+    if ($patternIds !== []) {
+        echo '<defs>';
+        foreach ($patternIds as $index => $patternId) {
+            $colors = $segments[$index]['colors'];
+            printf(
+                '<pattern id="%s" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="%s"/><rect width="4" height="8" fill="%s"/></pattern>',
+                e($patternId),
+                e($colors[0]),
+                e($colors[1])
+            );
+        }
+        echo '</defs>';
+    }
+
+    foreach ($segments as $index => $segment) {
+        $fill = isset($patternIds[$index])
+            ? 'url(#' . $patternIds[$index] . ')'
+            : $segment['color'];
+
+        if ($segment['percentage'] >= 99.999) {
+            echo '<circle cx="50" cy="50" r="40" fill="' . e($fill) . '"/>';
+            break;
+        }
+
         $endAngle = $startAngle + ($segment['percentage'] / 100) * 360;
         $largeArc = ($endAngle - $startAngle) > 180 ? 1 : 0;
         $startX = 50 + 40 * cos(deg2rad($startAngle - 90));
@@ -39,7 +72,7 @@ $renderPieChart = function (array $segments, float $chartWidth) {
             $largeArc,
             $endX,
             $endY,
-            e($segment['color'])
+            e($fill)
         );
         $startAngle = $endAngle;
     }
@@ -59,11 +92,21 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
         $width = ($count / $total) * 100;
         $label = $segment['displayLabel'] ?? $segment['label'];
         $borderStyle = !empty($segment['border']) ? 'border: 1px solid #ccc;' : '';
+        $colors = $segment['colors'] ?? [$segment['color']];
+        $background = count($colors) > 1
+            ? sprintf(
+                'repeating-linear-gradient(135deg, %s 0, %s 5px, %s 5px, %s 10px)',
+                $colors[0],
+                $colors[0],
+                $colors[1],
+                $colors[1]
+            )
+            : $segment['color'];
         printf(
             '<div title="%s: %d" style="background: %s; width: %.2f%%; height: 100%%; %s"></div>',
             e($label),
             $count,
-            e($segment['color']),
+            e($background),
             $width,
             $borderStyle
         );
@@ -163,12 +206,18 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
     $beltRankOrder = array_flip(array_map(fn($case) => $case->value, \App\Model\Belt::cases()));
     foreach ($beltCounts as $belt => $count) {
         $beltEnum = \App\Model\Belt::tryFromValue($belt);
+        $beltComponents = $beltEnum?->components() ?? [];
+        $beltColors = array_column($beltComponents, 'color');
+        if ($beltColors === []) {
+            $beltColors = ['#6c757d'];
+        }
         $beltSegments[] = [
             'label'        => $belt,
             'displayLabel' => $beltEnum?->label(\App\Localization::getLocale()) ?? $belt,
             'count'        => $count,
             'percentage'   => $beltTotal > 0 ? ($count / $beltTotal) * 100 : 0,
-            'color'        => $beltEnum !== null ? $beltEnum->components()[0]['color'] : '#6c757d',
+            'color'        => $beltColors[0],
+            'colors'       => $beltColors,
             'border'       => true,
         ];
     }
@@ -193,10 +242,10 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
 
     // Chart Collection
     $charts = array_filter([
-        ['title' => __('events.entries_category_breakdown'), 'segments' => $categorySegments],
-        ['title' => __('events.entries_weight_breakdown'),   'segments' => $weightSegments],
-        ['title' => __('events.entries_belt_breakdown'),     'segments' => $beltSegments],
-        ['title' => __('gender.gender'),                    'segments' => $genderSegments],
+        ['key' => 'category', 'title' => __('events.entries_category_breakdown'), 'segments' => $categorySegments],
+        ['key' => 'weight', 'title' => __('events.entries_weight_breakdown'), 'segments' => $weightSegments],
+        ['key' => 'belt', 'title' => __('events.entries_belt_breakdown'), 'segments' => $beltSegments],
+        ['key' => 'gender', 'title' => __('gender.gender'), 'segments' => $genderSegments],
     ], fn($c) => !empty($c['segments']));
     ?>
 
@@ -226,29 +275,33 @@ $renderStackedBar = function (array $segments, array $counts, int $total) {
                     <?php endif; ?>
                 </p>
 
-                <div style="display: flex; flex-direction: column; margin-bottom: 1rem; width: 100%;">
-                    <?php $chartWidth = 100 / (count($charts) + 1); ?>
-                    <!-- Pie Charts -->
-                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px; margin-bottom: 1rem; width: 100%;">
-                        <?php foreach ($charts as $chart) : ?>
-                            <?php $renderPieChart($chart['segments'], $chartWidth); ?>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <!-- Legends -->
-                    <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
-                        <?php foreach ($charts as $chart) : ?>
-                            <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.85rem;">
-                                <strong style="margin-right: 8px;"><?= e($chart['title']) ?>:</strong>
-                                <?php foreach ($chart['segments'] as $segment) : ?>
-                                    <span style="display: flex; align-items: center; gap: 4px;">
-                                        <span style="display: inline-block; width: 10px; height: 10px; background: <?= e($segment['color']) ?>; <?= !empty($segment['border']) ? 'border: 1px solid #ccc;' : '' ?> border-radius: 2px;"></span>
-                                        <?= e($segment['displayLabel'] ?? $segment['label']) ?>: <?= e((string) $segment['count']) ?>
-                                    </span>
-                                <?php endforeach; ?>
+                <div class="entries-chart-grid">
+                    <?php foreach ($charts as $chart) : ?>
+                        <section class="entries-chart-card">
+                            <h5 class="entries-chart-card__title"><?= e($chart['title']) ?></h5>
+                            <div class="entries-chart-card__visual">
+                                <?php $renderPieChart($chart['segments'], $chart['key'], $chart['title']); ?>
                             </div>
-                        <?php endforeach; ?>
-                    </div>
+                            <ul class="entries-chart__legend" aria-label="<?= e($chart['title']) ?>">
+                                <?php foreach ($chart['segments'] as $segment) : ?>
+                                    <?php
+                                    $colors = $segment['colors'] ?? [$segment['color']];
+                                    $swatchStyle = count($colors) > 1
+                                        ? '--chart-swatch-lower: ' . $colors[0] . '; --chart-swatch-upper: ' . $colors[1] . ';'
+                                        : '--chart-swatch-color: ' . $colors[0] . ';';
+                                    ?>
+                                    <li>
+                                        <span
+                                            class="entries-chart__swatch<?= count($colors) > 1 ? ' entries-chart__swatch--split' : '' ?><?= !empty($segment['border']) ? ' entries-chart__swatch--bordered' : '' ?>"
+                                            style="<?= e($swatchStyle) ?>"
+                                            aria-hidden="true"
+                                        ></span>
+                                        <span><?= e($segment['displayLabel'] ?? $segment['label']) ?>: <strong><?= e((string) $segment['count']) ?></strong></span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </section>
+                    <?php endforeach; ?>
                 </div>
             </div>
         <?php endif; ?>

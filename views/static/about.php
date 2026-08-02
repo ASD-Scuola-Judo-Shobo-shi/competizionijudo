@@ -1,4 +1,12 @@
-<section class="landing landing-clean">
+<?php $contactEmail = (string) ($privacyControllerEmail ?? ''); ?>
+<?php if ($contactEmail !== '') : ?>
+    <section>
+        <div class="landing-copy card banner">
+            <p><?= e(__('about.banner.text')) ?> <a href="mailto:<?= e($contactEmail) ?>"><?= e(__('about.banner.link')) ?></a></p>
+        </div>
+    </section>
+<?php endif; ?>
+<section class="landing-clean">
     <div class="landing-copy">
         <img
             class="landing-logo"
@@ -6,9 +14,7 @@
             alt="<?= e(__('app.logo_alt')) ?>">
         <div>
             <h2><?= translate('header.title') ?></h2>
-            <p>
-                <?= translate('about.description') ?>
-            </p>
+            <p><?= translate('about.description') ?></p>
         </div>
     </div>
 </section>
@@ -27,4 +33,3 @@
         <span><?= translate('about_info.athletes_text') ?></span>
     </div>
 </section>
-

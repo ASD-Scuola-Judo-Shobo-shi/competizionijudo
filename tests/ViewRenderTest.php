@@ -121,6 +121,67 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('/events/entries?event=101', $anonymous);
     }
 
+    public function testEventEntriesChartsUseResponsiveCardsAndSplitBeltColors(): void
+    {
+        Localization::setLocale('it');
+        $_GET = [];
+        $view = new View(dirname(__DIR__) . '/views');
+        $event = new Event(
+            101,
+            'Synthetic Event',
+            '2026-08-02',
+            'Synthetic Venue',
+            'Synthetic Organizer',
+            '2026-08-01',
+            'only_competitive',
+            null,
+            null,
+            null,
+            null,
+            true,
+            false,
+            100
+        );
+
+        $html = $view->render('events/entries', array_merge([
+            'event' => $event,
+            'clubs' => [],
+            'loggedInClubId' => null,
+            'clubAthleteCounts' => [],
+            'clubCategoryCounts' => [],
+            'clubBeltCounts' => [],
+            'clubGenderCounts' => [],
+            'clubWeightCounts' => [],
+            'categoryCounts' => ['Bambini A 4-5 anni' => 4],
+            'beltCounts' => ['white_yellow' => 2, 'green_blue' => 2],
+            'genderCounts' => ['F' => 2, 'M' => 2],
+            'weightCounts' => ['20-24kg' => 4],
+            'grouped' => [],
+            'rows' => [[], [], [], []],
+            'isAdmin' => false,
+            'hasRegistrationException' => false,
+            'upcomingEvents' => [],
+        ], $this->layoutData('/events/entries')));
+        $css = file_get_contents(dirname(__DIR__) . '/public/assets/css/app.css');
+
+        self::assertIsString($css);
+        self::assertSame(4, substr_count($html, 'class="entries-chart-card"'));
+        self::assertSame(4, substr_count($html, 'class="entries-chart__legend"'));
+        self::assertStringContainsString('patternTransform="rotate(45)"', $html);
+        self::assertStringContainsString('fill="url(#pie-pattern-belt-0)"', $html);
+        self::assertStringContainsString('entries-chart__swatch--split', $html);
+        self::assertStringContainsString('--chart-swatch-lower: #f5f5f5;', $html);
+        self::assertStringContainsString('--chart-swatch-upper: #ffc107;', $html);
+        self::assertStringContainsString(
+            'grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));',
+            $css
+        );
+        self::assertStringContainsString('grid-template-columns: repeat(2, minmax(0, 1fr));', $css);
+        self::assertStringContainsString('linear-gradient(', $css);
+        self::assertStringContainsString('var(--chart-swatch-lower) 0 50%', $css);
+        self::assertStringContainsString('var(--chart-swatch-upper) 50% 100%', $css);
+    }
+
     public function testAthletePreviewEmbedsSharedCategoryDefinitions(): void
     {
         Localization::setLocale('en');
@@ -248,6 +309,7 @@ final class ViewRenderTest extends TestCase
         self::assertSame(2, substr_count($html, 'src="' . $logoPath . '?v='));
         self::assertStringContainsString('class="site-heading-logo"', $html);
         self::assertStringContainsString('class="landing-logo"', $html);
+        self::assertStringContainsString('href="mailto:privacy@example.test"', $html);
         self::assertSame(2, substr_count($html, 'alt="Competizioni Judo logo"'));
         self::assertFileExists(dirname(__DIR__) . '/public' . $logoPath);
     }
@@ -298,6 +360,7 @@ final class ViewRenderTest extends TestCase
             'isLoggedIn' => false,
             'isAdmin' => false,
             'clubEmail' => null,
+            'privacyControllerEmail' => 'privacy@example.test',
             'privacyControllerFiscalCode' => 'SYNTHETIC-FISCAL-CODE',
         ], Navigation::context($currentPath, '', false, false));
     }

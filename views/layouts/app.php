@@ -14,6 +14,7 @@
 /** @var string $currentPath */
 /** @var string $clubView */
 /** @var string $content */
+/** @var string $privacyControllerEmail */
 /** @var string $privacyControllerFiscalCode */
 ?>
 <!doctype html>
@@ -29,7 +30,7 @@
     <link rel="icon" href="<?= $favicon ?>">
     <link rel="stylesheet" href="<?= e(asset_url('assets/css/app.css')) ?>">
     <script>
-        (function () {
+        (function() {
             try {
                 if (window.localStorage.getItem('competizioni-judo-theme') === 'dark') {
                     document.documentElement.dataset.theme = 'dark';
@@ -123,8 +124,7 @@
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         aria-hidden="true"
-                        focusable="false"
-                    >
+                        focusable="false">
                         <g data-theme-icon="light">
                             <circle cx="12" cy="12" r="3.6" />
                             <path d="M12 2.4v2.1m0 15v2.1M2.4 12h2.1m15 0h2.1M5.2 5.2l1.5 1.5m10.6 10.6 1.5 1.5m0-13.6-1.5 1.5M6.7 17.3l-1.5 1.5" />
@@ -191,6 +191,10 @@
         <div>
             <strong><?= e((string) ($privacyControllerName ?? '')) ?></strong><br>
             <?= e((string) ($privacyControllerAddress ?? '')) ?>
+            <?php if ($privacyControllerEmail !== '') : ?>
+                <?php $email = e((string) $privacyControllerEmail) ?>
+                <br><a href="mailto:<?= $email ?>"><?= $email ?></a>
+            <?php endif; ?>
             <?php if ($privacyControllerFiscalCode !== '') : ?>
                 <br><?= e(__('privacy.fiscal_code')) ?>: <?= e((string) $privacyControllerFiscalCode) ?>
             <?php endif; ?>
@@ -209,7 +213,7 @@
     </footer>
 
     <script>
-        (function () {
+        (function() {
             const toggle = document.getElementById('theme-toggle');
             if (!toggle) {
                 return;
@@ -235,12 +239,12 @@
             }
 
             setTheme(document.documentElement.dataset.theme, false);
-            toggle.addEventListener('click', function () {
+            toggle.addEventListener('click', function() {
                 setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true);
             });
         }());
 
-        (function () {
+        (function() {
             const wrappers = [...document.querySelectorAll('.table-scroll--responsive')];
             const storageKey = 'competizioni-judo-table-view';
             const labels = {
@@ -319,8 +323,8 @@
                     });
                     row.classList.add('is-inline-editing');
                     const firstControl = row.querySelector(
-                        'input[data-inline-editor], select[data-inline-editor], textarea[data-inline-editor], '
-                        + '[data-inline-editor] input, [data-inline-editor] select, [data-inline-editor] textarea'
+                        'input[data-inline-editor], select[data-inline-editor], textarea[data-inline-editor], ' +
+                        '[data-inline-editor] input, [data-inline-editor] select, [data-inline-editor] textarea'
                     );
                     firstControl?.focus();
                     return;
