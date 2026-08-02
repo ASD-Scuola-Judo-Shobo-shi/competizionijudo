@@ -12,7 +12,7 @@ final class LftpUploadScriptTest extends TestCase
     {
         $script = (string) file_get_contents(dirname(__DIR__) . '/scripts/lftp-upload.sh');
 
-        self::assertStringContainsString('FTPS upload wrapper v6:', $script);
+        self::assertStringContainsString('FTPS upload wrapper v7:', $script);
         self::assertStringContainsString('FTP_PASSWORD must not contain line breaks', $script);
         self::assertStringContainsString('set cmd:fail-exit true', $script);
         self::assertStringContainsString('set xfer:use-temp-file true', $script);
@@ -74,7 +74,7 @@ final class LftpUploadScriptTest extends TestCase
             fclose($pipes[2]);
 
             self::assertSame(0, proc_close($process), $output);
-            self::assertStringContainsString('FTPS upload wrapper v6:', $output);
+            self::assertStringContainsString('FTPS upload wrapper v7:', $output);
             self::assertStringContainsString('transferring the complete artifact.', $output);
         } finally {
             unlink($fakeLftp);
@@ -193,6 +193,23 @@ BASH
             self::assertSame(0, $status, $output);
             self::assertStringContainsString('FTPS targeted verification succeeded', $output);
             self::assertSame('', file_get_contents($directory . '/mismatches.txt'));
+
+            [$status, $output] = $this->runVerification(
+                $directory,
+                $fakeDirectory,
+                '',
+                false,
+                $directory . '/mismatches.txt',
+                '',
+                'DEPLOYMENT_MANIFEST.sha256',
+                '64'
+            );
+            self::assertSame(1, $status, $output);
+            self::assertStringContainsString('Remote deployment manifest does not match', $output);
+            self::assertSame(
+                "+./DEPLOYMENT_MANIFEST.sha256\n",
+                file_get_contents($directory . '/mismatches.txt')
+            );
         } finally {
             unlink($fakeLftp);
             rmdir($fakeDirectory);
@@ -268,11 +285,78 @@ BASH
             ));
             self::assertStringContainsString('set xfer:use-temp-file false', $commands);
             self::assertStringNotContainsString('put "' . $artifact . '/unchanged.php"', $commands);
+            self::assertStringNotContainsString('DEPLOYMENT_MANIFEST.sha256', $commands);
+            self::assertStringNotContainsString('.repair-', $commands);
+        } finally {
+            unlink($fakeLftp);
+            unlink($commandLog);
+            rmdir($fakeDirectory);
+            foreach (glob($artifact . '/*') ?: [] as $file) {
+                unlink($file);
+            }
+            rmdir($artifact);
+            unlink($mismatchFile);
+            rmdir($directory);
+        }
+    }
+
+    public function testTargetedRepairSafelyResumesATruncatedManifest(): void
+    {
+        $directory = sys_get_temp_dir() . '/competizionijudo-lftp-manifest-repair-' . bin2hex(random_bytes(8));
+        $artifact = $directory . '/artifact';
+        $fakeDirectory = $directory . '/fake';
+        self::assertTrue(mkdir($artifact, 0700, true));
+        self::assertTrue(mkdir($fakeDirectory, 0700));
+        self::assertNotFalse(file_put_contents($artifact . '/index.php', "<?php echo 'ok';\n"));
+        $this->generateManifest($artifact);
+        $mismatchFile = $directory . '/mismatches.txt';
+        self::assertNotFalse(file_put_contents($mismatchFile, "+./DEPLOYMENT_MANIFEST.sha256\n"));
+
+        $fakeLftp = $fakeDirectory . '/lftp';
+        $commandLog = $fakeDirectory . '/command.log';
+        self::assertNotFalse(file_put_contents($fakeLftp, <<<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+command="$2"
+if [[ "$command" == *'quote PWD'* ]]; then
+  exit 0
+fi
+printf '%s' "$command" > "$FAKE_COMMAND_LOG"
+BASH
+        ));
+        self::assertTrue(chmod($fakeLftp, 0700));
+
+        try {
+            $process = proc_open(
+                ['bash', dirname(__DIR__) . '/scripts/lftp-upload.sh', 'repair', 'site/prod/', $artifact, $mismatchFile],
+                [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+                $pipes,
+                dirname(__DIR__),
+                [
+                    'PATH' => $fakeDirectory . ':' . (string) getenv('PATH'),
+                    'FTP_SERVER' => 'ftp.example.test',
+                    'FTP_PORT' => '21',
+                    'FTP_USERNAME' => 'synthetic-user',
+                    'FTP_PASSWORD' => 'synthetic-password',
+                    'FAKE_COMMAND_LOG' => $commandLog,
+                ]
+            );
+            self::assertIsResource($process);
+
+            $output = (string) stream_get_contents($pipes[1]) . (string) stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            self::assertSame(0, proc_close($process), $output);
+            self::assertStringContainsString('retransferring 0 mismatched artifact files', $output);
+            self::assertStringContainsString('safely resuming the manifest', $output);
+            $commands = (string) file_get_contents($commandLog);
+            self::assertStringContainsString('set xfer:use-temp-file false', $commands);
             self::assertStringContainsString(
-                'put "' . $artifact . '/DEPLOYMENT_MANIFEST.sha256" -o "site/prod/DEPLOYMENT_MANIFEST.sha256"',
+                'put -c "' . $artifact . '/DEPLOYMENT_MANIFEST.sha256" '
+                    . '-o "site/prod/DEPLOYMENT_MANIFEST.sha256"',
                 $commands
             );
-            self::assertStringNotContainsString('.repair-', $commands);
         } finally {
             unlink($fakeLftp);
             unlink($commandLog);

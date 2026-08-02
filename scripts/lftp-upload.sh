@@ -24,7 +24,7 @@ if [[ "$FTP_SERVER" == 'ftp.competizionijudo.it' ]]; then
   FTP_SERVER='ftplnx02.aruba.it'
 fi
 
-echo "FTPS upload wrapper v6: preflighting ${FTP_SERVER}:${FTP_PORT}."
+echo "FTPS upload wrapper v7: preflighting ${FTP_SERVER}:${FTP_PORT}."
 
 lftp_quote() {
   local value="$1"
@@ -246,7 +246,7 @@ repair_mismatched_deployment_files() {
 
   local commands="mkdir -pf $(lftp_quote "$remote_dir");"
   local mismatch_record relative_path local_path remote_path parent_path
-  local repaired=0 resumed=0 repair_manifest=false
+  local repaired=0 resumed=0 repair_manifest=false repair_manifest_resume=false
   while IFS= read -r mismatch_record; do
     if ! parse_mismatch_record "$mismatch_record"; then
       echo "The targeted FTP repair list contains an unsafe path: ${mismatch_record}" >&2
@@ -255,6 +255,7 @@ repair_mismatched_deployment_files() {
     relative_path="$mismatch_relative_path"
     if [[ "$relative_path" == './DEPLOYMENT_MANIFEST.sha256' ]]; then
       repair_manifest=true
+      repair_manifest_resume="$mismatch_resume"
       continue
     fi
     if [[ ! "$relative_path" =~ ^\./[A-Za-z0-9._/-]+$ || -z "${local_entries[$relative_path]:-}" ]]; then
@@ -282,9 +283,20 @@ repair_mismatched_deployment_files() {
     echo 'The targeted FTP repair list contains no artifact files.' >&2
     exit 2
   fi
-  commands+=" put $(lftp_quote "$local_manifest") -o $(lftp_quote "${remote_dir%/}/DEPLOYMENT_MANIFEST.sha256");"
+  local manifest_action='leaving the verified manifest unchanged'
+  if [[ "$repair_manifest" == true ]]; then
+    if [[ "$repair_manifest_resume" == true ]]; then
+      commands+=" set xfer:use-temp-file false; cache flush;"
+      commands+=" put -c $(lftp_quote "$local_manifest") -o $(lftp_quote "${remote_dir%/}/DEPLOYMENT_MANIFEST.sha256");"
+      commands+=" set xfer:use-temp-file true;"
+      manifest_action='safely resuming the manifest from a verified remote prefix'
+    else
+      commands+=" put $(lftp_quote "$local_manifest") -o $(lftp_quote "${remote_dir%/}/DEPLOYMENT_MANIFEST.sha256");"
+      manifest_action='retransferring the manifest'
+    fi
+  fi
   echo "FTPS repair: retransferring ${repaired} mismatched artifact files " \
-    "(${resumed} safely resumed from a verified remote prefix) and the manifest."
+    "(${resumed} safely resumed from a verified remote prefix); ${manifest_action}."
   if ! lftp -c "${connection_settings} ${open_command} ${commands}"; then
     echo 'FTPS targeted artifact repair failed.' >&2
     exit 1
@@ -411,7 +423,15 @@ verify_remote_files() {
 
   if [[ "$manifest_failed" == true ]]; then
     if [[ -n "$mismatch_file" ]]; then
-      printf '%s\n' './DEPLOYMENT_MANIFEST.sha256' >> "$mismatch_file"
+      local manifest_mismatch_record='./DEPLOYMENT_MANIFEST.sha256'
+      local remote_manifest_size local_manifest_size
+      remote_manifest_size="$(stat --format='%s' "$remote_manifest_path")"
+      local_manifest_size="$(stat --format='%s' "$manifest_path")"
+      if (( remote_manifest_size > 0 && remote_manifest_size < local_manifest_size )) \
+        && cmp --silent --bytes="$remote_manifest_size" "$remote_manifest_path" "$manifest_path"; then
+        manifest_mismatch_record="+${manifest_mismatch_record}"
+      fi
+      printf '%s\n' "$manifest_mismatch_record" >> "$mismatch_file"
     fi
     echo 'Remote deployment manifest does not match the tested artifact.' >&2
   fi
