@@ -9,6 +9,22 @@ use Throwable;
 
 final class Application
 {
+    /** @var list<string> */
+    private const SENSITIVE_PATHS = [
+        '/admin/login',
+        '/clubs/confirm-registration',
+        '/clubs/forgot-password',
+        '/clubs/login',
+        '/clubs/register',
+        '/clubs/reset-password',
+    ];
+
+    /** @var list<string> */
+    private const TOKEN_PATHS = [
+        '/clubs/confirm-registration',
+        '/clubs/reset-password',
+    ];
+
     private Router $router;
     private View $view;
     private Logger $logger;
@@ -28,7 +44,7 @@ final class Application
     public function handle(Request $request): Response
     {
         try {
-            return $this->secure($this->router->dispatch($request));
+            return $this->secure($this->router->dispatch($request), $request);
         } catch (HttpException $exception) {
             if ($exception->statusCode() >= 500) {
                 $this->logFailure('application.http_failure', $exception, $request);
@@ -45,7 +61,7 @@ final class Application
                 $this->view->render('errors/' . $exception->statusCode(), $data),
                 $exception->statusCode(),
                 $exception->headers()
-            ));
+            ), $request);
         } catch (Throwable $exception) {
             $this->logFailure('application.unhandled_failure', $exception, $request);
 
@@ -76,22 +92,40 @@ final class Application
                 'reference' => __('errors.reference', ['id' => $request->correlationId()]),
             ], 'layouts/error'),
             500
-        ));
+        ), $request);
     }
 
-    private function secure(Response $response): Response
+    private function secure(Response $response, Request $request): Response
     {
         $headers = [
-            'Content-Security-Policy-Report-Only' => "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; form-action 'self'",
+            'Content-Security-Policy' => "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; form-action 'self'",
             'Permissions-Policy' => 'camera=(), geolocation=(), microphone=()',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
             'X-Content-Type-Options' => 'nosniff',
-            'X-Frame-Options' => 'SAMEORIGIN',
+            'X-Frame-Options' => 'DENY',
         ];
-        if (session_status() === PHP_SESSION_ACTIVE && AuthContext::isAuthenticated()) {
+        if ($this->isSecureRequest($request)) {
+            $headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+        }
+        if (
+            $request->method() !== 'GET'
+            || in_array($request->path(), self::SENSITIVE_PATHS, true)
+            || (session_status() === PHP_SESSION_ACTIVE && AuthContext::isAuthenticated())
+        ) {
             $headers['Cache-Control'] = 'private, no-store, max-age=0';
+        }
+        if (in_array($request->path(), self::TOKEN_PATHS, true)) {
+            $headers['Referrer-Policy'] = 'no-referrer';
         }
 
         return $response->withHeaders($headers);
+    }
+
+    private function isSecureRequest(Request $request): bool
+    {
+        return (
+            trim((string) $request->server('HTTPS', '')) !== ''
+            && strtolower((string) $request->server('HTTPS')) !== 'off'
+        ) || (int) $request->server('SERVER_PORT', 0) === 443;
     }
 }

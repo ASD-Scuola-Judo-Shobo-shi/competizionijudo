@@ -1,7 +1,8 @@
 RewriteEngine On
 
-RewriteRule ^(?:src|config|routes|views|tests|var|vendor)(?:/|$) - [F,L]
-RewriteRule ^(?:composer\.(?:json|lock)|phpunit\.xml|phpstan\.neon|phpcs\.xml|Makefile|README\.md|\.env.*)$ - [F,L]
+RewriteRule ^(?:\.git|\.github|config|docs|lang|migrations|routes|scripts|src|tests|var|vendor|views)(?:/|$) - [F,L,NC]
+RewriteRule ^(?:composer\.(?:json|lock)|phpunit\.xml|phpstan\.neon|phpcs\.xml|Makefile|README\.md|REVISION|DEPLOYMENT_(?:MANIFEST\.sha256|TRANSFER_PROTOCOL))$ - [F,L,NC]
+RewriteRule ^\.(?!well-known(?:/|$)) - [F,L,NC]
 
 RewriteCond %{REQUEST_URI} !^/public/
 RewriteRule ^(.*)$ public/$1 [L]

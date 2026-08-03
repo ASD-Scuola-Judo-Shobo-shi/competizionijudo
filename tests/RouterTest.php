@@ -115,7 +115,8 @@ final class RouterTest extends TestCase
         );
         self::assertStringContainsString('class="content-panel error-card"', $response->content());
         self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
-        self::assertArrayHasKey('Content-Security-Policy-Report-Only', $response->headers());
+        self::assertArrayHasKey('Content-Security-Policy', $response->headers());
+        self::assertArrayNotHasKey('Content-Security-Policy-Report-Only', $response->headers());
     }
 
     public function testUnknownPathReturnsLocalizedRecoveryPage(): void
