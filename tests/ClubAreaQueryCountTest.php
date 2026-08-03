@@ -31,7 +31,7 @@ final class ClubAreaQueryCountTest extends TestCase
 
         Session::destroy();
         Session::start();
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
     }
 
     protected function tearDown(): void

@@ -34,6 +34,11 @@ final class InMemoryThrottleDatabase extends PDO
     {
     }
 
+    public function getAttribute(int $attribute): mixed
+    {
+        return $attribute === PDO::ATTR_DRIVER_NAME ? 'mysql' : null;
+    }
+
     /** @param array<array-key, mixed> $options */
     public function prepare(string $query, array $options = []): PDOStatement|false
     {
@@ -142,7 +147,9 @@ final class InMemoryThrottleDatabase extends PDO
         }
 
         if (str_starts_with($sql, 'DELETE FROM authentication_throttles WHERE throttle_key')) {
-            unset($this->records[(string) $parameters[0]]);
+            foreach ($parameters as $key) {
+                unset($this->records[(string) $key]);
+            }
 
             return ['row' => false];
         }

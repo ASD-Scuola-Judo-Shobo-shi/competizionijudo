@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Security\CredentialFingerprint;
+
 final class Club
 {
     public function __construct(
@@ -80,6 +82,17 @@ final class Club
         $row = $stmt->fetch();
 
         return $row ? self::fromArray($row) : null;
+    }
+
+    public static function credentialFingerprintById(int $id): ?string
+    {
+        $statement = Database::connection()->prepare('SELECT password_hash FROM clubs WHERE id = ?');
+        $statement->execute([$id]);
+        $passwordHash = $statement->fetchColumn();
+
+        return is_string($passwordHash)
+            ? CredentialFingerprint::forClubPasswordHash($passwordHash)
+            : null;
     }
 
     /**

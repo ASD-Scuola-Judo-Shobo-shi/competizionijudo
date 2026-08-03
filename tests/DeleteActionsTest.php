@@ -71,7 +71,7 @@ final class DeleteActionsTest extends TestCase
     public function testInvalidCsrfRejectsEveryDeleteBeforeDatabaseAccess(): void
     {
         $this->setDatabase($this->databaseExpectingNoAccess());
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $adminRequest = new Request('POST', '/delete', [], [
             'csrf_token' => 'synthetic-invalid-csrf',
             'club_id' => '401',
@@ -82,7 +82,7 @@ final class DeleteActionsTest extends TestCase
         $this->assertCsrfRejected(static fn(): Response => $admin->deleteClub($adminRequest));
         $this->assertCsrfRejected(static fn(): Response => $admin->deleteEvent($adminRequest));
 
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $clubRequest = new Request('POST', '/clubs/delete-athlete', [], [
             'csrf_token' => 'synthetic-invalid-csrf',
             'athlete_id' => '301',
@@ -93,7 +93,7 @@ final class DeleteActionsTest extends TestCase
 
     public function testValidAdminRequestDeletesClub(): void
     {
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $this->setDatabase($this->databaseExpectingDelete('DELETE FROM clubs WHERE id = ?', [401]));
         $request = new Request('POST', '/admin/clubs/delete', [], [
             'csrf_token' => csrf_token(),
@@ -107,7 +107,7 @@ final class DeleteActionsTest extends TestCase
 
     public function testValidAdminRequestDeletesEvent(): void
     {
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $database = new PDO('sqlite::memory:');
         $database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->createEventTable($database);
@@ -149,7 +149,7 @@ final class DeleteActionsTest extends TestCase
 
     public function testReplacingEventUploadPurgesPreviousFile(): void
     {
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $database = new PDO('sqlite::memory:');
         $database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->createEventTable($database);
@@ -236,7 +236,7 @@ final class DeleteActionsTest extends TestCase
 
     public function testValidClubRequestScopesAthleteDeleteToSessionClub(): void
     {
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $this->setDatabase($this->databaseExpectingDelete(
             'DELETE FROM athletes WHERE id = ? AND club_id = ?',
             [301, 201]

@@ -18,6 +18,7 @@ use App\Model\EntryRegistrationRepository;
 use App\Model\EntryRegistrationResult;
 use App\Model\EventRegistrationException;
 use App\Model\Event;
+use App\Security\CredentialFingerprint;
 use App\Service\EventEntriesCsvTransfer;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -156,7 +157,7 @@ final class EventLifecycleTest extends TestCase
     public function testClubEntryDetailsAreAlwaysScopedToTheSessionClub(array $query): void
     {
         $this->seedEntriesForTwoClubs();
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries($query);
 
@@ -167,7 +168,7 @@ final class EventLifecycleTest extends TestCase
     public function testAnonymousCanonicalEntryRouteShowsEntriesForPublishedEvent(): void
     {
         $this->seedEntriesForTwoClubs();
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
 
         $response = $this->dispatchEntries(['event' => '101', 'club' => '202']);
 
@@ -193,7 +194,7 @@ final class EventLifecycleTest extends TestCase
             101, 202, 302, 'SnapshotForeign', 'Athlete', 'F', '2013-02-03', 39,
             'yellow', 'SNAPSHOT-FOREIGN', 'competitive', '-40 kg',
         ]);
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $request = new Request('GET', '/admin/events/details', ['event_id' => '101']);
 
         $response = (new AdminController($this->view, $request))->eventDetails($request);
@@ -299,7 +300,7 @@ final class EventLifecycleTest extends TestCase
             $this->insertOwnAthlete($athleteId, sprintf('Paged%02d', $index), 'Athlete');
             $entry->execute([101, 201, $athleteId]);
         }
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $request = new Request('GET', '/admin/events/details', [
             'event_id' => '101',
             'club_id' => '201',
@@ -334,7 +335,7 @@ final class EventLifecycleTest extends TestCase
     public function testClubEntryDetailsDoNotExposeUnpublishedEventMetadata(): void
     {
         $this->insertEvent(published: false, description: 'UNPUBLISHED-ENTRY-METADATA');
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries(['event' => '101']);
 
@@ -354,7 +355,7 @@ final class EventLifecycleTest extends TestCase
              WHEN NEW.athlete_id = 303
              BEGIN SELECT RAISE(FAIL, 'Synthetic entry failure'); END"
         );
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
         $this->logPath = sys_get_temp_dir() . '/competizionijudo-registration-'
             . bin2hex(random_bytes(8)) . '.log';
         $post = new Request(
@@ -409,7 +410,7 @@ final class EventLifecycleTest extends TestCase
         $this->database->prepare(
             'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
         )->execute([101, 201, 301]);
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $get = new Request('GET', '/events/register', [
             'event' => '101',
@@ -454,7 +455,7 @@ final class EventLifecycleTest extends TestCase
         $today = date('Y-m-d');
         $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: $today);
         $this->database->exec('UPDATE athletes SET weight_kg = NULL WHERE id = 303');
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
         $post = new Request(
             'POST',
             '/events/register?event=101',
@@ -503,7 +504,7 @@ final class EventLifecycleTest extends TestCase
         $this->database->exec(
             'UPDATE event_registration_options SET fee_cents = 1900 WHERE id = 501'
         );
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $post = new Request(
             'POST',
@@ -564,7 +565,7 @@ final class EventLifecycleTest extends TestCase
         $today = date('Y-m-d');
         $eventDate = date('Y-m-d', strtotime('+1 day'));
         $this->insertEvent(date: $eventDate, deadline: $today);
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
         $mailer = new FakePasswordResetMailer();
         $post = new Request(
             'POST',
@@ -609,7 +610,7 @@ final class EventLifecycleTest extends TestCase
     {
         $today = date('Y-m-d');
         $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: $today);
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
         $post = new Request(
             'POST',
             '/events/register?event=101',
@@ -635,7 +636,7 @@ final class EventLifecycleTest extends TestCase
     public function testEntriesWithoutEventIdShowsUpcomingEvents(): void
     {
         $this->insertEvent(date: '2099-06-29');
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
 
         $response = $this->dispatchEntries([]);
 
@@ -671,7 +672,7 @@ final class EventLifecycleTest extends TestCase
             $this->insertOwnAthlete($athleteId, sprintf('Paged%02d', $index), 'Athlete');
             $entry->execute([101, 201, $athleteId]);
         }
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries([
             'event' => '101',
@@ -696,7 +697,7 @@ final class EventLifecycleTest extends TestCase
         $insert->execute([101, 201, 301, 40, '-42 kg']);
         $insert->execute([101, 201, 303, 55, '-55 kg']);
         $insert->execute([101, 202, 302, 40, '-42 kg']);
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries([
             'event' => '101',
@@ -731,7 +732,7 @@ final class EventLifecycleTest extends TestCase
         $this->database->prepare(
             'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
         )->execute([101, 201, 301]);
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries(['event' => '101']);
 

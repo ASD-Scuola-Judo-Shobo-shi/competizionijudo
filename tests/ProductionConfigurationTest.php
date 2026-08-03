@@ -97,6 +97,16 @@ final class ProductionConfigurationTest extends TestCase
         ProductionConfiguration::assertReady(new FileLogger($this->logPath), $configuration);
     }
 
+    public function testMalformedAdministratorPasswordHashIsRejected(): void
+    {
+        $configuration = $this->validConfiguration();
+        $configuration['ADMIN_PASS_HASH'] = 'not-a-password-hash';
+
+        $this->expectException(RuntimeException::class);
+
+        ProductionConfiguration::assertReady(new FileLogger($this->logPath), $configuration);
+    }
+
     /** @return array<string, string> */
     private function validConfiguration(): array
     {
@@ -108,7 +118,7 @@ final class ProductionConfigurationTest extends TestCase
             'DB_USER' => 'synthetic_user',
             'DB_PASS' => 'synthetic-password',
             'ADMIN_USER' => 'synthetic-admin',
-            'ADMIN_PASS_HASH' => 'synthetic-password-hash',
+            'ADMIN_PASS_HASH' => '$2y$12$y16PQjTRvww7KLhAU3QVi.1TIefpeMduKDDlYs9dXN3zVyrDeoA8q',
             'MIGRATIONS_TOKEN' => 'synthetic-migration-token',
             'PASSWORD_RESET_MAILER' => 'aruba',
             'MAIL_FROM_ADDRESS' => 'postmaster@example.test',

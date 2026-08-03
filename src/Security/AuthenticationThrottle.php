@@ -6,9 +6,13 @@ namespace App\Security;
 
 interface AuthenticationThrottle
 {
-    public function isBlocked(string $scope, string $account, string $networkSignal): bool;
-
-    public function recordAttempt(string $scope, string $account, string $networkSignal): void;
+    /**
+     * Atomically reserve an authentication attempt.
+     *
+     * Returns false without reserving an attempt when any applicable limit is
+     * already blocked.
+     */
+    public function consume(string $scope, string $account, string $networkSignal): bool;
 
     public function clear(string $scope, string $account, string $networkSignal): void;
 }

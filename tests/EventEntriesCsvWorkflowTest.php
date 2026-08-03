@@ -46,7 +46,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
 
     public function testAdministratorCanExportOneEventsEntriesAsCsv(): void
     {
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $request = new Request('GET', '/admin/events/export', ['event_id' => '701']);
 
         $response = (new AdminController($this->view, $request))->exportEventEntries($request);
@@ -96,7 +96,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
             'UPDATE events SET closed = 0 WHERE id = 701;
              ALTER TABLE entries DROP COLUMN snapshot_birth_date'
         );
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $request = new Request('GET', '/admin/events/export', ['event_id' => '701']);
 
         $response = (new AdminController($this->view, $request))->exportEventEntries($request);
@@ -132,7 +132,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
              VALUES (802, 701, 202, 302, 'Foreign', 'Athlete', 'F', 42, 'blue', 'FOREIGN-001',
                      '2012-06-07', 'competitive', '-42 kg')"
         );
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $request = new Request('GET', '/events/entries/export', [
             'event' => '701',
             'weight_category' => '-42 kg',
@@ -155,7 +155,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
     public function testClubEntryExportIsUnavailableUntilTheEventCloses(): void
     {
         $this->database->exec('UPDATE events SET closed = 0 WHERE id = 701');
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $request = new Request('GET', '/events/entries/export', ['event' => '701']);
 
         $response = (new EventController($this->view, $request))->exportClubEntries($request);

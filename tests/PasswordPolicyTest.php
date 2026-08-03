@@ -12,6 +12,7 @@ use App\Core\View;
 use App\Localization;
 use App\Model\Database;
 use App\Security\PasswordPolicy;
+use App\Security\PasswordVerifier;
 use PDO;
 use PDOStatement;
 use PHPUnit\Framework\TestCase;
@@ -50,6 +51,18 @@ final class PasswordPolicyTest extends TestCase
         self::assertFalse(PasswordPolicy::accepts(str_repeat('x', PasswordPolicy::MINIMUM_LENGTH - 1)));
         self::assertTrue(PasswordPolicy::accepts(str_repeat('x', PasswordPolicy::MINIMUM_LENGTH)));
         self::assertTrue(PasswordPolicy::accepts(str_repeat('à', PasswordPolicy::MINIMUM_LENGTH)));
+    }
+
+    public function testPasswordVerifierNeverAcceptsUnknownOrMalformedCredentialHashes(): void
+    {
+        $password = 'SyntheticPassword123!';
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        self::assertIsString($passwordHash);
+
+        self::assertTrue(PasswordVerifier::matches($password, $passwordHash));
+        self::assertFalse(PasswordVerifier::matches('wrong-password', $passwordHash));
+        self::assertFalse(PasswordVerifier::matches($password, null));
+        self::assertFalse(PasswordVerifier::matches($password, 'malformed-hash'));
     }
 
     public function testRegistrationRejectsShortPasswordBeforeDatabaseAccess(): void
@@ -124,7 +137,7 @@ final class PasswordPolicyTest extends TestCase
         $database = $this->createMock(PDO::class);
         $database->expects(self::once())->method('prepare')->willReturn($club);
         $this->setDatabase($database);
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $repository = new FakePasswordResetRepository();
         $request = $this->adminRequest(str_repeat('x', PasswordPolicy::MINIMUM_LENGTH - 1));
 
@@ -151,7 +164,7 @@ final class PasswordPolicyTest extends TestCase
                 };
             });
         $this->setDatabase($database);
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $repository = new FakePasswordResetRepository();
         $acceptedPassword = str_repeat('x', PasswordPolicy::MINIMUM_LENGTH);
         $request = $this->adminRequest($acceptedPassword);

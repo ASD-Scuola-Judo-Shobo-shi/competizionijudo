@@ -43,7 +43,7 @@ final class AthleteCsvWorkflowTest extends TestCase
         $this->view = new View(dirname(__DIR__) . '/views');
         Localization::setLocale('en');
         $this->resetSession();
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
     }
 
     protected function tearDown(): void

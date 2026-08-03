@@ -8,8 +8,10 @@ use App\Core\Application;
 use App\Core\Request;
 use App\Core\Session;
 use App\Localization;
+use App\Model\Club;
 use App\Model\ClubDataRightsDeclaration;
 use App\Model\Database;
+use App\Security\CredentialFingerprint;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -345,7 +347,7 @@ final class CriticalWorkflowTest extends TestCase
         self::assertStringContainsString('Club', $clubEntries->content());
 
         $this->resetSession();
-        Session::set('is_admin', true);
+        $this->authenticateAdministrator();
         $adminEntries = $this->request('GET', '/events/entries', [
             'event' => (string) $eventId,
             'club' => (string) $foreignClubId,
@@ -354,7 +356,7 @@ final class CriticalWorkflowTest extends TestCase
         self::assertStringContainsString(__('events.entries_subscribed'), $adminEntries->content());
 
         $this->resetSession();
-        Session::set('club_id', $clubId);
+        $this->authenticateClub($clubId);
         $deleteAthlete = $this->request('POST', '/clubs/delete-athlete', [], [
             'csrf_token' => csrf_token(),
             'athlete_id' => (string) $athleteId,
@@ -365,7 +367,7 @@ final class CriticalWorkflowTest extends TestCase
         )->fetchColumn());
 
         $this->resetSession();
-        Session::set('is_admin', true);
+        $this->authenticateAdministrator();
         $deleteEvent = $this->request('POST', '/admin/events/delete', [], [
             'csrf_token' => csrf_token(),
             'event_id' => (string) $eventId,
@@ -427,6 +429,21 @@ final class CriticalWorkflowTest extends TestCase
         ]);
 
         return $clubId;
+    }
+
+    private function authenticateAdministrator(): void
+    {
+        Session::authenticateAdministrator(CredentialFingerprint::forAdministrator(
+            (string) env('ADMIN_USER'),
+            (string) env('ADMIN_PASS_HASH')
+        ));
+    }
+
+    private function authenticateClub(int $clubId): void
+    {
+        $fingerprint = Club::credentialFingerprintById($clubId);
+        self::assertNotNull($fingerprint);
+        Session::authenticateClub($clubId, $fingerprint);
     }
 
     private function createSchema(): void

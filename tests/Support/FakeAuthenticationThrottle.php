@@ -18,21 +18,21 @@ final class FakeAuthenticationThrottle implements AuthenticationThrottle
     {
     }
 
-    public function isBlocked(string $scope, string $account, string $networkSignal): bool
-    {
-        return ($this->attempts[$this->key($scope, $account, $networkSignal)] ?? 0)
-            >= $this->maximumAttempts;
-    }
-
-    public function recordAttempt(string $scope, string $account, string $networkSignal): void
+    public function consume(string $scope, string $account, string $networkSignal): bool
     {
         $key = $this->key($scope, $account, $networkSignal);
+        if (($this->attempts[$key] ?? 0) >= $this->maximumAttempts) {
+            return false;
+        }
+
         $this->attempts[$key] = ($this->attempts[$key] ?? 0) + 1;
         $this->recorded[] = [
             'scope' => $scope,
             'account' => $account,
             'network' => $networkSignal,
         ];
+
+        return true;
     }
 
     public function clear(string $scope, string $account, string $networkSignal): void

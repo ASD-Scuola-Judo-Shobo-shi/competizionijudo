@@ -47,7 +47,7 @@ final class ClubAreaCsrfTest extends TestCase
     public function testMissingTokenRejectsAthleteAddBeforeDatabaseAccess(): void
     {
         $this->setDatabase($this->databaseExpectingNoAccess());
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $request = $this->athleteRequest(['csrf_token' => null, 'athlete_id' => '']);
 
         $this->assertCsrfRejected($request);
@@ -56,7 +56,7 @@ final class ClubAreaCsrfTest extends TestCase
     public function testInvalidTokenRejectsAthleteEditBeforeDatabaseAccess(): void
     {
         $this->setDatabase($this->databaseExpectingNoAccess());
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $request = $this->athleteRequest([
             'csrf_token' => 'synthetic-invalid-csrf',
             'athlete_id' => '301',
@@ -96,7 +96,7 @@ final class ClubAreaCsrfTest extends TestCase
             ->with('SELECT * FROM athletes WHERE id = LAST_INSERT_ID()')
             ->willReturn($athleteStatement);
         $this->setDatabase($database);
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $request = $this->athleteRequest([
             'csrf_token' => csrf_token(),
             'athlete_id' => '',
@@ -141,7 +141,7 @@ final class ClubAreaCsrfTest extends TestCase
             );
         $database->expects(self::never())->method('query');
         $this->setDatabase($database);
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $request = $this->athleteRequest([
             'csrf_token' => csrf_token(),
             'athlete_id' => '301',
@@ -155,7 +155,7 @@ final class ClubAreaCsrfTest extends TestCase
     public function testInlineAthleteUpdateRejectsMissingTokenBeforeDatabaseAccess(): void
     {
         $this->setDatabase($this->databaseExpectingNoAccess());
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $request = $this->inlineAthleteRequest(['csrf_token' => null]);
 
         try {
@@ -194,7 +194,7 @@ final class ClubAreaCsrfTest extends TestCase
             );
         $database->expects(self::never())->method('query');
         $this->setDatabase($database);
-        Session::set('club_id', 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $request = $this->inlineAthleteRequest(['csrf_token' => csrf_token()]);
 
         $response = (new ClubAreaController($this->view, $request))->updateAthleteInline($request);

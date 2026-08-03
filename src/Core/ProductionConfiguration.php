@@ -87,6 +87,14 @@ final class ProductionConfiguration
             $issues[] = 'invalid.app_debug';
         }
 
+        $adminPasswordHash = trim((string) ($configuration['ADMIN_PASS_HASH'] ?? ''));
+        if (
+            $adminPasswordHash !== ''
+            && (password_get_info($adminPasswordHash)['algo'] ?? null) === null
+        ) {
+            $issues[] = 'invalid.admin_pass_hash';
+        }
+
         foreach (['MAIL_FROM_ADDRESS', 'APP_OWNER_EMAIL'] as $key) {
             $email = trim((string) ($configuration[$key] ?? ''));
             if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {

@@ -98,7 +98,7 @@ final class IntegrationTest extends TestCase
     {
         $throttle = new FakeAuthenticationThrottle();
         for ($attempt = 0; $attempt < 5; $attempt++) {
-            $throttle->recordAttempt('admin-login', 'wrong', '192.0.2.20');
+            $throttle->consume('admin-login', 'wrong', '192.0.2.20');
         }
 
         $this->startCleanSession();
@@ -120,7 +120,7 @@ final class IntegrationTest extends TestCase
     public function testClubLoginUsesPersistentThrottleBeforeAccountLookup(): void
     {
         $throttle = new FakeAuthenticationThrottle(1);
-        $throttle->recordAttempt('club-login', 'club@example.test', '192.0.2.30');
+        $throttle->consume('club-login', 'club@example.test', '192.0.2.30');
         $this->startCleanSession();
 
         $request = new Request('POST', '/clubs/login', [], [

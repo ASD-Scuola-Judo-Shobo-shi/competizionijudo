@@ -11,6 +11,7 @@ use App\Core\Session;
 use App\Core\View;
 use App\Localization;
 use App\Model\Database;
+use App\Security\AuthenticationThrottle;
 use App\Security\PasswordPolicy;
 use PDO;
 use PHPUnit\Framework\TestCase;
@@ -126,8 +127,35 @@ final class ClubRegistrationControllerTest extends TestCase
         self::assertStringNotContainsString('token=', $response->content());
     }
 
-    private function submit(FakePasswordResetMailer $mailer, Logger $logger): \App\Core\Response
+    public function testRegistrationThrottlePreventsConfirmationEmailAbuse(): void
     {
+        $throttle = new FakeAuthenticationThrottle(1);
+        self::assertTrue($throttle->consume(
+            'club-registration',
+            'new.club@example.test',
+            '192.0.2.50'
+        ));
+        $mailer = new FakePasswordResetMailer();
+
+        $response = $this->submit($mailer, $this->createStub(Logger::class), $throttle);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(
+            e(__('club.register.errors.too_many_attempts')),
+            $response->content()
+        );
+        self::assertSame([], $mailer->confirmationSent);
+        self::assertSame(
+            0,
+            (int) $this->database->query('SELECT COUNT(*) FROM club_registration_confirmations')->fetchColumn()
+        );
+    }
+
+    private function submit(
+        FakePasswordResetMailer $mailer,
+        Logger $logger,
+        ?AuthenticationThrottle $throttle = null
+    ): \App\Core\Response {
         $password = str_repeat('x', PasswordPolicy::MINIMUM_LENGTH);
         $request = new Request('POST', '/clubs/register', [], [
             'csrf_token' => csrf_token(),
@@ -145,12 +173,12 @@ final class ClubRegistrationControllerTest extends TestCase
             'password' => $password,
             'password2' => $password,
             'athlete_data_rights_declaration' => '1',
-        ]);
+        ], ['REMOTE_ADDR' => '192.0.2.50']);
         $controller = new ClubController(
             $this->view,
             $request,
             new FakePasswordResetTokenIssuer(null),
-            new FakeAuthenticationThrottle(),
+            $throttle ?? new FakeAuthenticationThrottle(),
             new FakePasswordResetRepository(),
             $logger,
             $mailer

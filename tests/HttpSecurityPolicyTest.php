@@ -103,6 +103,18 @@ final class HttpSecurityPolicyTest extends TestCase
         self::assertArrayNotHasKey('Content-Security-Policy-Report-Only', $response->headers());
         self::assertStringContainsString("frame-ancestors 'none'", $response->headers()['Content-Security-Policy']);
         self::assertSame('DENY', $response->headers()['X-Frame-Options']);
+        self::assertSame('0', $response->headers()['X-XSS-Protection']);
+    }
+
+    public function testPublicApachePolicyMatchesApplicationFrameAndXssPolicy(): void
+    {
+        $policy = file_get_contents(dirname(__DIR__) . '/public/.htaccess');
+        self::assertIsString($policy);
+
+        self::assertStringContainsString('Header always set X-Frame-Options "DENY"', $policy);
+        self::assertStringContainsString('Header always set X-XSS-Protection "0"', $policy);
+        self::assertStringNotContainsString('X-Frame-Options "SAMEORIGIN"', $policy);
+        self::assertStringNotContainsString('X-XSS-Protection "1; mode=block"', $policy);
     }
 
     #[DataProvider('sensitiveApplicationPaths')]

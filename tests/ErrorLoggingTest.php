@@ -85,7 +85,7 @@ final class ErrorLoggingTest extends TestCase
         $internalDetail = 'database host detail SENSITIVE-D';
         $throttle = $this->createMock(AuthenticationThrottle::class);
         $throttle->expects(self::once())
-            ->method('isBlocked')
+            ->method('consume')
             ->willThrowException(new RuntimeException($internalDetail));
         $request = new Request(
             'POST',

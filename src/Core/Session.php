@@ -10,7 +10,12 @@ use RuntimeException;
 final class Session
 {
     private const CONTEXT_KEY = '_session_context';
-    private const CONTEXT_VERSION = 'v2';
+    private const CONTEXT_VERSION = 'v3';
+    private const AUTHENTICATED_AT_KEY = '_authenticated_at';
+    private const LAST_ACTIVITY_AT_KEY = '_last_activity_at';
+    private const CREDENTIAL_FINGERPRINT_KEY = '_credential_fingerprint';
+    private const IDLE_TIMEOUT_SECONDS = 1800;
+    private const ABSOLUTE_TIMEOUT_SECONDS = 43200;
 
     private static ?SessionConfiguration $configuration = null;
 
@@ -127,14 +132,14 @@ final class Session
         session_regenerate_id(true);
     }
 
-    public static function authenticateClub(int $clubId): void
+    public static function authenticateClub(int $clubId, string $credentialFingerprint): void
     {
-        self::authenticate(SessionPrincipal::club($clubId));
+        self::authenticate(SessionPrincipal::club($clubId), $credentialFingerprint);
     }
 
-    public static function authenticateAdministrator(): void
+    public static function authenticateAdministrator(string $credentialFingerprint): void
     {
-        self::authenticate(SessionPrincipal::administrator());
+        self::authenticate(SessionPrincipal::administrator(), $credentialFingerprint);
     }
 
     public static function principal(): ?SessionPrincipal
@@ -145,13 +150,49 @@ final class Session
             return null;
         }
 
-        return match ($principal['type']) {
+        $resolved = match ($principal['type']) {
             'administrator' => SessionPrincipal::administrator(),
-            'club' => isset($principal['club_id']) && is_int($principal['club_id'])
+            'club' => isset($principal['club_id'])
+                && is_int($principal['club_id'])
+                && $principal['club_id'] > 0
                 ? SessionPrincipal::club($principal['club_id'])
                 : null,
             default => null,
         };
+
+        if ($resolved === null || !self::authenticationLifetimeIsValid(time())) {
+            self::invalidateAuthentication();
+
+            return null;
+        }
+
+        $_SESSION[self::LAST_ACTIVITY_AT_KEY] = time();
+
+        return $resolved;
+    }
+
+    public static function credentialFingerprint(): ?string
+    {
+        self::start();
+        $fingerprint = $_SESSION[self::CREDENTIAL_FINGERPRINT_KEY] ?? null;
+
+        return is_string($fingerprint) && preg_match('/\A[a-f0-9]{64}\z/', $fingerprint) === 1
+            ? $fingerprint
+            : null;
+    }
+
+    public static function invalidateAuthentication(): void
+    {
+        self::start();
+        $locale = $_SESSION['locale'] ?? null;
+        session_regenerate_id(true);
+        $_SESSION = [
+            self::CONTEXT_KEY => self::context(),
+            'csrf_token' => bin2hex(random_bytes(32)),
+        ];
+        if (is_string($locale) && in_array($locale, ['it', 'en'], true)) {
+            $_SESSION['locale'] = $locale;
+        }
     }
 
     public static function destroy(): void
@@ -225,10 +266,17 @@ final class Session
         return session_id();
     }
 
-    private static function authenticate(SessionPrincipal $principal): void
-    {
+    private static function authenticate(
+        SessionPrincipal $principal,
+        string $credentialFingerprint
+    ): void {
         self::start();
+        if (preg_match('/\A[a-f0-9]{64}\z/', $credentialFingerprint) !== 1) {
+            throw new \InvalidArgumentException('A credential fingerprint must be a SHA-256 digest.');
+        }
+
         $locale = $_SESSION['locale'] ?? null;
+        $now = time();
         session_regenerate_id(true);
         $_SESSION = [
             self::CONTEXT_KEY => self::context(),
@@ -236,7 +284,10 @@ final class Session
                 ? ['type' => 'club', 'club_id' => $principal->clubId]
                 : ['type' => 'administrator'],
             'csrf_token' => bin2hex(random_bytes(32)),
+            self::AUTHENTICATED_AT_KEY => $now,
+            self::LAST_ACTIVITY_AT_KEY => $now,
         ];
+        $_SESSION[self::CREDENTIAL_FINGERPRINT_KEY] = $credentialFingerprint;
         if (is_string($locale) && in_array($locale, ['it', 'en'], true)) {
             $_SESSION['locale'] = $locale;
         }
@@ -245,6 +296,22 @@ final class Session
         } else {
             $_SESSION['is_admin'] = true;
         }
+    }
+
+    private static function authenticationLifetimeIsValid(int $now): bool
+    {
+        $authenticatedAt = $_SESSION[self::AUTHENTICATED_AT_KEY] ?? null;
+        $lastActivityAt = $_SESSION[self::LAST_ACTIVITY_AT_KEY] ?? null;
+        if (!is_int($authenticatedAt) || !is_int($lastActivityAt)) {
+            return false;
+        }
+
+        if ($authenticatedAt > $lastActivityAt || $lastActivityAt > $now) {
+            return false;
+        }
+
+        return $now - $authenticatedAt < self::ABSOLUTE_TIMEOUT_SECONDS
+            && $now - $lastActivityAt < self::IDLE_TIMEOUT_SECONDS;
     }
 
     private static function context(): string

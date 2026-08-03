@@ -22,31 +22,87 @@ final class AuthenticationThrottleTest extends TestCase
         $throttle = new DatabaseAuthenticationThrottle($database, $clock);
 
         for ($attempt = 0; $attempt < 5; $attempt++) {
-            $throttle->recordAttempt(
+            self::assertTrue($throttle->consume(
                 'club-login',
                 ' Club@Example.Test ',
                 '198.51.100.12'
-            );
+            ));
         }
 
-        self::assertTrue($throttle->isBlocked('club-login', 'club@example.test', '198.51.100.12'));
+        self::assertFalse($throttle->consume('club-login', 'club@example.test', '198.51.100.12'));
         $newInstance = new DatabaseAuthenticationThrottle($database, $clock);
-        self::assertTrue($newInstance->isBlocked('CLUB-LOGIN', 'CLUB@EXAMPLE.TEST', '198.51.100.12'));
-        self::assertCount(1, $database->records);
+        self::assertFalse($newInstance->consume('CLUB-LOGIN', 'CLUB@EXAMPLE.TEST', '198.51.100.12'));
+        self::assertCount(3, $database->records);
 
-        $key = array_key_first($database->records);
-        self::assertIsString($key);
-        self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $key);
+        foreach (array_keys($database->records) as $key) {
+            self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $key);
+        }
         $persistedData = serialize([$database->records, $database->executedParameters]);
         self::assertStringNotContainsString('club@example.test', strtolower($persistedData));
         self::assertStringNotContainsString('198.51.100.12', $persistedData);
 
         $now = $now->modify('+301 seconds');
-        self::assertFalse($newInstance->isBlocked('club-login', 'club@example.test', '198.51.100.12'));
-        $newInstance->recordAttempt('club-login', 'club@example.test', '198.51.100.12');
+        self::assertTrue($newInstance->consume('club-login', 'club@example.test', '198.51.100.12'));
 
-        self::assertSame(1, $database->records[$key]['attempt_count']);
-        self::assertNull($database->records[$key]['blocked_until']);
+        $attemptCounts = array_column(array_values($database->records), 'attempt_count');
+        sort($attemptCounts);
+        self::assertSame([1, 1, 6], $attemptCounts);
+    }
+
+    public function testAccountLimitBlocksDistributedGuessingAcrossNetworks(): void
+    {
+        $database = new InMemoryThrottleDatabase();
+        $now = new DateTimeImmutable('2026-06-28 10:00:00', new DateTimeZone('UTC'));
+        $throttle = new DatabaseAuthenticationThrottle($database, static fn(): DateTimeImmutable => $now);
+
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            self::assertTrue($throttle->consume(
+                'club-login',
+                'target@example.test',
+                '198.51.100.' . ($attempt + 1)
+            ));
+        }
+
+        self::assertFalse($throttle->consume(
+            'club-login',
+            'target@example.test',
+            '203.0.113.200'
+        ));
+    }
+
+    public function testNetworkLimitBlocksBroadCredentialStuffing(): void
+    {
+        $database = new InMemoryThrottleDatabase();
+        $now = new DateTimeImmutable('2026-06-28 10:00:00', new DateTimeZone('UTC'));
+        $throttle = new DatabaseAuthenticationThrottle($database, static fn(): DateTimeImmutable => $now);
+
+        for ($attempt = 0; $attempt < 100; $attempt++) {
+            self::assertTrue($throttle->consume(
+                'club-login',
+                'candidate-' . $attempt . '@example.test',
+                '203.0.113.10'
+            ));
+        }
+
+        self::assertFalse($throttle->consume(
+            'club-login',
+            'next-candidate@example.test',
+            '203.0.113.10'
+        ));
+    }
+
+    public function testSuccessfulAuthenticationClearsAccountAndPairButKeepsNetworkLimit(): void
+    {
+        $database = new InMemoryThrottleDatabase();
+        $now = new DateTimeImmutable('2026-06-28 10:00:00', new DateTimeZone('UTC'));
+        $throttle = new DatabaseAuthenticationThrottle($database, static fn(): DateTimeImmutable => $now);
+
+        self::assertTrue($throttle->consume('club-login', 'club@example.test', '203.0.113.10'));
+        self::assertCount(3, $database->records);
+
+        $throttle->clear('club-login', 'club@example.test', '203.0.113.10');
+
+        self::assertCount(1, $database->records);
     }
 
     public function testCleanupDeletesAtMostOneBoundedBatch(): void
@@ -56,10 +112,10 @@ final class AuthenticationThrottleTest extends TestCase
         $now = new DateTimeImmutable('2026-06-28 10:00:00', new DateTimeZone('UTC'));
         $throttle = new DatabaseAuthenticationThrottle($database, static fn(): DateTimeImmutable => $now);
 
-        $throttle->recordAttempt('password-reset', 'fixture@example.test', '203.0.113.10');
+        self::assertTrue($throttle->consume('password-reset', 'fixture@example.test', '203.0.113.10'));
 
         self::assertSame(100, $database->cleanupDeleted);
-        self::assertCount(6, $database->records);
+        self::assertCount(8, $database->records);
         self::assertTrue($database->sawSql('DELETE FROM authentication_throttles WHERE updated_at < ? LIMIT 100'));
     }
 

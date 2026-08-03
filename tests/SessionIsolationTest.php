@@ -68,7 +68,7 @@ final class SessionIsolationTest extends TestCase
         $production = new SessionConfiguration('production', '/prod');
         Session::configure($production);
         Session::start();
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $productionId = session_id();
         self::assertNotSame('', $productionId);
         session_write_close();
@@ -82,7 +82,7 @@ final class SessionIsolationTest extends TestCase
         self::assertSame('/dev', session_get_cookie_params()['path']);
         self::assertSame('1', ini_get('session.use_strict_mode'));
         self::assertNull(Session::get('is_admin'));
-        self::assertSame('v2:' . $development->context, $_SESSION['_session_context']);
+        self::assertSame('v3:' . $development->context, $_SESSION['_session_context']);
         self::assertNotSame($productionId, session_id());
     }
 

@@ -33,7 +33,7 @@ final class EventCategorySnapshotTest extends TestCase
         $this->databaseConnection->setValue(null, $this->database);
         Session::destroy();
         Session::start();
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         Localization::setLocale('it');
     }
 

@@ -21,9 +21,11 @@ use App\Model\Event;
 use App\Model\EventRegistrationOption;
 use App\Model\SardinianLocation;
 use App\Security\AuthenticationThrottle;
+use App\Security\CredentialFingerprint;
 use App\Model\EventRegistrationException;
 use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
+use App\Security\PasswordVerifier;
 use App\Service\AthleteCsvTransfer;
 use App\Service\DatabasePasswordResetRepository;
 use App\Service\EventEntriesCsvTransfer;
@@ -77,15 +79,20 @@ final class AdminController extends Controller
                 $networkSignal = $this->networkSignal($request);
                 $throttle = $this->authenticationThrottle();
 
-                if ($throttle->isBlocked('admin-login', $user, $networkSignal)) {
+                if (!$throttle->consume('admin-login', $user, $networkSignal)) {
                     $errors[] = __('admin.login.errors.too_many_attempts');
-                } elseif ($user === $adminUser && password_verify($pass, $adminHash)) {
+                } elseif (
+                    PasswordVerifier::matches($pass, (string) $adminHash)
+                    && hash_equals((string) $adminUser, $user)
+                ) {
                     $throttle->clear('admin-login', $user, $networkSignal);
-                    Session::authenticateAdministrator();
+                    Session::authenticateAdministrator(CredentialFingerprint::forAdministrator(
+                        (string) $adminUser,
+                        (string) $adminHash
+                    ));
 
                     return $this->redirect('/admin/events');
                 } else {
-                    $throttle->recordAttempt('admin-login', $user, $networkSignal);
                     $errors[] = __('admin.login.errors.invalid_credentials');
                 }
             }

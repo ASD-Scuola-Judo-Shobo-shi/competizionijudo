@@ -69,12 +69,12 @@ final class RouterTest extends TestCase
             self::assertSame(302, $router->dispatch(new Request('GET', '/club-only'))->status());
             self::assertSame([], $handled);
 
-            Session::authenticateClub(42);
+            Session::authenticateClub(42, hash('sha256', 'test-club-credential'));
             self::assertSame(200, $router->dispatch(new Request('GET', '/club-only'))->status());
             self::assertSame(302, $router->dispatch(new Request('GET', '/admin-only'))->status());
             self::assertSame(['club'], $handled);
 
-            Session::authenticateAdministrator();
+            Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
             self::assertSame(302, $router->dispatch(new Request('GET', '/club-only'))->status());
             self::assertSame(200, $router->dispatch(new Request('GET', '/admin-only'))->status());
             self::assertSame(['club', 'admin'], $handled);

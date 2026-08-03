@@ -74,6 +74,7 @@ return [
                 'password_required' => 'Please enter a password.',
                 'password_mismatch' => 'Passwords do not match.',
                 'club_exists' => 'This club is already registered.',
+                'too_many_attempts' => 'Too many registration attempts. Please wait and try again.',
                 'confirmation_delivery_failed' => 'The confirmation email could not be sent. Please try again.',
                 'registration_failed' => 'Unable to complete registration. Please try again.',
             ],

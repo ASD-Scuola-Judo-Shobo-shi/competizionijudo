@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Security\SessionCredentialValidator;
+
 final class Router
 {
     /**
@@ -14,8 +16,10 @@ final class Router
     /** @var array<string, array<string, string>> */
     private array $policies = [];
 
-    public function __construct(private readonly View $view)
-    {
+    public function __construct(
+        private readonly View $view,
+        private readonly ?SessionCredentialValidator $sessionCredentialValidator = null
+    ) {
     }
 
     /** @param callable|array{0: class-string<Controller>, 1: string} $handler */
@@ -32,6 +36,7 @@ final class Router
 
     public function dispatch(Request $request): Response
     {
+        $this->validateSessionCredentials();
         $handler = $this->routes[$request->method()][$request->path()] ?? null;
 
         if ($handler === null) {
@@ -67,6 +72,24 @@ final class Router
         }
 
         return $response;
+    }
+
+    private function validateSessionCredentials(): void
+    {
+        if ($this->sessionCredentialValidator === null) {
+            return;
+        }
+
+        $principal = AuthContext::principal();
+        if (
+            $principal !== null
+            && !$this->sessionCredentialValidator->isCurrent(
+                $principal,
+                Session::credentialFingerprint()
+            )
+        ) {
+            Session::invalidateAuthentication();
+        }
     }
 
     /** @param callable|array{0: class-string<Controller>, 1: string} $handler */

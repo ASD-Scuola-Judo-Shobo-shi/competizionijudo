@@ -48,7 +48,7 @@ final class AthleteDuplicateMaintenanceControllerTest extends TestCase
 
         $this->destroySession();
         Session::start();
-        Session::authenticateAdministrator();
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         Localization::setLocale('en');
         $this->view = new View(dirname(__DIR__) . '/views');
     }
@@ -191,7 +191,7 @@ final class AthleteDuplicateMaintenanceControllerTest extends TestCase
         $anonymous = (new AthleteMaintenanceController($this->view, $request))->duplicates($request);
         self::assertSame('/admin/login', $anonymous->headers()['Location']);
 
-        Session::authenticateAdministrator();
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $this->setMaintenanceFlag('false');
         $this->expectException(HttpException::class);
         $this->expectExceptionCode(404);

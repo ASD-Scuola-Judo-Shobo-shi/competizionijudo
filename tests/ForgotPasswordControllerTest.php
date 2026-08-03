@@ -144,7 +144,7 @@ final class ForgotPasswordControllerTest extends TestCase
         $issuer = new FakePasswordResetTokenIssuer(hash('sha256', 'blocked-fixture'));
         $mailer = new FakePasswordResetMailer();
         $throttle = new FakeAuthenticationThrottle(1);
-        $throttle->recordAttempt('password-reset', 'known@example.test', '192.0.2.40');
+        $throttle->consume('password-reset', 'known@example.test', '192.0.2.40');
 
         $response = $this->submit('known@example.test', $issuer, $throttle, $mailer);
 

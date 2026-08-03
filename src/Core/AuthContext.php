@@ -16,46 +16,19 @@ final class AuthContext
 
     public static function principal(): ?SessionPrincipal
     {
-        $principal = Session::principal();
-        if ($principal !== null) {
-            return $principal;
-        }
-
-        // Keep pre-typed sessions readable during the staged rollout. A mixed
-        // legacy session is deliberately not authorized as either principal.
-        $clubId = Session::get('club_id');
-        $isAdministrator = Session::get('is_admin') === true;
-        if ($isAdministrator || !is_int($clubId) || $clubId < 1) {
-            return $isAdministrator && $clubId === null
-                ? SessionPrincipal::administrator()
-                : null;
-        }
-
-        return SessionPrincipal::club($clubId);
+        return Session::principal();
     }
 
     public static function isAdministrator(): bool
     {
-        $principal = Session::principal();
-        if ($principal !== null) {
-            return $principal->type === self::ADMINISTRATOR;
-        }
-
-        // Legacy sessions could contain both keys. Preserve their existing
-        // route behavior until the session-expiry rollout removes this bridge.
-        return Session::get('is_admin') === true;
+        return Session::principal()?->type === self::ADMINISTRATOR;
     }
 
     public static function clubId(): ?int
     {
         $principal = Session::principal();
-        if ($principal !== null) {
-            return $principal->type === self::CLUB ? $principal->clubId : null;
-        }
 
-        $clubId = Session::get('club_id');
-
-        return is_int($clubId) && $clubId > 0 ? $clubId : null;
+        return $principal?->type === self::CLUB ? $principal->clubId : null;
     }
 
     public static function isAuthenticated(): bool

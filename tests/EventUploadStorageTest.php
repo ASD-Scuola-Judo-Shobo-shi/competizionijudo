@@ -67,4 +67,16 @@ final class EventUploadStorageTest extends TestCase
             self::assertFileDoesNotExist($upload);
         }
     }
+
+    public function testUploadDirectoryPolicyDeniesExecutablesAndSandboxesDocuments(): void
+    {
+        $policy = file_get_contents(dirname(__DIR__) . '/public/uploads/events/.htaccess');
+        self::assertIsString($policy);
+
+        self::assertStringContainsString('php[0-9]?', $policy);
+        self::assertStringContainsString('phar', $policy);
+        self::assertStringContainsString('Require all denied', $policy);
+        self::assertStringContainsString('Content-Security-Policy "default-src \'none\'; sandbox"', $policy);
+        self::assertStringContainsString('Content-Disposition "attachment"', $policy);
+    }
 }

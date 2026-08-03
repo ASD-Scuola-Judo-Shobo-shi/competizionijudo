@@ -31,7 +31,7 @@ final class LogoutTest extends TestCase
 
     public function testGetLogoutRoutesDoNotMutateAuthenticationState(): void
     {
-        Session::authenticateAdministrator();
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $router = new Router($this->view);
         (require dirname(__DIR__) . '/routes/web.php')($router);
 
@@ -54,7 +54,7 @@ final class LogoutTest extends TestCase
 
     public function testInvalidCsrfDoesNotLogoutClubOrAdmin(): void
     {
-        Session::authenticateAdministrator();
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         csrf_token();
         $request = new Request('POST', '/clubs/logout', [], [
             'csrf_token' => 'synthetic-invalid-csrf',
@@ -78,7 +78,7 @@ final class LogoutTest extends TestCase
 
     public function testValidClubLogoutDestroysSessionAndCookie(): void
     {
-        Session::authenticateClub(201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $_COOKIE[session_name()] = 'synthetic-session-cookie';
         $request = new Request('POST', '/clubs/logout', [], [
             'csrf_token' => csrf_token(),
@@ -92,7 +92,7 @@ final class LogoutTest extends TestCase
 
     public function testValidAdminLogoutDestroysSessionAndCookie(): void
     {
-        Session::authenticateAdministrator();
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $_COOKIE[session_name()] = 'synthetic-session-cookie';
         $request = new Request('POST', '/admin/logout', [], [
             'csrf_token' => csrf_token(),

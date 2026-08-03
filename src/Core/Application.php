@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Presentation\LayoutContext;
+use App\Security\DatabaseSessionCredentialValidator;
+use App\Security\SessionCredentialValidator;
 use Throwable;
 
 final class Application
@@ -29,10 +31,16 @@ final class Application
     private View $view;
     private Logger $logger;
 
-    public function __construct(private readonly string $basePath, ?Logger $logger = null)
-    {
+    public function __construct(
+        private readonly string $basePath,
+        ?Logger $logger = null,
+        ?SessionCredentialValidator $sessionCredentialValidator = null
+    ) {
         $this->view = new View($basePath . '/views');
-        $this->router = new Router($this->view);
+        $this->router = new Router(
+            $this->view,
+            $sessionCredentialValidator ?? new DatabaseSessionCredentialValidator()
+        );
         $this->logger = $logger ?? FileLogger::application();
     }
 
@@ -103,6 +111,7 @@ final class Application
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
             'X-Content-Type-Options' => 'nosniff',
             'X-Frame-Options' => 'DENY',
+            'X-XSS-Protection' => '0',
         ];
         if ($this->isSecureRequest($request)) {
             $headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';

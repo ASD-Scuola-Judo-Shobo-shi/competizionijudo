@@ -125,7 +125,7 @@ final class InputValidationControllerTest extends TestCase
                 }
             );
         $this->setDatabase($database);
-        Session::set('club_id', 31);
+        Session::authenticateClub(31, hash('sha256', 'test-club-credential'));
         $request = new Request('POST', '/clubs/area?view=add', ['view' => 'add'], [
             'csrf_token' => csrf_token(),
             'athlete_id' => '',
@@ -162,7 +162,7 @@ final class InputValidationControllerTest extends TestCase
             ->willReturn($upcomingEvents);
         $database->expects(self::never())->method('beginTransaction');
         $this->setDatabase($database);
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $_FILES['poster_file'] = [
             'error' => UPLOAD_ERR_OK,
             'size' => EventInputValidator::MAX_UPLOAD_BYTES + 1,
@@ -190,7 +190,7 @@ final class InputValidationControllerTest extends TestCase
         $database = $this->createMock(PDO::class);
         $database->expects(self::once())->method('prepare')->willReturn($club);
         $this->setDatabase($database);
-        Session::set('is_admin', true);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $request = $this->adminClubRequest(42, 'invalid-email');
 
         $response = (new AdminController(

@@ -16,8 +16,10 @@ use App\Model\ClubRegistrationConfirmation;
 use App\Model\Database;
 use App\Model\SardinianLocation;
 use App\Security\AuthenticationThrottle;
+use App\Security\CredentialFingerprint;
 use App\Security\DatabaseAuthenticationThrottle;
 use App\Security\PasswordPolicy;
+use App\Security\PasswordVerifier;
 use App\Service\DatabasePasswordResetTokenIssuer;
 use App\Service\DatabasePasswordResetRepository;
 use App\Service\PasswordResetMailer;
@@ -115,7 +117,15 @@ final class ClubController extends Controller
 
             if ($errors === []) {
                 try {
-                    if (Club::findByName($formData['name']) !== null) {
+                    if (
+                        !$this->authenticationThrottle()->consume(
+                            'club-registration',
+                            $formData['email'],
+                            $this->networkSignal($request)
+                        )
+                    ) {
+                        $errors[] = __('club.register.errors.too_many_attempts');
+                    } elseif (Club::findByName($formData['name']) !== null) {
                         $errors[] = __('club.register.errors.club_exists');
                     } else {
                         $token = ClubRegistrationConfirmation::issue([
@@ -223,17 +233,19 @@ final class ClubController extends Controller
                     $networkSignal = $this->networkSignal($request);
                     $throttle = $this->authenticationThrottle();
 
-                    if ($throttle->isBlocked('club-login', $email, $networkSignal)) {
+                    if (!$throttle->consume('club-login', $email, $networkSignal)) {
                         $errors[] = __('club.login.errors.too_many_attempts');
                     } else {
                         $club = Club::findByEmail($email);
 
-                        if ($club === null || !password_verify($password, $club->password_hash)) {
-                            $throttle->recordAttempt('club-login', $email, $networkSignal);
+                        if (!PasswordVerifier::matches($password, $club?->password_hash)) {
                             $errors[] = __('club.login.errors.invalid_credentials');
                         } else {
                             $throttle->clear('club-login', $email, $networkSignal);
-                            Session::authenticateClub($club->id);
+                            Session::authenticateClub(
+                                $club->id,
+                                CredentialFingerprint::forClubPasswordHash($club->password_hash)
+                            );
 
                             return $this->redirect('/clubs/area?view=list');
                         }
@@ -304,9 +316,7 @@ final class ClubController extends Controller
                     $canExposeResetLink = $this->canExposeResetLink();
                     $success = __('club.forgot_password.success_message');
 
-                    if (!$throttle->isBlocked('password-reset', $email, $networkSignal)) {
-                        $throttle->recordAttempt('password-reset', $email, $networkSignal);
-
+                    if ($throttle->consume('password-reset', $email, $networkSignal)) {
                         $rawToken = $this->passwordResetTokens->issueForEmail($email);
                         if ($rawToken !== null) {
                             $resetUrl = sprintf(

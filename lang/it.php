@@ -74,6 +74,7 @@ return [
                 'password_required' => 'Inserire una password.',
                 'password_mismatch' => 'Le password non coincidono.',
                 'club_exists' => 'Questa società è già registrata.',
+                'too_many_attempts' => 'Troppi tentativi di registrazione. Attendi e riprova.',
                 'confirmation_delivery_failed' => 'Impossibile inviare l\'email di conferma. Riprova.',
                 'registration_failed' => 'Impossibile completare la registrazione. Riprovare.',
             ],

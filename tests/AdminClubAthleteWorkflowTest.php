@@ -39,7 +39,7 @@ final class AdminClubAthleteWorkflowTest extends TestCase
 
         $this->destroySession();
         Session::start();
-        Session::authenticateAdministrator();
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         Localization::setLocale('en');
         $this->view = new View(dirname(__DIR__) . '/views');
         $_GET = [];
