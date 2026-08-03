@@ -51,6 +51,25 @@ final class HttpSecurityPolicyTest extends TestCase
         }
     }
 
+    public function testRootApachePolicyDispatchesOnlyExactPostMigrationEndpointsBeforeDeny(): void
+    {
+        $policy = $this->rootPolicy();
+        $dispatch = "RewriteCond %{REQUEST_METHOD} ^POST$\n"
+            . 'RewriteRule ^(?:prod|dev)/migrations/?$ index.php [QSA,L]';
+        $dispatchPosition = strpos($policy, $dispatch);
+        $denyPosition = strpos(
+            $policy,
+            'RewriteRule ^(?:(?:prod|dev|legacy)/)?(?:\.git|\.github|config|docs|lang|migrations|'
+        );
+
+        self::assertIsInt($dispatchPosition);
+        self::assertIsInt($denyPosition);
+        self::assertTrue($dispatchPosition < $denyPosition);
+        self::assertTrue($this->isForbiddenByRootPolicy('prod/migrations/20260630_000000_create_schema.sql'));
+        self::assertTrue($this->isForbiddenByRootPolicy('dev/migrations/'));
+        self::assertStringNotContainsString('(?:prod|dev|legacy)/migrations/?$', $policy);
+    }
+
     #[DataProvider('directArtifactPaths')]
     public function testDirectArtifactApachePolicyDeniesSensitivePaths(string $path): void
     {
