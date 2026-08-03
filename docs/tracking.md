@@ -1,6 +1,11 @@
 # Remediation Tracking
 
-This is the mutable execution record for [roadmap.md](roadmap.md). The audit itself remains the rationale and should not be edited merely to mark progress.
+> Historical execution record for the completed June 2026 roadmap. Preserve
+> its hashes and evidence unchanged; current security status belongs in
+> [security.md](security.md).
+
+This was the mutable execution record for [roadmap.md](roadmap.md). The audit
+itself remains the rationale and should not be edited merely to mark progress.
 
 ## Status legend
 

@@ -1,5 +1,9 @@
 # Project Audit
 
+> Historical snapshot of revision `e975cb3` from 2026-06-28. Its findings are
+> retained as remediation evidence, not as the current vulnerability status.
+> See [security.md](security.md) for the current baseline.
+
 Audit date: 2026-06-28
 Audited revision: `e975cb3` (`main`, one commit ahead of `origin/main` when the audit started)
 Scope: current tracked application, current ignored local files that can affect builds, migrations, tests, CI/CD, and deployment packaging.

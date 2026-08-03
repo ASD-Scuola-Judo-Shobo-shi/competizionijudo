@@ -1,6 +1,11 @@
 # Architecture, Security, and Performance Review Tracking
 
-Status: Draft for triage
+> Historical point-in-time review of revision `34c1f55`. Later commits resolved
+> or changed several findings, so the original register and status markers are
+> retained for provenance rather than current triage. See
+> [security.md](security.md) for the current baseline.
+
+Status: Historical draft retained for provenance
 
 Audit date: 2026-07-13
 

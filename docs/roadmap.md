@@ -1,5 +1,9 @@
 # Remediation Roadmap
 
+> Historical implementation plan for the June 2026 audit. All C01-C35 items
+> were completed; do not add new work here. See [security.md](security.md) for
+> the current baseline and open risks.
+
 This roadmap converts [audit.md](audit.md) into a sequence of deliberately small commits. Execute in order unless a documented blocker requires a change. Each security or data fix includes its regression test in the same commit; do not create a separate “tests later” gap.
 
 ## Working rules

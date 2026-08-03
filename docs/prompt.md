@@ -1,5 +1,9 @@
 # Multi-session Implementation Prompt
 
+> Historical continuation prompt for the completed June 2026 remediation
+> roadmap. Use it only when explicitly asked to resume that workflow. For
+> current security status and priorities, see [security.md](security.md).
+
 Use the following prompt at the beginning of each implementation session.
 
 ---

@@ -68,6 +68,10 @@ Runtime state is not a code artifact:
 
 ## Privacy and security
 
+The implemented controls, current limitations, verification evidence, and
+post-deployment checks are summarized in the
+[current security baseline](docs/security.md).
+
 The public `/privacy` notice derives controller identity, legal bases,
 processors, transfer facts, and operational retention periods from environment
 variables. Production startup fails if required values are missing or malformed.
@@ -158,12 +162,13 @@ they require environment credentials and a live deployment target. Workflow
 validation uses Go to install the pinned `actionlint` version once, then reuses
 that binary.
 
-Project remediation evidence and sequencing live in
-[audit.md](docs/audit.md), [roadmap.md](docs/roadmap.md), and
-[tracking.md](docs/tracking.md). The current post-remediation findings and
-incremental PR plan are in
-[review-tracking-2026-07-13.md](docs/review-tracking-2026-07-13.md).
-Continue work with [prompt.md](docs/prompt.md).
+The June [audit](docs/audit.md), [roadmap](docs/roadmap.md), and
+[tracker](docs/tracking.md), plus the July
+[post-remediation review](docs/review-tracking-2026-07-13.md), are retained as
+historical evidence. They describe their audited revisions and must not be used
+as the current vulnerability status. The associated
+[continuation prompt](docs/prompt.md) applies only when explicitly resuming that
+historical roadmap workflow.
 
 ## License
 

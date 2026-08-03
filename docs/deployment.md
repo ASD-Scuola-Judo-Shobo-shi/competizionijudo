@@ -59,10 +59,13 @@ repository/hosting operator must:
    - `root.htaccess` → `.htaccess` (renamed at stage time)
    - `index.php` → `index.php` (as-is)
    
-   `root.htaccess` serves as the Apache front controller: it enforces HTTPS and
-   rewrites all non-file, non-directory requests to `index.php`. The PHP front
-   controller handles subdomain redirects and internally routes each request to
-   the correct environment directory (`prod/`, `dev/`, or `legacy/`).
+   `root.htaccess` serves as the Apache security boundary and front controller.
+   It rejects unknown hosts, redirects HTTP requests through fixed canonical
+   destinations, blocks direct access to environment files, source, migrations,
+   manifests, and other internal resources below `prod/`, `dev/`, or `legacy/`,
+   and rewrites other non-file, non-directory requests to `index.php`. The PHP
+   front controller handles the remaining canonical redirects and internally
+   routes each request to the correct environment directory.
    
    These files live outside any per-environment directory (they go to the FTP
    root, the directory that contains `prod/`, `dev/`, etc.). Every deploy
@@ -89,6 +92,33 @@ do not need database access. Do not create `MIGRATION_DB_*` GitHub entries for
 this flow. Deployment concurrency queues a newer run instead of cancelling an
 active one, so an in-progress migration request is not interrupted by a new
 push.
+
+## Post-deployment security verification
+
+Run these checks after changing the shared root router or an environment
+artifact. Use only synthetic paths and values; never place real tokens or
+credentials in terminal history or CI logs.
+
+1. Confirm `/prod/.env`, `/prod/.maintenance`, a known migration SQL path, and
+   the deployment manifest return HTTP 403. Repeat with `/dev` when that
+   environment is deployed.
+2. Send a request to the origin with a synthetic invalid `Host` header and
+   confirm HTTP 400 with no redirect to the supplied host. When testing by IP,
+   preserve the canonical hostname for TLS SNI and override only the HTTP Host
+   header.
+3. Request `/prod/clubs/login` and confirm the response includes an enforced
+   `Content-Security-Policy`, `X-Frame-Options: DENY`,
+   `X-Content-Type-Options: nosniff`, `Strict-Transport-Security`, and
+   `Cache-Control: private, no-store, max-age=0`.
+4. Request the reset-password page with a synthetic invalid token and confirm
+   `Referrer-Policy: no-referrer` and the same no-store cache policy.
+5. Confirm `/prod/health` still returns the deployed revision expected by the
+   workflow.
+
+`composer deploy:preflight` verifies the exact artifact and root-router files,
+but it does not execute Apache on the hosting provider. Record the live results
+with the deployment evidence. See the [current security baseline](security.md)
+for control scope and remaining risks.
 
 `ATHLETE_DUPLICATE_MAINTENANCE` is an optional, temporary boolean environment
 variable. It defaults to `false`; set it through the applicable GitHub Actions
