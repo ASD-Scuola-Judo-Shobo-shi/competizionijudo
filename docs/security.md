@@ -37,13 +37,13 @@ requires a separate nonce or external-asset migration.
 
 These are current limitations, not claims of an active exploit:
 
-| Priority | Limitation | Required direction |
-| --- | --- | --- |
-| High | Administration uses one shared environment-defined identity without a second factor or per-operator audit identity. | Introduce individual administrators, revocation, a selected strong second factor, and break-glass recovery. |
-| High | Email-confirmed public club registration has no administrator approval state or account-level athlete/registration quotas. Request throttling bounds confirmation-mail abuse but not growth after activation. | Add the approved lifecycle and configurable quotas with abuse and concurrency tests. |
-| High defense-in-depth | The application scopes entry creation, but MySQL does not enforce that `entries.club_id` owns `entries.athlete_id` with one composite foreign key. | Add a mismatch preflight, supporting composite key, and forward-only MySQL migration. |
-| Medium | CSP permits inline scripts and styles. | Move behavior to external assets or use per-response nonces, then remove `unsafe-inline`. |
-| Medium | Individual administrator mutations are not recorded in a durable audit trail; host backup, restore, rotation, and scheduled purge evidence remain operational controls. | Add actor-aware audit events and record periodic restore/retention checks outside public logs. |
+| Priority | Limitation | Required direction | Review tracker |
+| --- | --- | --- | --- |
+| High | Administration uses one shared environment-defined identity without a second factor or per-operator audit identity. | Introduce individual administrators, revocation, a selected strong second factor, and break-glass recovery. | [PR-32](review-tracking-2026-07-13.md) |
+| High | Email-confirmed public club registration has no administrator approval state or account-level athlete/registration quotas. Request throttling bounds confirmation-mail abuse but not growth after activation. | Add the approved lifecycle and configurable quotas with abuse and concurrency tests. | [PR-12](review-tracking-2026-07-13.md) |
+| High defense-in-depth | The application scopes entry creation, but MySQL does not enforce that `entries.club_id` owns `entries.athlete_id` with one composite foreign key. | Add a mismatch preflight, supporting composite key, and forward-only MySQL migration. | [PR-18](review-tracking-2026-07-13.md) |
+| Medium | CSP permits inline scripts and styles. | Move behavior to external assets or use per-response nonces, then remove `unsafe-inline`. | [PR-14](review-tracking-2026-07-13.md) |
+| Medium | Individual administrator mutations are not recorded in a durable audit trail; host backup, restore, rotation, and scheduled purge evidence remain operational controls. | Add actor-aware audit events and record periodic restore/retention checks outside public logs. | [PR-30](review-tracking-2026-07-13.md) |
 
 Schema, quota, second-factor, and audit-trail work changes persistent or
 user-visible behavior and should be implemented as separate reviewed changes,
