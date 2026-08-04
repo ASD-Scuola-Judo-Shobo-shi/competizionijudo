@@ -55,6 +55,8 @@ final class RenderDeployEnvScriptTest extends TestCase
             'APP_LOG_RETENTION_DAYS' => '30',
             'APP_BACKUP_RETENTION_DAYS' => '30',
             'ATHLETE_DUPLICATE_MAINTENANCE' => 'true',
+            'CLUB_ATHLETE_LIMIT' => '250',
+            'CLUB_ENTRY_LIMIT' => '0',
         ]);
 
         self::assertSame(0, $status, $output);
@@ -68,7 +70,46 @@ final class RenderDeployEnvScriptTest extends TestCase
         self::assertStringContainsString('PASSWORD_RESET_MAILER=aruba', $contents);
         self::assertStringContainsString('APP_OWNER=Synthetic Sports Association', $contents);
         self::assertStringContainsString('ATHLETE_DUPLICATE_MAINTENANCE=true', $contents);
+        self::assertStringContainsString('CLUB_ATHLETE_LIMIT=250', $contents);
+        self::assertStringContainsString('CLUB_ENTRY_LIMIT=0', $contents);
         self::assertSame(0600, fileperms($this->directory . '/.env') & 0777);
+    }
+
+    public function testRejectsInvalidClubQuotaValues(): void
+    {
+        [$status, $output] = $this->runScript([
+            'APP_ENV' => 'production',
+            'APP_DEBUG' => 'false',
+            'APP_URL' => 'https://www.example.test',
+            'DB_HOST' => '127.0.0.1',
+            'DB_NAME' => 'competizionijudo',
+            'DB_USER' => 'competizionijudo',
+            'ADMIN_USER' => 'prod-admin',
+            'ADMIN_PASS_HASH' => '$2y$12$abcdefghijklmnopqrstuvABCDEFGHIJKLMNOpqrstuvwxyz01234',
+            'MIGRATIONS_TOKEN' => 'synthetic-migration-token',
+            'MAIL_FROM_ADDRESS' => 'postmaster@example.test',
+            'APP_OWNER' => 'Synthetic Sports Association',
+            'APP_OWNER_ADDRESS' => '1 Test Street, Test City',
+            'APP_OWNER_FISCAL_CODE' => 'SYNTHETIC-FISCAL-CODE',
+            'APP_OWNER_EMAIL' => 'privacy@synthetic.test',
+            'APP_WEBHOST' => 'Synthetic Hosting Ltd',
+            'APP_WEBHOST_LOCATION' => 'European Union',
+            'APP_LOG_RETENTION_DAYS' => '30',
+            'APP_BACKUP_RETENTION_DAYS' => '30',
+            'CLUB_ATHLETE_LIMIT' => 'unlimited',
+            'CLUB_ENTRY_LIMIT' => '-1',
+        ]);
+
+        self::assertSame(1, $status, $output);
+        self::assertStringContainsString(
+            'CLUB_ATHLETE_LIMIT must be a non-negative integer (0 disables the quota).',
+            $output
+        );
+        self::assertStringContainsString(
+            'CLUB_ENTRY_LIMIT must be a non-negative integer (0 disables the quota).',
+            $output
+        );
+        self::assertFileDoesNotExist($this->directory . '/.env');
     }
 
     public function testRejectsMissingRequiredValues(): void

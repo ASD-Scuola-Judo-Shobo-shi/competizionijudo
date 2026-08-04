@@ -27,6 +27,7 @@ const REQUIRED_DEPLOY_ENV_KEYS = [
 
 const OPTIONAL_BOOLEAN_KEYS = ['APP_TEST_RESET_LINKS', 'ATHLETE_DUPLICATE_MAINTENANCE'];
 const OPTIONAL_POSITIVE_INTEGER_KEYS = ['EVENTS_UPCOMING_LIMIT'];
+const OPTIONAL_NON_NEGATIVE_INTEGER_KEYS = ['CLUB_ATHLETE_LIMIT', 'CLUB_ENTRY_LIMIT'];
 
 exit(main($argv));
 
@@ -220,6 +221,18 @@ function validateResolvedValues(array $resolvedValues): array
         $integer = filter_var($value, FILTER_VALIDATE_INT);
         if ($integer === false || $integer < 1) {
             $issues[] = "{$key} must be a positive integer.";
+        }
+    }
+
+    foreach (OPTIONAL_NON_NEGATIVE_INTEGER_KEYS as $key) {
+        $value = $resolvedValues[$key] ?? '';
+        if ($value === '') {
+            continue;
+        }
+
+        $integer = filter_var($value, FILTER_VALIDATE_INT);
+        if ($integer === false || $integer < 0) {
+            $issues[] = "{$key} must be a non-negative integer (0 disables the quota).";
         }
     }
 
