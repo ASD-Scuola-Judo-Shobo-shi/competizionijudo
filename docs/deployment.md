@@ -225,8 +225,10 @@ first deployment.
 expects GitHub environment entries with the same names for all blank required
 keys and reuses the template defaults for `APP_NAME`, `APP_LOCALE`,
 `APP_TEST_RESET_LINKS`, `EVENTS_UPCOMING_LIMIT`,
-`ATHLETE_DUPLICATE_MAINTENANCE=false`, and
-`PASSWORD_RESET_MAILER=aruba` unless a future workflow override is added.
+`ATHLETE_DUPLICATE_MAINTENANCE=false`, `CLUB_ATHLETE_LIMIT=1000`,
+`CLUB_ENTRY_LIMIT=1000`, and `PASSWORD_RESET_MAILER=aruba` unless a future
+workflow override is added. The club quota values must be non-negative
+integers; `0` disables the corresponding quota.
 Startup requires `APP_URL`, all four `DB_*` settings, `ADMIN_USER`,
 `ADMIN_PASS_HASH`, `MIGRATIONS_TOKEN`, `PASSWORD_RESET_MAILER`,
 `MAIL_FROM_ADDRESS`, all four
