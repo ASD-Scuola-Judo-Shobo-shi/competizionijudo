@@ -352,6 +352,7 @@ final class DeleteActionsTest extends TestCase
                 contact_email TEXT,
                 affiliation TEXT NOT NULL,
                 recovery_email TEXT NOT NULL,
+                approved_at TEXT,
                 password_hash TEXT NOT NULL
             )'
         );

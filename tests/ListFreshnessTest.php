@@ -123,8 +123,8 @@ final class ListFreshnessTest extends TestCase
             'INSERT INTO clubs (
                 id, federal_code, name, email, phone, contact_first_name,
                 contact_last_name, contact_phone, contact_email, affiliation,
-                recovery_email, password_hash
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                recovery_email, approved_at, password_hash
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $statement->execute([
             $id,
@@ -138,6 +138,7 @@ final class ListFreshnessTest extends TestCase
             null,
             'SYNTHETIC',
             'recovery' . $id . '@example.test',
+            '2026-01-01 00:00:00',
             'synthetic-hash',
         ]);
     }
@@ -174,6 +175,7 @@ final class ListFreshnessTest extends TestCase
                 contact_email TEXT,
                 affiliation TEXT NOT NULL,
                 recovery_email TEXT NOT NULL,
+                approved_at TEXT,
                 password_hash TEXT NOT NULL
             )'
         );

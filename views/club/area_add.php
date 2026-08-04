@@ -4,12 +4,24 @@
 /** @var array<int, array{age_below: int|null, type: string, weight_category: string}> $athleteCategories */
 /** @var array{type: string, message: string}|null $athleteInlineFeedback */
 /** @var array{column:string, direction:'asc'|'desc'}|null $tableSort */
+/** @var int|null $athleteQuotaRemaining */
+/** @var int|null $athleteQuotaLimit */
 $tableSort ??= ['column' => 'athlete', 'direction' => 'asc'];
+$athleteQuotaRemaining = $athleteQuotaRemaining ?? 0;
+$athleteQuotaLimit = $athleteQuotaLimit ?? 0;
 ?>
 <?php require __DIR__ . '/_agreements_feedback.php'; ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <div class="card">
     <h3><?= e($edit ? __('club.area.edit_athlete') : __('club.area.add_athlete')) ?></h3>
+    <?php if ($athleteQuotaLimit > 0 && !$edit) : ?>
+        <p class="field-help">
+            <?= e(__('club.area.quota_athletes', [
+                'current' => (string) ($athleteQuotaLimit - $athleteQuotaRemaining),
+                'limit' => (string) $athleteQuotaLimit,
+            ])) ?>
+        </p>
+    <?php endif; ?>
     <?php if (!empty($errors)) : ?>
         <div class="notice">
             <ul>

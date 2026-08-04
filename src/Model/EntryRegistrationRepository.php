@@ -65,6 +65,15 @@ final class EntryRegistrationRepository
             }
         }
 
+        // Account-level per-event registration quota (decision D-03).
+        $clubEntryLimit = max(0, (int) env('CLUB_ENTRY_LIMIT', 1000));
+        if (
+            $clubEntryLimit > 0
+            && (int) $registrationContext['club_entry_count'] >= $clubEntryLimit
+        ) {
+            return EntryRegistrationResult::QuotaExceeded;
+        }
+
         $ownsTransaction = false;
         if ($hasException && !$this->database->inTransaction()) {
             if (!$this->database->beginTransaction()) {
@@ -178,7 +187,8 @@ final class EntryRegistrationRepository
      *     birth_date: string,
      *     weight_kg: float|int|string|null,
      *     max_participants: int|string|null,
-     *     current_count: int|string
+     *     current_count: int|string,
+     *     club_entry_count: int|string
      * }|null
      */
     private function registrationContext(
@@ -191,7 +201,9 @@ final class EntryRegistrationRepository
         $statement = $this->database->prepare(
             'SELECT event_record.date, event_record.type, athlete.birth_date, athlete.weight_kg,
                     event_record.max_participants,
-                    (SELECT COUNT(athlete_id) FROM entries WHERE event_id = :event_id_for_count) AS current_count
+                    (SELECT COUNT(athlete_id) FROM entries WHERE event_id = :event_id_for_count) AS current_count,
+                    (SELECT COUNT(athlete_id) FROM entries
+                      WHERE event_id = :event_id_for_quota AND club_id = :club_id_for_quota) AS club_entry_count
              FROM events AS event_record
              JOIN athletes AS athlete ON athlete.id = :athlete_id
              JOIN event_registration_options AS registration_option
@@ -220,6 +232,8 @@ final class EntryRegistrationRepository
 
         $statement->execute([
             'event_id_for_count' => $eventId,
+            'event_id_for_quota' => $eventId,
+            'club_id_for_quota' => $clubId,
             'athlete_id' => $athleteId,
             'registration_option_id' => $registrationOptionId,
             'event_id' => $eventId,

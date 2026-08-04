@@ -84,7 +84,8 @@ return [
         'confirm_registration' => [
             'title' => 'Conferma registrazione società',
             'heading' => 'Conferma registrazione società',
-            'success' => 'Registrazione confermata. Ora puoi accedere con email e password.',
+            'success' => 'Registrazione confermata.',
+            'pending_approval' => 'Prima di poter accedere con email e password, la registrazione deve essere approvata dall\'amministratore. Ti sarà possibile accedere una volta approvata.',
             'invalid_token' => 'Il link di conferma non è valido o è scaduto.',
             'failed' => 'Impossibile confermare la registrazione. Riprova più tardi.',
         ],
@@ -113,6 +114,7 @@ return [
             'errors' => [
                 'credentials_required' => 'Inserire email società e password.',
                 'invalid_credentials' => 'Email o password non corrette.',
+                'not_approved' => 'L\'account della società non è ancora stato approvato dall\'amministratore. L\'accesso sarà abilitato non appena la registrazione viene approvata.',
                 'login_failed' => 'Impossibile completare l\'accesso. Riprovare.',
                 'too_many_attempts' => 'Troppi tentativi di accesso. Attendi 5 minuti e riprova.',
             ],
@@ -199,6 +201,7 @@ return [
             'filter_by_event' => 'Filtra per competizione',
             'all_events' => 'Tutte le competizioni',
             'no_athletes' => 'Nessun atleta in archivio.',
+            'quota_athletes' => 'Archivio atleti: {current} di {limit}',
             'no_entries' => 'Nessuna iscrizione trovata.',
             'registrations' => 'Iscrizioni',
             'table' => [
@@ -233,6 +236,7 @@ return [
                 'upload_failed' => 'Il caricamento del file degli atleti non è riuscito. Riprova.',
                 'too_large' => 'Il file da importare non può superare 2 MB.',
                 'too_many_rows' => 'Il file da importare non può contenere più di 5.000 atleti.',
+                'quota_exceeded' => 'Importazione rifiutata: l\'archivio supererebbe il limite di {limit} atleti.',
                 'invalid_file' => 'Il file da importare non è un foglio valido e supportato.',
                 'invalid_header' => 'Le intestazioni sono assenti o non valide. Inserisci nome, cognome, genere e data di nascita in italiano o inglese.',
                 'invalid_columns' => 'La riga {row} contiene un numero di colonne incoerente.',
@@ -294,6 +298,7 @@ return [
         'password_too_short' => 'La password deve contenere almeno {minimum} caratteri.',
         'account_conflict' => 'Email o codice federale già utilizzato.',
         'save_failed' => 'Impossibile salvare i dati. Verificare i campi e riprovare.',
+        'athlete_quota_exceeded' => 'Limite di {limit} atleti raggiunto.',
     ],
     'validation' => [
         'club_name_required' => 'Inserire il nome della società.',
@@ -427,6 +432,8 @@ return [
         'registration_missing_weight_notice' => 'Gli atleti senza peso non possono essere iscritti. Inserisci prima il peso nell\'archivio atleti.',
         'registration_weight_required' => 'Inserisci il peso prima dell\'iscrizione',
         'registration_capacity_exceeded' => 'Limite raggiunto: {count}',
+        'registration_quota_exceeded' => 'Limite società raggiunto: {count}',
+        'registration_quota_remaining' => 'Iscrizioni di questa società per l\'evento: {current} di {limit}',
         'registration_failed' => 'Non riusciti: {count}',
         'max_participants_format' => '{count} atleti',
         'entries_title' => 'Iscritti alla competizione',
@@ -728,6 +735,10 @@ return [
             'edit_title' => 'Modifica società',
             'confirm_delete' => 'Eliminando la società verranno eliminati definitivamente i dati correnti dei suoi atleti. Esportali prima se devono essere conservati. Continuare?',
             'empty' => 'Nessuna società registrata.',
+            'status_approved' => 'Approvata',
+            'status_pending' => 'In attesa di approvazione',
+            'approve' => 'Approva',
+            'approval_success' => 'Registrazione approvata: la società può ora accedere.',
             'table' => [
                 'name' => 'Società',
                 'federal_code' => 'Cod.',

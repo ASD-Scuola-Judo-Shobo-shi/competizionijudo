@@ -396,6 +396,24 @@ final class AthleteCsvTransfer
             throw new AthleteCsvImportException('club.area.csv.no_rows');
         }
 
+        $athleteLimit = ClubQuota::athleteLimit();
+        if ($athleteLimit > 0) {
+            $newAthletes = 0;
+            foreach ($operations as $operation) {
+                if ($operation['existing'] === null) {
+                    $newAthletes++;
+                }
+            }
+            if (count($athletes) + $newAthletes > $athleteLimit) {
+                throw new AthleteCsvImportException(
+                    'club.area.csv.quota_exceeded',
+                    null,
+                    [],
+                    ['limit' => (string) $athleteLimit]
+                );
+            }
+        }
+
         return $this->persist($operations, $issues, $reconciliations, $clubId);
     }
 

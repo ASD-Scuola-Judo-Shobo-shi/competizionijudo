@@ -842,6 +842,7 @@ final class EventLifecycleTest extends TestCase
                 contact_email TEXT,
                 affiliation TEXT NOT NULL,
                 recovery_email TEXT NOT NULL,
+                approved_at TEXT,
                 password_hash TEXT NOT NULL
             )'
         );
@@ -951,8 +952,8 @@ final class EventLifecycleTest extends TestCase
             'INSERT INTO clubs (
                 id, federal_code, name, email, phone, contact_first_name,
                 contact_last_name, contact_phone, contact_email, affiliation,
-                recovery_email, password_hash
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                recovery_email, approved_at, password_hash
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $club->execute([
             201,
@@ -966,6 +967,7 @@ final class EventLifecycleTest extends TestCase
             null,
             'TEST',
             'own-recovery@example.test',
+            '2026-01-01 00:00:00',
             'synthetic-hash',
         ]);
         $club->execute([
@@ -980,6 +982,7 @@ final class EventLifecycleTest extends TestCase
             null,
             'TEST',
             'foreign-recovery@example.test',
+            '2026-01-01 00:00:00',
             'synthetic-hash',
         ]);
         $declaration = $this->database->prepare(

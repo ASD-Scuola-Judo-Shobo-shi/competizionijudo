@@ -84,7 +84,8 @@ return [
         'confirm_registration' => [
             'title' => 'Confirm club registration',
             'heading' => 'Confirm club registration',
-            'success' => 'Registration confirmed. You can now log in with the club email and password.',
+            'success' => 'Registration confirmed.',
+            'pending_approval' => 'Before you can log in with the club email and password, the registration must be approved by an administrator. Access will be enabled once it is approved.',
             'invalid_token' => 'This registration confirmation link is invalid or has expired.',
             'failed' => 'Unable to confirm registration. Please try again later.',
         ],
@@ -113,6 +114,7 @@ return [
             'errors' => [
                 'credentials_required' => 'Please enter club email and password.',
                 'invalid_credentials' => 'Email or password is incorrect.',
+                'not_approved' => 'The club account has not been approved by the administrator yet. Access will be enabled as soon as the registration is approved.',
                 'login_failed' => 'Unable to complete login. Please try again.',
                 'too_many_attempts' => 'Too many login attempts. Please wait 5 minutes and try again.',
             ],
@@ -199,6 +201,7 @@ return [
             'filter_by_event' => 'Filter by event',
             'all_events' => 'All events',
             'no_athletes' => 'No athletes in archive.',
+            'quota_athletes' => 'Athlete archive: {current} of {limit}',
             'no_entries' => 'No event registrations found.',
             'registrations' => 'Registrations',
             'table' => [
@@ -233,6 +236,7 @@ return [
                 'upload_failed' => 'The athlete file upload failed. Please try again.',
                 'too_large' => 'The import file must not exceed 2 MB.',
                 'too_many_rows' => 'The import file must not contain more than 5,000 athletes.',
+                'quota_exceeded' => 'Import rejected: the archive would exceed the {limit} athlete limit.',
                 'invalid_file' => 'The import file is not a valid supported spreadsheet.',
                 'invalid_header' => 'The column headings are missing or invalid. Include first name, last name, gender, and birth date in English or Italian.',
                 'invalid_columns' => 'Row {row} has an inconsistent number of columns.',
@@ -294,6 +298,7 @@ return [
         'password_too_short' => 'The password must contain at least {minimum} characters.',
         'account_conflict' => 'The email address or federal code is already in use.',
         'save_failed' => 'Unable to save the data. Check the fields and try again.',
+        'athlete_quota_exceeded' => 'The {limit} athlete limit has been reached.',
     ],
     'validation' => [
         'club_name_required' => 'Please enter the club name.',
@@ -427,6 +432,8 @@ return [
         'registration_missing_weight_notice' => 'Athletes without a weight cannot be enrolled. Add their weight in the athlete archive first.',
         'registration_weight_required' => 'Add weight before enrollment',
         'registration_capacity_exceeded' => 'Capacity reached: {count}',
+        'registration_quota_exceeded' => 'Club limit reached: {count}',
+        'registration_quota_remaining' => 'Entries of this club for the event: {current} of {limit}',
         'registration_failed' => 'Failed: {count}',
         'max_participants_format' => '{count} participants',
         'entries_title' => 'Event entries',
@@ -728,6 +735,10 @@ return [
             'edit_title' => 'Edit club',
             'confirm_delete' => 'Deleting this club permanently deletes its live athlete records. Export them first if they must be retained. Continue?',
             'empty' => 'No clubs registered.',
+            'status_approved' => 'Approved',
+            'status_pending' => 'Awaiting approval',
+            'approve' => 'Approve',
+            'approval_success' => 'Registration approved: the club can now log in.',
             'table' => [
                 'name' => 'Club',
                 'federal_code' => 'Code',

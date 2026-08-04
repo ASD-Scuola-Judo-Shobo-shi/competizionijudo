@@ -343,6 +343,7 @@ final class AdminClubAthleteWorkflowTest extends TestCase
                 contact_first_name TEXT NOT NULL,
                 contact_last_name TEXT NOT NULL,
                 affiliation TEXT,
+                approved_at TEXT,
                 password_hash TEXT NOT NULL
             );
             CREATE TABLE athletes (
@@ -382,7 +383,7 @@ final class AdminClubAthleteWorkflowTest extends TestCase
     private function seedData(): void
     {
         $clubStatement = $this->database->prepare(
-            'INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $clubStatement->execute([
             201,
@@ -397,6 +398,7 @@ final class AdminClubAthleteWorkflowTest extends TestCase
             'Synthetic',
             'Contact',
             '["FIJLKAM","CSEN"]',
+            '2026-01-01 00:00:00',
             'synthetic-hash',
         ]);
         $clubStatement->execute([

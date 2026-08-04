@@ -40,6 +40,7 @@ final class ClubPrivacyObligationsTest extends TestCase
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
                 email TEXT NOT NULL,
+                approved_at TEXT,
                 password_hash TEXT NOT NULL
             );
             CREATE TABLE club_data_rights_declarations (
@@ -67,8 +68,8 @@ final class ClubPrivacyObligationsTest extends TestCase
                 accepted_locale TEXT NOT NULL,
                 accepted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
-            INSERT INTO clubs (id, name, email, password_hash)
-                VALUES (201, \'Synthetic Club\', \'club@example.test\', \'synthetic-hash\');
+            INSERT INTO clubs (id, name, email, approved_at, password_hash)
+                VALUES (201, \'Synthetic Club\', \'club@example.test\', \'2026-01-01 00:00:00\', \'synthetic-hash\');
             INSERT INTO club_data_rights_declarations
                 (club_id, declared_by_club_id, declaration_version)
                 VALUES (201, 201, \'legacy-version\')'

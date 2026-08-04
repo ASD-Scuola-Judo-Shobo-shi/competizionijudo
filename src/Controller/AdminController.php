@@ -235,6 +235,56 @@ final class AdminController extends Controller
         return $this->redirect($redirect, 303);
     }
 
+    public function approveClub(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+
+        validate_csrf((string) $request->post('csrf_token'));
+        $clubId = (int) $request->post('club_id');
+        $page = max(1, (int) $request->post('page', 1));
+        $redirect = '/admin/clubs?page=' . $page;
+        if ($request->post('sort') !== null || $request->post('direction') !== null) {
+            $sort = resolve_table_sort(
+                $request->post('sort'),
+                $request->post('direction'),
+                ['name', 'federal_code', 'email', 'phone', 'contact', 'address', 'affiliation', 'athletes'],
+                'name'
+            );
+            $redirect .= '&sort=' . rawurlencode($sort['column'])
+                . '&direction=' . rawurlencode($sort['direction']);
+        }
+        $redirect .= '#club-row-' . $clubId;
+        $club = $clubId > 0 ? Club::findById($clubId) : null;
+
+        if ($club === null) {
+            Session::flash(self::CLUB_INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __('tables.update_failed'),
+            ]);
+
+            return $this->redirect($redirect, 303);
+        }
+
+        try {
+            Club::approve($club->id);
+            Session::flash(self::CLUB_INLINE_FEEDBACK, [
+                'type' => 'success',
+                'message' => __('admin.clubs.approval_success'),
+            ]);
+        } catch (\Throwable $exception) {
+            $this->reportFailure('admin.club_approval_failed', $exception, $request);
+            Session::flash(self::CLUB_INLINE_FEEDBACK, [
+                'type' => 'error',
+                'message' => __('tables.update_failed'),
+            ]);
+        }
+
+        return $this->redirect($redirect, 303);
+    }
+
     public function clubAthletes(Request $request): Response
     {
         Session::start();

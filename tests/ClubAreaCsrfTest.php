@@ -80,15 +80,19 @@ final class ClubAreaCsrfTest extends TestCase
                 && $values[1] === 'Synthetic'
                 && $values[2] === 'Athlete'))
             ->willReturn(true);
+        $countStatement = $this->createMock(PDOStatement::class);
+        $countStatement->method('execute')->willReturn(true);
+        $countStatement->method('fetchColumn')->willReturn(0);
         $athleteStatement = $this->queryStatementFetching($this->athleteRow());
 
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(4))
+        $database->expects(self::exactly(5))
             ->method('prepare')
             ->willReturnCallback(static function (string $sql) use (
                 $clubStatement,
                 $termsStatement,
                 $declarationStatement,
+                $countStatement,
                 $insertStatement
             ): PDOStatement {
                 if (str_starts_with($sql, 'SELECT * FROM clubs')) {
@@ -99,6 +103,9 @@ final class ClubAreaCsrfTest extends TestCase
                 }
                 if (str_starts_with($sql, 'SELECT 1 FROM club_data_rights_declarations')) {
                     return $declarationStatement;
+                }
+                if (str_starts_with($sql, 'SELECT COUNT(*) FROM athletes')) {
+                    return $countStatement;
                 }
                 if (str_starts_with($sql, 'INSERT INTO athletes')) {
                     return $insertStatement;

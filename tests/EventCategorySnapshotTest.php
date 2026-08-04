@@ -123,7 +123,7 @@ final class EventCategorySnapshotTest extends TestCase
                 id INTEGER PRIMARY KEY, federal_code TEXT NOT NULL, name TEXT NOT NULL,
                 email TEXT NOT NULL, phone TEXT NOT NULL, contact_first_name TEXT NOT NULL,
                 contact_last_name TEXT NOT NULL, contact_phone TEXT NOT NULL, contact_email TEXT,
-                affiliation TEXT NOT NULL, recovery_email TEXT NOT NULL, password_hash TEXT NOT NULL
+                affiliation TEXT NOT NULL, recovery_email TEXT NOT NULL, approved_at TEXT, password_hash TEXT NOT NULL
             )'
         );
         $this->database->exec(
@@ -177,7 +177,7 @@ final class EventCategorySnapshotTest extends TestCase
         $this->database->exec(
             "INSERT INTO clubs VALUES (
                 201, 'SYN-201', 'Synthetic Club', 'club@example.test', '', 'Synthetic',
-                'Contact', '', NULL, 'SYNTHETIC', 'recovery@example.test', 'synthetic-hash'
+                'Contact', '', NULL, 'SYNTHETIC', 'recovery@example.test', '2026-01-01 00:00:00', 'synthetic-hash'
             )"
         );
         $this->database->exec(

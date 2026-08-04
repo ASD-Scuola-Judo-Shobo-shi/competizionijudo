@@ -23,7 +23,8 @@ final class PasswordResetTokenIssuerTest extends TestCase
             'CREATE TABLE clubs (
                 id INTEGER PRIMARY KEY,
                 email TEXT NOT NULL,
-                normalized_email TEXT NOT NULL UNIQUE
+                normalized_email TEXT NOT NULL UNIQUE,
+                approved_at TEXT
             )'
         );
         $this->database->exec(

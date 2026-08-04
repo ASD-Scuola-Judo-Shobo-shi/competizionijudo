@@ -6,7 +6,11 @@
 /** @var int $eventFilter */
 /** @var array{type: string, message: string}|null $athleteInlineFeedback */
 /** @var array{column:string, direction:'asc'|'desc'}|null $tableSort */
+/** @var int|null $athleteQuotaRemaining */
+/** @var int|null $athleteQuotaLimit */
 $tableSort ??= ['column' => 'athlete', 'direction' => 'asc'];
+$athleteQuotaRemaining = $athleteQuotaRemaining ?? 0;
+$athleteQuotaLimit = $athleteQuotaLimit ?? 0;
 ?>
 <?php require __DIR__ . '/_agreements_feedback.php'; ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
@@ -35,6 +39,14 @@ $tableSort ??= ['column' => 'athlete', 'direction' => 'asc'];
         <?= e(__('club.area.athlete_archive')) ?>
         <span class="count-badge"><?= e((string) $pagination['total']) ?></span>
     </h3>
+    <?php if ($athleteQuotaLimit > 0) : ?>
+        <p class="field-help">
+            <?= e(__('club.area.quota_athletes', [
+                'current' => (string) ($athleteQuotaLimit - $athleteQuotaRemaining),
+                'limit' => (string) $athleteQuotaLimit,
+            ])) ?>
+        </p>
+    <?php endif; ?>
     <?php if (is_array($athleteInlineFeedback ?? null)) : ?>
         <div class="notice<?= $athleteInlineFeedback['type'] === 'success' ? ' success' : '' ?>" role="status">
             <?= e($athleteInlineFeedback['message']) ?>

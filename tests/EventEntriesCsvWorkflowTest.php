@@ -121,7 +121,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
     public function testClubCanExportOnlyItsClosedEventEntriesForTheSelectedWeight(): void
     {
         $this->database->exec(
-            "INSERT INTO clubs (id, federal_code, name) VALUES (202, 'SYN-202', 'Foreign Club');
+            "INSERT INTO clubs (id, federal_code, name, approved_at) VALUES (202, 'SYN-202', 'Foreign Club', '2026-01-01 00:00:00');
              INSERT INTO athletes
                 (id, last_name, first_name, gender, birth_date, weight_kg, belt, membership_number)
              VALUES (302, 'Foreign', 'Athlete', 'F', '2012-06-07', 42, 'blue', 'FOREIGN-001');
@@ -206,7 +206,8 @@ final class EventEntriesCsvWorkflowTest extends TestCase
             'CREATE TABLE clubs (
                 id INTEGER PRIMARY KEY,
                 federal_code TEXT NOT NULL,
-                name TEXT NOT NULL
+                name TEXT NOT NULL,
+                approved_at TEXT
             );
             CREATE TABLE athletes (
                 id INTEGER PRIMARY KEY,
@@ -259,7 +260,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
     private function seedData(): void
     {
         $this->database->exec(
-            "INSERT INTO clubs (id, federal_code, name) VALUES (201, 'SYN-201', '=Formula Club');
+            "INSERT INTO clubs (id, federal_code, name, approved_at) VALUES (201, 'SYN-201', '=Formula Club', '2026-01-01 00:00:00');
              INSERT INTO athletes
                 (id, last_name, first_name, gender, birth_date, weight_kg, belt, membership_number)
              VALUES (301, 'Live', 'Athlete', 'F', '2013-05-06', 39, 'yellow', 'LIVE-001');

@@ -67,6 +67,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/admin/maintenance/athlete-duplicates', [AthleteMaintenanceController::class, 'duplicates'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/maintenance/athlete-duplicates', [AthleteMaintenanceController::class, 'duplicates'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/update-inline', [\App\Controller\AdminController::class, 'updateClubInline'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/clubs/approve', [\App\Controller\AdminController::class, 'approveClub'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/delete', [\App\Controller\AdminController::class, 'deleteClub'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);

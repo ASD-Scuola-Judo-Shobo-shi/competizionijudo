@@ -36,10 +36,11 @@ final class ClubReadProjectionTest extends TestCase
             'id' => 7,
             'email' => 'club@example.test',
             'password_hash' => 'hash',
+            'approved_at' => '2026-01-01 00:00:00',
         ], 'club@example.test');
         $database = $this->databaseFor(
             $statement,
-            'SELECT id, email, password_hash FROM clubs WHERE normalized_email = ?'
+            'SELECT id, email, password_hash, approved_at FROM clubs WHERE normalized_email = ?'
         );
         $this->databaseConnection->setValue(null, $database);
 
@@ -47,6 +48,7 @@ final class ClubReadProjectionTest extends TestCase
 
         self::assertSame(7, $club?->id);
         self::assertSame('hash', $club?->password_hash);
+        self::assertTrue($club?->isApproved());
     }
 
     public function testLayoutLookupDoesNotHydrateCredentialOrRecoveryFields(): void

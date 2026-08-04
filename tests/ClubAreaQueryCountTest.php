@@ -73,8 +73,8 @@ final class ClubAreaQueryCountTest extends TestCase
 
         $clubStatement = $this->statementReturning($this->clubRow(), 1);
         $athleteCountStatement = $this->createMock(PDOStatement::class);
-        $athleteCountStatement->expects(self::once())->method('execute')->with([201])->willReturn(true);
-        $athleteCountStatement->expects(self::once())->method('fetchColumn')->willReturn($athleteCount);
+        $athleteCountStatement->expects(self::exactly(2))->method('execute')->with([201])->willReturn(true);
+        $athleteCountStatement->expects(self::exactly(2))->method('fetchColumn')->willReturn($athleteCount);
         $athleteStatement = $this->statementReturningAll(array_slice($athletes, 0, 50));
         $registrationStatement = $this->statementReturningAll(array_map(
             static fn(array $entry): array => [
@@ -88,7 +88,7 @@ final class ClubAreaQueryCountTest extends TestCase
             ['id' => 101, 'name' => 'Synthetic Event', 'date' => '2026-06-29'],
         ]);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(5))
+        $database->expects(self::exactly(6))
             ->method('prepare')
             ->willReturnCallback(
                 static function (string $sql) use (

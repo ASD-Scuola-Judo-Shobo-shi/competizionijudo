@@ -11,6 +11,7 @@ enum EntryRegistrationResult
     case AthleteWeightMissing;
     case AlreadyRegistered;
     case CapacityExceeded;
+    case QuotaExceeded;
     case Unsubscribed;
     case UnsubscribeFailed;
 }

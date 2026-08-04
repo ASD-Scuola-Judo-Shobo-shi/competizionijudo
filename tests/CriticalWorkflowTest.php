@@ -171,6 +171,16 @@ final class CriticalWorkflowTest extends TestCase
             'email' => 'CLUB.ONE@EXAMPLE.TEST',
             'password' => $updatedPassword,
         ], ['REMOTE_ADDR' => '192.0.2.10']);
+        self::assertSame(200, $login->status());
+        self::assertNull(Session::get('club_id'));
+        self::assertStringContainsString(e(__('club.login.errors.not_approved')), $login->content());
+
+        self::assertTrue(\App\Model\Club::approve($clubId));
+        $login = $this->request('POST', '/clubs/login', [], [
+            'csrf_token' => csrf_token(),
+            'email' => 'CLUB.ONE@EXAMPLE.TEST',
+            'password' => $updatedPassword,
+        ], ['REMOTE_ADDR' => '192.0.2.11']);
         self::assertSame(302, $login->status());
         self::assertSame($clubId, Session::get('club_id'));
 
@@ -480,6 +490,7 @@ final class CriticalWorkflowTest extends TestCase
                 contact_first_name TEXT NOT NULL DEFAULT \'\',
                 contact_last_name TEXT NOT NULL DEFAULT \'\',
                 affiliation TEXT NOT NULL DEFAULT \'\',
+                approved_at TEXT,
                 password_hash TEXT NOT NULL
             );
             CREATE TABLE club_data_rights_declarations (

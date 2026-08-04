@@ -22,6 +22,7 @@ use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
 use App\Presentation\EventEntriesViewModel;
 use App\Service\EventEntriesCsvTransfer;
+use App\Service\ClubQuota;
 use App\Service\PasswordResetMailer;
 use App\Service\PasswordResetMailerFactory;
 use App\Service\RegistrationPaymentService;
@@ -270,6 +271,7 @@ final class EventController extends Controller
                 'missing_weight' => 0,
                 'already_registered' => 0,
                 'capacity_exceeded' => 0,
+                'quota_exceeded' => 0,
                 'failed' => 0,
             ];
 
@@ -313,6 +315,7 @@ final class EventController extends Controller
                         EntryRegistrationResult::AthleteRejected => $feedback['rejected']++,
                         EntryRegistrationResult::AthleteWeightMissing => $feedback['missing_weight']++,
                         EntryRegistrationResult::CapacityExceeded => $feedback['capacity_exceeded']++,
+                        EntryRegistrationResult::QuotaExceeded => $feedback['quota_exceeded']++,
                     };
                     if ($result === EntryRegistrationResult::Registered) {
                         $newlyRegisteredAthleteIds[] = $athleteId;
@@ -392,6 +395,7 @@ final class EventController extends Controller
                 'rejected' => $feedback['rejected'],
                 'missing_weight' => $feedback['missing_weight'],
                 'capacity_exceeded' => $feedback['capacity_exceeded'],
+                'quota_exceeded' => $feedback['quota_exceeded'],
                 'failed' => $feedback['failed'],
                 'recap_delivery_failed' => $recapDeliveryFailed,
                 'option_required_error' => false,
@@ -432,6 +436,8 @@ final class EventController extends Controller
             'athletePagination' => $athletePagination,
             'registrationSort' => $registrationSort,
             'preserveRegistrationSort' => $preserveRegistrationSort,
+            'clubEntryQuotaRemaining' => ClubQuota::remainingEntriesForEvent($eventId, $clubId),
+            'clubEntryQuotaLimit' => ClubQuota::entryLimit(),
         ]);
     }
 

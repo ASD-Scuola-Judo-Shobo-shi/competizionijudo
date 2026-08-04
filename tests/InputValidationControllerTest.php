@@ -144,13 +144,13 @@ final class InputValidationControllerTest extends TestCase
             ->willReturn(true);
         $declaration->expects(self::once())->method('fetchColumn')->willReturn(1);
         $count = $this->createMock(PDOStatement::class);
-        $count->expects(self::once())->method('execute')->with([31])->willReturn(true);
+        $count->expects(self::exactly(2))->method('execute')->with([31])->willReturn(true);
         $count->method('fetchColumn')->willReturn(0);
         $list = $this->createMock(PDOStatement::class);
         $list->expects(self::once())->method('execute')->with()->willReturn(true);
         $list->method('fetchAll')->willReturn([]);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(5))
+        $database->expects(self::exactly(6))
             ->method('prepare')
             ->willReturnCallback(
                 static function (string $sql) use ($club, $terms, $declaration, $count, $list): PDOStatement {

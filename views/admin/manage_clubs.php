@@ -62,7 +62,14 @@
                         ?>
                         <tr id="club-row-<?= (int) $club->id ?>" data-inline-edit-row>
                             <td class="admin-list-table__primary" data-label="<?= e(__('admin.clubs.name')) ?>">
-                                <span data-inline-display><?= e($club->name) ?></span>
+                                <span data-inline-display>
+                                    <?= e($club->name) ?>
+                                    <?php if (!$club->isApproved()) : ?>
+                                        <span class="status-badge status-badge--pending"><?= e(__('admin.clubs.status_pending')) ?></span>
+                                    <?php else : ?>
+                                        <span class="status-badge status-badge--approved"><?= e(__('admin.clubs.status_approved')) ?></span>
+                                    <?php endif; ?>
+                                </span>
                                 <input
                                     class="inline-edit-control"
                                     data-inline-editor
@@ -155,6 +162,16 @@
                                 <div class="table-actions admin-table-actions" data-inline-display>
                                     <a class="btn table-action-button" href="<?= e(base_url('/admin/clubs/athletes?club_id=' . (int) $club->id)) ?>" aria-label="<?= e(__('admin.clubs.view_athletes')) ?>" title="<?= e(__('admin.clubs.view_athletes')) ?>"><span aria-hidden="true">👥</span><span class="table-action-label"><?= e(__('admin.clubs.view_athletes')) ?></span></a>
                                     <a class="btn table-action-button" href="<?= e(base_url('/admin/clubs/athletes/export?club_id=' . (int) $club->id)) ?>" aria-label="<?= e(__('admin.clubs.export_athletes')) ?>" title="<?= e(__('admin.clubs.export_athletes')) ?>"><span aria-hidden="true">⬇️</span><span class="table-action-label"><?= e(__('admin.clubs.export_athletes')) ?></span></a>
+                                    <?php if (!$club->isApproved()) : ?>
+                                        <form method="post" action="<?= e(base_url('/admin/clubs/approve')) ?>">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="club_id" value="<?= (int) $club->id ?>">
+                                            <input type="hidden" name="page" value="<?= (int) $pagination['page'] ?>">
+                                            <input type="hidden" name="sort" value="<?= e($tableSort['column']) ?>">
+                                            <input type="hidden" name="direction" value="<?= e($tableSort['direction']) ?>">
+                                            <button class="btn green table-action-button" type="submit" aria-label="<?= e(__('admin.clubs.approve')) ?>" title="<?= e(__('admin.clubs.approve')) ?>"><span aria-hidden="true">✔️</span><span class="table-action-label"><?= e(__('admin.clubs.approve')) ?></span></button>
+                                        </form>
+                                    <?php endif; ?>
                                     <button class="btn table-action-button green" type="button" data-inline-edit aria-label="<?= e(__('tables.edit_row')) ?>" title="<?= e(__('tables.edit_row')) ?>"><span aria-hidden="true">✏️</span><span class="table-action-label"><?= e(__('tables.edit_row')) ?></span></button>
                                     <a class="btn table-action-button gray" href="<?= e(base_url('/admin/clubs/edit?id=' . (int) $club->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
                                     <form method="post" action="<?= e(base_url('/admin/clubs/delete?')) ?>" onsubmit="return confirm('<?= e(__('admin.clubs.confirm_delete')) ?>')">

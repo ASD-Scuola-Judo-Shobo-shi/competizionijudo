@@ -120,6 +120,46 @@ final class EntryRegistrationRepositoryTest extends TestCase
         self::assertSame(EntryRegistrationResult::AlreadyRegistered, $result);
     }
 
+    public function testClubEntryQuotaExceededReturnsQuotaExceededWithoutAnInsert(): void
+    {
+        $this->insertAthlete(301, 201);
+        $this->insertAthlete(302, 201);
+        $this->insertEvent(101, false);
+        $this->insertEntry(101, 201, 302);
+
+        $result = $this->withClubEntryLimit('1', fn (): EntryRegistrationResult =>
+            (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2026-06-28'));
+
+        self::assertSame(EntryRegistrationResult::QuotaExceeded, $result);
+        self::assertSame(1, (int) $this->database->query('SELECT COUNT(*) FROM entries')->fetchColumn());
+    }
+
+    public function testClubEntryQuotaAllowsRegistrationBelowTheLimit(): void
+    {
+        $this->insertAthlete(301, 201);
+        $this->insertAthlete(302, 201);
+        $this->insertEvent(101, false);
+        $this->insertEntry(101, 201, 302);
+
+        $result = $this->withClubEntryLimit('2', fn (): EntryRegistrationResult =>
+            (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2026-06-28'));
+
+        self::assertSame(EntryRegistrationResult::Registered, $result);
+    }
+
+    public function testClubEntryQuotaDisabledByZeroLimit(): void
+    {
+        $this->insertAthlete(301, 201);
+        $this->insertAthlete(302, 201);
+        $this->insertEvent(101, false);
+        $this->insertEntry(101, 201, 302);
+
+        $result = $this->withClubEntryLimit('0', fn (): EntryRegistrationResult =>
+            (new EntryRegistrationRepository($this->database))->register(101, 201, 301, 501, '2026-06-28'));
+
+        self::assertSame(EntryRegistrationResult::Registered, $result);
+    }
+
     public function testCapacityExceededReturnsCapacityExceededResult(): void
     {
         $this->insertAthlete(301, 201);
@@ -213,7 +253,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
     private function createSchema(): void
     {
         $this->database->exec(
-            'CREATE TABLE clubs (id INTEGER PRIMARY KEY, federal_code TEXT NOT NULL, name TEXT NOT NULL)'
+            'CREATE TABLE clubs (id INTEGER PRIMARY KEY, federal_code TEXT NOT NULL, name TEXT NOT NULL, approved_at TEXT)'
         );
         $this->database->exec(
             'CREATE TABLE events (
@@ -335,6 +375,26 @@ final class EntryRegistrationRepositoryTest extends TestCase
         );
         for ($i = 0; $i < $count; $i++) {
             $stmt->execute([$eventId, $clubId, 400 + $i]);
+        }
+    }
+
+    private function withClubEntryLimit(?string $value, callable $callback): mixed
+    {
+        $original = $_ENV['CLUB_ENTRY_LIMIT'] ?? null;
+        if ($value === null) {
+            unset($_ENV['CLUB_ENTRY_LIMIT']);
+        } else {
+            $_ENV['CLUB_ENTRY_LIMIT'] = $value;
+        }
+
+        try {
+            return $callback();
+        } finally {
+            if ($original === null) {
+                unset($_ENV['CLUB_ENTRY_LIMIT']);
+            } else {
+                $_ENV['CLUB_ENTRY_LIMIT'] = $original;
+            }
         }
     }
 }

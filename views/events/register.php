@@ -11,9 +11,13 @@
 /** @var list<\App\Model\EventRegistrationOption> $registrationOptions */
 /** @var int|null $defaultRegistrationOptionId */
 /** @var array<int, array{athlete_id:int, athlete_name:string, option_id:int, option_name:string, fee_cents:int}> $registeredEnrollmentDetails */
+/** @var int|null $clubEntryQuotaRemaining */
+/** @var int|null $clubEntryQuotaLimit */
 $athletePagination ??= paginate(count($athletes), 1, 50, 'athletes_page');
 $registrationSort ??= ['column' => 'athlete', 'direction' => 'asc'];
 $preserveRegistrationSort ??= false;
+$clubEntryQuotaRemaining = $clubEntryQuotaRemaining ?? 0;
+$clubEntryQuotaLimit = $clubEntryQuotaLimit ?? 0;
 $showRegistrationFeedback = $registrationFeedback !== null
     && empty($registrationFeedback['option_required_error'])
     && empty($registrationFeedback['option_configuration_error']);
@@ -78,6 +82,15 @@ if ($preserveRegistrationSort) {
                         <div class="notice">
                             <?= e(__('events.registration_exception_notice')) ?>
                         </div>
+                    <?php endif; ?>
+
+                    <?php if ($clubEntryQuotaLimit > 0 && $clubEntryQuotaRemaining > 0) : ?>
+                        <p class="field-help">
+                            <?= e(__('events.registration_quota_remaining', [
+                                'current' => (string) ($clubEntryQuotaLimit - $clubEntryQuotaRemaining),
+                                'limit' => (string) $clubEntryQuotaLimit,
+                            ])) ?>
+                        </p>
                     <?php endif; ?>
 
                     <?php if (!empty($registrationFeedback['option_required_error'])) : ?>
@@ -227,6 +240,9 @@ if ($preserveRegistrationSort) {
                                         }
                                         if (($registrationFeedback['capacity_exceeded'] ?? 0) > 0) {
                                             $parts[] = __('events.registration_capacity_exceeded', ['count' => (string) $registrationFeedback['capacity_exceeded']]);
+                                        }
+                                        if (($registrationFeedback['quota_exceeded'] ?? 0) > 0) {
+                                            $parts[] = __('events.registration_quota_exceeded', ['count' => (string) $registrationFeedback['quota_exceeded']]);
                                         }
                                         if (($registrationFeedback['failed'] ?? 0) > 0) {
                                             $parts[] = __('events.registration_failed', ['count' => (string) $registrationFeedback['failed']]);

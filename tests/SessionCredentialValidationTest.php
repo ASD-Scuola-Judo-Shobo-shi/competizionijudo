@@ -38,7 +38,7 @@ final class SessionCredentialValidationTest extends TestCase
 
         $this->database = new PDO('sqlite::memory:');
         $this->database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->database->exec('CREATE TABLE clubs (id INTEGER PRIMARY KEY, password_hash TEXT NOT NULL)');
+        $this->database->exec('CREATE TABLE clubs (id INTEGER PRIMARY KEY, approved_at TEXT, password_hash TEXT NOT NULL)');
         $this->databaseConnection->setValue(null, $this->database);
 
         foreach (['ADMIN_USER', 'ADMIN_PASS_HASH'] as $key) {

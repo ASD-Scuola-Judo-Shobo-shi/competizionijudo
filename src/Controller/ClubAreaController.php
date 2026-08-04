@@ -19,6 +19,7 @@ use App\Service\AthleteCsvImportException;
 use App\Service\AthleteCsvTransfer;
 use App\Service\AthleteImportIssue;
 use App\Service\AthleteImportReconciliation;
+use App\Service\ClubQuota;
 use App\Validation\AthleteInputValidator;
 
 final class ClubAreaController extends Controller
@@ -101,6 +102,10 @@ final class ClubAreaController extends Controller
                             if ($edit !== null) {
                                 $edit->update($data);
                             }
+                        } elseif (!ClubQuota::canAddAthletes($club->id, 1)) {
+                            $errors[] = __('errors.athlete_quota_exceeded', [
+                                'limit' => (string) ClubQuota::athleteLimit(),
+                            ]);
                         } else {
                             Athlete::add($data);
                         }
@@ -156,6 +161,8 @@ final class ClubAreaController extends Controller
                 'athleteInlineFeedback' => $athleteInlineFeedback,
                 'agreementsFeedback' => $agreementsFeedback,
                 'csvReturnView' => 'add',
+                'athleteQuotaRemaining' => ClubQuota::remainingAthletes($club->id),
+                'athleteQuotaLimit' => ClubQuota::athleteLimit(),
             ]);
         }
 
@@ -213,6 +220,8 @@ final class ClubAreaController extends Controller
             'athleteInlineFeedback' => $athleteInlineFeedback,
             'agreementsFeedback' => $agreementsFeedback,
             'csvReturnView' => 'list',
+            'athleteQuotaRemaining' => ClubQuota::remainingAthletes($club->id),
+            'athleteQuotaLimit' => ClubQuota::athleteLimit(),
         ]);
     }
 
@@ -506,7 +515,7 @@ final class ClubAreaController extends Controller
 
     private function csvImportError(AthleteCsvImportException $exception): string
     {
-        $replacements = [];
+        $replacements = $exception->replacements;
         if ($exception->row !== null) {
             $replacements['row'] = (string) $exception->row;
         }

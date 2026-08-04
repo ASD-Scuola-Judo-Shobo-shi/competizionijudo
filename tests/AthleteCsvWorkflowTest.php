@@ -13,6 +13,7 @@ use App\Localization;
 use App\Model\ClubDataRightsDeclaration;
 use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
+use App\Service\AthleteCsvImportException;
 use App\Service\AthleteCsvTransfer;
 use PDO;
 use PHPUnit\Framework\TestCase;
@@ -246,6 +247,55 @@ final class AthleteCsvWorkflowTest extends TestCase
         self::assertSame(0, (int) $this->database->query(
             "SELECT COUNT(*) FROM athletes WHERE membership_number = 'NAME-002'"
         )->fetchColumn());
+    }
+
+    public function testImportRejectsNewRowsBeyondTheConfiguredAthleteQuota(): void
+    {
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+            'Quota,One,F,2013-05-06,39,yellow,QUOTA-001',
+            'Quota,Two,M,2012-04-05,45,green,QUOTA-002',
+        ]));
+        $original = $_ENV['CLUB_ATHLETE_LIMIT'] ?? null;
+        $_ENV['CLUB_ATHLETE_LIMIT'] = '1';
+        try {
+            (new AthleteCsvTransfer())->import($path, 201);
+            self::fail('Expected the quota exception.');
+        } catch (AthleteCsvImportException $exception) {
+            self::assertSame('club.area.csv.quota_exceeded', $exception->translationKey);
+            self::assertSame(['limit' => '1'], $exception->replacements);
+        } finally {
+            if ($original === null) {
+                unset($_ENV['CLUB_ATHLETE_LIMIT']);
+            } else {
+                $_ENV['CLUB_ATHLETE_LIMIT'] = $original;
+            }
+        }
+        self::assertSame(0, (int) $this->database->query(
+            "SELECT COUNT(*) FROM athletes WHERE membership_number LIKE 'QUOTA-%'"
+        )->fetchColumn());
+    }
+
+    public function testImportIgnoresTheAthleteQuotaWhenTheLimitIsDisabled(): void
+    {
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+            'Quota,One,F,2013-05-06,39,yellow,QUOTA-001',
+            'Quota,Two,M,2012-04-05,45,green,QUOTA-002',
+        ]));
+        $original = $_ENV['CLUB_ATHLETE_LIMIT'] ?? null;
+        $_ENV['CLUB_ATHLETE_LIMIT'] = '0';
+        try {
+            $result = (new AthleteCsvTransfer())->import($path, 201);
+        } finally {
+            if ($original === null) {
+                unset($_ENV['CLUB_ATHLETE_LIMIT']);
+            } else {
+                $_ENV['CLUB_ATHLETE_LIMIT'] = $original;
+            }
+        }
+
+        self::assertSame(2, $result->created);
     }
 
     public function testExactDuplicateRowsInOneFileAreSkipped(): void
@@ -685,6 +735,7 @@ final class AthleteCsvWorkflowTest extends TestCase
                 contact_email TEXT,
                 affiliation TEXT NOT NULL,
                 recovery_email TEXT NOT NULL,
+                approved_at TEXT,
                 password_hash TEXT NOT NULL
             );
             CREATE TABLE athletes (
@@ -722,15 +773,15 @@ final class AthleteCsvWorkflowTest extends TestCase
     private function seedData(): void
     {
         $club = $this->database->prepare(
-            'INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $club->execute([
             201, 'SYN-201', 'Own Club', 'own@example.test', '', 'Own', 'Contact', '', '',
-            'FIJLKAM', 'own@example.test', 'hash',
+            'FIJLKAM', 'own@example.test', '2026-01-01 00:00:00', 'hash',
         ]);
         $club->execute([
             202, 'SYN-202', 'Foreign Club', 'foreign@example.test', '', 'Foreign', 'Contact', '', '',
-            'FIJLKAM', 'foreign@example.test', 'hash',
+            'FIJLKAM', 'foreign@example.test', '2026-01-01 00:00:00', 'hash',
         ]);
         $this->database->prepare(
             'INSERT INTO club_data_rights_declarations '

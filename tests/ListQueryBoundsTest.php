@@ -156,7 +156,7 @@ final class ListQueryBoundsTest extends TestCase
                 id INTEGER PRIMARY KEY, federal_code TEXT NOT NULL, name TEXT NOT NULL,
                 email TEXT NOT NULL, phone TEXT NOT NULL, contact_first_name TEXT NOT NULL,
                 contact_last_name TEXT NOT NULL, contact_phone TEXT NOT NULL, contact_email TEXT,
-                affiliation TEXT NOT NULL, recovery_email TEXT NOT NULL, password_hash TEXT NOT NULL
+                affiliation TEXT NOT NULL, recovery_email TEXT NOT NULL, approved_at TEXT, password_hash TEXT NOT NULL
             )'
         );
         $this->database->exec(
@@ -189,12 +189,12 @@ final class ListQueryBoundsTest extends TestCase
     private function insertClub(int $id, string $name): void
     {
         $statement = $this->database->prepare(
-            'INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO clubs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $statement->execute([
             $id, 'CODE-' . $id, $name, 'club' . $id . '@example.test', '',
             'Synthetic', 'Contact', '', null, 'SYNTHETIC',
-            'recovery' . $id . '@example.test', 'synthetic-hash',
+            'recovery' . $id . '@example.test', '2026-01-01 00:00:00', 'synthetic-hash',
         ]);
     }
 

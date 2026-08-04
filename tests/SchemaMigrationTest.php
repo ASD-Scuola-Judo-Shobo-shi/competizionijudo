@@ -32,6 +32,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20260730_000001_repair_registration_payment_schema_drift.sql',
                 dirname(__DIR__) . '/migrations/20260731_000001_allow_missing_athlete_weight.sql',
                 dirname(__DIR__) . '/migrations/20260804_000001_create_club_terms_acceptances.sql',
+                dirname(__DIR__) . '/migrations/20260804_000002_add_club_approval_state.sql',
             ],
             array_values($migrations)
         );
@@ -123,6 +124,18 @@ final class SchemaMigrationTest extends TestCase
         self::assertStringContainsString('terms_version VARCHAR(64) NOT NULL', $migration);
         self::assertStringContainsString('accepted_locale VARCHAR(5) NOT NULL', $migration);
         self::assertStringContainsString('accepted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', $migration);
+    }
+
+    public function testForwardMigrationAddsClubApprovalState(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260804_000002_add_club_approval_state.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString('ADD COLUMN approved_at TIMESTAMP NULL DEFAULT NULL', $migration);
+        self::assertStringContainsString("COLUMN_NAME = 'approved_at'", $migration);
+        self::assertStringContainsString('incomplete_club_approval_column', $migration);
     }
 
     public function testForwardMigrationConsolidatesClubContactsAndAddsAddresses(): void

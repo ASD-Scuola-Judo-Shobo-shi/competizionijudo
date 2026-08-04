@@ -249,6 +249,8 @@ final class ClubController extends Controller
 
                         if (!PasswordVerifier::matches($password, $club?->password_hash)) {
                             $errors[] = __('club.login.errors.invalid_credentials');
+                        } elseif (!$club->isApproved()) {
+                            $errors[] = __('club.login.errors.not_approved');
                         } else {
                             $throttle->clear('club-login', $email, $networkSignal);
                             Session::authenticateClub(

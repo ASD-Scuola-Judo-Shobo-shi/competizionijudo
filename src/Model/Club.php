@@ -21,7 +21,8 @@ final class Club
         public readonly string $contact_last_name,
         public readonly ?string $affiliation,
         public readonly string $password_hash,
-        public readonly string $federal_code
+        public readonly string $federal_code,
+        public readonly ?string $approved_at = null
     ) {
     }
 
@@ -41,14 +42,20 @@ final class Club
             (string) ($data['contact_last_name'] ?? ''),
             self::nullableString($data['affiliation'] ?? null),
             (string) ($data['password_hash'] ?? ''),
-            (string) ($data['federal_code'] ?? '')
+            (string) ($data['federal_code'] ?? ''),
+            self::nullableString($data['approved_at'] ?? null)
         );
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->approved_at !== null;
     }
 
     public static function findByEmail(string $email): ?self
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, email, password_hash '
+            'SELECT id, email, password_hash, approved_at '
             . 'FROM clubs WHERE normalized_email = ?'
         );
         $stmt->execute([self::normalizeEmail($email)]);
@@ -168,6 +175,19 @@ final class Club
     {
         $stmt = Database::connection()->prepare('DELETE FROM clubs WHERE id = ?');
         $stmt->execute([$id]);
+    }
+
+    public static function approve(int $id): bool
+    {
+        $timestamp = Database::connection()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql'
+            ? 'UTC_TIMESTAMP()'
+            : "datetime('now')";
+        $stmt = Database::connection()->prepare(
+            'UPDATE clubs SET approved_at = ' . $timestamp . ' WHERE id = ? AND approved_at IS NULL'
+        );
+        $stmt->execute([$id]);
+
+        return $stmt->rowCount() > 0;
     }
 
     public static function count(): int

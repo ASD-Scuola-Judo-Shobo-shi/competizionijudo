@@ -4,6 +4,7 @@
 
     <?php if ($success) : ?>
         <div class="notice success"><?= e(__('club.confirm_registration.success')) ?></div>
+        <div class="notice"><?= e(__('club.confirm_registration.pending_approval')) ?></div>
         <a class="btn green" href="<?= e(base_url('/clubs/login?')) ?>"><?= e(__('buttons.back_to_login')) ?></a>
     <?php else : ?>
         <div class="notice"><?= e($error ?? __('club.confirm_registration.invalid_token')) ?></div>

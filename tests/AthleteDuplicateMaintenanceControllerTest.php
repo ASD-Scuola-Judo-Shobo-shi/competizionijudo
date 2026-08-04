@@ -216,7 +216,8 @@ final class AthleteDuplicateMaintenanceControllerTest extends TestCase
             'CREATE TABLE clubs (
                 id INTEGER PRIMARY KEY,
                 federal_code TEXT NOT NULL,
-                name TEXT NOT NULL
+                name TEXT NOT NULL,
+                approved_at TEXT
             );
             CREATE TABLE athletes (
                 id INTEGER PRIMARY KEY,

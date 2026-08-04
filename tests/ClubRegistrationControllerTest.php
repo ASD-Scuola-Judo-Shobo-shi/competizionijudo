@@ -221,6 +221,7 @@ final class ClubRegistrationControllerTest extends TestCase
                 contact_first_name TEXT NOT NULL,
                 contact_last_name TEXT NOT NULL,
                 affiliation TEXT,
+                approved_at TEXT,
                 password_hash TEXT NOT NULL
             );
             CREATE TABLE club_registration_confirmations (
