@@ -84,6 +84,7 @@ final class PasswordPolicyTest extends TestCase
             'affiliation' => ['FIJLKAM'],
             'password' => $shortPassword,
             'password2' => $shortPassword,
+            'terms_accepted' => '1',
             'athlete_data_rights_declaration' => '1',
         ]);
 

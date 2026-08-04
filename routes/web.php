@@ -19,6 +19,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/index.php', [AboutController::class, 'index']);
     $router->get('/about', [AboutController::class, 'about']);
     $router->get('/privacy', [AboutController::class, 'privacy']);
+    $router->get('/terms', [AboutController::class, 'terms']);
     $router->get('/health', [HealthController::class, 'show']);
     $router->post('/migrations', [MigrationWebhookController::class, 'run']);
 
@@ -41,6 +42,8 @@ return static function (App\Core\Router $router): void {
 
     $router->get('/clubs/area', [ClubAreaController::class, 'index'], AuthContext::CLUB);
     $router->post('/clubs/area', [ClubAreaController::class, 'index'], AuthContext::CLUB);
+    $router->get('/clubs/agreements', [ClubAreaController::class, 'agreements'], AuthContext::CLUB);
+    $router->post('/clubs/agreements', [ClubAreaController::class, 'agreements'], AuthContext::CLUB);
     $router->post('/clubs/athletes/update-inline', [ClubAreaController::class, 'updateAthleteInline'], AuthContext::CLUB);
     $router->post('/clubs/delete-athlete', [ClubAreaController::class, 'deleteAthlete'], AuthContext::CLUB);
     $router->get('/clubs/athletes-export', [ClubAreaController::class, 'exportAthletes'], AuthContext::CLUB);

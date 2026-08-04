@@ -26,9 +26,11 @@ RewriteRule ^ https://www.competizionijudo.it%{REQUEST_URI} [L,R=301]
 # BLOCK SENSITIVE INTERNAL RESOURCES
 # =====================================================================
 # The deployment workflow invokes this authenticated application route after
-# uploading an environment. Dispatch only the exact POST endpoints before the
+# uploading an environment. Dispatch only the exact endpoints before the
 # physical migrations directory is denied below; files inside it stay private.
-RewriteCond %{REQUEST_METHOD} ^POST$
+# The rule is intentionally unconditional: the production host does not honor
+# method conditions in per-directory context; the application rejects
+# non-POST requests with 405.
 RewriteRule ^(?:prod|dev)/migrations/?$ index.php [QSA,L]
 
 # Application artifacts live below /prod, /dev, or /legacy. Match both that

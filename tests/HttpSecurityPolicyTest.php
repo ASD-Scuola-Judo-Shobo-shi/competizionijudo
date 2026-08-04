@@ -51,11 +51,10 @@ final class HttpSecurityPolicyTest extends TestCase
         }
     }
 
-    public function testRootApachePolicyDispatchesOnlyExactPostMigrationEndpointsBeforeDeny(): void
+    public function testRootApachePolicyDispatchesOnlyExactMigrationEndpointsBeforeDeny(): void
     {
         $policy = $this->rootPolicy();
-        $dispatch = "RewriteCond %{REQUEST_METHOD} ^POST$\n"
-            . 'RewriteRule ^(?:prod|dev)/migrations/?$ index.php [QSA,L]';
+        $dispatch = 'RewriteRule ^(?:prod|dev)/migrations/?$ index.php [QSA,L]';
         $dispatchPosition = strpos($policy, $dispatch);
         $denyPosition = strpos(
             $policy,
@@ -65,8 +64,9 @@ final class HttpSecurityPolicyTest extends TestCase
         self::assertIsInt($dispatchPosition);
         self::assertIsInt($denyPosition);
         self::assertTrue($dispatchPosition < $denyPosition);
+        self::assertStringNotContainsString('RewriteCond %{REQUEST_METHOD}', $policy);
         self::assertTrue($this->isForbiddenByRootPolicy('prod/migrations/20260630_000000_create_schema.sql'));
-        self::assertTrue($this->isForbiddenByRootPolicy('dev/migrations/'));
+        self::assertTrue($this->isForbiddenByRootPolicy('legacy/migrations/'));
         self::assertStringNotContainsString('(?:prod|dev|legacy)/migrations/?$', $policy);
     }
 
@@ -93,6 +93,21 @@ final class HttpSecurityPolicyTest extends TestCase
         foreach (['events', 'assets/logo.svg', 'health', '.well-known/acme-challenge/token'] as $path) {
             self::assertFalse($this->isForbiddenByArtifactPolicy($path), $path . ' was unexpectedly denied.');
         }
+    }
+
+    public function testArtifactApachePolicyDispatchesOnlyExactMigrationEndpointsBeforeDeny(): void
+    {
+        $policy = $this->artifactPolicy();
+        $dispatch = 'RewriteRule ^(?:migrations/?)$ public/index.php [QSA,L]';
+        $dispatchPosition = strpos($policy, $dispatch);
+        $denyPosition = strpos($policy, 'RewriteRule ^(?:\.git|\.github|config|docs|lang|migrations|');
+
+        self::assertIsInt($dispatchPosition);
+        self::assertIsInt($denyPosition);
+        self::assertTrue($dispatchPosition < $denyPosition);
+        self::assertStringNotContainsString('RewriteCond %{REQUEST_METHOD}', $policy);
+        self::assertTrue($this->isForbiddenByArtifactPolicy('migrations/20260630_000000_create_schema.sql'));
+        self::assertTrue($this->isForbiddenByArtifactPolicy('migrations/nested/file.sql'));
     }
 
     public function testApacheHttpsRedirectUsesTheCanonicalHost(): void
@@ -202,10 +217,15 @@ final class HttpSecurityPolicyTest extends TestCase
 
     private function isForbiddenByArtifactPolicy(string $path): bool
     {
+        return $this->isForbiddenByPolicy($this->artifactPolicy(), $path);
+    }
+
+    private function artifactPolicy(): string
+    {
         $policy = file_get_contents(dirname(__DIR__) . '/.htaccess');
         self::assertIsString($policy);
 
-        return $this->isForbiddenByPolicy($policy, $path);
+        return $policy;
     }
 
     private function isForbiddenByPolicy(string $policy, string $path): bool

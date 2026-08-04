@@ -76,7 +76,8 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
         <textarea name="description" rows="3"><?= e($event?->description ?? '') ?></textarea>
 
         <label><?= e($isEdit ? __('admin.edit.notes') : __('admin.event_details.notes')) ?></label>
-        <textarea name="notes" rows="3"><?= e($event?->notes ?? '') ?></textarea>
+        <p class="field-help" id="event-notes-help"><?= e(__('admin.event_details.notes_privacy_help')) ?></p>
+        <textarea name="notes" rows="3" aria-describedby="event-notes-help"><?= e($event?->notes ?? '') ?></textarea>
 
         <label><?= e($isEdit ? __('admin.edit.max_participants') : __('admin.event_details.max_participants')) ?></label>
         <input type="number" name="max_participants" value="<?= e($event?->max_participants ? (string) $event->max_participants : '') ?>" min="1" placeholder="<?= e(__('admin.event_details.max_participants_placeholder')) ?>">

@@ -13,6 +13,8 @@ use App\Core\Session;
 use App\Core\View;
 use App\Model\Athlete;
 use App\Model\Club;
+use App\Model\ClubDataRightsDeclaration;
+use App\Model\ClubTermsAcceptance;
 use App\Model\Entry;
 use App\Model\EntryRegistrationResult;
 use App\Model\Event;
@@ -112,6 +114,16 @@ final class EventController extends Controller
         }
         $clubId = (int) $clubId;
 
+        if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
+            if (
+                !ClubTermsAcceptance::hasCurrentVersion($clubId)
+                || !ClubDataRightsDeclaration::hasCurrentVersion($clubId)
+            ) {
+                return $this->redirect('/clubs/agreements', 303);
+            }
+        }
+
         $eventId = (int) ($request->input('event') ?? $request->query('event'));
         $limit = max(1, (int) config('app.events_upcoming_limit'));
         $registrationDate = date('Y-m-d');
@@ -193,8 +205,6 @@ final class EventController extends Controller
         }
 
         if ($request->method() === 'POST') {
-            validate_csrf((string) $request->post('csrf_token'));
-
             $selectedOptionId = (int) ($request->post('registration_option_id') ?? 0);
             $selectedOption = EventRegistrationOption::activeForEventById(
                 $eventId,
@@ -429,6 +439,8 @@ final class EventController extends Controller
     {
         Session::start();
         $isAdmin = AuthContext::isAdministrator();
+        $canViewEntryBreakdowns = AuthContext::isAuthenticated();
+        $canViewAllAthleteEntries = $isAdmin;
         $limit = max(1, (int) config('app.events_upcoming_limit'));
         $date = date('Y-m-d');
 
@@ -440,6 +452,8 @@ final class EventController extends Controller
                 'title' => __('events.entries'),
                 'event' => null,
                 'loggedInClubId' => null,
+                'canViewEntryBreakdowns' => false,
+                'canViewAllAthleteEntries' => false,
                 'hasRegistrationException' => false,
                 'entryReport' => EventEntriesViewModel::empty(),
                 'upcomingEvents' => $upcomingEvents,
@@ -552,6 +566,8 @@ final class EventController extends Controller
             'entryAthletesSort' => $entryAthletesSort,
             'currentClubSort' => $currentClubSort,
             'loggedInClubId' => $clubId !== null ? (int) $clubId : null,
+            'canViewEntryBreakdowns' => $canViewEntryBreakdowns,
+            'canViewAllAthleteEntries' => $canViewAllAthleteEntries,
             'hasRegistrationException' => $hasRegistrationException,
             'upcomingEvents' => $upcomingEvents,
             'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),

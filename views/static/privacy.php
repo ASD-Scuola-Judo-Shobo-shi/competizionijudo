@@ -29,10 +29,12 @@ $email = (string) ($privacy['contact_email'] ?? '');
 
     <h3><?= e(__('privacy.source_title')) ?></h3>
     <p><?= e(__('privacy.source')) ?></p>
+    <p><?= e(__('privacy.indirect_notice_delivery')) ?></p>
 
     <h3><?= e(__('privacy.purpose_title')) ?></h3>
     <p><?= e(__('privacy.account_purpose')) ?><br><strong><?= e(__('privacy.legal_basis')) ?>:</strong> <?= e(__('privacy.account_legal_basis')) ?></p>
     <p><?= e(__('privacy.athlete_purpose')) ?><br><strong><?= e(__('privacy.legal_basis')) ?>:</strong> <?= e(__('privacy.athlete_legal_basis')) ?></p>
+    <p><?= e(__('privacy.event_purpose')) ?><br><strong><?= e(__('privacy.legal_basis')) ?>:</strong> <?= e(__('privacy.event_legal_basis')) ?></p>
     <p><?= e(__('privacy.special_categories')) ?></p>
     <p><?= e(__('privacy.club_declaration')) ?></p>
     <p><?= e(__('privacy.provision')) ?></p>
@@ -42,12 +44,17 @@ $email = (string) ($privacy['contact_email'] ?? '');
         'provider' => (string) ($privacy['hosting_provider'] ?? ''),
         'location' => (string) ($privacy['hosting_location'] ?? ''),
     ])) ?></p>
+    <p><?= e(__('privacy.public_access')) ?></p>
     <p><?= e(__('privacy.transfers')) ?></p>
 
     <h3><?= e(__('privacy.retention_title')) ?></h3>
     <ul>
+        <li><?= e(__('privacy.account_retention')) ?></li>
         <li><?= e(__('privacy.live_retention')) ?></li>
         <li><?= e(__('privacy.snapshot_retention')) ?></li>
+        <li><?= e(__('privacy.legacy_entry_retention')) ?></li>
+        <li><?= e(__('privacy.account_workflow_retention')) ?></li>
+        <li><?= e(__('privacy.event_retention')) ?></li>
         <li><?= e(__('privacy.upload_retention')) ?></li>
         <li><?= e(__('privacy.log_retention', ['days' => (string) ($privacy['log_retention_days'] ?? '')])) ?></li>
         <li><?= e(__('privacy.backup_retention', ['days' => (string) ($privacy['backup_retention_days'] ?? '')])) ?></li>

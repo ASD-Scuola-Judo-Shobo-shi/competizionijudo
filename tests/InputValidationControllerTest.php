@@ -12,6 +12,8 @@ use App\Core\Request;
 use App\Core\Session;
 use App\Core\View;
 use App\Localization;
+use App\Model\ClubDataRightsDeclaration;
+use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
 use App\Security\PasswordPolicy;
 use App\Validation\EventInputValidator;
@@ -75,6 +77,7 @@ final class InputValidationControllerTest extends TestCase
             e(__('validation.club_athlete_data_rights_required')),
             $response->content()
         );
+        self::assertStringContainsString(e(__('validation.club_terms_required')), $response->content());
     }
 
     public function testClubRegistrationRejectsMissingAthleteDataRightsDeclaration(): void
@@ -88,6 +91,7 @@ final class InputValidationControllerTest extends TestCase
             'email' => 'declaration@example.test',
             'password' => $password,
             'password2' => $password,
+            'terms_accepted' => '1',
         ]);
 
         $response = $this->clubController($request)->register($request);
@@ -97,11 +101,48 @@ final class InputValidationControllerTest extends TestCase
             e(__('validation.club_athlete_data_rights_required')),
             $response->content()
         );
+        self::assertStringNotContainsString(e(__('validation.club_terms_required')), $response->content());
+    }
+
+    public function testClubRegistrationRejectsMissingTermsAcceptance(): void
+    {
+        $this->setDatabase($this->databaseExpectingNoAccess());
+        $password = str_repeat('x', PasswordPolicy::MINIMUM_LENGTH);
+        $request = new Request('POST', '/club_register.php', [], [
+            'csrf_token' => csrf_token(),
+            'name' => 'Synthetic Club',
+            'federal_code' => 'SYN-TERMS',
+            'email' => 'terms@example.test',
+            'password' => $password,
+            'password2' => $password,
+            'athlete_data_rights_declaration' => '1',
+        ]);
+
+        $response = $this->clubController($request)->register($request);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(e(__('validation.club_terms_required')), $response->content());
+        self::assertStringNotContainsString(
+            e(__('validation.club_athlete_data_rights_required')),
+            $response->content()
+        );
     }
 
     public function testInvalidAthletePostPerformsOnlyRequiredReadQueries(): void
     {
         $club = $this->statementFetching($this->clubRow(31), [31]);
+        $terms = $this->createMock(PDOStatement::class);
+        $terms->expects(self::once())
+            ->method('execute')
+            ->with([31, ClubTermsAcceptance::VERSION])
+            ->willReturn(true);
+        $terms->expects(self::once())->method('fetchColumn')->willReturn(1);
+        $declaration = $this->createMock(PDOStatement::class);
+        $declaration->expects(self::once())
+            ->method('execute')
+            ->with([31, ClubDataRightsDeclaration::VERSION])
+            ->willReturn(true);
+        $declaration->expects(self::once())->method('fetchColumn')->willReturn(1);
         $count = $this->createMock(PDOStatement::class);
         $count->expects(self::once())->method('execute')->with([31])->willReturn(true);
         $count->method('fetchColumn')->willReturn(0);
@@ -109,15 +150,17 @@ final class InputValidationControllerTest extends TestCase
         $list->expects(self::once())->method('execute')->with()->willReturn(true);
         $list->method('fetchAll')->willReturn([]);
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(3))
+        $database->expects(self::exactly(5))
             ->method('prepare')
             ->willReturnCallback(
-                static function (string $sql) use ($club, $count, $list): PDOStatement {
+                static function (string $sql) use ($club, $terms, $declaration, $count, $list): PDOStatement {
                     if (str_starts_with($sql, 'SELECT * FROM clubs')) {
                         return $club;
                     }
 
                     return match (true) {
+                        str_starts_with($sql, 'SELECT 1 FROM club_terms_acceptances') => $terms,
+                        str_starts_with($sql, 'SELECT 1 FROM club_data_rights_declarations') => $declaration,
                         str_starts_with($sql, 'SELECT COUNT(*) FROM athletes') => $count,
                         str_starts_with($sql, 'SELECT * FROM athletes') => $list,
                         default => throw new RuntimeException('Mutation query reached for invalid athlete input.'),
@@ -235,6 +278,7 @@ final class InputValidationControllerTest extends TestCase
             'affiliation' => ['FIJLKAM'],
             'password' => str_repeat('x', PasswordPolicy::MINIMUM_LENGTH),
             'password2' => str_repeat('x', PasswordPolicy::MINIMUM_LENGTH),
+            'terms_accepted' => '1',
             'athlete_data_rights_declaration' => '1',
         ]);
 

@@ -6,7 +6,18 @@ namespace App\Model;
 
 final class ClubDataRightsDeclaration
 {
-    public const VERSION = '2026-07-15';
+    public const VERSION = '2026-08-04-article-14';
+
+    public static function hasCurrentVersion(int $clubId): bool
+    {
+        $statement = Database::connection()->prepare(
+            'SELECT 1 FROM club_data_rights_declarations '
+            . 'WHERE club_id = ? AND declaration_version = ? LIMIT 1'
+        );
+        $statement->execute([$clubId, self::VERSION]);
+
+        return $statement->fetchColumn() !== false;
+    }
 
     public static function record(int $clubId): void
     {

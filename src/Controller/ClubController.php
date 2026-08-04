@@ -10,9 +10,12 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
+use App\Localization;
 use App\Model\Affiliation;
 use App\Model\Club;
+use App\Model\ClubDataRightsDeclaration;
 use App\Model\ClubRegistrationConfirmation;
+use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
 use App\Model\SardinianLocation;
 use App\Security\AuthenticationThrottle;
@@ -69,6 +72,7 @@ final class ClubController extends Controller
             'contact_first_name' => '',
             'contact_last_name' => '',
             'affiliation' => [],
+            'terms_accepted' => false,
             'athlete_data_rights_declaration' => false,
         ];
 
@@ -86,6 +90,7 @@ final class ClubController extends Controller
                 'contact_first_name' => trim((string) $request->post('contact_first_name')),
                 'contact_last_name' => trim((string) $request->post('contact_last_name')),
                 'affiliation' => Affiliation::selected($request->post('affiliation')),
+                'terms_accepted' => $request->post('terms_accepted') === '1',
                 'athlete_data_rights_declaration' => $request->post('athlete_data_rights_declaration') === '1',
             ];
             $password = (string) $request->post('password');
@@ -101,7 +106,8 @@ final class ClubController extends Controller
                     $formData['postal_code'],
                     $formData['province'],
                     $formData['city'],
-                    $formData['athlete_data_rights_declaration']
+                    $formData['athlete_data_rights_declaration'],
+                    $formData['terms_accepted']
                 ) as $key
             ) {
                 $errors[] = __($key);
@@ -141,6 +147,9 @@ final class ClubController extends Controller
                             'contact_last_name' => $formData['contact_last_name'],
                             'affiliation' => Affiliation::encode($formData['affiliation']),
                             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                            'terms_version' => ClubTermsAcceptance::VERSION,
+                            'terms_locale' => Localization::getLocale(),
+                            'data_rights_declaration_version' => ClubDataRightsDeclaration::VERSION,
                         ]);
                         $confirmationUrl = sprintf(
                             '%s/clubs/confirm-registration?token=%s',

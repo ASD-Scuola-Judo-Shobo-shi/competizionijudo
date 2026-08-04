@@ -8,6 +8,7 @@
 /** @var array{column:string, direction:'asc'|'desc'}|null $tableSort */
 $tableSort ??= ['column' => 'athlete', 'direction' => 'asc'];
 ?>
+<?php require __DIR__ . '/_agreements_feedback.php'; ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <?php if (!empty($events)) : ?>
 <div class="card">

@@ -12,6 +12,8 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
 use App\Localization;
+use App\Model\ClubDataRightsDeclaration;
+use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
 use PDO;
 use PDOStatement;
@@ -68,6 +70,8 @@ final class ClubAreaCsrfTest extends TestCase
     public function testValidTokenAllowsAthleteAdd(): void
     {
         $clubStatement = $this->statementFetching($this->clubRow());
+        $termsStatement = $this->currentTermsStatement();
+        $declarationStatement = $this->currentDeclarationStatement();
         $insertStatement = $this->createMock(PDOStatement::class);
         $insertStatement->expects(self::once())
             ->method('execute')
@@ -79,11 +83,22 @@ final class ClubAreaCsrfTest extends TestCase
         $athleteStatement = $this->queryStatementFetching($this->athleteRow());
 
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(2))
+        $database->expects(self::exactly(4))
             ->method('prepare')
-            ->willReturnCallback(static function (string $sql) use ($clubStatement, $insertStatement): PDOStatement {
+            ->willReturnCallback(static function (string $sql) use (
+                $clubStatement,
+                $termsStatement,
+                $declarationStatement,
+                $insertStatement
+            ): PDOStatement {
                 if (str_starts_with($sql, 'SELECT * FROM clubs')) {
                     return $clubStatement;
+                }
+                if (str_starts_with($sql, 'SELECT 1 FROM club_terms_acceptances')) {
+                    return $termsStatement;
+                }
+                if (str_starts_with($sql, 'SELECT 1 FROM club_data_rights_declarations')) {
+                    return $declarationStatement;
                 }
                 if (str_starts_with($sql, 'INSERT INTO athletes')) {
                     return $insertStatement;
@@ -110,6 +125,8 @@ final class ClubAreaCsrfTest extends TestCase
     public function testValidTokenAllowsOwnedAthleteEdit(): void
     {
         $clubStatement = $this->statementFetching($this->clubRow());
+        $termsStatement = $this->currentTermsStatement();
+        $declarationStatement = $this->currentDeclarationStatement();
         $athleteStatement = $this->statementFetching($this->athleteRow());
         $updateStatement = $this->createMock(PDOStatement::class);
         $updateStatement->expects(self::once())
@@ -122,12 +139,24 @@ final class ClubAreaCsrfTest extends TestCase
             ->willReturn(true);
 
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(3))
+        $database->expects(self::exactly(5))
             ->method('prepare')
             ->willReturnCallback(
-                static function (string $sql) use ($clubStatement, $athleteStatement, $updateStatement): PDOStatement {
+                static function (string $sql) use (
+                    $clubStatement,
+                    $termsStatement,
+                    $declarationStatement,
+                    $athleteStatement,
+                    $updateStatement
+                ): PDOStatement {
                     if (str_starts_with($sql, 'SELECT * FROM clubs')) {
                         return $clubStatement;
+                    }
+                    if (str_starts_with($sql, 'SELECT 1 FROM club_terms_acceptances')) {
+                        return $termsStatement;
+                    }
+                    if (str_starts_with($sql, 'SELECT 1 FROM club_data_rights_declarations')) {
+                        return $declarationStatement;
                     }
                     if (str_starts_with($sql, 'SELECT * FROM athletes')) {
                         return $athleteStatement;
@@ -168,6 +197,8 @@ final class ClubAreaCsrfTest extends TestCase
 
     public function testValidTokenAllowsOwnedInlineAthleteUpdate(): void
     {
+        $termsStatement = $this->currentTermsStatement();
+        $declarationStatement = $this->currentDeclarationStatement();
         $athleteStatement = $this->statementFetching($this->athleteRow());
         $updateStatement = $this->createMock(PDOStatement::class);
         $updateStatement->expects(self::once())
@@ -181,11 +212,20 @@ final class ClubAreaCsrfTest extends TestCase
             ->willReturn(true);
 
         $database = $this->createMock(PDO::class);
-        $database->expects(self::exactly(2))
+        $database->expects(self::exactly(4))
             ->method('prepare')
             ->willReturnCallback(
-                static function (string $sql) use ($athleteStatement, $updateStatement): PDOStatement {
+                static function (string $sql) use (
+                    $termsStatement,
+                    $declarationStatement,
+                    $athleteStatement,
+                    $updateStatement
+                ): PDOStatement {
                     return match (true) {
+                        str_starts_with($sql, 'SELECT 1 FROM club_terms_acceptances') =>
+                            $termsStatement,
+                        str_starts_with($sql, 'SELECT 1 FROM club_data_rights_declarations') =>
+                            $declarationStatement,
                         str_starts_with($sql, 'SELECT * FROM athletes') => $athleteStatement,
                         str_starts_with($sql, 'UPDATE athletes') => $updateStatement,
                         default => throw new RuntimeException('Unexpected synthetic fixture query.'),
@@ -294,6 +334,30 @@ final class ClubAreaCsrfTest extends TestCase
         $statement = $this->createMock(PDOStatement::class);
         $statement->expects(self::never())->method('execute');
         $statement->expects(self::once())->method('fetch')->willReturn($row);
+
+        return $statement;
+    }
+
+    private function currentDeclarationStatement(): PDOStatement&MockObject
+    {
+        $statement = $this->createMock(PDOStatement::class);
+        $statement->expects(self::once())
+            ->method('execute')
+            ->with([201, ClubDataRightsDeclaration::VERSION])
+            ->willReturn(true);
+        $statement->expects(self::once())->method('fetchColumn')->willReturn(1);
+
+        return $statement;
+    }
+
+    private function currentTermsStatement(): PDOStatement&MockObject
+    {
+        $statement = $this->createMock(PDOStatement::class);
+        $statement->expects(self::once())
+            ->method('execute')
+            ->with([201, ClubTermsAcceptance::VERSION])
+            ->willReturn(true);
+        $statement->expects(self::once())->method('fetchColumn')->willReturn(1);
 
         return $statement;
     }

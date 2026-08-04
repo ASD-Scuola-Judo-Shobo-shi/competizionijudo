@@ -30,6 +30,7 @@ final class MigrationRunner
         'password_reset_tokens',
         'authentication_throttles',
         'club_data_rights_declarations',
+        'club_terms_acceptances',
         'club_registration_confirmations',
         'event_registration_exceptions',
         'event_registration_options',

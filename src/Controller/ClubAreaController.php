@@ -9,8 +9,11 @@ use App\Core\AuthContext;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
+use App\Localization;
 use App\Model\Athlete;
 use App\Model\Club;
+use App\Model\ClubDataRightsDeclaration;
+use App\Model\ClubTermsAcceptance;
 use App\Model\Entry;
 use App\Service\AthleteCsvImportException;
 use App\Service\AthleteCsvTransfer;
@@ -22,6 +25,7 @@ final class ClubAreaController extends Controller
 {
     private const IMPORT_REPORT_LIMIT = 200;
     private const INLINE_FEEDBACK = 'athlete_inline_feedback';
+    private const AGREEMENTS_FEEDBACK = 'club_agreements_feedback';
 
     public function index(Request $request): Response
     {
@@ -50,6 +54,10 @@ final class ClubAreaController extends Controller
         if (!is_array($athleteInlineFeedback)) {
             $athleteInlineFeedback = null;
         }
+        $agreementsFeedback = Session::pullFlash(self::AGREEMENTS_FEEDBACK);
+        if (!is_string($agreementsFeedback)) {
+            $agreementsFeedback = null;
+        }
         $view = (string) ($request->query('view') ?? 'list');
 
         if ($view === 'add') {
@@ -57,6 +65,10 @@ final class ClubAreaController extends Controller
             $edit = null;
 
             if ($request->method() === 'POST') {
+                if (!$this->hasCurrentAgreements($club->id)) {
+                    return $this->redirect('/clubs/agreements', 303);
+                }
+
                 $weightInput = trim((string) $request->input('weight_kg'));
                 $data = [
                     'club_id' => $club->id,
@@ -142,6 +154,7 @@ final class ClubAreaController extends Controller
                 'athleteCategories' => $this->athleteCategories($athletes),
                 'athleteCsvFeedback' => $athleteCsvFeedback,
                 'athleteInlineFeedback' => $athleteInlineFeedback,
+                'agreementsFeedback' => $agreementsFeedback,
                 'csvReturnView' => 'add',
             ]);
         }
@@ -198,7 +211,50 @@ final class ClubAreaController extends Controller
             'athleteCategories' => $this->athleteCategories($athletes),
             'athleteCsvFeedback' => $athleteCsvFeedback,
             'athleteInlineFeedback' => $athleteInlineFeedback,
+            'agreementsFeedback' => $agreementsFeedback,
             'csvReturnView' => 'list',
+        ]);
+    }
+
+    public function agreements(Request $request): Response
+    {
+        Session::start();
+        $clubId = AuthContext::clubId();
+        $club = $clubId !== null ? Club::findById((int) $clubId) : null;
+        if ($club === null) {
+            return $this->redirect('/clubs/login');
+        }
+
+        $termsCurrent = ClubTermsAcceptance::hasCurrentVersion((int) $clubId);
+        $privacyCurrent = ClubDataRightsDeclaration::hasCurrentVersion((int) $clubId);
+        $errors = [];
+        if ($request->method() === 'POST') {
+            validate_csrf((string) $request->post('csrf_token'));
+            if (!$termsCurrent && $request->post('terms_accepted') !== '1') {
+                $errors[] = __('validation.club_terms_required');
+            }
+            if (!$privacyCurrent && $request->post('athlete_privacy_obligations') !== '1') {
+                $errors[] = __('validation.club_athlete_data_rights_required');
+            }
+            if ($errors === []) {
+                if (!$termsCurrent) {
+                    ClubTermsAcceptance::record($club, Localization::getLocale());
+                }
+                if (!$privacyCurrent) {
+                    ClubDataRightsDeclaration::record((int) $clubId);
+                }
+                Session::flash(self::AGREEMENTS_FEEDBACK, __('club.agreements.accepted'));
+
+                return $this->redirect('/clubs/area', 303);
+            }
+        }
+
+        return $this->view('club/agreements', [
+            'title' => __('club.agreements.title'),
+            'club' => $club,
+            'errors' => $errors,
+            'termsCurrent' => $termsCurrent,
+            'privacyCurrent' => $privacyCurrent,
         ]);
     }
 
@@ -225,6 +281,9 @@ final class ClubAreaController extends Controller
         }
 
         validate_csrf((string) $request->post('csrf_token'));
+        if (!$this->hasCurrentAgreements((int) $clubId)) {
+            return $this->redirect('/clubs/agreements', 303);
+        }
         $athleteId = (int) $request->post('athlete_id');
         $returnView = $request->post('return_view') === 'add' ? 'add' : 'list';
         $page = max(1, (int) $request->post('page', 1));
@@ -350,6 +409,9 @@ final class ClubAreaController extends Controller
         }
 
         validate_csrf((string) $request->post('csrf_token'));
+        if (!$this->hasCurrentAgreements((int) $clubId)) {
+            return $this->redirect('/clubs/agreements', 303);
+        }
         $returnView = $request->post('return_view') === 'add' ? 'add' : 'list';
         $redirect = '/clubs/area?view=' . $returnView;
         $file = $request->file('athletes_file') ?? $request->file('athletes_csv');
@@ -514,5 +576,11 @@ final class ClubAreaController extends Controller
             'report' => $report,
             'omitted' => $omitted,
         ]);
+    }
+
+    private function hasCurrentAgreements(int $clubId): bool
+    {
+        return ClubTermsAcceptance::hasCurrentVersion($clubId)
+            && ClubDataRightsDeclaration::hasCurrentVersion($clubId);
     }
 }

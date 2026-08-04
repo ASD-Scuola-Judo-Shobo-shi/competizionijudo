@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 
 final class PrivacyNoticeTest extends TestCase
 {
-    public function testPrivacyNoticeIsPubliclyRoutableAndTechnicalCookieHasNoConsentBanner(): void
+    public function testPrivacyNoticeIsPubliclyRoutableAndTechnicalStorageHasNoConsentBanner(): void
     {
         Localization::setLocale('it');
         $view = new View(dirname(__DIR__) . '/views');
@@ -24,7 +24,7 @@ final class PrivacyNoticeTest extends TestCase
 
         self::assertSame(200, $response->status());
         self::assertStringContainsString('Informativa privacy', $response->content());
-        self::assertStringContainsString('Cookie tecnici', $response->content());
+        self::assertStringContainsString('Cookie e archiviazione tecnica locale', $response->content());
         self::assertStringNotContainsString('cookie-consent', $response->content());
     }
 
@@ -50,8 +50,15 @@ final class PrivacyNoticeTest extends TestCase
             ], 'layouts/error');
 
             self::assertStringContainsString(e(__('privacy.source_title')), $html);
+            self::assertStringContainsString(e(__('privacy.indirect_notice_delivery')), $html);
             self::assertStringContainsString(e(__('privacy.account_legal_basis')), $html);
             self::assertStringContainsString(e(__('privacy.athlete_legal_basis')), $html);
+            self::assertStringContainsString(e(__('privacy.event_legal_basis')), $html);
+            self::assertStringContainsString(e(__('privacy.public_access')), $html);
+            self::assertStringContainsString(e(__('privacy.account_retention')), $html);
+            self::assertStringContainsString(e(__('privacy.account_workflow_retention')), $html);
+            self::assertStringContainsString(e(__('privacy.event_retention')), $html);
+            self::assertStringContainsString(e(__('privacy.cookies')), $html);
             self::assertStringContainsString(e(__('privacy.club_declaration')), $html);
             self::assertStringContainsString('Synthetic Host', $html);
         }

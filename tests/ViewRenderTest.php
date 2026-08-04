@@ -76,6 +76,10 @@ final class ViewRenderTest extends TestCase
             $html
         );
         self::assertSame(4, substr_count($html, 'class="required-marker"'));
+        self::assertStringContainsString(
+            'Non inserire nelle Note informazioni sanitarie',
+            $html
+        );
         self::assertSame(substr_count($html, '<form'), substr_count($html, '</form>'));
     }
 
@@ -210,6 +214,8 @@ final class ViewRenderTest extends TestCase
             'event' => $event,
             'entryReport' => $entryReport,
             'loggedInClubId' => null,
+            'canViewEntryBreakdowns' => true,
+            'canViewAllAthleteEntries' => false,
             'hasRegistrationException' => false,
             'upcomingEvents' => [],
             'eventExceptions' => [],
@@ -295,6 +301,12 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('class="notice info csv-federal-import-notice"', $html);
         self::assertStringContainsString('Import federation XLSX exports directly', $html);
         self::assertStringContainsString('exported by your federation&#039;s management system', $html);
+        self::assertStringContainsString('id="athlete-notes-help"', $html);
+        self::assertStringContainsString('aria-describedby="athlete-notes-help"', $html);
+        self::assertStringContainsString(
+            'Do not enter health information or any other sensitive or special-category personal data in Notes.',
+            $html
+        );
         self::assertStringNotContainsString('Import athletes CSV', $html);
     }
 
@@ -399,7 +411,7 @@ final class ViewRenderTest extends TestCase
         self::assertFileExists(dirname(__DIR__) . '/public' . $logoPath);
     }
 
-    public function testClubRegistrationRequiresAthleteDataRightsDeclaration(): void
+    public function testClubRegistrationRequiresTermsAndAthleteDataRightsDeclaration(): void
     {
         Localization::setLocale('en');
         $_GET = [];
@@ -414,7 +426,8 @@ final class ViewRenderTest extends TestCase
             'name="athlete_data_rights_declaration" value="1" required',
             $html
         );
-        self::assertSame(13, substr_count($html, 'class="required-marker"'));
+        self::assertStringContainsString('name="terms_accepted" value="1" required', $html);
+        self::assertSame(14, substr_count($html, 'class="required-marker"'));
         foreach (
             [
                 'contact_first_name',
@@ -432,8 +445,11 @@ final class ViewRenderTest extends TestCase
             e(__('club.register.athlete_data_rights_declaration')),
             $html
         );
+        self::assertStringContainsString('every athlete whose data it provides', $html);
+        self::assertStringContainsString('Article 14 privacy notice', $html);
         self::assertStringContainsString('value="FIJLKAM"', $html);
         self::assertStringContainsString('href="/privacy"', $html);
+        self::assertStringContainsString('href="/terms"', $html);
     }
 
     /** @return array<string, mixed> */

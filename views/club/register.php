@@ -1,5 +1,5 @@
 <?php
-/** @var array{name: string, federal_code: string, email: string, phone: string, address_line: string, postal_code: string, city: string, province: string, contact_first_name: string, contact_last_name: string, affiliation: list<string>, athlete_data_rights_declaration: bool} $formData */
+/** @var array{name: string, federal_code: string, email: string, phone: string, address_line: string, postal_code: string, city: string, province: string, contact_first_name: string, contact_last_name: string, affiliation: list<string>, terms_accepted: bool, athlete_data_rights_declaration: bool} $formData */
 $formData = $formData ?? [
     'name' => '',
     'federal_code' => '',
@@ -12,6 +12,7 @@ $formData = $formData ?? [
     'contact_first_name' => '',
     'contact_last_name' => '',
     'affiliation' => [],
+    'terms_accepted' => false,
     'athlete_data_rights_declaration' => false,
 ];
 $sardinianLocations = $sardinianLocations ?? \App\Model\SardinianLocation::all();
@@ -115,6 +116,17 @@ $affiliationOptions = $affiliationOptions ?? \App\Model\Affiliation::options();
                     <?php endforeach; ?>
                 </div>
             </div>
+
+            <label class="consent-field">
+                <input type="checkbox" name="terms_accepted" value="1" required <?= $formData['terms_accepted'] ? 'checked' : '' ?>>
+                <span>
+                    <?= e(__('club.register.terms_acceptance', [
+                        'version' => \App\Model\ClubTermsAcceptance::VERSION,
+                    ])) ?>
+                    <a href="<?= e(base_url('/terms')) ?>" target="_blank" rel="noopener noreferrer"><?= e(__('club.register.terms_link')) ?></a>
+                    <span class="required-marker" aria-hidden="true">*</span>
+                </span>
+            </label>
 
             <label class="consent-field">
                 <input type="checkbox" name="athlete_data_rights_declaration" value="1" required <?= $formData['athlete_data_rights_declaration'] ? 'checked' : '' ?>>

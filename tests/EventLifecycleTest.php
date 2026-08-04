@@ -13,6 +13,8 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
 use App\Localization;
+use App\Model\ClubDataRightsDeclaration;
+use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
 use App\Model\EntryRegistrationRepository;
 use App\Model\EntryRegistrationResult;
@@ -651,6 +653,7 @@ final class EventLifecycleTest extends TestCase
         $this->database->prepare(
             'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
         )->execute([101, 201, 301]);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries(['event' => '101']);
 
@@ -660,7 +663,24 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('-42 kg', $response->content());
     }
 
-    public function testClosedEntryTablesHaveIndependentPagination(): void
+    public function testAnonymousClosedEntriesHideAthleteLevelTable(): void
+    {
+        $this->insertEvent(closed: true);
+        $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        )->execute([101, 201, 301]);
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(__('events.entries_clubs_heading'), $response->content());
+        self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
+        self::assertStringNotContainsString(__('events.entries_class_weight_breakdown'), $response->content());
+        self::assertStringNotContainsString(__('events.entries_club_breakdown'), $response->content());
+        self::assertStringNotContainsString('OwnFamily OwnGiven', $response->content());
+    }
+
+    public function testClosedCurrentClubTableHasIndependentPagination(): void
     {
         $this->insertEvent(closed: true);
         $entry = $this->database->prepare(
@@ -681,9 +701,46 @@ final class EventLifecycleTest extends TestCase
         ]);
 
         self::assertSame(200, $response->status());
-        self::assertSame(2, substr_count($response->content(), 'Paged50 Athlete'));
-        self::assertStringContainsString('athletes_page=1', $response->content());
+        self::assertSame(1, substr_count($response->content(), 'Paged50 Athlete'));
+        self::assertStringNotContainsString('athletes_page=1', $response->content());
         self::assertStringContainsString('club_entries_page=1', $response->content());
+    }
+
+    public function testClubClosedEntriesNeverExposeAnotherClubsAthletes(): void
+    {
+        $this->insertEvent(closed: true);
+        $statement = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        $statement->execute([101, 201, 301]);
+        $statement->execute([101, 202, 302]);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
+        self::assertStringNotContainsString('ForeignFamily ForeignGiven', $response->content());
+        self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
+    }
+
+    public function testAdministratorCanViewAllClosedEventAthletes(): void
+    {
+        $this->insertEvent(closed: true);
+        $statement = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        $statement->execute([101, 201, 301]);
+        $statement->execute([101, 202, 302]);
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+
+        $request = new Request('GET', '/events/entries', ['event' => '101']);
+        $response = (new EventController($this->view, $request))->entries($request);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
+        self::assertStringContainsString('ForeignFamily ForeignGiven', $response->content());
+        self::assertStringContainsString(__('events.entries_athletes_heading'), $response->content());
     }
 
     public function testClosedEntriesCanFilterTheCurrentClubByWeightCategory(): void
@@ -846,6 +903,27 @@ final class EventLifecycleTest extends TestCase
             )'
         );
         $this->database->exec(
+            'CREATE TABLE club_data_rights_declarations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club_id INTEGER NOT NULL,
+                declared_by_club_id INTEGER NOT NULL,
+                declaration_version TEXT NOT NULL,
+                declared_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+        $this->database->exec(
+            'CREATE TABLE club_terms_acceptances (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club_id INTEGER NOT NULL,
+                accepted_by_club_id INTEGER NOT NULL,
+                representative_name TEXT NOT NULL,
+                accepted_account_email TEXT NOT NULL,
+                terms_version TEXT NOT NULL,
+                accepted_locale TEXT NOT NULL,
+                accepted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+        $this->database->exec(
             'CREATE TABLE entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_id INTEGER NOT NULL,
@@ -903,6 +981,26 @@ final class EventLifecycleTest extends TestCase
             'TEST',
             'foreign-recovery@example.test',
             'synthetic-hash',
+        ]);
+        $declaration = $this->database->prepare(
+            'INSERT INTO club_data_rights_declarations '
+            . '(club_id, declared_by_club_id, declaration_version) VALUES (?, ?, ?)'
+        );
+        $declaration->execute([201, 201, ClubDataRightsDeclaration::VERSION]);
+        $declaration->execute([202, 202, ClubDataRightsDeclaration::VERSION]);
+        $terms = $this->database->prepare(
+            'INSERT INTO club_terms_acceptances '
+            . '(club_id, accepted_by_club_id, representative_name, accepted_account_email, '
+            . 'terms_version, accepted_locale) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $terms->execute([201, 201, 'Own Contact', 'own@example.test', ClubTermsAcceptance::VERSION, 'en']);
+        $terms->execute([
+            202,
+            202,
+            'Foreign Contact',
+            'foreign@example.test',
+            ClubTermsAcceptance::VERSION,
+            'en',
         ]);
 
         $athlete = $this->database->prepare(

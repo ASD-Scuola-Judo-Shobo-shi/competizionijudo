@@ -31,6 +31,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20260729_000002_add_event_sepa_payment_details.sql',
                 dirname(__DIR__) . '/migrations/20260730_000001_repair_registration_payment_schema_drift.sql',
                 dirname(__DIR__) . '/migrations/20260731_000001_allow_missing_athlete_weight.sql',
+                dirname(__DIR__) . '/migrations/20260804_000001_create_club_terms_acceptances.sql',
             ],
             array_values($migrations)
         );
@@ -106,6 +107,22 @@ final class SchemaMigrationTest extends TestCase
         self::assertStringContainsString('declared_by_club_id INT NOT NULL', $migration);
         self::assertStringContainsString('declaration_version VARCHAR(64) NOT NULL', $migration);
         self::assertStringContainsString('declared_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', $migration);
+    }
+
+    public function testForwardMigrationDefinesVersionedClubTermsAcceptanceEvidence(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260804_000001_create_club_terms_acceptances.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString('CREATE TABLE IF NOT EXISTS club_terms_acceptances', $migration);
+        self::assertStringContainsString('accepted_by_club_id INT NOT NULL', $migration);
+        self::assertStringContainsString('representative_name VARCHAR(255) NOT NULL', $migration);
+        self::assertStringContainsString('accepted_account_email VARCHAR(255) NOT NULL', $migration);
+        self::assertStringContainsString('terms_version VARCHAR(64) NOT NULL', $migration);
+        self::assertStringContainsString('accepted_locale VARCHAR(5) NOT NULL', $migration);
+        self::assertStringContainsString('accepted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', $migration);
     }
 
     public function testForwardMigrationConsolidatesClubContactsAndAddsAddresses(): void

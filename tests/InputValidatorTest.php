@@ -26,7 +26,8 @@ final class InputValidatorTest extends TestCase
             'validation.club_province_invalid',
             'validation.club_city_invalid',
             'validation.club_athlete_data_rights_required',
-        ], ClubInputValidator::registrationErrors('', '', 'invalid', '', '', '', '', '', false));
+            'validation.club_terms_required',
+        ], ClubInputValidator::registrationErrors('', '', 'invalid', '', '', '', '', '', false, false));
         self::assertSame([], ClubInputValidator::registrationErrors(
             'Synthetic Club',
             'SYN-12',
@@ -36,6 +37,7 @@ final class InputValidatorTest extends TestCase
             '08100',
             'Provincia di Nuoro',
             'Nuoro',
+            true,
             true
         ));
         self::assertSame([
@@ -50,6 +52,7 @@ final class InputValidatorTest extends TestCase
             '08100',
             'invalid',
             'Nuoro',
+            true,
             true
         ));
         self::assertSame([

@@ -2,6 +2,7 @@
 
 /** @var \App\Model\Event $event */
 /** @var \App\Presentation\EventEntriesViewModel $entryReport */
+/** @var bool $canViewEntryBreakdowns */
 /** @var bool $hasRegistrationException */
 ?>
 
@@ -33,13 +34,15 @@
                 <?php endif; ?>
             </p>
 
-            <?php require __DIR__ . '/_entries_category_weight_chart.php'; ?>
+            <?php if ($canViewEntryBreakdowns) : ?>
+                <?php require __DIR__ . '/_entries_category_weight_chart.php'; ?>
 
-            <div class="entries-chart-grid">
-                <?php foreach ($entryReport->dimensions as $dimension) : ?>
-                    <?php require __DIR__ . '/_entries_chart.php'; ?>
-                <?php endforeach; ?>
-            </div>
+                <div class="entries-chart-grid">
+                    <?php foreach ($entryReport->dimensions as $dimension) : ?>
+                        <?php require __DIR__ . '/_entries_chart.php'; ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 

@@ -10,10 +10,11 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 | Capability | Routes | Access |
 | --- | --- | --- |
 | Public events and event details | `/events`, `/events/details` | Public |
-| Event entries | `/events/entries` | Authenticated club or administrator |
-| Privacy notice and language switch | `/privacy`, `/language/switch` | Public |
+| Event entries | `/events/entries` | Public club totals; detailed aggregates for authenticated users; named athletes for their club or administrators |
+| Privacy notice, Terms of Service, and language switch | `/privacy`, `/terms`, `/language/switch` | Public |
 | Deployment health and build revision | `/health` | Public, minimal JSON |
 | Club registration and login | `/clubs/register`, `/clubs/login` | Public |
+| Club Terms and privacy-warranty acceptance | `/clubs/agreements` | Authenticated club; current versions required before athlete-data mutations |
 | Password recovery by email | `/clubs/forgot-password`, `/clubs/reset-password` | Public |
 | Club athlete archive and event registration | `/clubs/area`, `/events/register` | Authenticated club |
 | Athlete spreadsheet import and CSV export | `/clubs/athletes-import`, `/clubs/athletes-export` | Authenticated club; import is POST + CSRF |
@@ -76,13 +77,19 @@ The public `/privacy` notice derives controller identity, legal bases,
 processors, transfer facts, and operational retention periods from environment
 variables. Production startup fails if required values are missing or malformed.
 The comments in `.env.example` identify the required GDPR transparency data.
+The public `/terms` page is the versioned club contract. Registration records
+the accepted Terms version and language separately from the Article 14
+notice-delivery warranty. Material Terms changes require a version bump and
+fresh club acceptance before further athlete-data mutations.
 Those values must describe the real deployment; software cannot choose a lawful
 basis or validate the controller's arrangements.
 
 Live athlete categories are calculated from source data for the event year.
 Closing an event atomically stores its event snapshot. Schedule
-`composer privacy:purge` daily to remove closed-event entry snapshots after at
-most one year. Event uploads are deleted when replaced or when their event is deleted.
+`composer privacy:purge` daily, or configure Aruba's PHP cron to run
+`scripts/purge-expired-data.php`, to remove closed-event entries once they reach
+one year and expired account-workflow records. Event uploads are deleted when
+replaced or when their event is deleted.
 Administrators are warned to export live athlete records before deleting a club.
 
 ### Repairing historical athlete duplicates

@@ -22,7 +22,8 @@ final class ClubInputValidator
         string $postalCode,
         string $province,
         string $city,
-        bool $athleteDataRightsDeclared
+        bool $athleteDataRightsDeclared,
+        bool $termsAccepted
     ): array {
         $errors = self::errors(
             $name,
@@ -36,6 +37,9 @@ final class ClubInputValidator
         );
         if (!$athleteDataRightsDeclared) {
             $errors[] = 'validation.club_athlete_data_rights_required';
+        }
+        if (!$termsAccepted) {
+            $errors[] = 'validation.club_terms_required';
         }
 
         return $errors;

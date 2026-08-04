@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
+use App\Model\ClubTermsAcceptance;
 
 final class AboutController extends Controller
 {
@@ -27,6 +28,15 @@ final class AboutController extends Controller
         return $this->view('static/privacy', [
             'title' => __('privacy.title'),
             'privacy' => config('privacy', []),
+        ]);
+    }
+
+    public function terms(Request $request): Response
+    {
+        return $this->view('static/terms', [
+            'title' => __('terms.title'),
+            'termsVersion' => ClubTermsAcceptance::VERSION,
+            'operator' => config('privacy', []),
         ]);
     }
 }

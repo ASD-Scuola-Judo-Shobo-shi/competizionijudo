@@ -10,6 +10,8 @@ use App\Core\Request;
 use App\Core\Session;
 use App\Core\View;
 use App\Localization;
+use App\Model\ClubDataRightsDeclaration;
+use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
 use App\Security\AuthenticationThrottle;
 use App\Security\PasswordPolicy;
@@ -102,6 +104,21 @@ final class ClubRegistrationControllerTest extends TestCase
             1,
             (int) $this->database->query('SELECT COUNT(*) FROM club_registration_confirmations')->fetchColumn()
         );
+        $payload = json_decode(
+            (string) $this->database->query(
+                'SELECT registration_payload FROM club_registration_confirmations'
+            )->fetchColumn(),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+        self::assertIsArray($payload);
+        self::assertSame(
+            ClubDataRightsDeclaration::VERSION,
+            $payload['data_rights_declaration_version'] ?? null
+        );
+        self::assertSame(ClubTermsAcceptance::VERSION, $payload['terms_version'] ?? null);
+        self::assertSame('it', $payload['terms_locale'] ?? null);
     }
 
     public function testRegistrationTransportFailureIsReportedAsDeliveryFailure(): void
@@ -172,6 +189,7 @@ final class ClubRegistrationControllerTest extends TestCase
             'affiliation' => ['FIJLKAM'],
             'password' => $password,
             'password2' => $password,
+            'terms_accepted' => '1',
             'athlete_data_rights_declaration' => '1',
         ], ['REMOTE_ADDR' => '192.0.2.50']);
         $controller = new ClubController(

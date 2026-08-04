@@ -1,6 +1,6 @@
 # Security Baseline
 
-Last reviewed: 2026-08-03
+Last reviewed: 2026-08-04
 
 Code baseline: the revision containing this document.
 
@@ -19,13 +19,13 @@ live penetration test or hosting-control-panel audit.
 | State changes | Mutations use POST, validate CSRF, validate server-side input, and return controlled errors. Destructive GET routes are rejected. |
 | Sessions | Production and development use environment/path-specific cookie names and contexts. Cookies are strict-mode, cookie-only, HttpOnly, SameSite=Lax, and Secure on HTTPS. Authentication rotates the session identifier, creates one exclusive typed principal, expires after 30 idle minutes or 12 absolute hours, and is revalidated against the current club or administrator credentials on every request. Legacy privilege flags no longer authorize requests. |
 | Credentials | Passwords use PHP password hashing and a minimum 12-character policy. Login, recovery, and public registration attempts atomically consume persistent hashed account, network, and account/network limits. Unknown identities perform equivalent password-hash verification work. Production recovery responses do not reveal account existence or raw tokens. |
-| Reset tokens | Tokens contain 256 bits of randomness, are stored only as SHA-256 hashes, expire after one hour, are issued transactionally under a club-row lock, and are consumed once in a transaction. Password replacement invalidates outstanding tokens. |
+| Reset tokens | Tokens contain 256 bits of randomness, are stored only as SHA-256 hashes, expire after one hour, and are issued transactionally under a club-row lock. New requests and successful password changes delete earlier tokens; the daily privacy job removes expired and legacy-used rows. |
 | Browser policy | Dynamic responses enforce CSP, deny framing, disable MIME sniffing and the legacy XSS auditor, restrict referrers and browser permissions, and emit HSTS on HTTPS. Authentication and token pages are non-cacheable; token pages use `no-referrer`. Apache and application header policies use the same framing rules. |
 | Hosting boundary | The shared and per-artifact Apache rules reject sensitive files and directories before existing files can bypass the front controller. Unknown hosts are rejected and HTTP redirects use fixed canonical destinations. |
 | Database access | Request-derived values use prepared statements. Sort expressions are selected from explicit allowlists. Athlete registration writes scope the athlete and club together. |
 | Output and exports | Templates escape untrusted HTML. CSV exports neutralize spreadsheet formula prefixes. Production exceptions are logged through the redacting failure path and rendered generically. |
 | Uploads | Event documents are limited by size and detected MIME type to PDF, JPEG, or PNG, stored under generated names, served with `nosniff`, and purged on replacement or event deletion. The upload directory denies common executable extensions, applies a sandboxed document policy, and forces PDFs to download. |
-| Privacy | Public club projections are minimized, registration records the versioned athlete-data-rights declaration, and closed-entry snapshots have a scheduled one-year purge workflow. |
+| Privacy and club terms | Public event-entry projections stop at club totals; detailed breakdowns require authentication. Clubs can see only their own named athletes and administrators can see the complete table. Terms acceptance and the Article 14 notice-delivery warranty are versioned and recorded separately; outdated clubs must re-accept the applicable agreement before athlete-data mutations. Successful account confirmations are deleted immediately, while the scheduled privacy job removes expired account-workflow data and entry snapshots after one year. |
 | Release assurance | CI validates syntax, coding style, PHPStan, PHPUnit, changed-code coverage, locked dependency advisories, MySQL migrations, the exact deployment manifest, bilingual artifact boot, and root-router staging. |
 
 The enforced CSP still permits inline scripts and styles because current

@@ -74,24 +74,35 @@ final class ClubRegistrationConfirmation
                 return false;
             }
 
+            $payload = json_decode((string) $record['registration_payload'], true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($payload)) {
+                throw new RuntimeException('Registration confirmation payload is invalid.');
+            }
+            if (
+                ($payload['data_rights_declaration_version'] ?? null)
+                !== ClubDataRightsDeclaration::VERSION
+                || ($payload['terms_version'] ?? null) !== ClubTermsAcceptance::VERSION
+                || !in_array(($payload['terms_locale'] ?? null), ['en', 'it'], true)
+            ) {
+                $database->commit();
+
+                return false;
+            }
+
             $claim = $database->prepare(
-                'UPDATE club_registration_confirmations SET confirmed_at = ? '
+                'DELETE FROM club_registration_confirmations '
                 . 'WHERE id = ? AND confirmed_at IS NULL AND expires_at > ?'
             );
-            $claim->execute([$now, (int) $record['id'], $now]);
+            $claim->execute([(int) $record['id'], $now]);
             if ($claim->rowCount() !== 1) {
                 $database->rollBack();
 
                 return false;
             }
 
-            $payload = json_decode((string) $record['registration_payload'], true, 512, JSON_THROW_ON_ERROR);
-            if (!is_array($payload)) {
-                throw new RuntimeException('Registration confirmation payload is invalid.');
-            }
-
             $club = Club::add($payload);
             ClubDataRightsDeclaration::record($club->id);
+            ClubTermsAcceptance::record($club, (string) $payload['terms_locale']);
 
             if (!$database->commit()) {
                 throw new RuntimeException('Unable to confirm club registration.');

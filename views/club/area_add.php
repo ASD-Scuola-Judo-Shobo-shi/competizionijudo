@@ -6,6 +6,7 @@
 /** @var array{column:string, direction:'asc'|'desc'}|null $tableSort */
 $tableSort ??= ['column' => 'athlete', 'direction' => 'asc'];
 ?>
+<?php require __DIR__ . '/_agreements_feedback.php'; ?>
 <?php require __DIR__ . '/_athlete_csv_tools.php'; ?>
 <div class="card">
     <h3><?= e($edit ? __('club.area.edit_athlete') : __('club.area.add_athlete')) ?></h3>
@@ -62,7 +63,8 @@ $tableSort ??= ['column' => 'athlete', 'direction' => 'asc'];
         <input name="membership_number" value="<?= e($edit?->membership_number ?? '') ?>">
 
         <label><?= e(__('club.area.notes')) ?></label>
-        <textarea name="notes" rows="3"><?= e($edit?->notes ?? '') ?></textarea>
+        <p class="field-help" id="athlete-notes-help"><?= e(__('club.area.notes_privacy_help')) ?></p>
+        <textarea name="notes" rows="3" aria-describedby="athlete-notes-help"><?= e($edit?->notes ?? '') ?></textarea>
 
         <button class="btn green" type="submit"><?= e(__('club.area.save_athlete')) ?></button>
     </form>

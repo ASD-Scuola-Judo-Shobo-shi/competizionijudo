@@ -3,6 +3,8 @@
 /** @var \App\Model\Event|null $event */
 /** @var \App\Presentation\EventEntriesViewModel $entryReport */
 /** @var int|null $loggedInClubId */
+/** @var bool|null $canViewEntryBreakdowns */
+/** @var bool|null $canViewAllAthleteEntries */
 /** @var bool $hasRegistrationException */
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var array<int, bool> $eventExceptions */
@@ -12,6 +14,8 @@
 $entryClubs ??= $entryReport->clubs;
 $entryAthleteGroups ??= $entryReport->athleteGroups;
 $currentClubEntries ??= $entryReport->currentClubEntries;
+$canViewEntryBreakdowns ??= false;
+$canViewAllAthleteEntries ??= false;
 $entryClubsPagination ??= paginate(count($entryClubs), 1, 50, 'clubs_page');
 $entryAthletesPagination ??= paginate(count($entryReport->entries), 1, 50, 'athletes_page');
 $currentClubPagination ??= paginate(count($currentClubEntries), 1, 50, 'club_entries_page');
@@ -26,8 +30,10 @@ $currentClubPagination ??= paginate(count($currentClubEntries), 1, 50, 'club_ent
 
     <?php require __DIR__ . '/_entries_clubs.php'; ?>
 
-    <?php if ($event->closed && ($loggedInClubId === null || !$hasRegistrationException)) : ?>
-        <?php require __DIR__ . '/_entries_athletes.php'; ?>
+    <?php if ($event->closed && $canViewAllAthleteEntries) : ?>
+        <?php if ($loggedInClubId === null || !$hasRegistrationException) : ?>
+            <?php require __DIR__ . '/_entries_athletes.php'; ?>
+        <?php endif; ?>
     <?php endif; ?>
 <?php endif; ?>
 

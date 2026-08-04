@@ -71,6 +71,16 @@ repository/hosting operator must:
    root, the directory that contains `prod/`, `dev/`, etc.). Every deploy
    re-uploads them, so changes to `root.htaccess` or `index.php` take effect
    on the next deployment.
+
+   The artifact itself also ships a `.htaccess` inside each environment
+   directory. It carries the same deny rules relative to that directory and
+   its own front-controller dispatch through `public/index.php`. The
+   migration webhook endpoint is dispatched by both files: `root.htaccess`
+   rewrites `(?:prod|dev)/migrations/?` to the root `index.php`, while the
+   artifact `.htaccess` rewrites `migrations/?` to `public/index.php`. If the
+   hosting account does not consult the root router for environment
+   directories, the artifact-level dispatch remains operative; keep both
+   rules in sync.
 6. Verify that `https://www.competizionijudo.it/health` returns HTTP 200 before
    enabling traffic. The workflow renders `.env` inside GitHub Actions and
    uploads it to the target directory after the application files. If an
@@ -106,7 +116,9 @@ credentials in terminal history or CI logs.
    confirm HTTP 400 with no redirect to the supplied host. When testing by IP,
    preserve the canonical hostname for TLS SNI and override only the HTTP Host
    header.
-3. Request `/prod/clubs/login` and confirm the response includes an enforced
+3. Request `/prod/terms` and `/prod/privacy` and confirm the current bilingual
+   contract and notice render with the configured controller identity. Request
+   `/prod/clubs/login` and confirm the response includes an enforced
    `Content-Security-Policy`, `X-Frame-Options: DENY`,
    `X-Content-Type-Options: nosniff`, `Strict-Transport-Security`, and
    `Cache-Control: private, no-store, max-age=0`.
@@ -285,12 +297,21 @@ access-control file and must never overwrite or synchronize runtime upload
 contents. The application deletes event documents when they are replaced and
 when their event is deleted.
 
-Schedule `composer privacy:purge` at least daily. It deletes closed-event entry
-snapshots older than one year, enforcing a one-year maximum; monitor its exit status. Configure log rotation
+Schedule `composer privacy:purge` at least daily. It deletes closed-event entries
+at or beyond one year, using the event date for legacy rows without snapshot timestamps.
+It also deletes expired registration confirmations, expired password-reset tokens,
+and legacy reset tokens marked as used; monitor its exit status. Configure log rotation
 to delete application logs after `APP_LOG_RETENTION_DAYS`, and configure the
 backup system to delete backups after `APP_BACKUP_RETENTION_DAYS`. Those two
 host-level policies are not implemented by the PHP process. Test both restores
 and expiry, and document any processor that can access backups or logs.
+
+On Aruba Hosting Linux Basic, open the domain control panel, select **Processi
+Cron**, add a PHP instruction for the deployed `prod/scripts/purge-expired-data.php`,
+and schedule it daily. Aruba cron schedules use UTC. After the first run, inspect
+the task's last-run status and error log in the same panel, then retain periodic
+evidence that the task remains successful. The PHP instruction avoids exposing
+a maintenance endpoint over HTTP and does not require SSH or the Composer alias.
 
 Before going live, the controller must also establish procedures for data-subject
 requests and breaches, confirm club authority for athletes and minors, sign the

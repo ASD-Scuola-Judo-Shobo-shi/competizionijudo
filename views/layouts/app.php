@@ -209,6 +209,8 @@
             <a href="https://it.m.wikipedia.org/wiki/Judo_(sport)" target="_blank" rel="noopener noreferrer">Judo</a>
             <span class="footer-sep">•</span>
             <a href="<?= e(base_url('/privacy')) ?>"><?= e(__('privacy.footer_link')) ?></a>
+            <span class="footer-sep">•</span>
+            <a href="<?= e(base_url('/terms')) ?>"><?= e(__('terms.footer_link')) ?></a>
         </div>
     </footer>
 

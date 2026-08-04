@@ -10,6 +10,8 @@ use App\Core\Request;
 use App\Core\Session;
 use App\Core\View;
 use App\Localization;
+use App\Model\ClubDataRightsDeclaration;
+use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
 use App\Service\AthleteCsvTransfer;
 use PDO;
@@ -696,6 +698,23 @@ final class AthleteCsvWorkflowTest extends TestCase
                 belt TEXT NOT NULL,
                 membership_number TEXT,
                 notes TEXT
+            );
+            CREATE TABLE club_data_rights_declarations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club_id INTEGER NOT NULL,
+                declared_by_club_id INTEGER NOT NULL,
+                declaration_version TEXT NOT NULL,
+                declared_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE club_terms_acceptances (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club_id INTEGER NOT NULL,
+                accepted_by_club_id INTEGER NOT NULL,
+                representative_name TEXT NOT NULL,
+                accepted_account_email TEXT NOT NULL,
+                terms_version TEXT NOT NULL,
+                accepted_locale TEXT NOT NULL,
+                accepted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )'
         );
     }
@@ -713,6 +732,15 @@ final class AthleteCsvWorkflowTest extends TestCase
             202, 'SYN-202', 'Foreign Club', 'foreign@example.test', '', 'Foreign', 'Contact', '', '',
             'FIJLKAM', 'foreign@example.test', 'hash',
         ]);
+        $this->database->prepare(
+            'INSERT INTO club_data_rights_declarations '
+            . '(club_id, declared_by_club_id, declaration_version) VALUES (?, ?, ?)'
+        )->execute([201, 201, ClubDataRightsDeclaration::VERSION]);
+        $this->database->prepare(
+            'INSERT INTO club_terms_acceptances '
+            . '(club_id, accepted_by_club_id, representative_name, accepted_account_email, '
+            . 'terms_version, accepted_locale) VALUES (?, ?, ?, ?, ?, ?)'
+        )->execute([201, 201, 'Own Contact', 'own@example.test', ClubTermsAcceptance::VERSION, 'en']);
 
         $athlete = $this->database->prepare(
             'INSERT INTO athletes

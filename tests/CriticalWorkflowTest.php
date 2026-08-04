@@ -10,6 +10,7 @@ use App\Core\Session;
 use App\Localization;
 use App\Model\Club;
 use App\Model\ClubDataRightsDeclaration;
+use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
 use App\Security\CredentialFingerprint;
 use PDO;
@@ -93,6 +94,7 @@ final class CriticalWorkflowTest extends TestCase
             'affiliation' => ['FIJLKAM'],
             'password' => $accountPassword,
             'password2' => $accountPassword,
+            'terms_accepted' => '1',
             'athlete_data_rights_declaration' => '1',
         ]);
 
@@ -121,6 +123,21 @@ final class CriticalWorkflowTest extends TestCase
         self::assertSame($clubId, (int) $declaration['declared_by_club_id']);
         self::assertSame(ClubDataRightsDeclaration::VERSION, $declaration['declaration_version']);
         self::assertNotSame('', $declaration['declared_at']);
+        $termsAcceptance = $this->database->query(
+            'SELECT club_id, accepted_by_club_id, representative_name, accepted_account_email, '
+            . 'terms_version, accepted_locale, accepted_at '
+            . 'FROM club_terms_acceptances'
+        )->fetch();
+        self::assertSame($clubId, (int) $termsAcceptance['club_id']);
+        self::assertSame($clubId, (int) $termsAcceptance['accepted_by_club_id']);
+        self::assertSame('Synthetic Contact', $termsAcceptance['representative_name']);
+        self::assertSame('club.one@example.test', $termsAcceptance['accepted_account_email']);
+        self::assertSame(ClubTermsAcceptance::VERSION, $termsAcceptance['terms_version']);
+        self::assertSame('it', $termsAcceptance['accepted_locale']);
+        self::assertNotSame('', $termsAcceptance['accepted_at']);
+        self::assertSame(0, (int) $this->database->query(
+            'SELECT COUNT(*) FROM club_registration_confirmations'
+        )->fetchColumn());
 
         $rawToken = 'synthetic-reset-token-that-never-leaves-this-test';
         $token = $this->database->prepare(
@@ -141,8 +158,8 @@ final class CriticalWorkflowTest extends TestCase
 
         self::assertSame(302, $reset->status());
         self::assertSame('/clubs/login', $reset->headers()['Location']);
-        self::assertSame(1, (int) $this->database->query(
-            'SELECT used FROM password_reset_tokens'
+        self::assertSame(0, (int) $this->database->query(
+            'SELECT COUNT(*) FROM password_reset_tokens'
         )->fetchColumn());
         self::assertTrue(password_verify(
             $updatedPassword,
@@ -471,6 +488,16 @@ final class CriticalWorkflowTest extends TestCase
                 declared_by_club_id INTEGER NOT NULL,
                 declaration_version TEXT NOT NULL,
                 declared_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE club_terms_acceptances (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club_id INTEGER NOT NULL,
+                accepted_by_club_id INTEGER NOT NULL,
+                representative_name TEXT NOT NULL,
+                accepted_account_email TEXT NOT NULL,
+                terms_version TEXT NOT NULL,
+                accepted_locale TEXT NOT NULL,
+                accepted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE athletes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

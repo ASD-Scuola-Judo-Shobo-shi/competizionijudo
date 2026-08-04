@@ -1,5 +1,13 @@
 RewriteEngine On
 
+# The deployment workflow invokes this authenticated application route after
+# uploading an environment. Dispatch only the exact migration endpoints before
+# the physical migrations directory is denied below; files inside it stay
+# private. The application rejects non-POST requests with 405. This rule is the
+# operative path on hosts where the root router is not consulted for the
+# environment directories; it mirrors the equivalent rule in root.htaccess.
+RewriteRule ^(?:migrations/?)$ public/index.php [QSA,L]
+
 RewriteRule ^(?:\.git|\.github|config|docs|lang|migrations|routes|scripts|src|tests|var|vendor|views)(?:/|$) - [F,L,NC]
 RewriteRule ^(?:composer\.(?:json|lock)|phpunit\.xml|phpstan\.neon|phpcs\.xml|Makefile|README\.md|REVISION|DEPLOYMENT_(?:MANIFEST\.sha256|TRANSFER_PROTOCOL))$ - [F,L,NC]
 RewriteRule ^\.(?!well-known(?:/|$)) - [F,L,NC]

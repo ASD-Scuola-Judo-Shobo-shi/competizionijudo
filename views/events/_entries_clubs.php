@@ -2,6 +2,7 @@
 
 /** @var \App\Presentation\EventEntriesViewModel $entryReport */
 /** @var int|null $loggedInClubId */
+/** @var bool $canViewEntryBreakdowns */
 /** @var list<array<string, mixed>> $entryClubs */
 /** @var array{page:int, per_page:int, total:int, last_page:int, offset:int, links:string} $entryClubsPagination */
 ?>
@@ -33,7 +34,9 @@
                         <th scope="col" data-sort-key="club"><?= e(__('events.entries_club')) ?></th>
                         <th scope="col" data-sort-key="federal_code"><?= e(__('events.entries_code')) ?></th>
                         <th scope="col" data-sort-key="athletes"><?= e(__('events.entries_athletes')) ?></th>
-                        <th scope="col" data-sort-key="breakdown"><?= e(__('events.entries_club_breakdown')) ?></th>
+                        <?php if ($canViewEntryBreakdowns) : ?>
+                            <th scope="col" data-sort-key="breakdown"><?= e(__('events.entries_club_breakdown')) ?></th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -57,15 +60,17 @@
                             <td data-label="<?= e(__('events.entries_athletes')) ?>">
                                 <?= e((string) $clubTotal) ?>
                             </td>
-                            <td data-label="<?= e(__('events.entries_club_breakdown')) ?>">
-                                <?php if ($clubTotal > 0) : ?>
-                                    <div class="entries-club-breakdowns">
-                                        <?php foreach ($entryReport->dimensions as $dimension) : ?>
-                                            <?php require __DIR__ . '/_entries_stacked_bar.php'; ?>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </td>
+                            <?php if ($canViewEntryBreakdowns) : ?>
+                                <td data-label="<?= e(__('events.entries_club_breakdown')) ?>">
+                                    <?php if ($clubTotal > 0) : ?>
+                                        <div class="entries-club-breakdowns">
+                                            <?php foreach ($entryReport->dimensions as $dimension) : ?>
+                                                <?php require __DIR__ . '/_entries_stacked_bar.php'; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
