@@ -16,11 +16,16 @@ final class EntrySnapshotRetentionService
     {
         $statement = $this->database->prepare(
             'DELETE FROM entries
-             WHERE snapshot_at IS NOT NULL
-               AND snapshot_at < ?
-               AND event_id IN (SELECT id FROM events WHERE closed = 1)'
+             WHERE event_id IN (SELECT id FROM events WHERE closed = 1)
+               AND (
+                   (snapshot_at IS NOT NULL AND snapshot_at <= ?)
+                   OR (
+                       snapshot_at IS NULL
+                       AND event_id IN (SELECT id FROM events WHERE closed = 1 AND date <= ?)
+                   )
+               )'
         );
-        $statement->execute([$cutoff]);
+        $statement->execute([$cutoff, substr($cutoff, 0, 10)]);
 
         return $statement->rowCount();
     }

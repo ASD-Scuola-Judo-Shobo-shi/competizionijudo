@@ -46,7 +46,7 @@ final class PasswordResetRepositoryTest extends TestCase
 
                 return match (true) {
                     str_starts_with($sql, 'SELECT id, club_id') => $candidate,
-                    str_starts_with($sql, 'UPDATE password_reset_tokens SET used = 1 WHERE id') => $claim,
+                    str_starts_with($sql, 'DELETE FROM password_reset_tokens WHERE id') => $claim,
                     str_starts_with($sql, 'UPDATE clubs SET password_hash') => $password,
                     str_contains($sql, 'WHERE club_id = ?') => $invalidate,
                     default => throw new RuntimeException('Unexpected password reset query.'),
@@ -61,7 +61,7 @@ final class PasswordResetRepositoryTest extends TestCase
         self::assertFalse($repository->consume($tokenHash, $passwordHash));
         self::assertTrue($this->containsSql($queries, 'LIMIT 1 FOR UPDATE'));
         self::assertTrue($this->containsSql($queries, 'WHERE id = ? AND used = 0 AND expires_at > ?'));
-        self::assertTrue($this->containsSql($queries, 'WHERE club_id = ? AND used = 0'));
+        self::assertTrue($this->containsSql($queries, 'DELETE FROM password_reset_tokens WHERE club_id = ?'));
     }
 
     #[DataProvider('unavailableTokenStates')]
@@ -121,7 +121,7 @@ final class PasswordResetRepositoryTest extends TestCase
         ));
     }
 
-    public function testAdministrativePasswordReplacementInvalidatesOutstandingTokens(): void
+    public function testAdministrativePasswordReplacementDeletesOutstandingTokens(): void
     {
         $passwordHash = hash('sha256', 'administrative-password-fixture');
         $password = $this->executingStatement([$passwordHash, 13], 1);

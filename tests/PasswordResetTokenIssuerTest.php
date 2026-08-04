@@ -41,7 +41,7 @@ final class PasswordResetTokenIssuerTest extends TestCase
         );
     }
 
-    public function testIssuingATokenAtomicallyInvalidatesThePreviousToken(): void
+    public function testIssuingATokenAtomicallyDeletesThePreviousToken(): void
     {
         $this->database->exec(
             "INSERT INTO password_reset_tokens (club_id, token_hash, expires_at, used)
@@ -55,10 +55,10 @@ final class PasswordResetTokenIssuerTest extends TestCase
         $tokens = $this->database->query(
             'SELECT token_hash, expires_at, used FROM password_reset_tokens ORDER BY id'
         )->fetchAll(PDO::FETCH_ASSOC);
-        self::assertSame(1, (int) $tokens[0]['used']);
-        self::assertSame(hash('sha256', $rawToken), $tokens[1]['token_hash']);
-        self::assertSame('2026-08-03 13:00:00', $tokens[1]['expires_at']);
-        self::assertSame(0, (int) $tokens[1]['used']);
+        self::assertCount(1, $tokens);
+        self::assertSame(hash('sha256', $rawToken), $tokens[0]['token_hash']);
+        self::assertSame('2026-08-03 13:00:00', $tokens[0]['expires_at']);
+        self::assertSame(0, (int) $tokens[0]['used']);
         self::assertStringNotContainsString($rawToken, serialize($tokens));
     }
 

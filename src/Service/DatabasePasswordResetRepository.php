@@ -62,7 +62,7 @@ final class DatabasePasswordResetRepository implements PasswordResetRepository
             }
 
             $claim = $this->prepare(
-                'UPDATE password_reset_tokens SET used = 1 '
+                'DELETE FROM password_reset_tokens '
                 . 'WHERE id = ? AND used = 0 AND expires_at > ?'
             );
             $claim->execute([(int) $token['id'], $this->now()]);
@@ -73,7 +73,7 @@ final class DatabasePasswordResetRepository implements PasswordResetRepository
                 return false;
             }
 
-            $this->updatePasswordAndInvalidate((int) $token['club_id'], $passwordHash);
+            $this->updatePasswordAndDeleteTokens((int) $token['club_id'], $passwordHash);
             $this->database->commit();
 
             return true;
@@ -91,7 +91,7 @@ final class DatabasePasswordResetRepository implements PasswordResetRepository
         $this->database->beginTransaction();
 
         try {
-            $this->updatePasswordAndInvalidate($clubId, $passwordHash);
+            $this->updatePasswordAndDeleteTokens($clubId, $passwordHash);
             $this->database->commit();
         } catch (Throwable $exception) {
             if ($this->database->inTransaction()) {
@@ -102,7 +102,7 @@ final class DatabasePasswordResetRepository implements PasswordResetRepository
         }
     }
 
-    private function updatePasswordAndInvalidate(int $clubId, string $passwordHash): void
+    private function updatePasswordAndDeleteTokens(int $clubId, string $passwordHash): void
     {
         $password = $this->prepare('UPDATE clubs SET password_hash = ? WHERE id = ?');
         $password->execute([$passwordHash, $clubId]);
@@ -111,7 +111,7 @@ final class DatabasePasswordResetRepository implements PasswordResetRepository
         }
 
         $tokens = $this->prepare(
-            'UPDATE password_reset_tokens SET used = 1 WHERE club_id = ? AND used = 0'
+            'DELETE FROM password_reset_tokens WHERE club_id = ?'
         );
         $tokens->execute([$clubId]);
     }

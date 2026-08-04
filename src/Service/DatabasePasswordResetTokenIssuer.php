@@ -54,11 +54,11 @@ final class DatabasePasswordResetTokenIssuer implements PasswordResetTokenIssuer
                 return null;
             }
 
-            $invalidate = $this->prepare(
+            $deletePrevious = $this->prepare(
                 $database,
-                'UPDATE password_reset_tokens SET used = 1 WHERE club_id = ? AND used = 0'
+                'DELETE FROM password_reset_tokens WHERE club_id = ?'
             );
-            $invalidate->execute([(int) $clubId]);
+            $deletePrevious->execute([(int) $clubId]);
 
             $insert = $this->prepare(
                 $database,
