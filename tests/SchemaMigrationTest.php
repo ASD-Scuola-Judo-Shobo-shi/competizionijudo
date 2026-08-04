@@ -33,6 +33,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20260731_000001_allow_missing_athlete_weight.sql',
                 dirname(__DIR__) . '/migrations/20260804_000001_create_club_terms_acceptances.sql',
                 dirname(__DIR__) . '/migrations/20260804_000002_add_club_approval_state.sql',
+                dirname(__DIR__) . '/migrations/20260804_000003_add_entry_club_ownership.sql',
             ],
             array_values($migrations)
         );
@@ -136,6 +137,23 @@ final class SchemaMigrationTest extends TestCase
         self::assertStringContainsString('ADD COLUMN approved_at TIMESTAMP NULL DEFAULT NULL', $migration);
         self::assertStringContainsString("COLUMN_NAME = 'approved_at'", $migration);
         self::assertStringContainsString('incomplete_club_approval_column', $migration);
+    }
+
+    public function testForwardMigrationEnforcesEntryClubOwnership(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__) . '/migrations/20260804_000003_add_entry_club_ownership.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString('fk_entries_athlete_club', $migration);
+        self::assertStringContainsString('uq_athletes_id_club', $migration);
+        self::assertStringContainsString(
+            'FOREIGN KEY (athlete_id, club_id) REFERENCES athletes(id, club_id)',
+            $migration
+        );
+        self::assertStringContainsString('entry_ownership_preflight_failed', $migration);
+        self::assertStringContainsString('incomplete_entry_ownership_constraint', $migration);
     }
 
     public function testForwardMigrationConsolidatesClubContactsAndAddsAddresses(): void

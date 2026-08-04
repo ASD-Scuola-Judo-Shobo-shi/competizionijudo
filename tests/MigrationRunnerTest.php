@@ -90,7 +90,7 @@ final class MigrationRunnerTest extends TestCase
         $migrationQuery->method('fetchAll')->willReturn($historicalVersions);
         $recordedVersions = [];
         $recordStatement = $this->createMock(PDOStatement::class);
-        $recordStatement->expects(self::exactly(17))
+        $recordStatement->expects(self::exactly(18))
             ->method('execute')
             ->willReturnCallback(
                 static function (?array $parameters = null) use (&$recordedVersions): bool {
@@ -106,7 +106,7 @@ final class MigrationRunnerTest extends TestCase
             ->willReturn(true);
         $database = $this->createMock(PDO::class);
         $database->expects(self::exactly(3))->method('query')->willReturn($migrationQuery);
-        $database->expects(self::exactly(18))
+        $database->expects(self::exactly(19))
             ->method('prepare')
             ->willReturnOnConsecutiveCalls(
                 $recordStatement,
@@ -126,12 +126,13 @@ final class MigrationRunnerTest extends TestCase
                 $recordStatement,
                 $recordStatement,
                 $recordStatement,
+                $recordStatement,
                 $recordStatement
             );
-        $database->expects(self::atLeast(17))->method('exec');
-        $database->expects(self::exactly(17))->method('beginTransaction')->willReturn(true);
-        $database->expects(self::exactly(16))->method('inTransaction')->willReturn(true);
-        $database->expects(self::exactly(17))->method('commit')->willReturn(true);
+        $database->expects(self::atLeast(18))->method('exec');
+        $database->expects(self::exactly(18))->method('beginTransaction')->willReturn(true);
+        $database->expects(self::exactly(17))->method('inTransaction')->willReturn(true);
+        $database->expects(self::exactly(18))->method('commit')->willReturn(true);
 
         (new MigrationRunner($database))->run();
 
@@ -153,6 +154,7 @@ final class MigrationRunnerTest extends TestCase
             '20260731_000001_allow_missing_athlete_weight.sql',
             '20260804_000001_create_club_terms_acceptances.sql',
             '20260804_000002_add_club_approval_state.sql',
+            '20260804_000003_add_entry_club_ownership.sql',
         ], $recordedVersions);
     }
 

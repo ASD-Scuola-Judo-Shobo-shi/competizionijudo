@@ -509,6 +509,12 @@ function assertSchemaContract(PDO $database): void
     );
     assertUniqueIndex(
         $database,
+        'athletes',
+        'uq_athletes_id_club',
+        'id,club_id'
+    );
+    assertUniqueIndex(
+        $database,
         'event_registration_options',
         'uniq_event_registration_option_default',
         'default_event_id'
@@ -540,6 +546,7 @@ function assertSchemaContract(PDO $database): void
         'club_data_rights_declarations.club_id=clubs.id',
         'club_data_rights_declarations.declared_by_club_id=clubs.id',
         'entries.athlete_id=athletes.id',
+        'entries.club_id=athletes.club_id',
         'entries.club_id=clubs.id',
         'entries.event_id=events.id',
         'entries.event_id=event_registration_options.event_id',
