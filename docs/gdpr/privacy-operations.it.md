@@ -90,6 +90,12 @@ nell'informativa in `/privacy`.
 - I registri interni delle richieste e degli incidenti sono documentazione
   operativa del titolare; tenerli fuori dai log pubblici e applicare la
   conservazione che il titolare sceglie per la documentazione operativa.
+- L'esecuzione giornaliera di `composer privacy:purge` aggiunge un record di
+  evidenza append-only in `var/log/privacy-purge-evidence.log` (conteggi di
+  eliminazione, valori di conservazione di log e backup, età osservata del log
+  applicativo e un riferimento di correlazione in caso di errore). Conservare
+  questo file insieme alle evidenze di log e backup descritte in
+  `docs/deployment.md`.
 - I test e la documentazione del repository non possono provare il
   comportamento dell'hosting reale: il titolare deve registrare i controlli
   periodici di ripristino, scadenza e scheduler descritti in

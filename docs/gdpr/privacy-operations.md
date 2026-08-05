@@ -87,6 +87,10 @@ Reference: Articles 12–17, 33, 34 GDPR. Owner: the controller (value of
 - The internal request and incident registers are operational records of the
   controller; keep them outside public logs and apply the retention the
   controller chooses for operational records.
+- The daily `composer privacy:purge` run appends an append-only evidence record
+  to `var/log/privacy-purge-evidence.log` (purge counts, log and backup retention
+  values, observed application-log age, and a correlation reference on failures).
+  Keep that file with the log/backup evidence described in `docs/deployment.md`.
 - Repository tests and documentation cannot prove live hosting behavior:
   the controller must record the periodic restore, expiry, and scheduler
   checks described in `docs/deployment.md` and `docs/security.md`.

@@ -302,7 +302,12 @@ when their event is deleted.
 Schedule `composer privacy:purge` at least daily. It deletes closed-event entries
 at or beyond one year, using the event date for legacy rows without snapshot timestamps.
 It also deletes expired registration confirmations, expired password-reset tokens,
-and legacy reset tokens marked as used; monitor its exit status. Configure log rotation
+and legacy reset tokens marked as used; monitor its exit status. Each run appends
+a timestamped JSON record to `var/log/privacy-purge-evidence.log` with the purge
+counts, the configured `APP_LOG_RETENTION_DAYS` and `APP_BACKUP_RETENTION_DAYS`
+values, the observed age of `var/log/application.log`, and — for failed runs — a
+correlation reference. Treat that file as evidence of daily execution and reconcile
+it against host-side rotation. Configure log rotation
 to delete application logs after `APP_LOG_RETENTION_DAYS`, and configure the
 backup system to delete backups after `APP_BACKUP_RETENTION_DAYS`. Those two
 host-level policies are not implemented by the PHP process. Test both restores
@@ -312,8 +317,10 @@ On Aruba Hosting Linux Basic, open the domain control panel, select **Processi
 Cron**, add a PHP instruction for the deployed `prod/scripts/purge-expired-data.php`,
 and schedule it daily. Aruba cron schedules use UTC. After the first run, inspect
 the task's last-run status and error log in the same panel, then retain periodic
-evidence that the task remains successful. The PHP instruction avoids exposing
-a maintenance endpoint over HTTP and does not require SSH or the Composer alias.
+evidence that the task remains successful — the evidence file in
+`var/log/privacy-purge-evidence.log` records every run, including failures. The
+PHP instruction avoids exposing a maintenance endpoint over HTTP and does not
+require SSH or the Composer alias.
 
 Before going live, the controller must also establish procedures for data-subject
 requests and breaches, confirm club authority for athletes and minors, sign the
