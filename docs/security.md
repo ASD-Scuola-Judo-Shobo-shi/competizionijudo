@@ -20,7 +20,7 @@ live penetration test or hosting-control-panel audit.
 | Sessions | Production and development use environment/path-specific cookie names and contexts. Cookies are strict-mode, cookie-only, HttpOnly, SameSite=Lax, and Secure on HTTPS. Authentication rotates the session identifier, creates one exclusive typed principal, expires after 30 idle minutes or 12 absolute hours, and is revalidated against the current club or administrator credentials on every request. Legacy privilege flags no longer authorize requests. |
 | Credentials | Passwords use PHP password hashing and a minimum 12-character policy. Login, recovery, and public registration attempts atomically consume persistent hashed account, network, and account/network limits. Unknown identities perform equivalent password-hash verification work. Production recovery responses do not reveal account existence or raw tokens. |
 | Reset tokens | Tokens contain 256 bits of randomness, are stored only as SHA-256 hashes, expire after one hour, and are issued transactionally under a club-row lock. New requests and successful password changes delete earlier tokens; the daily privacy job removes expired and legacy-used rows. |
-| Browser policy | Dynamic responses enforce CSP, deny framing, disable MIME sniffing and the legacy XSS auditor, restrict referrers and browser permissions, and emit HSTS on HTTPS. Authentication and token pages are non-cacheable; token pages use `no-referrer`. Apache and application header policies use the same framing rules. |
+| Browser policy | Dynamic responses enforce CSP, deny framing, disable MIME sniffing and the legacy XSS auditor, restrict referrers and browser permissions, and emit HSTS on HTTPS. CSP uses a fresh per-request nonce for inline scripts and style blocks and bans `unsafe-inline`; templates keep behavior in nonced scripts and keep dynamic colors and chart geometry in external CSS and SVG presentation attributes, with no inline event handlers or style attributes. Authentication and token pages are non-cacheable; token pages use `no-referrer`. Apache and application header policies use the same framing rules. |
 | Hosting boundary | The shared and per-artifact Apache rules reject sensitive files and directories before existing files can bypass the front controller. Unknown hosts are rejected and HTTP redirects use fixed canonical destinations. |
 | Database access | Request-derived values use prepared statements. Sort expressions are selected from explicit allowlists. Athlete registration writes scope the athlete and club together. MySQL enforces entry ownership with a composite foreign key on `entries (athlete_id, club_id)` referencing `athletes (id, club_id)`. |
 | Club lifecycle | Email-confirmed registrations stay pending until an administrator approves the account; the pending state blocks login only, never the confirmation or recovery workflow. Athlete-archive and per-event entry growth are bounded by environment-configured quotas (`CLUB_ATHLETE_LIMIT`, `CLUB_ENTRY_LIMIT`; `0` disables a quota) and enforced at manual add, spreadsheet import, and registration time. |
@@ -29,10 +29,8 @@ live penetration test or hosting-control-panel audit.
 | Privacy and club terms | Public event-entry projections stop at club totals; detailed breakdowns require authentication. Clubs can see only their own named athletes and administrators can see the complete table. Terms acceptance and the Article 14 notice-delivery warranty are versioned and recorded separately; outdated clubs must re-accept the applicable agreement before athlete-data mutations. Successful account confirmations are deleted immediately, while the scheduled privacy job removes expired account-workflow data and entry snapshots after one year. |
 | Release assurance | CI validates syntax, coding style, PHPStan, PHPUnit, changed-code coverage, locked dependency advisories, MySQL migrations, the exact deployment manifest, bilingual artifact boot, and root-router staging. |
 
-The enforced CSP still permits inline scripts and styles because current
-templates contain inline behavior and dynamic style values. It provides origin,
-form, framing, object, and resource restrictions, but removing `unsafe-inline`
-requires a separate nonce or external-asset migration.
+Templates are guarded by a test that rejects inline event handlers, style
+attributes, and `javascript:` URLs so the nonce policy cannot silently regress.
 
 ## Remaining priorities
 
@@ -41,15 +39,13 @@ These are current limitations, not claims of an active exploit:
 | Priority | Limitation | Required direction | Review tracker |
 | --- | --- | --- | --- |
 | High | Administration uses one shared environment-defined identity without a second factor or per-operator audit identity. | Introduce individual administrators, revocation, a selected strong second factor, and break-glass recovery. | [PR-32](review-tracking-2026-07-13.md) |
-| Medium | CSP permits inline scripts and styles. | Move behavior to external assets or use per-response nonces, then remove `unsafe-inline`. | [PR-14](review-tracking-2026-07-13.md) |
 | Medium | Individual administrator mutations are not recorded in a durable audit trail; host backup, restore, rotation, and scheduled purge evidence remain operational controls. | Add actor-aware audit events and record periodic restore/retention checks outside public logs. | [PR-30](review-tracking-2026-07-13.md) |
 
-The previously listed club-approval/quota and composite entry-ownership
-limitations are implemented; see the rows above and the commit history for
-`20260804_000002_add_club_approval_state.sql` and
-`20260804_000003_add_entry_club_ownership.sql`.
-
-Schema, second-factor, and audit-trail work changes persistent or
+The previously listed club-approval/quota, composite entry-ownership, and CSP
+inline-code limitations are implemented; see the rows above, the migration
+history for `20260804_000002_add_club_approval_state.sql` and
+`20260804_000003_add_entry_club_ownership.sql`, and the nonce-based browser
+policy row. Schema, second-factor, and audit-trail work changes persistent or
 user-visible behavior and should be implemented as separate reviewed changes,
 not folded into unrelated maintenance.
 
