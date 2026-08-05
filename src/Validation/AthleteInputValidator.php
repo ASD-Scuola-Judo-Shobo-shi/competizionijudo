@@ -11,6 +11,8 @@ use DateTimeZone;
 
 final class AthleteInputValidator
 {
+    public const MAX_NOTES_LENGTH = 2000;
+
     private function __construct()
     {
     }
@@ -23,7 +25,8 @@ final class AthleteInputValidator
         string $birthDate,
         string $weight,
         string $belt,
-        ?DateTimeImmutable $today = null
+        ?DateTimeImmutable $today = null,
+        string $notes = ''
     ): array {
         $errors = [];
         $today ??= new DateTimeImmutable('today', new DateTimeZone('UTC'));
@@ -48,6 +51,9 @@ final class AthleteInputValidator
         }
         if (Belt::tryFrom(trim($belt)) === null) {
             $errors[] = 'validation.athlete_belt_invalid';
+        }
+        if (mb_strlen(trim($notes)) > self::MAX_NOTES_LENGTH) {
+            $errors[] = 'validation.athlete_notes_too_long';
         }
 
         return $errors;

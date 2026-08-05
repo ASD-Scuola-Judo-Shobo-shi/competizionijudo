@@ -110,6 +110,54 @@ final class InputValidatorTest extends TestCase
         ));
     }
 
+    public function testNotesAreBoundedForAthletesAndEvents(): void
+    {
+        $max = str_repeat('a', AthleteInputValidator::MAX_NOTES_LENGTH);
+        $over = $max . 'b';
+
+        self::assertSame([], AthleteInputValidator::errors(
+            'A',
+            'B',
+            'F',
+            '2000-01-01',
+            '45.2',
+            'white',
+            null,
+            $max
+        ));
+        self::assertSame(['validation.athlete_notes_too_long'], AthleteInputValidator::errors(
+            'A',
+            'B',
+            'F',
+            '2000-01-01',
+            '45.2',
+            'white',
+            null,
+            $over
+        ));
+
+        self::assertSame([], EventInputValidator::errors(
+            'Synthetic Event',
+            '2026-06-28',
+            'Synthetic Venue',
+            '',
+            'only_competitive',
+            [],
+            null,
+            $max
+        ));
+        self::assertSame(['validation.event_notes_too_long'], EventInputValidator::errors(
+            'Synthetic Event',
+            '2026-06-28',
+            'Synthetic Venue',
+            '',
+            'only_competitive',
+            [],
+            null,
+            $over
+        ));
+    }
+
     public function testEventValidatorRejectsInvalidDatesOrderingTypeAndOversizedUpload(): void
     {
         $oversizedUpload = [

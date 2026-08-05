@@ -778,7 +778,7 @@ final class AthleteCsvTransfer
         if ($this->length($row['membership_number'] ?? '') > 80) {
             $errors[] = 'club.area.csv.membership_too_long';
         }
-        if ($this->length($row['notes'] ?? '') > 65_535) {
+        if ($this->length($row['notes'] ?? '') > AthleteInputValidator::MAX_NOTES_LENGTH) {
             $errors[] = 'club.area.csv.notes_too_long';
         }
 

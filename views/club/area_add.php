@@ -77,7 +77,7 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
 
         <label><?= e(__('club.area.notes')) ?></label>
         <p class="field-help" id="athlete-notes-help"><?= e(__('club.area.notes_privacy_help')) ?></p>
-        <textarea name="notes" rows="3" aria-describedby="athlete-notes-help"><?= e($edit?->notes ?? '') ?></textarea>
+        <textarea name="notes" rows="3" maxlength="2000" aria-describedby="athlete-notes-help"><?= e($edit?->notes ?? '') ?></textarea>
 
         <button class="btn green" type="submit"><?= e(__('club.area.save_athlete')) ?></button>
     </form>

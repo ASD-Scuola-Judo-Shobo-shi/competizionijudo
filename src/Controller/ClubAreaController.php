@@ -89,7 +89,9 @@ final class ClubAreaController extends Controller
                         $data['gender'],
                         $data['birth_date'],
                         $weightInput,
-                        $data['belt']
+                        $data['belt'],
+                        null,
+                        $data['notes']
                     ) as $key
                 ) {
                     $errors[] = __($key);
@@ -345,7 +347,9 @@ final class ClubAreaController extends Controller
             $data['gender'],
             $data['birth_date'],
             $weightInput,
-            $data['belt']
+            $data['belt'],
+            null,
+            $data['notes']
         );
 
         if ($errors !== []) {

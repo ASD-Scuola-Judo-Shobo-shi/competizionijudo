@@ -15,6 +15,7 @@ use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
 use App\Service\AthleteCsvImportException;
 use App\Service\AthleteCsvTransfer;
+use App\Validation\AthleteInputValidator;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -551,6 +552,129 @@ final class AthleteCsvWorkflowTest extends TestCase
         self::assertSame('Mergedown', $athlete['last_name']);
         self::assertSame('42.5', (string) $athlete['weight_kg']);
         self::assertSame('green', $athlete['belt']);
+    }
+
+    public function testOverLimitSensitiveNotesAreRejectedByImportWithoutLeakingTheRawValue(): void
+    {
+        $marker = 'HEALTH-MARKER-4711';
+        $notes = str_repeat('n', AthleteInputValidator::MAX_NOTES_LENGTH + 1) . $marker;
+        $path = $this->temporaryCsv(
+            "last_name,first_name,gender,birth_date,weight_kg,belt,membership_number,notes\n"
+            . "New,Athlete,M,2012-04-05,42,green,NEW-006,$notes\n"
+        );
+        $transfer = new AthleteCsvTransfer();
+
+        $imported = $transfer->import($path, 201);
+
+        self::assertSame(0, $imported->created);
+        self::assertSame(0, $imported->updated);
+        self::assertCount(1, $imported->issues);
+        self::assertSame('club.area.csv.invalid_row', $imported->issues[0]->translationKey);
+        self::assertContains(
+            'club.area.csv.notes_too_long',
+            $imported->issues[0]->validationKeys
+        );
+        self::assertStringNotContainsString(
+            $marker,
+            json_encode($imported, JSON_THROW_ON_ERROR)
+        );
+        self::assertSame(1, (int) $this->database->query(
+            'SELECT COUNT(*) FROM athletes WHERE club_id = 201'
+        )->fetchColumn());
+    }
+
+    public function testOverLimitSensitiveNotesImportFeedbackShowsOnlyTheKeyedMessage(): void
+    {
+        $marker = 'HEALTH-MARKER-4822';
+        $notes = str_repeat('n', AthleteInputValidator::MAX_NOTES_LENGTH + 1) . $marker;
+        $path = $this->temporaryCsv(
+            "last_name,first_name,gender,birth_date,weight_kg,belt,membership_number,notes\n"
+            . "New,Athlete,M,2012-04-05,42,green,NEW-007,$notes\n"
+        );
+        $request = $this->importRequest($path);
+
+        $response = (new ClubAreaController($this->view, $request))->importAthletes($request);
+
+        self::assertSame(302, $response->status());
+        $feedback = Session::pullFlash('athlete_csv_feedback');
+        self::assertIsArray($feedback);
+        self::assertSame('error', $feedback['type']);
+        $reportMessages = implode(' ', array_column((array) $feedback['report'], 'message'));
+        self::assertStringContainsString(
+            e(__('club.area.csv.notes_too_long')),
+            $reportMessages
+        );
+        self::assertStringNotContainsString(
+            $marker,
+            json_encode($feedback, JSON_THROW_ON_ERROR)
+        );
+        self::assertSame(1, (int) $this->database->query(
+            'SELECT COUNT(*) FROM athletes WHERE club_id = 201'
+        )->fetchColumn());
+    }
+
+    public function testWebSaveRejectsOverLimitSensitiveNotesWithoutPersistingThem(): void
+    {
+        $marker = 'HEALTH-MARKER-4933';
+        $notes = str_repeat('n', AthleteInputValidator::MAX_NOTES_LENGTH + 1) . $marker;
+        $request = new Request('POST', '/clubs/area?view=add', ['view' => 'add'], [
+            'csrf_token' => csrf_token(),
+            'last_name' => 'New',
+            'first_name' => 'Athlete',
+            'gender' => 'M',
+            'birth_date' => '2012-04-05',
+            'weight_kg' => '42',
+            'belt' => 'green',
+            'membership_number' => 'NEW-008',
+            'notes' => $notes,
+        ]);
+
+        $response = (new ClubAreaController($this->view, $request))->index($request);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(
+            e(__('validation.athlete_notes_too_long')),
+            $response->content()
+        );
+        self::assertStringNotContainsString($marker, $response->content());
+        self::assertSame(1, (int) $this->database->query(
+            'SELECT COUNT(*) FROM athletes WHERE club_id = 201'
+        )->fetchColumn());
+    }
+
+    public function testInlineUpdateRejectsOverLimitSensitiveNotesWithoutChangingStoredNotes(): void
+    {
+        $marker = 'HEALTH-MARKER-5044';
+        $notes = str_repeat('n', AthleteInputValidator::MAX_NOTES_LENGTH + 1) . $marker;
+        $request = new Request('POST', '/clubs/athlete-inline-update', [], [
+            'csrf_token' => csrf_token(),
+            'athlete_id' => '301',
+            'return_view' => 'list',
+            'last_name' => 'Existingown',
+            'first_name' => 'Athlete',
+            'gender' => 'M',
+            'birth_date' => '2012-04-05',
+            'weight_kg' => '42.5',
+            'belt' => 'green',
+            'membership_number' => 'OWN-001',
+            'notes' => $notes,
+        ]);
+
+        $response = (new ClubAreaController($this->view, $request))->updateAthleteInline($request);
+
+        self::assertSame(303, $response->status());
+        $feedback = Session::pullFlash('athlete_inline_feedback');
+        self::assertIsArray($feedback);
+        self::assertSame(
+            e(__('validation.athlete_notes_too_long')),
+            $feedback['message']
+        );
+        self::assertSame(
+            '=SUM(1,1)',
+            $this->database->query(
+                'SELECT notes FROM athletes WHERE id = 301'
+            )->fetchColumn()
+        );
     }
 
     public function testImportRequiresAuthenticationAndCsrfProtection(): void

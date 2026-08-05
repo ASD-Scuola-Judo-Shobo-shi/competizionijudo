@@ -139,6 +139,7 @@ final class ErrorLoggingTest extends TestCase
                 'reset_token' => 'SENSITIVE-H',
                 'session_id' => 'SENSITIVE-I',
                 'athlete_record' => ['name' => 'SENSITIVE-J'],
+                'notes' => 'SENSITIVE-K',
             ]
         );
 
@@ -155,6 +156,7 @@ final class ErrorLoggingTest extends TestCase
         self::assertStringNotContainsString('reset_token', $rawLog);
         self::assertStringNotContainsString('session_id', $rawLog);
         self::assertStringNotContainsString('athlete_record', $rawLog);
+        self::assertStringNotContainsString('notes', $rawLog);
     }
 
     /** @return list<array<string, mixed>> */

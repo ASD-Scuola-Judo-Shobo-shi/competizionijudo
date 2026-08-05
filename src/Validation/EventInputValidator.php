@@ -12,6 +12,7 @@ final class EventInputValidator
 {
     public const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
     public const MAX_REGISTRATION_FEE_CENTS = 4_294_967_295;
+    public const MAX_NOTES_LENGTH = 2000;
 
     private const EVENT_TYPES = [
         'only_precompetitive',
@@ -40,7 +41,8 @@ final class EventInputValidator
         string $registrationDeadline,
         string $type,
         array $uploads,
-        ?string $maxParticipants = null
+        ?string $maxParticipants = null,
+        string $notes = ''
     ): array {
         $errors = [];
         $eventDate = self::date($date);
@@ -76,6 +78,10 @@ final class EventInputValidator
             if ($uploadError !== null) {
                 $errors[] = $uploadError;
             }
+        }
+
+        if (mb_strlen(trim($notes)) > self::MAX_NOTES_LENGTH) {
+            $errors[] = 'validation.event_notes_too_long';
         }
 
         return array_values(array_unique($errors));

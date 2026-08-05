@@ -730,7 +730,8 @@ final class AdminController extends Controller
                 $data['registration_deadline'],
                 $data['type'],
                 $uploads,
-                $data['max_participants']
+                $data['max_participants'],
+                $data['notes']
             ), EventInputValidator::registrationConfigurationErrors(
                 $data['registration_options'],
                 $data['sepa_account_holder'],
