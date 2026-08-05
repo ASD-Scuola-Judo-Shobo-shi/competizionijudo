@@ -318,7 +318,11 @@ a maintenance endpoint over HTTP and does not require SSH or the Composer alias.
 Before going live, the controller must also establish procedures for data-subject
 requests and breaches, confirm club authority for athletes and minors, sign the
 required processor agreements, and verify Aruba's subprocessors and any
-international-transfer safeguards. The public notice is at `/privacy`.
+international-transfer safeguards. The public notice is at `/privacy`. The
+operational templates live in `docs/gdpr/`: the legitimate interest assessment
+(`lia.md`), the Article 30 records of processing (`records-of-processing.md`),
+and the data-subject request and breach procedures
+(`privacy-operations.md`); Italian counterparts carry the `.it.md` suffix.
 
 ## Post-deployment health and rollback
 
