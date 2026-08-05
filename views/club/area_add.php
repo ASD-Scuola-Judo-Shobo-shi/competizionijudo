@@ -6,6 +6,7 @@
 /** @var array{column:string, direction:'asc'|'desc'}|null $tableSort */
 /** @var int|null $athleteQuotaRemaining */
 /** @var int|null $athleteQuotaLimit */
+/** @var string $cspNonce */
 $tableSort ??= ['column' => 'athlete', 'direction' => 'asc'];
 $athleteQuotaRemaining = $athleteQuotaRemaining ?? 0;
 $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
@@ -49,18 +50,18 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
             <?php endforeach; ?>
         </select>
         <label><?= e(__('club.area.birth_date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-            <input type="date" name="birth_date" id="birth_date" required value="<?= e($edit?->birth_date ?? '') ?>" max="<?= e(date('Y-m-d', strtotime('-2 years'))) ?>" style="flex:1;min-width:0;">
-            <span id="age_class_display" class="age-class-badge" style="flex:0 0 20%;text-align:center;">—</span>
+        <div class="form-inline-row">
+            <input type="date" name="birth_date" id="birth_date" required value="<?= e($edit?->birth_date ?? '') ?>" max="<?= e(date('Y-m-d', strtotime('-2 years'))) ?>" class="form-inline-grow">
+            <span id="age_class_display" class="age-class-badge">—</span>
         </div>
 
         <label><?= e(__('club.area.weight_kg')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-            <div class="weight-slider-group" style="flex:1;min-width:0;">
-                <input type="number" name="weight_kg" min="0.1" max="200" step="0.1" required value="<?= e($edit?->weight_kg ?? '') ?>" class="weight-input" style="width:100px;flex-shrink:0;">
-                <input type="range" min="0" max="200" step="0.1" value="<?= e($edit?->weight_kg ?? '') ?>" class="weight-slider" style="flex:1;min-width:0;">
+        <div class="form-inline-row">
+            <div class="weight-slider-group">
+                <input type="number" name="weight_kg" min="0.1" max="200" step="0.1" required value="<?= e($edit?->weight_kg ?? '') ?>" class="weight-input">
+                <input type="range" min="0" max="200" step="0.1" value="<?= e($edit?->weight_kg ?? '') ?>" class="weight-slider">
             </div>
-            <span id="weight_category_display" class="weight-category-badge" style="flex:0 0 20%;text-align:center;">—</span>
+            <span id="weight_category_display" class="weight-category-badge">—</span>
         </div>
 
         <label><?= e(__('club.area.belt')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
@@ -80,7 +81,7 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
 
         <button class="btn green" type="submit"><?= e(__('club.area.save_athlete')) ?></button>
     </form>
-    <script>
+    <script nonce="<?= e($cspNonce) ?>">
     (function() {
         const form = document.querySelector('.form-card');
         if (!form) return;
@@ -190,11 +191,13 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
 
     })();
     </script>
-    <style>
+    <style nonce="<?= e($cspNonce) ?>">
     .weight-slider-group {
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        flex: 1;
+        min-width: 0;
     }
     .weight-slider-group .weight-slider {
         flex: 1;
@@ -213,6 +216,8 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
         border-radius: 4px;
         color: #666;
         white-space: nowrap;
+        flex: 0 0 20%;
+        text-align: center;
     }
     .age-class-badge.has-value {
         background: #d4edda;
@@ -227,6 +232,8 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
         border-radius: 4px;
         color: #666;
         white-space: nowrap;
+        flex: 0 0 20%;
+        text-align: center;
     }
     .weight-category-badge.has-value {
         background: #d4edda;
@@ -327,7 +334,7 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
                             <div class="table-actions" data-inline-display>
                                 <button class="btn green table-action-button" type="button" data-inline-edit aria-label="<?= e(__('tables.edit_row')) ?>" title="<?= e(__('tables.edit_row')) ?>"><span aria-hidden="true">✏️</span><span class="table-action-label"><?= e(__('tables.edit_row')) ?></span></button>
                                 <a class="btn gray table-action-button" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
-                                <form method="post" action="<?= e(base_url('/clubs/delete-athlete?')) ?>" onsubmit="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')">
+                                <form method="post" action="<?= e(base_url('/clubs/delete-athlete?')) ?>" data-confirm="<?= e(__('club.area.confirm_delete_athlete')) ?>">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="athlete_id" value="<?= e((string) $athlete->id) ?>">
                                     <button class="btn red table-action-button" type="submit" aria-label="<?= e(__('club.area.delete')) ?>" title="<?= e(__('club.area.delete')) ?>"><span aria-hidden="true">🗑️</span><span class="table-action-label"><?= e(__('club.area.delete')) ?></span></button>

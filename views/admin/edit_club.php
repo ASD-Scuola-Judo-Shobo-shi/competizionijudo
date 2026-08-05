@@ -8,6 +8,7 @@ if (!isset($sardinianPostalCodes)) {
 }
 /** @var array<string, list<string>> $sardinianLocations */
 /** @var array<string, array<string, string>> $sardinianPostalCodes */
+/** @var string $cspNonce */
 $affiliationOptions = $affiliationOptions ?? \App\Model\Affiliation::options();
 ?>
 <div class="card">
@@ -118,7 +119,7 @@ $affiliationOptions = $affiliationOptions ?? \App\Model\Affiliation::options();
 
         <button class="btn green" type="submit"><?= e(__('admin.clubs.save')) ?></button>
     </form>
-    <script>
+    <script nonce="<?= e($cspNonce) ?>">
     (() => {
         const locations = <?= json_encode($sardinianLocations, JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_THROW_ON_ERROR) ?>;
         const postalCodes = <?= json_encode($sardinianPostalCodes, JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_THROW_ON_ERROR) ?>;

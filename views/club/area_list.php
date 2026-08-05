@@ -22,7 +22,7 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
         <input type="hidden" name="sort" value="<?= e($tableSort['column']) ?>">
         <input type="hidden" name="direction" value="<?= e($tableSort['direction']) ?>">
         <label><?= e(__('club.area.event')) ?></label>
-        <select name="event" onchange="this.form.submit()">
+        <select name="event" data-submit-on-change>
             <option value="0"><?= e(__('club.area.all_events')) ?></option>
             <?php foreach ($events as $c) : ?>
                 <option value="<?= e((string) $c['id']) ?>" <?= $eventFilter === (int) $c['id'] ? 'selected' : '' ?>>
@@ -142,7 +142,7 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
                             <div class="table-actions" data-inline-display>
                                 <button class="btn green table-action-button" type="button" data-inline-edit aria-label="<?= e(__('tables.edit_row')) ?>" title="<?= e(__('tables.edit_row')) ?>"><span aria-hidden="true">✏️</span><span class="table-action-label"><?= e(__('tables.edit_row')) ?></span></button>
                                 <a class="btn gray table-action-button" href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $athlete->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
-                                <form method="post" action="<?= e(base_url('/clubs/delete-athlete?')) ?>" onsubmit="return confirm('<?= e(__('club.area.confirm_delete_athlete')) ?>')">
+                                <form method="post" action="<?= e(base_url('/clubs/delete-athlete?')) ?>" data-confirm="<?= e(__('club.area.confirm_delete_athlete')) ?>">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="athlete_id" value="<?= e((string) $athlete->id) ?>">
                                     <button class="btn red table-action-button" type="submit" aria-label="<?= e(__('club.area.delete')) ?>" title="<?= e(__('club.area.delete')) ?>"><span aria-hidden="true">🗑️</span><span class="table-action-label"><?= e(__('club.area.delete')) ?></span></button>

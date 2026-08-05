@@ -2,6 +2,7 @@
 
 /** @var string $favicon */
 /** @var string $content */
+/** @var string $cspNonce */
 ?>
 
 <!doctype html>
@@ -13,7 +14,7 @@
     <title><?= e($title ?? __('errors.server_error')) ?></title>
     <link rel="icon" href="<?= $favicon ?>">
     <link rel="stylesheet" href="<?= e(asset_url('assets/css/app.css')) ?>">
-    <script>
+    <script nonce="<?= e($cspNonce) ?>">
         (function () {
             try {
                 if (window.localStorage.getItem('competizioni-judo-theme') === 'dark') {

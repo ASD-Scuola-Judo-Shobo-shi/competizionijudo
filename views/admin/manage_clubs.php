@@ -174,7 +174,7 @@
                                     <?php endif; ?>
                                     <button class="btn table-action-button green" type="button" data-inline-edit aria-label="<?= e(__('tables.edit_row')) ?>" title="<?= e(__('tables.edit_row')) ?>"><span aria-hidden="true">✏️</span><span class="table-action-label"><?= e(__('tables.edit_row')) ?></span></button>
                                     <a class="btn table-action-button gray" href="<?= e(base_url('/admin/clubs/edit?id=' . (int) $club->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
-                                    <form method="post" action="<?= e(base_url('/admin/clubs/delete?')) ?>" onsubmit="return confirm('<?= e(__('admin.clubs.confirm_delete')) ?>')">
+                                    <form method="post" action="<?= e(base_url('/admin/clubs/delete?')) ?>" data-confirm="<?= e(__('admin.clubs.confirm_delete')) ?>">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="club_id" value="<?= (int) $club->id ?>">
                                         <button class="btn red table-action-button" type="submit" aria-label="<?= e(__('admin.clubs.delete')) ?>" title="<?= e(__('admin.clubs.delete')) ?>"><span aria-hidden="true">🗑️</span><span class="table-action-label"><?= e(__('admin.clubs.delete')) ?></span></button>

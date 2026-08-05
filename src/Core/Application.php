@@ -30,6 +30,7 @@ final class Application
     private Router $router;
     private View $view;
     private Logger $logger;
+    private string $cspNonce = '';
 
     public function __construct(
         private readonly string $basePath,
@@ -51,6 +52,9 @@ final class Application
 
     public function handle(Request $request): Response
     {
+        $this->cspNonce = bin2hex(random_bytes(16));
+        $this->view->setCspNonce($this->cspNonce);
+
         try {
             return $this->secure($this->router->dispatch($request), $request);
         } catch (HttpException $exception) {
@@ -106,7 +110,7 @@ final class Application
     private function secure(Response $response, Request $request): Response
     {
         $headers = [
-            'Content-Security-Policy' => "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; form-action 'self'",
+            'Content-Security-Policy' => "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'nonce-" . $this->cspNonce . "'; style-src 'self' 'nonce-" . $this->cspNonce . "'; img-src 'self' data:; font-src 'self'; form-action 'self'",
             'Permissions-Policy' => 'camera=(), geolocation=(), microphone=()',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
             'X-Content-Type-Options' => 'nosniff',

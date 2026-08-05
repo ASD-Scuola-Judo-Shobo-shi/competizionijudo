@@ -66,19 +66,30 @@ $startAngle = 0.0;
     </div>
 
     <ul class="entries-chart__legend" aria-label="<?= e($chartTitle) ?>">
-        <?php foreach ($segments as $segment) : ?>
+        <?php foreach ($segments as $index => $segment) : ?>
             <?php
             $colors = $segment['colors'];
-            $swatchStyle = count($colors) > 1
-                ? '--chart-swatch-lower: ' . $colors[0] . '; --chart-swatch-upper: ' . $colors[1] . ';'
-                : '--chart-swatch-color: ' . $colors[0] . ';';
+            $swatchId = 'pie-swatch-' . $chartKey . '-' . (string) $index;
             ?>
             <li>
                 <span
                     class="entries-chart__swatch<?= count($colors) > 1 ? ' entries-chart__swatch--split' : '' ?><?= $segment['border'] ? ' entries-chart__swatch--bordered' : '' ?>"
-                    style="<?= e($swatchStyle) ?>"
                     aria-hidden="true"
-                ></span>
+                >
+                    <svg viewBox="0 0 13 13">
+                        <?php if (count($colors) > 1) : ?>
+                            <defs>
+                                <linearGradient id="<?= e($swatchId) ?>" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0.5" stop-color="<?= e((string) $colors[0]) ?>" />
+                                    <stop offset="0.5" stop-color="<?= e((string) $colors[1]) ?>" />
+                                </linearGradient>
+                            </defs>
+                            <rect width="13" height="13" fill="url(#<?= e($swatchId) ?>)" />
+                        <?php else : ?>
+                            <rect width="13" height="13" fill="<?= e((string) $colors[0]) ?>" />
+                        <?php endif; ?>
+                    </svg>
+                </span>
                 <span>
                     <?= e((string) $segment['displayLabel']) ?>:
                     <strong><?= e((string) $segment['count']) ?></strong>

@@ -15,6 +15,7 @@
 /** @var string|null $formSepaIban */
 /** @var string|null $formSepaBic */
 /** @var list<\App\Model\Event> $upcomingEvents */
+/** @var string $cspNonce */
 $isEdit = !empty($event);
 $formRegistrationOptions ??= [[
     'id' => null,
@@ -194,13 +195,13 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
 
         <?php if (!empty($clubs)) : ?>
             <label><?= e(__('admin.event_details.registration_exceptions')) ?></label>
-            <p style="font-size: 0.9em; color: #666; margin-bottom: 0.5rem;"><?= e(__('admin.event_details.registration_exceptions_help')) ?></p>
+            <p class="form-note"><?= e(__('admin.event_details.registration_exceptions_help')) ?></p>
             <div class="checkbox-dropdown">
-                <button type="button" class="dropdown-toggle btn btn-sm" onclick="toggleDropdown(this)">
+                <button type="button" class="dropdown-toggle btn btn-sm" data-dropdown-toggle>
                     <span><?= e(__('admin.event_details.select_clubs')) ?></span>
                     <span class="dropdown-arrow">▼</span>
                 </button>
-                <div class="dropdown-menu" style="display: none;">
+                <div class="dropdown-menu hidden">
                     <?php foreach ($clubs as $club) : ?>
                         <?php $isChecked = in_array($club['id'], $exceptionClubIds, true); ?>
                         <label class="dropdown-item">
@@ -223,7 +224,7 @@ $eventExceptions = [];
 $upcomingEventAction = 'admin_details';
 require dirname(__DIR__) . '/components/upcoming_events.php';
 ?>
-<script>
+<script nonce="<?= e($cspNonce) ?>">
     let registrationOptionIndex = <?= count($formRegistrationOptions) ?>;
 
     function refreshRegistrationOptionRows() {
@@ -300,16 +301,18 @@ require dirname(__DIR__) . '/components/upcoming_events.php';
     });
 
     // Dropdown toggle for registration exceptions
-    function toggleDropdown(button) {
-        const menu = button.nextElementSibling;
-        if (menu && menu.classList.contains('dropdown-menu')) {
-            menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none';
-        }
-    }
+    document.querySelectorAll('[data-dropdown-toggle]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const menu = this.nextElementSibling;
+            if (menu && menu.classList.contains('dropdown-menu')) {
+                menu.classList.toggle('hidden');
+            }
+        });
+    });
     document.addEventListener('click', function(event) {
         if (!event.target.closest('.checkbox-dropdown')) {
             document.querySelectorAll('.dropdown-menu').forEach(function(menu) {
-                menu.style.display = 'none';
+                menu.classList.add('hidden');
             });
         }
     });

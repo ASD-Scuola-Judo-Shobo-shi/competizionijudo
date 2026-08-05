@@ -13,6 +13,7 @@
 /** @var array<int, array{athlete_id:int, athlete_name:string, option_id:int, option_name:string, fee_cents:int}> $registeredEnrollmentDetails */
 /** @var int|null $clubEntryQuotaRemaining */
 /** @var int|null $clubEntryQuotaLimit */
+/** @var string $cspNonce */
 $athletePagination ??= paginate(count($athletes), 1, 50, 'athletes_page');
 $registrationSort ??= ['column' => 'athlete', 'direction' => 'asc'];
 $preserveRegistrationSort ??= false;
@@ -416,7 +417,7 @@ if ($preserveRegistrationSort) {
         </div>
     </div>
 
-    <script>
+    <script nonce="<?= e($cspNonce) ?>">
         document.addEventListener('DOMContentLoaded', function() {
             const checkboxes = document.querySelectorAll('input[name="athletes[]"]');
             const saveBtn = document.getElementById('save-changes-btn');

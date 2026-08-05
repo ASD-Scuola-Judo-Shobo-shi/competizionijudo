@@ -14,6 +14,7 @@
 /** @var string $currentPath */
 /** @var string $clubView */
 /** @var string $content */
+/** @var string $cspNonce */
 /** @var string $privacyControllerEmail */
 /** @var string $privacyControllerFiscalCode */
 ?>
@@ -29,7 +30,7 @@
 
     <link rel="icon" href="<?= $favicon ?>">
     <link rel="stylesheet" href="<?= e(asset_url('assets/css/app.css')) ?>">
-    <script>
+    <script nonce="<?= e($cspNonce) ?>">
         (function() {
             try {
                 if (window.localStorage.getItem('competizioni-judo-theme') === 'dark') {
@@ -41,7 +42,7 @@
         }());
     </script>
 
-    <style>
+    <style nonce="<?= e($cspNonce) ?>">
         .next-events-list {
             list-style: none;
             margin: 0;
@@ -101,7 +102,7 @@
             <div class="header-controls">
                 <form class="lang-switch" action="<?= e(base_url('/language/switch')) ?>" method="get" aria-label="<?= e(translate('a11y.language_selector')) ?>">
                     <label for="locale-select" class="sr-only"><?= e(translate('a11y.language_selector')) ?></label>
-                    <select id="locale-select" name="locale" onchange="this.form.submit()">
+                    <select id="locale-select" name="locale" data-submit-on-change>
                         <option value="it" <?= $locale === 'it' ? 'selected' : '' ?>>🇮🇹 Italiano</option>
                         <option value="en" <?= $locale === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
                     </select>
@@ -214,7 +215,24 @@
         </div>
     </footer>
 
-    <script>
+    <script nonce="<?= e($cspNonce) ?>">
+        (function() {
+            document.addEventListener('change', function(event) {
+                const target = event.target;
+                if (target instanceof Element && target.hasAttribute('data-submit-on-change')) {
+                    target.form?.submit();
+                }
+            });
+
+            document.addEventListener('submit', function(event) {
+                const form = event.target;
+                const message = form instanceof HTMLFormElement ? form.dataset.confirm : null;
+                if (message && !window.confirm(message)) {
+                    event.preventDefault();
+                }
+            });
+        }());
+
         (function() {
             const toggle = document.getElementById('theme-toggle');
             if (!toggle) {

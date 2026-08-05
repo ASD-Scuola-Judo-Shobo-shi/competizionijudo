@@ -229,25 +229,22 @@ final class ViewRenderTest extends TestCase
         self::assertIsInt($pieChartPosition);
         self::assertLessThan($pieChartPosition, $barChartPosition);
         self::assertSame(1, substr_count($html, 'class="entries-category-weight-chart__row"'));
-        self::assertSame(2, substr_count($html, 'class="entries-category-weight-chart__segment"'));
-        self::assertStringContainsString('--entry-segment-width: 75.00%;', $html);
-        self::assertStringContainsString('--entry-segment-width: 25.00%;', $html);
+        self::assertSame(1, substr_count($html, 'class="entries-category-weight-chart__bars"'));
+        self::assertStringContainsString('width="75.00"', $html);
+        self::assertStringContainsString('width="25.00"', $html);
         self::assertStringContainsString('Atleti per classe d&#039;età e categoria di peso', $html);
         self::assertSame(4, substr_count($html, 'class="entries-chart-card"'));
         self::assertSame(4, substr_count($html, 'class="entries-chart__legend"'));
         self::assertStringContainsString('patternTransform="rotate(45)"', $html);
         self::assertStringContainsString('fill="url(#pie-pattern-belt-0)"', $html);
         self::assertStringContainsString('entries-chart__swatch--split', $html);
-        self::assertStringContainsString('--chart-swatch-lower: #f5f5f5;', $html);
-        self::assertStringContainsString('--chart-swatch-upper: #ffc107;', $html);
+        self::assertStringContainsString('fill="#f5f5f5"', $html);
+        self::assertStringContainsString('fill="#ffc107"', $html);
         self::assertStringContainsString(
             'grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));',
             $css
         );
         self::assertStringContainsString('grid-template-columns: repeat(2, minmax(0, 1fr));', $css);
-        self::assertStringContainsString('linear-gradient(', $css);
-        self::assertStringContainsString('var(--chart-swatch-lower) 0 50%', $css);
-        self::assertStringContainsString('var(--chart-swatch-upper) 50% 100%', $css);
         self::assertMatchesRegularExpression(
             '/\.gender-badge--male\s*\{[^}]*background:\s*#dbeafe;/s',
             $css
@@ -257,11 +254,11 @@ final class ViewRenderTest extends TestCase
             $css
         );
         self::assertMatchesRegularExpression(
-            '/\.entries-category-weight-chart__track\s*\{[^}]*display:\s*flex;[^}]*width:\s*100%;/s',
+            '/\.entries-category-weight-chart__track\s*\{[^}]*display:\s*block;[^}]*width:\s*100%;/s',
             $css
         );
         self::assertMatchesRegularExpression(
-            '/\.entries-category-weight-chart__segment\s*\{[^}]*flex:\s*0 0 var\(--entry-segment-width\);/s',
+            '/\.entries-category-weight-chart__bars\s*\{[^}]*display:\s*block;[^}]*width:\s*100%;/s',
             $css
         );
         self::assertMatchesRegularExpression(

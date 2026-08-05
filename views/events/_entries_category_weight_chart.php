@@ -17,29 +17,31 @@ $chartTitle = __('events.entries_class_weight_breakdown');
                 </p>
                 <div class="entries-category-weight-chart__content">
                     <div class="entries-category-weight-chart__track" aria-label="<?= e((string) $bar['category']) ?>">
-                        <?php foreach ($bar['segments'] as $segment) : ?>
+                        <svg class="entries-category-weight-chart__bars" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                             <?php
-                            $segmentStyle = sprintf(
-                                '--entry-segment-width: %.2f%%; --entry-segment-color: %s;',
-                                (float) $segment['percentage'],
-                                (string) $segment['color']
-                            );
-                            ?>
-                            <span
-                                class="entries-category-weight-chart__segment"
-                                style="<?= e($segmentStyle) ?>"
-                                title="<?= e((string) $segment['label']) ?>: <?= e((string) $segment['count']) ?>"
-                            ></span>
-                        <?php endforeach; ?>
+                            $segmentOffset = 0.0;
+                            foreach ($bar['segments'] as $segment) : ?>
+                                <rect
+                                    x="<?= sprintf('%.2f', $segmentOffset) ?>"
+                                    y="0"
+                                    width="<?= sprintf('%.2f', (float) $segment['percentage']) ?>"
+                                    height="100"
+                                    fill="<?= e((string) $segment['color']) ?>"
+                                >
+                                    <title><?= e((string) $segment['label']) ?>: <?= e((string) $segment['count']) ?></title>
+                                </rect>
+                                <?php $segmentOffset += (float) $segment['percentage']; ?>
+                            <?php endforeach; ?>
+                        </svg>
                     </div>
                     <ul class="entries-category-weight-chart__legend">
                         <?php foreach ($bar['segments'] as $segment) : ?>
                             <li>
-                                <span
-                                    class="entries-category-weight-chart__swatch"
-                                    style="--entry-segment-color: <?= e((string) $segment['color']) ?>;"
-                                    aria-hidden="true"
-                                ></span>
+                                <span class="entries-category-weight-chart__swatch" aria-hidden="true">
+                                    <svg viewBox="0 0 11 11">
+                                        <rect width="11" height="11" fill="<?= e((string) $segment['color']) ?>" />
+                                    </svg>
+                                </span>
                                 <span>
                                     <?= e((string) $segment['label']) ?>:
                                     <strong><?= e((string) $segment['count']) ?></strong>

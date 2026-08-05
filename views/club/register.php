@@ -1,5 +1,6 @@
 <?php
 /** @var array{name: string, federal_code: string, email: string, phone: string, address_line: string, postal_code: string, city: string, province: string, contact_first_name: string, contact_last_name: string, affiliation: list<string>, terms_accepted: bool, athlete_data_rights_declaration: bool} $formData */
+/** @var string $cspNonce */
 $formData = $formData ?? [
     'name' => '',
     'federal_code' => '',
@@ -140,7 +141,7 @@ $affiliationOptions = $affiliationOptions ?? \App\Model\Affiliation::options();
             <button class="btn green" type="submit"><?= e(__('club.register.register_button')) ?></button>
             <a class="btn" href="<?= e(base_url('/clubs/login?')) ?>"><?= e(__('nav.club_login')) ?></a>
         </form>
-        <script>
+        <script nonce="<?= e($cspNonce) ?>">
         (() => {
             const locations = <?= json_encode($sardinianLocations, JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_THROW_ON_ERROR) ?>;
             const postalCodes = <?= json_encode($sardinianPostalCodes, JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_THROW_ON_ERROR) ?>;

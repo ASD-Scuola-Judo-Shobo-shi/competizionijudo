@@ -24,17 +24,27 @@ $_beltLabel = implode(' / ', array_column($_beltComponents, 'label'));
     <span class="belt-badge__visual" aria-hidden="true">
         <span class="belt-badge__band">
             <?php foreach ($_beltComponents as $_beltComponent) : ?>
+                <?php
+                $colorMatch = [];
+                $colorSuffix = preg_match('/^#([0-9a-f]{6})$/i', (string) $_beltComponent['color'], $colorMatch) === 1
+                    ? strtolower($colorMatch[1])
+                    : '9ca3af';
+                ?>
                 <span
-                    class="belt-badge__segment"
-                    style="background-color: <?= e($_beltComponent['color']) ?>"
+                    class="belt-badge__segment belt-badge__segment--c-<?= $colorSuffix ?>"
                 ></span>
             <?php endforeach; ?>
         </span>
         <span class="belt-badge__knot">
             <?php foreach ($_beltComponents as $_beltComponent) : ?>
+                <?php
+                $colorMatch = [];
+                $colorSuffix = preg_match('/^#([0-9a-f]{6})$/i', (string) $_beltComponent['color'], $colorMatch) === 1
+                    ? strtolower($colorMatch[1])
+                    : '9ca3af';
+                ?>
                 <span
-                    class="belt-badge__segment"
-                    style="background-color: <?= e($_beltComponent['color']) ?>"
+                    class="belt-badge__segment belt-badge__segment--c-<?= $colorSuffix ?>"
                 ></span>
             <?php endforeach; ?>
         </span>

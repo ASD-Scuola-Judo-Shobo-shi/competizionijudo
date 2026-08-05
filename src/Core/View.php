@@ -8,8 +8,15 @@ use RuntimeException;
 
 final class View
 {
+    private string $cspNonce = '';
+
     public function __construct(private readonly string $basePath)
     {
+    }
+
+    public function setCspNonce(string $nonce): void
+    {
+        $this->cspNonce = $nonce;
     }
 
     /** @param array<string, mixed> $data */
@@ -17,6 +24,7 @@ final class View
     {
         $data = array_merge([
             'favicon' => (string) config('app.favicon'),
+            'cspNonce' => $this->cspNonce,
         ], $data);
         $content = $this->renderPartial($template, $data);
 

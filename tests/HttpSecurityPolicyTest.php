@@ -140,6 +140,68 @@ final class HttpSecurityPolicyTest extends TestCase
         self::assertSame('0', $response->headers()['X-XSS-Protection']);
     }
 
+    public function testCspUsesPerRequestNoncesAndBansInlineScriptsAndStyles(): void
+    {
+        $response = (new Application(dirname(__DIR__)))->handle(new Request('GET', '/missing'));
+        $policy = $response->headers()['Content-Security-Policy'];
+
+        self::assertStringNotContainsString('unsafe-inline', $policy);
+        self::assertMatchesRegularExpression(
+            "/script-src 'self' 'nonce-[0-9a-f]{32}'/",
+            $policy
+        );
+        self::assertMatchesRegularExpression(
+            "/style-src 'self' 'nonce-[0-9a-f]{32}'/",
+            $policy
+        );
+
+        preg_match("/script-src 'self' 'nonce-([0-9a-f]{32})'/", $policy, $matches);
+        $nonce = $matches[1];
+        $body = $response->content();
+
+        self::assertMatchesRegularExpression('/<script nonce="' . preg_quote($nonce, '/') . '">/', $body);
+        self::assertMatchesRegularExpression('/<style nonce="' . preg_quote($nonce, '/') . '">/', $body);
+        self::assertStringNotContainsString('<script nonce="">', $body);
+
+        preg_match_all('/<script nonce="[0-9a-f]{32}">/', $body, $scriptMatches);
+        preg_match_all('/<style nonce="[0-9a-f]{32}">/', $body, $styleMatches);
+        self::assertNotEmpty($scriptMatches[0]);
+        self::assertNotEmpty($styleMatches[0]);
+    }
+
+    public function testCspNonceIsRenewedPerRequest(): void
+    {
+        $application = new Application(dirname(__DIR__));
+        $application->router()->get('/synthetic', static fn(Request $request): Response => new Response('synthetic'));
+
+        $first = $application->handle(new Request('GET', '/synthetic'))->headers()['Content-Security-Policy'];
+        $second = $application->handle(new Request('GET', '/synthetic'))->headers()['Content-Security-Policy'];
+
+        self::assertNotSame($first, $second);
+    }
+
+    public function testTemplatesAvoidInlineEventHandlersAndStyleAttributes(): void
+    {
+        $viewFiles = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(dirname(__DIR__) . '/views')
+        );
+        foreach ($iterator as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                $viewFiles[] = $file->getPathname();
+            }
+        }
+        self::assertNotEmpty($viewFiles);
+
+        foreach ($viewFiles as $file) {
+            $contents = (string) file_get_contents($file);
+            self::assertStringNotContainsString(' style="', $contents, $file);
+            self::assertStringNotContainsString(" style='", $contents, $file);
+            self::assertDoesNotMatchRegularExpression('/\son[a-z]+="/i', $contents, $file);
+            self::assertStringNotContainsString('javascript:', $contents, $file);
+        }
+    }
+
     public function testPublicApachePolicyMatchesApplicationFrameAndXssPolicy(): void
     {
         $policy = file_get_contents(dirname(__DIR__) . '/public/.htaccess');
