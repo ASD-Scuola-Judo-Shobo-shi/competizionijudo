@@ -494,10 +494,10 @@ final class AthleteCsvTransfer
             'athlete_id' => trim($raw['athlete_id'] ?? ''),
             'last_name' => $this->fieldReconciler->titleCaseName($raw['last_name'] ?? ''),
             'first_name' => $this->fieldReconciler->titleCaseName($raw['first_name'] ?? ''),
-            'gender' => $gender?->value ?? trim($genderInput),
+            'gender' => $gender->value ?? trim($genderInput),
             'birth_date' => $this->birthDate($raw['birth_date'] ?? '', $excelDate1904),
             'weight_kg' => $this->weight($raw['weight_kg'] ?? ''),
-            'belt' => $belt?->value ?? trim($beltInput),
+            'belt' => $belt->value ?? trim($beltInput),
             'membership_number' => $this->cleanText($raw['membership_number'] ?? ''),
             'notes' => trim($raw['notes'] ?? ''),
         ];

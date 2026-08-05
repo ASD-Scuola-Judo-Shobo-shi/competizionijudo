@@ -34,32 +34,32 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
     <?php endif; ?>
     <form method="post" class="form-card">
         <?= csrf_field() ?>
-        <input type="hidden" name="athlete_id" value="<?= e($edit?->id ?? '') ?>">
+        <input type="hidden" name="athlete_id" value="<?= e($edit->id ?? '') ?>">
 
         <label><?= e(__('club.area.last_name')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <input name="last_name" required value="<?= e($edit?->last_name ?? '') ?>">
+        <input name="last_name" required value="<?= e($edit->last_name ?? '') ?>">
 
         <label><?= e(__('club.area.first_name')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <input name="first_name" required value="<?= e($edit?->first_name ?? '') ?>">
+        <input name="first_name" required value="<?= e($edit->first_name ?? '') ?>">
 
         <label><?= e(__('club.area.gender')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <select name="gender" required>
             <option value="">—</option>
             <?php foreach (App\Model\Gender::cases() as $genderEnum) : ?>
-                <option value="<?= e($genderEnum->value) ?>" <?= ($edit?->gender ?? '') === $genderEnum->value ? 'selected' : '' ?>><?= $genderEnum->iconLabel(App\Localization::getLocale()) ?></option>
+                <option value="<?= e($genderEnum->value) ?>" <?= ($edit->gender ?? '') === $genderEnum->value ? 'selected' : '' ?>><?= $genderEnum->iconLabel(App\Localization::getLocale()) ?></option>
             <?php endforeach; ?>
         </select>
         <label><?= e(__('club.area.birth_date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <div class="form-inline-row">
-            <input type="date" name="birth_date" id="birth_date" required value="<?= e($edit?->birth_date ?? '') ?>" max="<?= e(date('Y-m-d', strtotime('-2 years'))) ?>" class="form-inline-grow">
+            <input type="date" name="birth_date" id="birth_date" required value="<?= e($edit->birth_date ?? '') ?>" max="<?= e(date('Y-m-d', strtotime('-2 years'))) ?>" class="form-inline-grow">
             <span id="age_class_display" class="age-class-badge">—</span>
         </div>
 
         <label><?= e(__('club.area.weight_kg')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <div class="form-inline-row">
             <div class="weight-slider-group">
-                <input type="number" name="weight_kg" min="0.1" max="200" step="0.1" required value="<?= e($edit?->weight_kg ?? '') ?>" class="weight-input">
-                <input type="range" min="0" max="200" step="0.1" value="<?= e($edit?->weight_kg ?? '') ?>" class="weight-slider">
+                <input type="number" name="weight_kg" min="0.1" max="200" step="0.1" required value="<?= e($edit->weight_kg ?? '') ?>" class="weight-input">
+                <input type="range" min="0" max="200" step="0.1" value="<?= e($edit->weight_kg ?? '') ?>" class="weight-slider">
             </div>
             <span id="weight_category_display" class="weight-category-badge">—</span>
         </div>
@@ -68,16 +68,16 @@ $athleteQuotaLimit = $athleteQuotaLimit ?? 0;
         <select name="belt" required>
             <option value="">—</option>
             <?php foreach (App\Model\Belt::cases() as $beltEnum) : ?>
-                <option value="<?= e($beltEnum->value) ?>" <?= ($edit?->belt ?? '') === $beltEnum->value ? 'selected' : '' ?>><?= $beltEnum->circleLabel(App\Localization::getLocale()) ?></option>
+                <option value="<?= e($beltEnum->value) ?>" <?= ($edit->belt ?? '') === $beltEnum->value ? 'selected' : '' ?>><?= $beltEnum->circleLabel(App\Localization::getLocale()) ?></option>
             <?php endforeach; ?>
         </select>
 
         <label><?= e(__('club.area.membership_number')) ?></label>
-        <input name="membership_number" value="<?= e($edit?->membership_number ?? '') ?>">
+        <input name="membership_number" value="<?= e($edit->membership_number ?? '') ?>">
 
         <label><?= e(__('club.area.notes')) ?></label>
         <p class="field-help" id="athlete-notes-help"><?= e(__('club.area.notes_privacy_help')) ?></p>
-        <textarea name="notes" rows="3" maxlength="2000" aria-describedby="athlete-notes-help"><?= e($edit?->notes ?? '') ?></textarea>
+        <textarea name="notes" rows="3" maxlength="2000" aria-describedby="athlete-notes-help"><?= e($edit->notes ?? '') ?></textarea>
 
         <button class="btn green" type="submit"><?= e(__('club.area.save_athlete')) ?></button>
     </form>

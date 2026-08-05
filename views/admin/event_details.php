@@ -24,9 +24,9 @@ $formRegistrationOptions ??= [[
     'fee_cents' => null,
     'is_default' => true,
 ]];
-$formSepaAccountHolder ??= $event?->sepa_account_holder ?? '';
-$formSepaIban ??= $event?->sepa_iban ?? '';
-$formSepaBic ??= $event?->sepa_bic ?? '';
+$formSepaAccountHolder ??= $event->sepa_account_holder ?? '';
+$formSepaIban ??= $event->sepa_iban ?? '';
+$formSepaBic ??= $event->sepa_bic ?? '';
 $enrolledAthletes ??= [];
 $enrolledClubs ??= [];
 $enrollmentFields ??= [];
@@ -43,16 +43,16 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
     <form method="post" class="form-card" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <input type="hidden" name="MAX_FILE_SIZE" value="<?= \App\Validation\EventInputValidator::MAX_UPLOAD_BYTES ?>">
-        <input type="hidden" name="event_id" value="<?= e($event?->id ?? '') ?>">
+        <input type="hidden" name="event_id" value="<?= e($event->id ?? '') ?>">
 
         <label><?= e($isEdit ? __('admin.edit.name') : __('admin.event_details.name')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <input name="name" value="<?= e($event?->name ?? '') ?>" required>
+        <input name="name" value="<?= e($event->name ?? '') ?>" required>
 
         <label><?= e($isEdit ? __('admin.edit.date') : __('admin.event_details.date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <input type="date" name="date" value="<?= e($event?->date ?? '') ?>" required>
+        <input type="date" name="date" value="<?= e($event->date ?? '') ?>" required>
 
         <label><?= e($isEdit ? __('admin.edit.location') : __('admin.event_details.location')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <input name="location" value="<?= e($event?->location ?? '') ?>" list="locations_list" required>
+        <input name="location" value="<?= e($event->location ?? '') ?>" list="locations_list" required>
         <datalist id="locations_list">
             <?php foreach ($locations as $loc) : ?>
                 <option value="<?= e($loc) ?>">
@@ -60,25 +60,25 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
         </datalist>
 
         <label><?= e($isEdit ? __('admin.edit.organizer') : __('admin.event_details.organizer')) ?></label>
-        <input name="organizer" value="<?= e($event?->organizer ?? '') ?>">
+        <input name="organizer" value="<?= e($event->organizer ?? '') ?>">
 
         <label><?= e($isEdit ? __('admin.edit.registration_deadline') : __('admin.event_details.registration_deadline')) ?></label>
-        <input type="date" name="registration_deadline" value="<?= e($event?->registration_deadline ?? '') ?>">
+        <input type="date" name="registration_deadline" value="<?= e($event->registration_deadline ?? '') ?>">
 
         <label><?= e($isEdit ? __('admin.edit.type') : __('admin.event_details.type')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
         <select name="type" required>
             <option value="">—</option>
-            <option value="only_precompetitive" <?= ($event?->type ?? '') === 'only_precompetitive' ? 'selected' : '' ?>><?= e(__('events.type.only_precompetitive')) ?></option>
-            <option value="only_competitive" <?= ($event?->type ?? '') === 'only_competitive' ? 'selected' : '' ?>><?= e(__('events.type.only_competitive')) ?></option>
-            <option value="precompetitive_and_competitive" <?= ($event?->type ?? '') === 'precompetitive_and_competitive' ? 'selected' : '' ?>><?= e(__('events.type.precompetitive_and_competitive')) ?></option>
+            <option value="only_precompetitive" <?= ($event->type ?? '') === 'only_precompetitive' ? 'selected' : '' ?>><?= e(__('events.type.only_precompetitive')) ?></option>
+            <option value="only_competitive" <?= ($event->type ?? '') === 'only_competitive' ? 'selected' : '' ?>><?= e(__('events.type.only_competitive')) ?></option>
+            <option value="precompetitive_and_competitive" <?= ($event->type ?? '') === 'precompetitive_and_competitive' ? 'selected' : '' ?>><?= e(__('events.type.precompetitive_and_competitive')) ?></option>
         </select>
 
         <label><?= e($isEdit ? __('admin.edit.description') : __('admin.event_details.description')) ?></label>
-        <textarea name="description" rows="3"><?= e($event?->description ?? '') ?></textarea>
+        <textarea name="description" rows="3"><?= e($event->description ?? '') ?></textarea>
 
         <label><?= e($isEdit ? __('admin.edit.notes') : __('admin.event_details.notes')) ?></label>
         <p class="field-help" id="event-notes-help"><?= e(__('admin.event_details.notes_privacy_help')) ?></p>
-        <textarea name="notes" rows="3" maxlength="2000" aria-describedby="event-notes-help"><?= e($event?->notes ?? '') ?></textarea>
+        <textarea name="notes" rows="3" maxlength="2000" aria-describedby="event-notes-help"><?= e($event->notes ?? '') ?></textarea>
 
         <label><?= e($isEdit ? __('admin.edit.max_participants') : __('admin.event_details.max_participants')) ?></label>
         <input type="number" name="max_participants" value="<?= e($event?->max_participants ? (string) $event->max_participants : '') ?>" min="1" placeholder="<?= e(__('admin.event_details.max_participants_placeholder')) ?>">

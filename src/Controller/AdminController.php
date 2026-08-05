@@ -580,7 +580,7 @@ final class AdminController extends Controller
         }
 
         $date = str_replace('-', '', $event->date);
-        $name_or_id = $event->name ?? $event->id;
+        $name_or_id = $event->name;
         $slug = strtolower(preg_replace('/[^A-Za-z0-9]+/', '-', $name_or_id));
         $truncatedSlug = trim(substr($slug, 0, 16), '-');
         $filename = sprintf('event-entries-%s-%s.csv', $date, $truncatedSlug);
@@ -670,9 +670,9 @@ final class AdminController extends Controller
 
         $error = '';
         $formRegistrationOptions = $this->registrationOptionsForForm($event);
-        $formSepaAccountHolder = $event?->sepa_account_holder ?? '';
-        $formSepaIban = $event?->sepa_iban ?? '';
-        $formSepaBic = $event?->sepa_bic ?? '';
+        $formSepaAccountHolder = $event->sepa_account_holder ?? '';
+        $formSepaIban = $event->sepa_iban ?? '';
+        $formSepaBic = $event->sepa_bic ?? '';
 
         if ($request->method() === 'POST') {
             validate_csrf((string) $request->post('csrf_token'));
@@ -746,8 +746,8 @@ final class AdminController extends Controller
                 $storedUploads = [];
                 $persisted = false;
                 try {
-                    $locandina = $event?->poster_file ?? null;
-                    $informativa = $event?->info_file ?? null;
+                    $locandina = $event->poster_file ?? null;
+                    $informativa = $event->info_file ?? null;
 
                     if (isset($uploads['poster_file'])) {
                         $locandina = $this->eventUploadStorage->store($uploads['poster_file'], 'poster_');

@@ -151,7 +151,7 @@ final class MigrationRunner
         $files = glob($this->migrationDirectory . '/*.sql') ?: [];
         sort($files, SORT_STRING);
 
-        return array_values($files);
+        return $files;
     }
 
     /** @param list<string> $applied */

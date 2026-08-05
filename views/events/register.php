@@ -29,7 +29,7 @@ foreach ($athletes as $candidateAthlete) {
         break;
     }
 }
-$registrationFormUrl = '/events/register?event=' . rawurlencode((string) ($event?->id ?? ''));
+$registrationFormUrl = '/events/register?event=' . rawurlencode((string) ($event->id ?? ''));
 if ($athletePagination['page'] > 1) {
     $registrationFormUrl .= '&athletes_page=' . $athletePagination['page'];
 }

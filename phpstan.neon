@@ -18,3 +18,11 @@ parameters:
     - scripts
     - views
     - lang
+  ignoreErrors:
+    # PDO::commit() throwing can leave the transaction open (e.g. SQLite), so
+    # the defensive roll-back guard is required at runtime; PHPStan's PDO stub
+    # cannot model commit() as a throwing point.
+    -
+      identifier: booleanAnd.rightAlwaysFalse
+      path: src/Service/AthleteCsvTransfer.php
+      reportUnmatched: true

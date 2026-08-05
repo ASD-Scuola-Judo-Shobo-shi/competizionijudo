@@ -423,10 +423,6 @@ JSON, true, 512, JSON_THROW_ON_ERROR);
             throw new \LogicException('Unable to load Sardinian municipalities.', 0, $exception);
         }
 
-        if (!is_array($locations)) {
-            throw new \LogicException('Invalid Sardinian municipality list.');
-        }
-
         /** @var array<string, list<string>> $locations */
         return self::$locations = $locations;
     }
@@ -843,10 +839,6 @@ JSON, true, 512, JSON_THROW_ON_ERROR);
 JSON, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
             throw new \LogicException('Unable to load Sardinian postal codes.', 0, $exception);
-        }
-
-        if (!is_array($postalCodes)) {
-            throw new \LogicException('Invalid Sardinian postal-code list.');
         }
 
         /** @var array<string, array<string, string>> $postalCodes */
