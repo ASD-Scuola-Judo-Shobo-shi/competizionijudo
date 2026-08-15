@@ -31,6 +31,7 @@ final class ClubRegistrationControllerTest extends TestCase
         'APP_DEBUG',
         'APP_TEST_RESET_LINKS',
         'APP_URL',
+        'APP_OWNER_EMAIL',
     ];
 
     private ReflectionProperty $databaseConnection;
@@ -54,6 +55,7 @@ final class ClubRegistrationControllerTest extends TestCase
         $_ENV['APP_DEBUG'] = 'false';
         $_ENV['APP_TEST_RESET_LINKS'] = 'false';
         $_ENV['APP_URL'] = 'https://registration.example.test';
+        $_ENV['APP_OWNER_EMAIL'] = 'owner@example.test';
 
         $this->databaseConnection = new ReflectionProperty(Database::class, 'pdo');
         $connection = $this->databaseConnection->getValue();
@@ -63,6 +65,10 @@ final class ClubRegistrationControllerTest extends TestCase
         $this->database = new PDO('sqlite::memory:');
         $this->database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->database->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        $this->database->sqliteCreateFunction(
+            'LAST_INSERT_ID',
+            fn(): int => (int) $this->database->lastInsertId()
+        );
         $this->createSchema();
         $this->databaseConnection->setValue(null, $this->database);
 
@@ -168,6 +174,61 @@ final class ClubRegistrationControllerTest extends TestCase
         );
     }
 
+    public function testConfirmedRegistrationNotifiesOwnerOnlyOnce(): void
+    {
+        $mailer = new FakePasswordResetMailer();
+        $this->submit($mailer, $this->createStub(Logger::class));
+        $token = $this->confirmationToken($mailer);
+
+        $response = $this->confirm($token, $mailer, $this->createStub(Logger::class));
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(e(__('club.confirm_registration.success')), $response->content());
+        self::assertCount(1, $mailer->newClubNotifications);
+        self::assertSame([
+            'recipient' => 'owner@example.test',
+            'club_name' => 'New Synthetic Club',
+            'club_email' => 'new.club@example.test',
+            'admin_url' => 'https://registration.example.test/admin/clubs',
+        ], $mailer->newClubNotifications[0]);
+
+        $secondResponse = $this->confirm($token, $mailer, $this->createStub(Logger::class));
+
+        self::assertStringContainsString(
+            e(__('club.confirm_registration.invalid_token')),
+            $secondResponse->content()
+        );
+        self::assertCount(1, $mailer->newClubNotifications);
+    }
+
+    public function testOwnerNotificationFailureDoesNotUndoConfirmedRegistration(): void
+    {
+        $submissionMailer = new FakePasswordResetMailer();
+        $this->submit($submissionMailer, $this->createStub(Logger::class));
+        $logger = $this->createMock(Logger::class);
+        $logger->expects(self::once())
+            ->method('error')
+            ->with(
+                'club.registration_owner_notification_failed',
+                self::isInstanceOf(Throwable::class),
+                self::matchesRegularExpression('/\A[a-f0-9]{32}\z/'),
+                ['method' => 'GET', 'path' => '/clubs/confirm-registration']
+            );
+
+        $response = $this->confirm(
+            $this->confirmationToken($submissionMailer),
+            new FakePasswordResetMailer(true),
+            $logger
+        );
+
+        self::assertStringContainsString(e(__('club.confirm_registration.success')), $response->content());
+        self::assertSame(1, (int) $this->database->query('SELECT COUNT(*) FROM clubs')->fetchColumn());
+        self::assertSame(
+            0,
+            (int) $this->database->query('SELECT COUNT(*) FROM club_registration_confirmations')->fetchColumn()
+        );
+    }
+
     private function submit(
         FakePasswordResetMailer $mailer,
         Logger $logger,
@@ -205,6 +266,34 @@ final class ClubRegistrationControllerTest extends TestCase
         return $controller->register($request);
     }
 
+    private function confirmationToken(FakePasswordResetMailer $mailer): string
+    {
+        self::assertCount(1, $mailer->confirmationSent);
+        $query = parse_url($mailer->confirmationSent[0]['confirmation_url'], PHP_URL_QUERY);
+        self::assertIsString($query);
+        parse_str($query, $parameters);
+        $token = $parameters['token'] ?? null;
+        self::assertIsString($token);
+
+        return $token;
+    }
+
+    private function confirm(string $token, FakePasswordResetMailer $mailer, Logger $logger): \App\Core\Response
+    {
+        $request = new Request('GET', '/clubs/confirm-registration', ['token' => $token]);
+        $controller = new ClubController(
+            $this->view,
+            $request,
+            new FakePasswordResetTokenIssuer(null),
+            new FakeAuthenticationThrottle(),
+            new FakePasswordResetRepository(),
+            $logger,
+            $mailer
+        );
+
+        return $controller->confirmRegistration($request);
+    }
+
     private function createSchema(): void
     {
         $this->database->exec(
@@ -232,6 +321,23 @@ final class ClubRegistrationControllerTest extends TestCase
                 expires_at TEXT NOT NULL,
                 confirmed_at TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE club_data_rights_declarations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club_id INTEGER NOT NULL,
+                declared_by_club_id INTEGER NOT NULL,
+                declaration_version TEXT NOT NULL,
+                declared_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE club_terms_acceptances (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club_id INTEGER NOT NULL,
+                accepted_by_club_id INTEGER NOT NULL,
+                representative_name TEXT NOT NULL,
+                accepted_account_email TEXT NOT NULL,
+                terms_version TEXT NOT NULL,
+                accepted_locale TEXT NOT NULL,
+                accepted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );'
         );
     }

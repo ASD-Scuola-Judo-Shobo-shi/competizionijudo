@@ -93,6 +93,10 @@ return [
             'subject' => 'Conferma la registrazione della società',
             'body' => "Apri questo link per confermare la registrazione della società:\n{url}",
         ],
+        'new_registration_notification_email' => [
+            'subject' => 'Nuova società in attesa di approvazione',
+            'body' => "La società {club} ({email}) ha completato la registrazione ed è in attesa di approvazione.\n\nGestisci le società:\n{url}",
+        ],
         'agreements' => [
             'title' => 'Accordi della società',
             'intro' => 'Prima che la società possa aggiungere, modificare, importare o iscrivere dati degli atleti, un referente autorizzato deve accettare le Condizioni di servizio vigenti e la garanzia di consegna dell’informativa ai sensi dell’articolo 14. Per quanto applicabile sono registrate versione, lingua e ora di ogni accettazione.',

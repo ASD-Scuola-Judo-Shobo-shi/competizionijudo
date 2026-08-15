@@ -49,6 +49,27 @@ final class ArubaPhpMailPasswordResetMailer implements PasswordResetMailer
         );
     }
 
+    public function sendNewClubRegistrationNotification(
+        string $recipient,
+        string $clubName,
+        string $clubEmail,
+        string $adminUrl
+    ): void {
+        if (filter_var($adminUrl, FILTER_VALIDATE_URL) === false || !str_starts_with($adminUrl, 'https://')) {
+            throw new RuntimeException('Club administration URL must use HTTPS.');
+        }
+
+        $this->sendPlainText(
+            $recipient,
+            __('club.new_registration_notification_email.subject'),
+            __('club.new_registration_notification_email.body', [
+                'club' => $clubName,
+                'email' => $clubEmail,
+                'url' => $adminUrl,
+            ])
+        );
+    }
+
     public function sendRegistrationRecap(string $recipient, string $subject, string $message): void
     {
         $this->sendPlainText($recipient, $subject, $message);

@@ -48,8 +48,13 @@ final class ClubRegistrationConfirmation
 
     public static function confirm(string $token): bool
     {
+        return self::confirmAndReturnClub($token) !== null;
+    }
+
+    public static function confirmAndReturnClub(string $token): ?Club
+    {
         if (preg_match('/\A[a-f0-9]{64}\z/i', $token) !== 1) {
-            return false;
+            return null;
         }
 
         $database = Database::connection();
@@ -71,7 +76,7 @@ final class ClubRegistrationConfirmation
             if (!is_array($record)) {
                 $database->commit();
 
-                return false;
+                return null;
             }
 
             $payload = json_decode((string) $record['registration_payload'], true, 512, JSON_THROW_ON_ERROR);
@@ -86,7 +91,7 @@ final class ClubRegistrationConfirmation
             ) {
                 $database->commit();
 
-                return false;
+                return null;
             }
 
             $claim = $database->prepare(
@@ -97,7 +102,7 @@ final class ClubRegistrationConfirmation
             if ($claim->rowCount() !== 1) {
                 $database->rollBack();
 
-                return false;
+                return null;
             }
 
             $club = Club::add($payload);
@@ -108,7 +113,7 @@ final class ClubRegistrationConfirmation
                 throw new RuntimeException('Unable to confirm club registration.');
             }
 
-            return true;
+            return $club;
         } catch (Throwable $exception) {
             if ($database->inTransaction()) {
                 $database->rollBack();

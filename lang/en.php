@@ -93,6 +93,10 @@ return [
             'subject' => 'Confirm your club registration',
             'body' => "Open this link to confirm your club registration:\n{url}",
         ],
+        'new_registration_notification_email' => [
+            'subject' => 'New club awaiting approval',
+            'body' => "The club {club} ({email}) completed registration and is awaiting approval.\n\nManage clubs:\n{url}",
+        ],
         'agreements' => [
             'title' => 'Club agreements',
             'intro' => 'Before the club can add, update, import, or register athlete data, an authorized representative must accept the current Terms of Service and Article 14 notice-delivery warranty. Each accepted version, language, and time is recorded as applicable.',

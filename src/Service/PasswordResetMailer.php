@@ -10,5 +10,12 @@ interface PasswordResetMailer
 
     public function sendRegistrationConfirmationLink(string $recipient, string $confirmationUrl): void;
 
+    public function sendNewClubRegistrationNotification(
+        string $recipient,
+        string $clubName,
+        string $clubEmail,
+        string $adminUrl
+    ): void;
+
     public function sendRegistrationRecap(string $recipient, string $subject, string $message): void;
 }

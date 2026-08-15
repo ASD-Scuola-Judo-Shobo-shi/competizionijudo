@@ -209,9 +209,28 @@ final class ClubController extends Controller
             $error = __('club.confirm_registration.invalid_token');
         } else {
             try {
-                $success = ClubRegistrationConfirmation::confirm($token);
+                $club = ClubRegistrationConfirmation::confirmAndReturnClub($token);
+                $success = $club !== null;
                 if (!$success) {
                     $error = __('club.confirm_registration.invalid_token');
+                } elseif (!$this->canExposeResetLink()) {
+                    try {
+                        $this->passwordResetMailer()->sendNewClubRegistrationNotification(
+                            trim((string) env('APP_OWNER_EMAIL', '')),
+                            $club->name,
+                            $club->email,
+                            sprintf(
+                                '%s/admin/clubs',
+                                rtrim((string) env('APP_URL', 'http://localhost:8080'), '/')
+                            )
+                        );
+                    } catch (\Throwable $exception) {
+                        $this->reportFailure(
+                            'club.registration_owner_notification_failed',
+                            $exception,
+                            $request
+                        );
+                    }
                 }
             } catch (\Throwable $exception) {
                 $this->reportFailure('club.registration_confirmation_failed', $exception, $request);

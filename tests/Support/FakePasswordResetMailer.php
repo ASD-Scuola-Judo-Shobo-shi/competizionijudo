@@ -15,6 +15,9 @@ final class FakePasswordResetMailer implements PasswordResetMailer
     /** @var list<array{recipient: string, confirmation_url: string}> */
     public array $confirmationSent = [];
 
+    /** @var list<array{recipient: string, club_name: string, club_email: string, admin_url: string}> */
+    public array $newClubNotifications = [];
+
     /** @var list<array{recipient: string, subject: string, message: string}> */
     public array $registrationRecaps = [];
 
@@ -43,6 +46,24 @@ final class FakePasswordResetMailer implements PasswordResetMailer
         $this->confirmationSent[] = [
             'recipient' => $recipient,
             'confirmation_url' => $confirmationUrl,
+        ];
+    }
+
+    public function sendNewClubRegistrationNotification(
+        string $recipient,
+        string $clubName,
+        string $clubEmail,
+        string $adminUrl
+    ): void {
+        if ($this->fail) {
+            throw new RuntimeException('Synthetic mail transport failure.');
+        }
+
+        $this->newClubNotifications[] = [
+            'recipient' => $recipient,
+            'club_name' => $clubName,
+            'club_email' => $clubEmail,
+            'admin_url' => $adminUrl,
         ];
     }
 

@@ -85,6 +85,40 @@ final class ArubaPhpMailPasswordResetMailerTest extends TestCase
         self::assertSame('quoted-printable', $calls[0]['headers']['Content-Transfer-Encoding']);
     }
 
+    public function testSendsNewClubRegistrationNotificationToOwner(): void
+    {
+        $calls = [];
+        $mailer = new ArubaPhpMailPasswordResetMailer(static function (
+            string $recipient,
+            string $subject,
+            string $message,
+            array $headers
+        ) use (&$calls): bool {
+            $calls[] = compact('recipient', 'subject', 'message', 'headers');
+
+            return true;
+        });
+        $adminUrl = 'https://www.mailer.example.test/admin/clubs';
+
+        $mailer->sendNewClubRegistrationNotification(
+            'owner@example.test',
+            'Synthetic Club',
+            'club@example.test',
+            $adminUrl
+        );
+
+        self::assertCount(1, $calls);
+        self::assertSame('owner@example.test', $calls[0]['recipient']);
+        self::assertSame(
+            __('club.new_registration_notification_email.subject'),
+            mb_decode_mimeheader($calls[0]['subject'])
+        );
+        $message = quoted_printable_decode($calls[0]['message']);
+        self::assertStringContainsString('Synthetic Club', $message);
+        self::assertStringContainsString('club@example.test', $message);
+        self::assertStringContainsString($adminUrl, $message);
+    }
+
     public function testSendsRegistrationRecapAsPlainText(): void
     {
         $calls = [];

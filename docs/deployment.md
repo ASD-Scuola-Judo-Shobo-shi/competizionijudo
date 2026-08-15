@@ -276,11 +276,13 @@ changing provider does not change the controller or reset-token lifecycle.
 
 Before enabling recovery, create/verify the postmaster mailbox and run Aruba's
 PHP mail test from **Strumenti e impostazioni > Gestione PHP > Test PHP mail**.
-Then request one reset for a synthetic club and submit one synthetic club
-registration. Confirm delivery and sender for both messages, plus the reset's
-one-hour expiry and one-time use. Transport failures are logged as
-`club.password_reset_delivery_failed` or
-`club.registration_confirmation_delivery_failed`.
+Then request one reset for a synthetic club and submit and confirm one synthetic
+club registration. Confirm delivery and sender for the reset, confirmation, and
+owner-notification messages, plus the reset's one-hour expiry and one-time use.
+Transport failures are logged as
+`club.password_reset_delivery_failed`,
+`club.registration_confirmation_delivery_failed`, or
+`club.registration_owner_notification_failed`.
 
 Linux Basic does not include a database or database backup by default. Purchase
 and provision the MySQL add-on before deployment; also activate a backup policy
