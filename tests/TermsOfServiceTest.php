@@ -49,6 +49,8 @@ final class TermsOfServiceTest extends TestCase
             self::assertStringContainsString(e(__('terms.scope')), $html);
             self::assertStringContainsString(e(__('terms.authority')), $html);
             self::assertStringContainsString(e(__('terms.notice_delivery')), $html);
+            self::assertStringContainsString(e(__('terms.closed_roster_access')), $html);
+            self::assertStringContainsString(e(__('terms.closed_roster_confidentiality')), $html);
             self::assertStringContainsString(e(__('terms.sensitive_data')), $html);
             self::assertStringContainsString(e(__('terms.changes')), $html);
             self::assertStringContainsString('Synthetic Operator', $html);

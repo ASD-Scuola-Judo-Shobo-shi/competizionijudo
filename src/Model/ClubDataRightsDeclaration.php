@@ -6,7 +6,7 @@ namespace App\Model;
 
 final class ClubDataRightsDeclaration
 {
-    public const VERSION = '2026-08-04-article-14';
+    public const VERSION = '2026-08-15-closed-rosters';
 
     public static function hasCurrentVersion(int $clubId): bool
     {

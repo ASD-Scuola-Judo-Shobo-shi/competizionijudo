@@ -701,12 +701,12 @@ final class EventLifecycleTest extends TestCase
         ]);
 
         self::assertSame(200, $response->status());
-        self::assertSame(1, substr_count($response->content(), 'Paged50 Athlete'));
-        self::assertStringNotContainsString('athletes_page=1', $response->content());
+        self::assertSame(2, substr_count($response->content(), 'Paged50 Athlete'));
+        self::assertStringContainsString('athletes_page=1', $response->content());
         self::assertStringContainsString('club_entries_page=1', $response->content());
     }
 
-    public function testClubClosedEntriesNeverExposeAnotherClubsAthletes(): void
+    public function testParticipatingClubWithCurrentAgreementsCanViewAllClosedEventAthletes(): void
     {
         $this->insertEvent(closed: true);
         $statement = $this->database->prepare(
@@ -720,8 +720,73 @@ final class EventLifecycleTest extends TestCase
 
         self::assertSame(200, $response->status());
         self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
+        self::assertStringContainsString('ForeignFamily ForeignGiven', $response->content());
+        self::assertStringContainsString(__('events.entries_athletes_heading'), $response->content());
+        self::assertStringContainsString(e(__('events.entries_shared_roster_help')), $response->content());
+        self::assertStringContainsString('href="/privacy"', $response->content());
+        self::assertStringContainsString('href="/terms"', $response->content());
+    }
+
+    public function testClubMustAcceptCurrentAgreementsBeforeViewingOtherClubsAthletes(): void
+    {
+        $this->insertEvent(closed: true);
+        $statement = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        $statement->execute([101, 201, 301]);
+        $statement->execute([101, 202, 302]);
+        $this->database->exec('DELETE FROM club_terms_acceptances WHERE club_id = 201');
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
         self::assertStringNotContainsString('ForeignFamily ForeignGiven', $response->content());
         self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
+        self::assertStringContainsString(
+            e(__('events.entries_roster_agreements_required')),
+            $response->content()
+        );
+        self::assertStringContainsString('href="/clubs/agreements"', $response->content());
+    }
+
+    public function testClosedRosterRemainsScopedToParticipatingClubs(): void
+    {
+        $this->insertEvent(closed: true);
+        $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        )->execute([101, 202, 302]);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(302, $response->status());
+        self::assertSame('/events', $response->headers()['Location']);
+        self::assertStringNotContainsString('ForeignFamily ForeignGiven', $response->content());
+    }
+
+    public function testClubWithRegistrationExceptionCannotViewSharedRosterWhileItCanEnroll(): void
+    {
+        $this->insertEvent(closed: true);
+        $statement = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        $statement->execute([101, 201, 301]);
+        $statement->execute([101, 202, 302]);
+        EventRegistrationException::setForEvent(101, [201]);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
+        self::assertStringNotContainsString('ForeignFamily ForeignGiven', $response->content());
+        self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
+        self::assertStringNotContainsString(
+            __('events.entries_roster_agreements_required'),
+            $response->content()
+        );
     }
 
     public function testAdministratorCanViewAllClosedEventAthletes(): void
@@ -789,6 +854,9 @@ final class EventLifecycleTest extends TestCase
         $this->database->prepare(
             'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
         )->execute([101, 201, 301]);
+        $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        )->execute([101, 202, 302]);
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries(['event' => '101']);
@@ -796,6 +864,8 @@ final class EventLifecycleTest extends TestCase
         self::assertSame(200, $response->status());
         self::assertStringNotContainsString('closed-event-club-entries', $response->content());
         self::assertStringNotContainsString('/events/entries/export', $response->content());
+        self::assertStringNotContainsString('ForeignFamily ForeignGiven', $response->content());
+        self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
     }
 
     public function testClosedEventExceptionRegistrationCreatesAnEntrySnapshot(): void

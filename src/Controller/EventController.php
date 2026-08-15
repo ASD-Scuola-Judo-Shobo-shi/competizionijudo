@@ -447,6 +447,7 @@ final class EventController extends Controller
         $isAdmin = AuthContext::isAdministrator();
         $canViewEntryBreakdowns = AuthContext::isAuthenticated();
         $canViewAllAthleteEntries = $isAdmin;
+        $requiresRosterAgreements = false;
         $limit = max(1, (int) config('app.events_upcoming_limit'));
         $date = date('Y-m-d');
 
@@ -460,6 +461,7 @@ final class EventController extends Controller
                 'loggedInClubId' => null,
                 'canViewEntryBreakdowns' => false,
                 'canViewAllAthleteEntries' => false,
+                'requiresRosterAgreements' => false,
                 'hasRegistrationException' => false,
                 'entryReport' => EventEntriesViewModel::empty(),
                 'upcomingEvents' => $upcomingEvents,
@@ -482,6 +484,13 @@ final class EventController extends Controller
 
         if ($event === null) {
             return $this->redirect('/events');
+        }
+
+        if ($event->closed && $clubId !== null && !$hasRegistrationException) {
+            $hasCurrentRosterAgreements = ClubTermsAcceptance::hasCurrentVersion((int) $clubId)
+                && ClubDataRightsDeclaration::hasCurrentVersion((int) $clubId);
+            $canViewAllAthleteEntries = $hasCurrentRosterAgreements;
+            $requiresRosterAgreements = !$hasCurrentRosterAgreements;
         }
 
         $clubs = Entry::findClubsByEvent($eventId, null);
@@ -519,7 +528,7 @@ final class EventController extends Controller
             __('events.entries_clubs_heading')
         );
         $entryAthletesPagination = paginate(
-            count($entryReport->entries),
+            $event->closed && $canViewAllAthleteEntries ? count($entryReport->entries) : 0,
             max(1, (int) $request->query('athletes_page', '1')),
             self::ENTRIES_PER_PAGE,
             'athletes_page',
@@ -554,12 +563,14 @@ final class EventController extends Controller
                 $entryClubsPagination['offset'],
                 $entryClubsPagination['per_page']
             ),
-            'entryAthleteGroups' => $entryReport->athleteGroupsSortedPage(
-                $entryAthletesSort['column'],
-                $entryAthletesSort['direction'],
-                $entryAthletesPagination['offset'],
-                $entryAthletesPagination['per_page']
-            ),
+            'entryAthleteGroups' => $event->closed && $canViewAllAthleteEntries
+                ? $entryReport->athleteGroupsSortedPage(
+                    $entryAthletesSort['column'],
+                    $entryAthletesSort['direction'],
+                    $entryAthletesPagination['offset'],
+                    $entryAthletesPagination['per_page']
+                )
+                : [],
             'currentClubEntries' => array_slice(
                 $sortedCurrentClubEntries,
                 $currentClubPagination['offset'],
@@ -574,6 +585,7 @@ final class EventController extends Controller
             'loggedInClubId' => $clubId !== null ? (int) $clubId : null,
             'canViewEntryBreakdowns' => $canViewEntryBreakdowns,
             'canViewAllAthleteEntries' => $canViewAllAthleteEntries,
+            'requiresRosterAgreements' => $requiresRosterAgreements,
             'hasRegistrationException' => $hasRegistrationException,
             'upcomingEvents' => $upcomingEvents,
             'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),

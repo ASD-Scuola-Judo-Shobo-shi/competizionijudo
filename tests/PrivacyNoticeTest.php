@@ -9,6 +9,7 @@ use App\Core\Request;
 use App\Core\Router;
 use App\Core\View;
 use App\Localization;
+use App\Model\ClubDataRightsDeclaration;
 use PHPUnit\Framework\TestCase;
 
 final class PrivacyNoticeTest extends TestCase
@@ -24,6 +25,7 @@ final class PrivacyNoticeTest extends TestCase
 
         self::assertSame(200, $response->status());
         self::assertStringContainsString('Informativa privacy', $response->content());
+        self::assertStringContainsString(ClubDataRightsDeclaration::VERSION, $response->content());
         self::assertStringContainsString('Cookie e archiviazione tecnica locale', $response->content());
         self::assertStringNotContainsString('cookie-consent', $response->content());
     }
@@ -47,6 +49,7 @@ final class PrivacyNoticeTest extends TestCase
             $html = $view->render('static/privacy', [
                 'title' => __('privacy.title'),
                 'privacy' => $privacy,
+                'privacyVersion' => ClubDataRightsDeclaration::VERSION,
             ], 'layouts/error');
 
             self::assertStringContainsString(e(__('privacy.source_title')), $html);
@@ -55,6 +58,7 @@ final class PrivacyNoticeTest extends TestCase
             self::assertStringContainsString(e(__('privacy.athlete_legal_basis')), $html);
             self::assertStringContainsString(e(__('privacy.event_legal_basis')), $html);
             self::assertStringContainsString(e(__('privacy.public_access')), $html);
+            self::assertStringContainsString(e(__('privacy.club_roster_access')), $html);
             self::assertStringContainsString(e(__('privacy.account_retention')), $html);
             self::assertStringContainsString(e(__('privacy.account_workflow_retention')), $html);
             self::assertStringContainsString(e(__('privacy.event_retention')), $html);

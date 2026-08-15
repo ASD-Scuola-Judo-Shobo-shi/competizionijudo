@@ -44,6 +44,8 @@ $email = (string) ($operator['contact_email'] ?? '');
             <a href="<?= e(base_url('/privacy')) ?>"><?= e(__('terms.privacy_link')) ?></a>
         </li>
         <li><?= e(__('terms.data_quality')) ?></li>
+        <li><?= e(__('terms.closed_roster_access')) ?></li>
+        <li><?= e(__('terms.closed_roster_confidentiality')) ?></li>
         <li><?= e(__('terms.sensitive_data')) ?></li>
         <li><?= e(__('terms.rights_cooperation')) ?></li>
     </ul>

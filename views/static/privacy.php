@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 /** @var array<string, mixed> $privacy */
+/** @var string $privacyVersion */
 $email = (string) ($privacy['contact_email'] ?? '');
 ?>
 <section class="content-panel privacy-notice">
     <h2><?= e(__('privacy.title')) ?></h2>
+    <p><strong><?= e(__('privacy.version_label')) ?>:</strong> <?= e($privacyVersion) ?></p>
     <p><?= e(__('privacy.intro')) ?></p>
 
     <h3><?= e(__('privacy.controller_title')) ?></h3>
@@ -45,6 +47,7 @@ $email = (string) ($privacy['contact_email'] ?? '');
         'location' => (string) ($privacy['hosting_location'] ?? ''),
     ])) ?></p>
     <p><?= e(__('privacy.public_access')) ?></p>
+    <p><?= e(__('privacy.club_roster_access')) ?></p>
     <p><?= e(__('privacy.transfers')) ?></p>
 
     <h3><?= e(__('privacy.retention_title')) ?></h3>

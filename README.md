@@ -10,11 +10,11 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 | Capability | Routes | Access |
 | --- | --- | --- |
 | Public events and event details | `/events`, `/events/details` | Public |
-| Event entries | `/events/entries` | Public club totals; detailed aggregates for authenticated users; named athletes for their club or administrators |
+| Event entries | `/events/entries` | Public club totals; authenticated aggregates; own-club details; minimized closed rosters for participating clubs with current agreements; complete administrator view |
 | Privacy notice, Terms of Service, and language switch | `/privacy`, `/terms`, `/language/switch` | Public |
 | Deployment health and build revision | `/health` | Public, minimal JSON |
 | Club registration and login | `/clubs/register`, `/clubs/login` | Public |
-| Club Terms and privacy-warranty acceptance | `/clubs/agreements` | Authenticated club; current versions required before athlete-data mutations |
+| Club Terms and privacy-warranty acceptance | `/clubs/agreements` | Authenticated club; current versions required before athlete-data mutations or cross-club closed-roster access |
 | Password recovery by email | `/clubs/forgot-password`, `/clubs/reset-password` | Public |
 | Club athlete archive and event registration | `/clubs/area`, `/events/register` | Authenticated club |
 | Athlete spreadsheet import and CSV export | `/clubs/athletes-import`, `/clubs/athletes-export` | Authenticated club; import is POST + CSRF |
@@ -80,7 +80,12 @@ The comments in `.env.example` identify the required GDPR transparency data.
 The public `/terms` page is the versioned club contract. Registration records
 the accepted Terms version and language separately from the Article 14
 notice-delivery warranty. Material Terms changes require a version bump and
-fresh club acceptance before further athlete-data mutations.
+fresh club acceptance before further athlete-data mutations or cross-club
+closed-roster access. After registrations close, a participating club with no
+registration exception may see the minimized roster (name, club, age class,
+weight category, gender, and belt) only after both current agreements are on
+record. Public users remain limited to aggregates, and cross-club CSV export is
+not available.
 Those values must describe the real deployment; software cannot choose a lawful
 basis or validate the controller's arrangements.
 

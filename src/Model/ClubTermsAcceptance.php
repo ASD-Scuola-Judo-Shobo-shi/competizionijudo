@@ -7,7 +7,7 @@ namespace App\Model;
 final class ClubTermsAcceptance
 {
     /** Bump this whenever the contractual terms change materially. */
-    public const VERSION = '2026-08-04';
+    public const VERSION = '2026-08-15';
 
     public static function hasCurrentVersion(int $clubId): bool
     {

@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
+use App\Model\ClubDataRightsDeclaration;
 use App\Model\ClubTermsAcceptance;
 
 final class AboutController extends Controller
@@ -28,6 +29,7 @@ final class AboutController extends Controller
         return $this->view('static/privacy', [
             'title' => __('privacy.title'),
             'privacy' => config('privacy', []),
+            'privacyVersion' => ClubDataRightsDeclaration::VERSION,
         ]);
     }
 

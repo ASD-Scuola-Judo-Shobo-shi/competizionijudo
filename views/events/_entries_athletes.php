@@ -8,6 +8,13 @@
 
 <section class="card">
     <h2><?= e(__('events.entries_athletes_heading')) ?></h2>
+    <?php if ($loggedInClubId !== null) : ?>
+        <p class="field-help">
+            <?= e(__('events.entries_shared_roster_help')) ?>
+            <a href="<?= e(base_url('/privacy')) ?>"><?= e(__('events.entries_shared_roster_privacy')) ?></a>
+            <a href="<?= e(base_url('/terms')) ?>"><?= e(__('events.entries_shared_roster_terms')) ?></a>
+        </p>
+    <?php endif; ?>
     <?php if ($entryAthleteGroups === []) : ?>
         <p><?= e(__('club.area.no_entries')) ?></p>
     <?php else : ?>

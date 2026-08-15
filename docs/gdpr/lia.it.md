@@ -7,7 +7,7 @@ dati di atleti ed eventi.
 | Campo | Valore |
 | --- | --- |
 | Titolare | Valore di `APP_OWNER` (ambiente di distribuzione), indirizzo `APP_OWNER_ADDRESS`, email `APP_OWNER_EMAIL` |
-| Versione del documento | 2026-08-05 |
+| Versione del documento | 2026-08-15 |
 | Ciclo di revisione | Ogni 12 mesi, o a ogni modifica di finalità, categorie di dati, garanzie o conservazione |
 | Stato | Corrente |
 
@@ -22,6 +22,9 @@ pubblica:
   importazione, esportazione, riconciliazione);
 - iscrizione degli atleti agli eventi, invio dei riepiloghi alle società e
   consolidamento del verbale degli eventi chiusi (copie consolidate);
+- disponibilità ai referenti autenticati delle società partecipanti a un evento
+  di un elenco minimizzato dopo la chiusura delle iscrizioni per quella società,
+  per verificare iscrizioni e categorie e coordinare la logistica dell'evento;
 - pubblicazione di totali aggregati di iscrizioni e medaglie dopo un evento.
 
 Non copre i trattamenti fondati sul contratto (articolo 6, paragrafo 1,
@@ -35,8 +38,10 @@ al servizio e fasi precontrattuali.
 2. **Organizzatori:** gestione della partecipazione, dell'ammissibilità,
    delle iscrizioni e delle quote e conservazione di un verbale affidabile
    degli eventi chiusi.
-3. **Società partecipanti:** amministrazione del proprio archivio atleti e
-   invio delle iscrizioni senza duplicazioni cartacee o manuali.
+3. **Società partecipanti:** amministrazione del proprio archivio atleti,
+   invio delle iscrizioni senza duplicazioni cartacee o manuali, verifica
+   dell'elenco chiuso e delle categorie di gara e coordinamento di tecnici e
+   logistica sulla base delle stesse informazioni.
 
 Il trattamento soddisfa tutti e tre gli interessi; l'interesse del titolare e
 degli organizzatori coincide con l'esigenza operativa delle società di gestire
@@ -51,8 +56,17 @@ Nessuna alternativa con impatto sostanzialmente minore consegue lo scopo:
 
 - la superficie pubblica è ridotta ai totali aggregati — nessun risultato
   nominale è pubblicato per scelta progettuale;
-- le viste dettagliate degli atleti sono limitate alla società di
-  appartenenza e agli amministratori;
+- l'elenco tra società non è pubblico, è disponibile soltanto dopo la chiusura
+  delle iscrizioni per quella società ed è limitato alle società con almeno
+  un'iscrizione nell'evento;
+- l'accesso richiede autenticazione, accettazione delle Condizioni vigenti e
+  una garanzia vigente di consegna dell'informativa ai sensi dell'articolo 14;
+- la proiezione condivisa contiene soltanto nome, società, classe d'età,
+  categoria di peso, genere e cintura; data di nascita e peso esatti, numero di
+  tesseramento, note, recapiti e dati di pagamento restano riservati a ruoli più
+  ristretti;
+- non esiste esportazione CSV tra società, mentre la società di appartenenza può
+  continuare a esportare soltanto le proprie iscrizioni;
 - gli eventi non pubblicati rifiutano le richieste di metadati delle iscrizioni;
 - il campo libero delle note è scoraggiato per contenuti sensibili.
 
@@ -64,21 +78,24 @@ Nessuna alternativa con impatto sostanzialmente minore consegue lo scopo:
   e istruzioni di pagamento, dati tecnici di sicurezza. Nessuna categoria
   particolare è raccolta per scelta progettuale (l'articolo 9 è
   espressamente escluso nell'informativa e nelle Condizioni).
-- **Rischio di danno:** basso. I dati restano nell'ambito delle società
-  partecipanti, dell'organizzatore e del titolare; nessun risultato nominale
-  pubblico, nessuna profilazione, nessun marketing, nessuna decisione
-  automatizzata con effetti giuridici.
+- **Rischio di danno:** moderato prima delle garanzie perché l'elenco contiene
+  l'identità di atleti, compresi minori, comunicata ad altre società
+  partecipanti. Il rischio residuo è ridotto dal gruppo ristretto di destinatari
+  e campi, dall'assenza di accesso pubblico ed esportazione tra società, dalle
+  sessioni autenticate brevi, dalla riservatezza contrattuale, dalla
+  conservazione e dai diritti degli interessati.
 - **Minori:** rilievo particolare ai diritti dei minori: nessun risultato
-  nominale pubblico, nessuna valutazione individuale, accesso all'archivio
-  limitato alla società di appartenenza e garanzia della società di consegna
-  dell'informativa ai sensi dell'articolo 14 al genitore o tutore prima di
-  fornire i dati.
+  nominale pubblico, nessuna data di nascita o peso esatto nell'elenco
+  condiviso, nessuna valutazione individuale, accesso all'archivio corrente
+  limitato alla società di appartenenza e garanzia di consegna dell'informativa
+  aggiornata ai sensi dell'articolo 14 al genitore o tutore prima di abilitare
+  l'accesso all'elenco tra società.
 
 ## 5. Garanzie già in essere
 
 | Ambito | Garanzia |
 | --- | --- |
-| Accesso | Ambito per società applicato nelle query; vincolo di proprietà composito; accesso amministratore solo alla tabella completa |
+| Accesso | Archivi ed esportazioni correnti restano circoscritti alla società; vincolo di proprietà composito; elenco condiviso limitato alle società partecipanti autenticate dopo chiusura, accordi vigenti e rimozione dell'eccezione alle iscrizioni della società; accesso amministratore solo alla tabella completa |
 | Sicurezza | Prepared statement, CSRF, limitazione delle richieste, sessioni rigorose, CSP con nonce, sandbox per i caricamenti |
 | Crescita | Approvazione amministrativa prima dell'attivazione; quote atleti e iscrizioni (`CLUB_ATHLETE_LIMIT`, `CLUB_ENTRY_LIMIT`) |
 | Conservazione | Copie consolidate degli eventi chiusi eliminate dopo 1 anno; token 1h/24h; documenti eliminati alla sostituzione o all'eliminazione dell'evento; scadenza log/backup secondo `APP_LOG_RETENTION_DAYS` / `APP_BACKUP_RETENTION_DAYS` |
@@ -87,14 +104,17 @@ Nessuna alternativa con impatto sostanzialmente minore consegue lo scopo:
 
 ## 6. Conclusione della comparazione
 
-Gli interessi del titolare, degli organizzatori e delle società nella gestione
-e nell'amministrazione delle competizioni sono legittimi e il trattamento è
-necessario al loro conseguimento. L'impatto sugli interessati è limitato da
-minimizzazione, ambito per società, assenza di qualsiasi risultato nominale
-pubblico, conservazione restrittiva e solide garanzie tecniche; per i minori,
-l'assenza di risultati nominali pubblici e l'obbligo di consegna
-dell'informativa ai sensi dell'articolo 14 pesano in modo decisivo nella
-comparazione.
+Gli interessi del titolare, degli organizzatori e delle società partecipanti
+nella gestione, verifica e amministrazione delle competizioni sono legittimi.
+Un elenco comune è necessario per la finalità documentata di verifica e
+coordinamento, mentre non sono necessari un elenco pubblico o la comunicazione
+dei dati sorgente esatti. L'impatto sugli interessati è limitato dalla
+minimizzazione di destinatari e campi, dai gate sul ciclo di vita e sugli accordi
+vigenti, dall'assenza di risultati nominali pubblici o esportazione tra società,
+dalla conservazione restrittiva e dalle garanzie tecniche. Per i minori,
+l'esclusione di data di nascita e peso esatti, l'assenza di risultati nominali
+pubblici e l'obbligo di consegna dell'informativa aggiornata ai sensi
+dell'articolo 14 pesano in modo decisivo nella comparazione.
 
 **Conclusione: gli interessi legittimi prevalgono sull'impatto; il
 trattamento sulla base dell'articolo 6, paragrafo 1, lettera f, GDPR è
@@ -110,4 +130,6 @@ protezione dei dati. La revisione deve essere registrata nel presente
 documento.
 
 Evidenze storiche: audit di giugno 2026, revisione post-riparazione di luglio
-2026 e baseline di sicurezza in `docs/security.md`.
+2026 e baseline di sicurezza in `docs/security.md`. La revisione del 2026-08-15
+ha aggiunto finalità, destinatari, verifica di necessità e garanzie dell'elenco
+minimizzato degli eventi chiusi.

@@ -1,6 +1,6 @@
 # Security Baseline
 
-Last reviewed: 2026-08-05
+Last reviewed: 2026-08-15
 
 Code baseline: the revision containing this document.
 
@@ -26,7 +26,7 @@ live penetration test or hosting-control-panel audit.
 | Club lifecycle | Email-confirmed registrations stay pending until an administrator approves the account; the pending state blocks login only, never the confirmation or recovery workflow. Athlete-archive and per-event entry growth are bounded by environment-configured quotas (`CLUB_ATHLETE_LIMIT`, `CLUB_ENTRY_LIMIT`; `0` disables a quota) and enforced at manual add, spreadsheet import, and registration time. |
 | Output and exports | Templates escape untrusted HTML. CSV exports neutralize spreadsheet formula prefixes. Production exceptions are logged through the redacting failure path and rendered generically. |
 | Uploads | Event documents are limited by size and detected MIME type to PDF, JPEG, or PNG, stored under generated names, served with `nosniff`, and purged on replacement or event deletion. The upload directory denies common executable extensions, applies a sandboxed document policy, and forces PDFs to download. |
-| Privacy and club terms | Public event-entry projections stop at club totals; detailed breakdowns require authentication. Clubs can see only their own named athletes and administrators can see the complete table. Terms acceptance and the Article 14 notice-delivery warranty are versioned and recorded separately; outdated clubs must re-accept the applicable agreement before athlete-data mutations. Successful account confirmations are deleted immediately, while the scheduled privacy job removes expired account-workflow data and entry snapshots after one year. |
+| Privacy and club terms | Public event-entry projections stop at club totals; detailed breakdowns require authentication. A participating club always retains its own entry view. Once registrations are closed to that club, representatives with both current agreements may also see a minimized cross-club roster (name, club, age class, weight category, gender, and belt); exact birth dates, exact weights, membership numbers, notes, contacts, payment data, and cross-club CSV export remain excluded. Administrators retain the complete table. Terms acceptance and the Article 14 notice-delivery warranty are versioned and recorded separately; outdated clubs must re-accept before athlete-data mutations or cross-club roster access. Successful account confirmations are deleted immediately, while the scheduled privacy job removes expired account-workflow data and entry snapshots after one year. |
 | Release assurance | CI validates syntax, coding style, PHPStan, PHPUnit, changed-code coverage, locked dependency advisories, MySQL migrations, the exact deployment manifest, bilingual artifact boot, and root-router staging. |
 
 Templates are guarded by a test that rejects inline event handlers, style

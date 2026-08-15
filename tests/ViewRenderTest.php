@@ -314,6 +314,7 @@ final class ViewRenderTest extends TestCase
         $view = new View(dirname(__DIR__) . '/views');
 
         $privacy = $view->render('static/privacy', array_merge([
+            'privacyVersion' => \App\Model\ClubDataRightsDeclaration::VERSION,
             'privacy' => [
                 'controller_fiscal_code' => 'SYNTHETIC-FISCAL-CODE',
             ],
