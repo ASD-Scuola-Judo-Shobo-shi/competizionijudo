@@ -34,6 +34,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20260804_000001_create_club_terms_acceptances.sql',
                 dirname(__DIR__) . '/migrations/20260804_000002_add_club_approval_state.sql',
                 dirname(__DIR__) . '/migrations/20260804_000003_add_entry_club_ownership.sql',
+                dirname(__DIR__) . '/migrations/20260816_000001_repair_club_terms_acceptance_audit_fields.sql',
             ],
             array_values($migrations)
         );
@@ -125,6 +126,40 @@ final class SchemaMigrationTest extends TestCase
         self::assertStringContainsString('terms_version VARCHAR(64) NOT NULL', $migration);
         self::assertStringContainsString('accepted_locale VARCHAR(5) NOT NULL', $migration);
         self::assertStringContainsString('accepted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', $migration);
+    }
+
+    public function testForwardMigrationRepairsClubTermsAcceptanceAuditFields(): void
+    {
+        $migration = file_get_contents(
+            dirname(__DIR__)
+            . '/migrations/20260816_000001_repair_club_terms_acceptance_audit_fields.sql'
+        );
+        self::assertIsString($migration);
+
+        self::assertStringContainsString(
+            'ADD COLUMN representative_name VARCHAR(255) NULL',
+            $migration
+        );
+        self::assertStringContainsString(
+            'ADD COLUMN accepted_account_email VARCHAR(255) NULL',
+            $migration
+        );
+        self::assertStringContainsString(
+            'JOIN clubs AS club ON club.id = acceptance.club_id',
+            $migration
+        );
+        self::assertStringContainsString(
+            'MODIFY COLUMN representative_name VARCHAR(255) NOT NULL',
+            $migration
+        );
+        self::assertStringContainsString(
+            'MODIFY COLUMN accepted_account_email VARCHAR(255) NOT NULL',
+            $migration
+        );
+        self::assertStringContainsString(
+            'incomplete_club_terms_acceptance_audit_schema',
+            $migration
+        );
     }
 
     public function testForwardMigrationAddsClubApprovalState(): void

@@ -56,17 +56,20 @@ $server = connectWithRetry(
     $password,
     $options
 );
+$scenario = 'database initialization';
 
 try {
     foreach ($databaseNames as $databaseName) {
         recreateDatabase($server, $databaseName);
     }
 
+    $scenario = 'clean schema';
     $clean = databaseConnection($host, $port, $databaseNames['clean'], $user, $password, $options);
     runMigrationsTwice($clean);
     assertSchemaContract($clean);
     assertCleanWritesAndReads($clean);
 
+    $scenario = 'pre-squash upgrade';
     $preSquash = databaseConnection(
         $host,
         $port,
@@ -80,6 +83,7 @@ try {
     assertSchemaContract($preSquash);
     assertPreSquashDataPreserved($preSquash);
 
+    $scenario = 'recorded birth-date drift';
     recreateDatabase($server, $databaseNames['pre_squash']);
     $recordedRenameDrift = databaseConnection(
         $host,
@@ -100,6 +104,7 @@ try {
     assertSchemaContract($recordedRenameDrift);
     assertPreSquashDataPreserved($recordedRenameDrift);
 
+    $scenario = 'recorded registration-payment drift';
     recreateDatabase($server, $databaseNames['pre_squash']);
     $recordedRegistrationPaymentDrift = databaseConnection(
         $host,
@@ -115,6 +120,24 @@ try {
     assertSchemaContract($recordedRegistrationPaymentDrift);
     assertPreSquashDataPreserved($recordedRegistrationPaymentDrift);
 
+    $scenario = 'recorded terms-acceptance drift';
+    recreateDatabase($server, $databaseNames['pre_squash']);
+    $recordedTermsAcceptanceDrift = databaseConnection(
+        $host,
+        $port,
+        $databaseNames['pre_squash'],
+        $user,
+        $password,
+        $options
+    );
+    preparePreSquashDatabase($recordedTermsAcceptanceDrift);
+    prepareRecordedClubTermsAcceptanceDrift($recordedTermsAcceptanceDrift);
+    runMigrationsTwice($recordedTermsAcceptanceDrift);
+    assertSchemaContract($recordedTermsAcceptanceDrift);
+    assertPreSquashDataPreserved($recordedTermsAcceptanceDrift);
+    assertClubTermsAcceptanceAuditFieldsRepaired($recordedTermsAcceptanceDrift);
+
+    $scenario = 'guarded schema';
     $guarded = databaseConnection(
         $host,
         $port,
@@ -126,12 +149,13 @@ try {
     assertExistingSchemaRejected($guarded);
 
     echo "Migration smoke checks passed for clean, pre-squash, recorded birth-date drift, "
-        . "recorded registration-payment drift, and guarded schemas.\n";
+        . "recorded registration-payment drift, recorded terms-acceptance drift, "
+        . "and guarded schemas.\n";
 } catch (Throwable $exception) {
     $message = $exception instanceof MigrationException
         ? $exception->getMessage()
         : (new MigrationExecutor())->failureDetail($exception);
-    fwrite(STDERR, $message . "\n");
+    fwrite(STDERR, 'Migration smoke scenario failed: ' . $scenario . ".\n" . $message . "\n");
     exit(1);
 } finally {
     foreach ($databaseNames as $databaseName) {
@@ -346,6 +370,36 @@ function prepareRecordedRegistrationPaymentDrift(PDO $database): void
     ]);
 }
 
+function prepareRecordedClubTermsAcceptanceDrift(PDO $database): void
+{
+    $database->exec(
+        'CREATE TABLE club_terms_acceptances ('
+        . 'id INT AUTO_INCREMENT PRIMARY KEY, '
+        . 'club_id INT NOT NULL, '
+        . 'accepted_by_club_id INT NOT NULL, '
+        . 'terms_version VARCHAR(64) NOT NULL, '
+        . 'accepted_locale VARCHAR(5) NOT NULL, '
+        . 'accepted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, '
+        . 'KEY idx_club_terms_acceptances_club_accepted (club_id, accepted_at), '
+        . 'CONSTRAINT fk_club_terms_acceptances_club '
+        . 'FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE, '
+        . 'CONSTRAINT fk_club_terms_acceptances_actor '
+        . 'FOREIGN KEY (accepted_by_club_id) REFERENCES clubs(id) ON DELETE CASCADE'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $database->exec(
+        "INSERT INTO club_terms_acceptances (
+            club_id, accepted_by_club_id, terms_version, accepted_locale, accepted_at
+         ) VALUES (1, 1, '2026-08-04', 'it', '2026-08-04 12:00:00')"
+    );
+    $database->prepare(
+        'INSERT INTO schema_migrations (version, description) VALUES (?, ?)'
+    )->execute([
+        '20260804_000001_create_club_terms_acceptances.sql',
+        'Synthetic recorded early terms-acceptance draft',
+    ]);
+}
+
 function assertExistingSchemaRejected(PDO $database): void
 {
     $database->exec('CREATE TABLE clubs (id INT AUTO_INCREMENT PRIMARY KEY) ENGINE=InnoDB');
@@ -406,6 +460,7 @@ function assertUnrecordedForwardMigrationsCanBeRetried(PDO $database): void
         '20260729_000001_add_event_registration_options.sql',
         '20260729_000002_add_event_sepa_payment_details.sql',
         '20260730_000001_repair_registration_payment_schema_drift.sql',
+        '20260816_000001_repair_club_terms_acceptance_audit_fields.sql',
     ];
     $placeholders = implode(', ', array_fill(0, count($versions), '?'));
     $statement = $database->prepare(
@@ -431,6 +486,7 @@ function assertSchemaContract(PDO $database): void
         'clubs',
         'club_registration_confirmations',
         'club_data_rights_declarations',
+        'club_terms_acceptances',
         'events',
         'event_registration_options',
         'athletes',
@@ -462,6 +518,8 @@ function assertSchemaContract(PDO $database): void
     assertColumn($database, 'club_data_rights_declarations', 'declared_by_club_id', 'NO');
     assertColumn($database, 'club_data_rights_declarations', 'declaration_version', 'NO');
     assertColumn($database, 'club_data_rights_declarations', 'declared_at', 'NO');
+    assertColumn($database, 'club_terms_acceptances', 'representative_name', 'NO');
+    assertColumn($database, 'club_terms_acceptances', 'accepted_account_email', 'NO');
     assertColumn($database, 'events', 'location', 'NO');
     assertColumn($database, 'events', 'sepa_account_holder', 'YES');
     assertColumn($database, 'events', 'sepa_iban', 'YES');
@@ -528,6 +586,12 @@ function assertSchemaContract(PDO $database): void
     );
     assertIndex(
         $database,
+        'club_terms_acceptances',
+        'idx_club_terms_acceptances_club_accepted',
+        'club_id,accepted_at'
+    );
+    assertIndex(
+        $database,
         'athletes',
         'idx_athletes_club_name_id',
         'club_id,last_name,first_name,id'
@@ -545,6 +609,8 @@ function assertSchemaContract(PDO $database): void
         'athletes.club_id=clubs.id',
         'club_data_rights_declarations.club_id=clubs.id',
         'club_data_rights_declarations.declared_by_club_id=clubs.id',
+        'club_terms_acceptances.club_id=clubs.id',
+        'club_terms_acceptances.accepted_by_club_id=clubs.id',
         'entries.athlete_id=athletes.id',
         'entries.club_id=athletes.club_id',
         'entries.club_id=clubs.id',
@@ -669,6 +735,31 @@ function assertCleanWritesAndReads(PDO $database): void
         )"
     );
     $database->exec(
+        "INSERT INTO club_terms_acceptances (
+            club_id, accepted_by_club_id, representative_name, accepted_account_email,
+            terms_version, accepted_locale
+         ) VALUES (
+            101, 101, 'Synthetic Contact', 'clean@example.test', 'synthetic-version', 'en'
+         )"
+    );
+    $acceptance = $database->query(
+        'SELECT representative_name, accepted_account_email '
+        . 'FROM club_terms_acceptances WHERE club_id = 101'
+    )->fetch();
+    if (!is_array($acceptance)) {
+        throw new RuntimeException('Clean schema terms acceptance write failed.');
+    }
+    assertSameValue(
+        'Synthetic Contact',
+        $acceptance['representative_name'],
+        'Clean schema representative snapshot changed.'
+    );
+    assertSameValue(
+        'clean@example.test',
+        $acceptance['accepted_account_email'],
+        'Clean schema account email snapshot changed.'
+    );
+    $database->exec(
         "INSERT INTO athletes (
             id, club_id, last_name, first_name, gender, birth_date,
             weight_kg, belt
@@ -770,6 +861,57 @@ function assertPreSquashDataPreserved(PDO $database): void
     }
     assertSameValue('Standard', $registration['registration_option_name'], 'Default option was not backfilled.');
     assertSameValue('0', (string) $registration['registration_fee_cents'], 'Default fee was not backfilled.');
+}
+
+function assertClubTermsAcceptanceAuditFieldsRepaired(PDO $database): void
+{
+    $legacyAcceptance = $database->query(
+        'SELECT representative_name, accepted_account_email, terms_version, '
+        . 'accepted_locale, accepted_at FROM club_terms_acceptances WHERE id = 1'
+    )->fetch();
+    if (!is_array($legacyAcceptance)) {
+        throw new RuntimeException('Legacy terms acceptance disappeared during repair.');
+    }
+
+    assertSameValue(
+        'Synthetic Contact',
+        $legacyAcceptance['representative_name'],
+        'Legacy representative snapshot was not backfilled.'
+    );
+    assertSameValue(
+        'presquash@example.test',
+        $legacyAcceptance['accepted_account_email'],
+        'Legacy account email snapshot was not backfilled.'
+    );
+    assertSameValue(
+        '2026-08-04',
+        $legacyAcceptance['terms_version'],
+        'Legacy terms version changed during repair.'
+    );
+    assertSameValue(
+        'it',
+        $legacyAcceptance['accepted_locale'],
+        'Legacy acceptance locale changed during repair.'
+    );
+    assertSameValue(
+        '2026-08-04 12:00:00',
+        $legacyAcceptance['accepted_at'],
+        'Legacy acceptance timestamp changed during repair.'
+    );
+
+    $database->exec(
+        "INSERT INTO club_terms_acceptances (
+            club_id, accepted_by_club_id, representative_name, accepted_account_email,
+            terms_version, accepted_locale
+         ) VALUES (
+            1, 1, 'Synthetic Contact', 'presquash@example.test', '2026-08-15', 'en'
+         )"
+    );
+    assertSameValue(
+        2,
+        (int) $database->query('SELECT COUNT(*) FROM club_terms_acceptances')->fetchColumn(),
+        'Repaired terms acceptance table rejected a current-shape audit record.'
+    );
 }
 
 function assertSameValue(mixed $expected, mixed $actual, string $message): void
