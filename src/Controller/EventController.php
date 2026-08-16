@@ -34,6 +34,36 @@ final class EventController extends Controller
     private const REGISTRATION_FEEDBACK_PREFIX = 'event_registration_';
     private const REGISTRATION_ATHLETES_PER_PAGE = 50;
     private const ENTRIES_PER_PAGE = 50;
+    private const ENTRY_FILTER_MAX_LENGTH = 100;
+    private const ENTRY_CLUB_FILTER_PARAMETERS = [
+        'club' => 'clubs_filter_club',
+        'federal_code' => 'clubs_filter_federal_code',
+        'athletes' => 'clubs_filter_athletes',
+        'breakdown' => 'clubs_filter_breakdown',
+    ];
+    private const ENTRY_ATHLETE_FILTER_PARAMETERS = [
+        'age_class' => 'athletes_filter_age_class',
+        'weight_category' => 'athletes_filter_weight_category',
+        'athlete' => 'athletes_filter_athlete',
+        'club' => 'athletes_filter_club',
+        'gender' => 'athletes_filter_gender',
+        'belt' => 'athletes_filter_belt',
+    ];
+    private const CURRENT_CLUB_FILTER_PARAMETERS = [
+        'athlete' => 'club_entries_filter_athlete',
+        'gender' => 'club_entries_filter_gender',
+        'weight' => 'club_entries_filter_weight',
+        'weight_category' => 'weight_category',
+        'belt' => 'club_entries_filter_belt',
+    ];
+    private const ENTRY_OPPONENT_FILTER_PARAMETERS = [
+        'age_class' => 'opponents_filter_age_class',
+        'weight_category' => 'opponents_filter_weight_category',
+        'athlete' => 'opponents_filter_athlete',
+        'club' => 'opponents_filter_club',
+        'gender' => 'opponents_filter_gender',
+        'belt' => 'opponents_filter_belt',
+    ];
 
     public function __construct(
         View $view,
@@ -493,14 +523,30 @@ final class EventController extends Controller
             $requiresRosterAgreements = !$hasCurrentRosterAgreements;
         }
 
+        $entryClubFilterParameters = self::ENTRY_CLUB_FILTER_PARAMETERS;
+        if (!$canViewEntryBreakdowns) {
+            unset($entryClubFilterParameters['breakdown']);
+        }
+        $entryClubFilters = $this->entryFilters($request, $entryClubFilterParameters);
+        $entryAthleteFilters = $event->closed && $canViewAllAthleteEntries
+            ? $this->entryFilters($request, self::ENTRY_ATHLETE_FILTER_PARAMETERS)
+            : $this->emptyEntryFilters(self::ENTRY_ATHLETE_FILTER_PARAMETERS);
+        $currentClubFilters = $event->closed && $clubId !== null
+            ? $this->entryFilters($request, self::CURRENT_CLUB_FILTER_PARAMETERS)
+            : $this->emptyEntryFilters(self::CURRENT_CLUB_FILTER_PARAMETERS);
+        $entryOpponentFilters = $event->closed && $clubId !== null && $canViewAllAthleteEntries
+            ? $this->entryFilters($request, self::ENTRY_OPPONENT_FILTER_PARAMETERS)
+            : $this->emptyEntryFilters(self::ENTRY_OPPONENT_FILTER_PARAMETERS);
+
         $clubs = Entry::findClubsByEvent($eventId, null);
         $rows = Entry::findByEvent($eventId, null, $event->closed);
         $entryReport = EventEntriesViewModel::fromRows(
             $rows,
             $clubs,
             $event->closed ? $clubId : null,
-            trim((string) $request->query('weight_category', ''))
+            $currentClubFilters['weight_category']
         );
+        $currentClubFilters['weight_category'] = $entryReport->selectedWeightCategory;
         $entryClubsSort = resolve_table_sort(
             $request->query('clubs_sort'),
             $request->query('clubs_direction'),
@@ -519,40 +565,94 @@ final class EventController extends Controller
             ['athlete', 'gender', 'weight', 'weight_category', 'belt'],
             'weight'
         );
+
+        $filteredEntryClubs = $entryReport->filteredClubs($entryClubFilters);
+        $filteredEntryAthletes = $event->closed && $canViewAllAthleteEntries
+            ? $entryReport->filteredEntries($entryAthleteFilters)
+            : [];
+        $filteredCurrentClubEntries = $event->closed && $clubId !== null
+            ? $entryReport->filteredCurrentClubEntries($currentClubFilters)
+            : [];
+        $entryOpponentGroups = $event->closed && $clubId !== null && $canViewAllAthleteEntries
+            ? $entryReport->opponentGroups($entryOpponentFilters)
+            : [];
+
+        $entriesQueryState = [
+            'event' => (string) $eventId,
+            'clubs_sort' => $entryClubsSort['column'],
+            'clubs_direction' => $entryClubsSort['direction'],
+            'athletes_sort' => $entryAthletesSort['column'],
+            'athletes_direction' => $entryAthletesSort['direction'],
+            'club_entries_sort' => $currentClubSort['column'],
+            'club_entries_direction' => $currentClubSort['direction'],
+            ...$this->entryFilterQuery($entryClubFilters, $entryClubFilterParameters),
+            ...$this->entryFilterQuery($entryAthleteFilters, self::ENTRY_ATHLETE_FILTER_PARAMETERS),
+            ...$this->entryFilterQuery($currentClubFilters, self::CURRENT_CLUB_FILTER_PARAMETERS),
+            ...$this->entryFilterQuery($entryOpponentFilters, self::ENTRY_OPPONENT_FILTER_PARAMETERS),
+        ];
+        $entriesPaginationState = $entriesQueryState;
+        foreach (['clubs_page', 'athletes_page', 'club_entries_page'] as $pageParameter) {
+            $page = max(1, (int) $request->query($pageParameter, '1'));
+            if ($page > 1) {
+                $entriesPaginationState[$pageParameter] = (string) $page;
+            }
+        }
         $entryClubsPagination = paginate(
-            count($entryReport->clubs),
+            count($filteredEntryClubs),
             max(1, (int) $request->query('clubs_page', '1')),
             self::ENTRIES_PER_PAGE,
             'clubs_page',
-            $request->queryParameters(),
+            $entriesPaginationState,
             __('events.entries_clubs_heading')
         );
         $entryAthletesPagination = paginate(
-            $event->closed && $canViewAllAthleteEntries ? count($entryReport->entries) : 0,
+            count($filteredEntryAthletes),
             max(1, (int) $request->query('athletes_page', '1')),
             self::ENTRIES_PER_PAGE,
             'athletes_page',
-            $request->queryParameters(),
+            $entriesPaginationState,
             __('events.entries_athletes_heading')
         );
         $currentClubPagination = paginate(
-            count($entryReport->currentClubEntries),
+            count($filteredCurrentClubEntries),
             max(1, (int) $request->query('club_entries_page', '1')),
             self::ENTRIES_PER_PAGE,
             'club_entries_page',
-            $request->queryParameters(),
+            $entriesPaginationState,
             __('events.entries_current_club_title')
         );
 
         $upcomingEvents = $this->resolveUpcomingEvents($eventId, $date, $limit);
         $sortedEntryClubs = $entryReport->sortedClubs(
             $entryClubsSort['column'],
-            $entryClubsSort['direction']
+            $entryClubsSort['direction'],
+            $filteredEntryClubs
         );
         $sortedCurrentClubEntries = $entryReport->sortedCurrentClubEntries(
             $currentClubSort['column'],
-            $currentClubSort['direction']
+            $currentClubSort['direction'],
+            $filteredCurrentClubEntries
         );
+        $entryClubsFilterResetUrl = $this->entriesUrl(
+            $entriesQueryState,
+            array_values($entryClubFilterParameters)
+        );
+        $entryAthletesFilterResetUrl = $this->entriesUrl(
+            $entriesQueryState,
+            array_values(self::ENTRY_ATHLETE_FILTER_PARAMETERS)
+        );
+        $currentClubFilterResetUrl = $this->entriesUrl(
+            $entriesQueryState,
+            array_values(self::CURRENT_CLUB_FILTER_PARAMETERS)
+        );
+        $entryOpponentsFilterResetUrl = $this->entriesUrl(
+            $entriesQueryState,
+            array_values(self::ENTRY_OPPONENT_FILTER_PARAMETERS)
+        );
+        $clubEntriesExportUrl = $this->queryUrl('/events/entries/export', [
+            'event' => (string) $eventId,
+            ...$this->entryFilterQuery($currentClubFilters, self::CURRENT_CLUB_FILTER_PARAMETERS),
+        ]);
 
         return $this->view('events/entries', [
             'title' => __('events.entries') . ' - ' . $event->name,
@@ -568,7 +668,8 @@ final class EventController extends Controller
                     $entryAthletesSort['column'],
                     $entryAthletesSort['direction'],
                     $entryAthletesPagination['offset'],
-                    $entryAthletesPagination['per_page']
+                    $entryAthletesPagination['per_page'],
+                    $filteredEntryAthletes
                 )
                 : [],
             'currentClubEntries' => array_slice(
@@ -582,6 +683,17 @@ final class EventController extends Controller
             'entryClubsSort' => $entryClubsSort,
             'entryAthletesSort' => $entryAthletesSort,
             'currentClubSort' => $currentClubSort,
+            'entryClubFilters' => $entryClubFilters,
+            'entryAthleteFilters' => $entryAthleteFilters,
+            'currentClubFilters' => $currentClubFilters,
+            'entryOpponentGroups' => $entryOpponentGroups,
+            'entryOpponentFilters' => $entryOpponentFilters,
+            'entriesQueryState' => $entriesQueryState,
+            'entryClubsFilterResetUrl' => $entryClubsFilterResetUrl,
+            'entryAthletesFilterResetUrl' => $entryAthletesFilterResetUrl,
+            'currentClubFilterResetUrl' => $currentClubFilterResetUrl,
+            'entryOpponentsFilterResetUrl' => $entryOpponentsFilterResetUrl,
+            'clubEntriesExportUrl' => $clubEntriesExportUrl,
             'loggedInClubId' => $clubId !== null ? (int) $clubId : null,
             'canViewEntryBreakdowns' => $canViewEntryBreakdowns,
             'canViewAllAthleteEntries' => $canViewAllAthleteEntries,
@@ -611,17 +723,18 @@ final class EventController extends Controller
             return $this->redirect('/events/entries?event=' . $eventId);
         }
 
-        $weightCategories = EventEntriesViewModel::weightCategories(Entry::findByEvent($eventId, $clubId, true));
-        $weightCategory = trim((string) $request->query('weight_category', ''));
+        $currentClubFilters = $this->entryFilters($request, self::CURRENT_CLUB_FILTER_PARAMETERS);
+        $rows = Entry::findByEvent($eventId, $clubId, true);
+        $weightCategories = EventEntriesViewModel::weightCategories($rows);
+        $weightCategory = $currentClubFilters['weight_category'];
         if ($weightCategory !== '' && !in_array($weightCategory, $weightCategories, true)) {
             return $this->redirect('/events/entries?event=' . $eventId);
         }
 
-        $csv = (new EventEntriesCsvTransfer())->export(
-            $eventId,
-            true,
-            $clubId,
-            $weightCategory !== '' ? $weightCategory : null
+        $entryReport = EventEntriesViewModel::fromRows($rows, [], $clubId, $weightCategory);
+        $currentClubFilters['weight_category'] = $entryReport->selectedWeightCategory;
+        $csv = (new EventEntriesCsvTransfer())->exportRows(
+            $entryReport->filteredCurrentClubEntries($currentClubFilters)
         );
         $eventSlug = trim(strtolower(preg_replace('/[^A-Za-z0-9]+/', '-', $event->name) ?? ''), '-');
         $eventSlug = substr($eventSlug !== '' ? $eventSlug : 'event-' . $eventId, 0, 24);
@@ -639,6 +752,83 @@ final class EventController extends Controller
             'Cache-Control' => 'private, no-store, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    /**
+     * @param array<string, string> $parameters Field names mapped to query parameters.
+     * @return array<string, string>
+     */
+    private function entryFilters(Request $request, array $parameters): array
+    {
+        $filters = [];
+        foreach ($parameters as $field => $parameter) {
+            $value = $request->query($parameter, '');
+            if (!is_string($value) && !is_numeric($value)) {
+                $filters[$field] = '';
+                continue;
+            }
+            $filters[$field] = mb_substr(
+                trim((string) $value),
+                0,
+                self::ENTRY_FILTER_MAX_LENGTH,
+                'UTF-8'
+            );
+        }
+
+        return $filters;
+    }
+
+    /**
+     * @param array<string, string> $parameters
+     * @return array<string, string>
+     */
+    private function emptyEntryFilters(array $parameters): array
+    {
+        $filters = [];
+        foreach ($parameters as $field => $_parameter) {
+            $filters[$field] = '';
+        }
+
+        return $filters;
+    }
+
+    /**
+     * @param array<string, string> $filters
+     * @param array<string, string> $parameters
+     * @return array<string, string>
+     */
+    private function entryFilterQuery(array $filters, array $parameters): array
+    {
+        $query = [];
+        foreach ($parameters as $field => $parameter) {
+            $value = $filters[$field] ?? '';
+            if ($value !== '') {
+                $query[$parameter] = $value;
+            }
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param array<string, string> $query
+     * @param list<string> $removeParameters
+     */
+    private function entriesUrl(array $query, array $removeParameters): string
+    {
+        foreach ($removeParameters as $parameter) {
+            unset($query[$parameter]);
+        }
+
+        return $this->queryUrl('/events/entries', $query);
+    }
+
+    /** @param array<string, string> $query */
+    private function queryUrl(string $path, array $query): string
+    {
+        $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+
+        return $queryString !== '' ? $path . '?' . $queryString : $path;
     }
 
     /**

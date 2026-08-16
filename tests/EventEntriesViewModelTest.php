@@ -146,6 +146,139 @@ final class EventEntriesViewModelTest extends TestCase
         );
     }
 
+    public function testOpponentGroupsMatchEveryCurrentClubAgeAndWeightCombination(): void
+    {
+        Localization::setLocale('it');
+        $olderOwnAthlete = $this->entry(201, 'Delta', 'Atleta', 'F', 35.0, '-36 kg', 'blue');
+        $olderOwnAthlete['birth_date'] = '2018-01-01';
+        $report = EventEntriesViewModel::fromRows([
+            $this->entry(201, 'Alpha', 'Atleta', 'F', 21.5, '-24 kg', 'white'),
+            $this->entry(201, 'Bravo', 'Atleta', 'M', 25.0, '-28 kg', 'yellow'),
+            $olderOwnAthlete,
+            $this->entry(202, 'MatchOne', 'Atleta', 'F', 22.0, '-24kg', 'green'),
+            $this->entry(203, 'MatchTwo', 'Atleta', 'M', 22.5, '-24 kg', 'blue'),
+            $this->entry(202, 'SecondGroup', 'Atleta', 'M', 26.0, '-28 kg', 'orange'),
+            $this->entry(202, 'Unrelated', 'Atleta', 'F', 30.0, '-32 kg', 'brown'),
+        ], [], 201, '-24 kg');
+
+        $groups = $report->opponentGroups();
+
+        self::assertSame(['-24 kg', '-28 kg', '-36 kg'], array_column($groups, 'weightCategory'));
+        self::assertSame([3, 2, 1], array_map(
+            static fn(array $group): int => count($group['athletes']),
+            $groups
+        ));
+        self::assertSame(
+            ['Alpha Atleta', 'MatchOne Atleta', 'MatchTwo Atleta'],
+            array_column($groups[0]['athletes'], 'athlete_name')
+        );
+        self::assertSame(
+            [true, false, false],
+            array_column($groups[0]['athletes'], 'is_current_club')
+        );
+        self::assertSame(['Delta Atleta'], array_column($groups[2]['athletes'], 'athlete_name'));
+        self::assertSame(
+            ['-24 kg', '-28 kg', '-36 kg'],
+            array_column($report->opponentGroups(['age_class' => 'anni']), 'weightCategory')
+        );
+        self::assertSame(
+            ['-28 kg'],
+            array_column($report->opponentGroups(['weight_category' => '-28']), 'weightCategory')
+        );
+        self::assertSame(
+            ['-24 kg'],
+            array_column($report->opponentGroups(['athlete' => 'matchone']), 'weightCategory')
+        );
+        self::assertSame(
+            ['-24 kg', '-28 kg'],
+            array_column($report->opponentGroups(['club' => 'club 202']), 'weightCategory')
+        );
+        self::assertSame(
+            ['-24 kg', '-36 kg'],
+            array_column($report->opponentGroups(['gender' => 'femmina']), 'weightCategory')
+        );
+        self::assertSame(
+            ['-24 kg'],
+            array_column($report->opponentGroups(['belt' => 'verde']), 'weightCategory')
+        );
+        self::assertSame(
+            ['-24 kg', '-28 kg', '-36 kg'],
+            array_column($report->opponentGroups(['club' => 'club 201']), 'weightCategory')
+        );
+        self::assertSame([], $report->opponentGroups(['athlete' => 'missing']));
+        self::assertCount(1, $report->currentClubEntries);
+    }
+
+    public function testEveryVisibleEntryColumnCanBeFilteredCaseInsensitively(): void
+    {
+        Localization::setLocale('it');
+        $clubs = [
+            ['id' => 201, 'club_name' => 'Club Uno', 'federal_code' => 'ONE'],
+            ['id' => 202, 'club_name' => 'Club Due', 'federal_code' => 'TWO'],
+        ];
+        $olderAthlete = $this->entry(202, 'Charlie', 'Atleta', 'M', 31.0, '-32 kg', 'yellow');
+        $olderAthlete['birth_date'] = '2018-01-01';
+        $report = EventEntriesViewModel::fromRows([
+            $this->entry(201, 'Alpha', 'Atleta', 'F', 21.5, '-24 kg', 'white'),
+            $this->entry(201, 'Bravo', 'Atleta', 'M', 25.0, '-28 kg', 'green'),
+            $olderAthlete,
+        ], $clubs, 201);
+
+        $sharedFilters = [
+            'age_class' => ['fAnCiUlLi', 'Charlie Atleta'],
+            'weight_category' => ['-28 KG', 'Bravo Atleta'],
+            'athlete' => ['cHaRlIe', 'Charlie Atleta'],
+            'club' => ['club 202', 'Charlie Atleta'],
+            'gender' => ['fEmMiNa', 'Alpha Atleta'],
+            'belt' => ['vErDe', 'Bravo Atleta'],
+        ];
+        foreach ($sharedFilters as $field => [$filter, $athleteName]) {
+            self::assertSame(
+                [$athleteName],
+                array_column($report->filteredEntries([$field => $filter]), 'athlete_name'),
+                $field
+            );
+        }
+
+        $currentClubFilters = [
+            'athlete' => 'alpha',
+            'gender' => 'femmina',
+            'weight' => '21.5',
+            'weight_category' => '-24 kg',
+            'belt' => 'bianca',
+        ];
+        foreach ($currentClubFilters as $field => $filter) {
+            self::assertSame(
+                ['Alpha Atleta'],
+                array_column(
+                    $report->filteredCurrentClubEntries([$field => $filter]),
+                    'athlete_name'
+                ),
+                $field
+            );
+        }
+
+        $clubFilters = [
+            'club' => ['uno', 201],
+            'federal_code' => ['two', 202],
+            'athletes' => ['2', 201],
+            'breakdown' => ['verde: 1', 201],
+        ];
+        foreach ($clubFilters as $field => [$filter, $clubId]) {
+            self::assertSame(
+                [$clubId],
+                array_column($report->filteredClubs([$field => $filter]), 'id'),
+                $field
+            );
+        }
+
+        self::assertSame([], $report->filteredEntries([
+            'athlete' => 'Alpha',
+            'gender' => 'Maschio',
+        ]));
+        self::assertCount(3, $report->filteredEntries(['not_a_column' => 'ignored']));
+    }
+
     /** @return array<string, mixed> */
     private function entry(
         int $clubId,

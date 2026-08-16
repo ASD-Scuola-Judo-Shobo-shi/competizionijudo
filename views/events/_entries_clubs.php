@@ -5,11 +5,53 @@
 /** @var bool $canViewEntryBreakdowns */
 /** @var list<array<string, mixed>> $entryClubs */
 /** @var array{page:int, per_page:int, total:int, last_page:int, offset:int, links:string} $entryClubsPagination */
+/** @var array<string, string> $entryClubFilters */
+/** @var array<string, string> $entriesQueryState */
+/** @var string $entryClubsFilterResetUrl */
+$tableFilterId = 'entry-clubs';
+$tableFilterLabel = __('events.entries_filter_table', [
+    'table' => __('events.entries_clubs_heading'),
+]);
+$tableFilterFields = [
+    [
+        'name' => 'clubs_filter_club',
+        'label' => __('events.entries_club'),
+        'value' => $entryClubFilters['club'] ?? '',
+    ],
+    [
+        'name' => 'clubs_filter_federal_code',
+        'label' => __('events.entries_code'),
+        'value' => $entryClubFilters['federal_code'] ?? '',
+    ],
+    [
+        'name' => 'clubs_filter_athletes',
+        'label' => __('events.entries_athletes'),
+        'value' => $entryClubFilters['athletes'] ?? '',
+        'inputmode' => 'numeric',
+    ],
+];
+if ($canViewEntryBreakdowns) {
+    $tableFilterFields[] = [
+        'name' => 'clubs_filter_breakdown',
+        'label' => __('events.entries_club_breakdown'),
+        'value' => $entryClubFilters['breakdown'] ?? '',
+    ];
+}
+$tableFilterState = $entriesQueryState;
+$tableFilterResetUrl = $entryClubsFilterResetUrl;
+$tableFilterDownloadUrl = null;
+$entryClubFiltersActive = count(array_filter(
+    $entryClubFilters,
+    static fn(string $value): bool => $value !== ''
+)) > 0;
 ?>
 
 <section class="card">
     <h2><?= e(__('events.entries_clubs_heading')) ?></h2>
-    <?php if ($entryClubs === [] && $entryReport->entries === []) : ?>
+    <?php require __DIR__ . '/_entries_table_filters.php'; ?>
+    <?php if ($entryClubs === [] && $entryClubFiltersActive) : ?>
+        <p><?= e(__('events.entries_no_filter_results')) ?></p>
+    <?php elseif ($entryClubs === [] && $entryReport->entries === []) : ?>
         <p><?= e(__('club.area.no_entries')) ?></p>
     <?php elseif ($entryClubs === []) : ?>
         <p><?= e(__('events.entries_no_clubs')) ?></p>

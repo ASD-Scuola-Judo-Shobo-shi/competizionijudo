@@ -97,13 +97,14 @@ final class EventEntriesViewModel
         public readonly array $athleteGroups,
         public readonly array $currentClubEntries,
         public readonly array $currentClubWeightCategories,
-        public readonly string $selectedWeightCategory
+        public readonly string $selectedWeightCategory,
+        private readonly ?int $currentClubId
     ) {
     }
 
     public static function empty(): self
     {
-        return new self([], [], [], [], [], [], [], [], '');
+        return new self([], [], [], [], [], [], [], [], '', null);
     }
 
     /**
@@ -239,7 +240,8 @@ final class EventEntriesViewModel
             $athleteGroups,
             $currentClubEntries,
             $weightCategories,
-            $selectedWeightCategory
+            $selectedWeightCategory,
+            $currentClubId
         );
     }
 
@@ -265,6 +267,147 @@ final class EventEntriesViewModel
         });
 
         return $categories;
+    }
+
+    /**
+     * @param array<string, string> $filters
+     * @return list<array<string, mixed>>
+     */
+    public function filteredClubs(array $filters): array
+    {
+        return array_values(array_filter(
+            $this->clubs,
+            fn(array $club): bool => $this->clubMatchesFilters($club, $filters)
+        ));
+    }
+
+    /**
+     * @param array<string, string> $filters
+     * @return list<array<string, mixed>>
+     */
+    public function filteredEntries(array $filters): array
+    {
+        return array_values(array_filter(
+            $this->entries,
+            static fn(array $entry): bool => self::entryMatchesFilters($entry, $filters)
+        ));
+    }
+
+    /**
+     * @param array<string, string> $filters
+     * @return list<array<string, mixed>>
+     */
+    public function filteredCurrentClubEntries(array $filters): array
+    {
+        return array_values(array_filter(
+            $this->currentClubEntries,
+            static fn(array $entry): bool => self::entryMatchesFilters($entry, $filters)
+        ));
+    }
+
+    /**
+     * Build each current-club competition group with its potential opponents.
+     *
+     * Group filters apply to the age class and weight category headings. Athlete,
+     * club, gender, and belt filters apply to every athlete row within each group.
+     *
+     * @param array<string, string> $filters
+     * @return list<array{
+     *     ageClass:string,
+     *     weightCategory:string,
+     *     ageMin:int,
+     *     athletes:list<array<string, mixed>>
+     * }>
+     */
+    public function opponentGroups(array $filters = []): array
+    {
+        if ($this->currentClubId === null) {
+            return [];
+        }
+
+        $groups = [];
+        foreach ($this->entries as $entry) {
+            if ((int) ($entry['club_id'] ?? 0) !== $this->currentClubId) {
+                continue;
+            }
+            $key = self::competitionGroupKey($entry);
+            $groups[$key] ??= [
+                'ageClass' => (string) ($entry['age_category'] ?? ''),
+                'weightCategory' => (string) ($entry['weight_label'] ?? ''),
+                'ageMin' => (int) ($entry['age_min'] ?? PHP_INT_MAX),
+                'athletes' => [],
+            ];
+            $entry['is_current_club'] = true;
+            $groups[$key]['athletes'][] = $entry;
+        }
+
+        foreach ($this->entries as $entry) {
+            if ((int) ($entry['club_id'] ?? 0) === $this->currentClubId) {
+                continue;
+            }
+            $key = self::competitionGroupKey($entry);
+            if (isset($groups[$key])) {
+                $entry['is_current_club'] = false;
+                $groups[$key]['athletes'][] = $entry;
+            }
+        }
+
+        $groupFilters = [
+            'age_class' => $filters['age_class'] ?? '',
+            'weight_category' => $filters['weight_category'] ?? '',
+        ];
+        $rowFilters = [
+            'athlete' => $filters['athlete'] ?? '',
+            'club' => $filters['club'] ?? '',
+            'gender' => $filters['gender'] ?? '',
+            'belt' => $filters['belt'] ?? '',
+        ];
+
+        $filteredGroups = [];
+        foreach ($groups as $group) {
+            $representative = $group['athletes'][0];
+            if (!self::entryMatchesFilters($representative, $groupFilters)) {
+                continue;
+            }
+
+            $athletes = array_values(array_filter(
+                $group['athletes'],
+                static fn(array $entry): bool => self::entryMatchesFilters($entry, $rowFilters)
+            ));
+            if ($athletes === []) {
+                continue;
+            }
+
+            $currentClubAthletes = [];
+            $opponents = [];
+            foreach ($athletes as $athlete) {
+                if ($athlete['is_current_club'] === true) {
+                    $currentClubAthletes[] = $athlete;
+                    continue;
+                }
+                $opponents[] = $athlete;
+            }
+            $group['athletes'] = array_merge(
+                $this->sortedEntries($currentClubAthletes, 'athlete', 'asc'),
+                $this->sortedEntries($opponents, 'club', 'asc')
+            );
+            $filteredGroups[] = $group;
+        }
+
+        usort($filteredGroups, static function (array $left, array $right): int {
+            $byAge = $left['ageMin'] <=> $right['ageMin'];
+            if ($byAge !== 0) {
+                return $byAge;
+            }
+            $byWeight = self::weightCategoryValue($left['weightCategory'])
+                <=> self::weightCategoryValue($right['weightCategory']);
+
+            return $byWeight !== 0
+                ? $byWeight
+                : strcasecmp($left['weightCategory'], $right['weightCategory']);
+        });
+
+        return $filteredGroups;
     }
 
     /**
@@ -310,10 +453,13 @@ final class EventEntriesViewModel
         return $groups;
     }
 
-    /** @return list<array<string, mixed>> */
-    public function sortedClubs(string $sort, string $direction): array
+    /**
+     * @param list<array<string, mixed>>|null $clubs
+     * @return list<array<string, mixed>>
+     */
+    public function sortedClubs(string $sort, string $direction, ?array $clubs = null): array
     {
-        $clubs = $this->clubs;
+        $clubs ??= $this->clubs;
         usort($clubs, function (array $left, array $right) use ($sort, $direction): int {
             $leftId = (int) ($left['id'] ?? 0);
             $rightId = (int) ($right['id'] ?? 0);
@@ -350,14 +496,16 @@ final class EventEntriesViewModel
      *     ageMin:int,
      *     athletes:list<array<string, mixed>>
      * }>
+     * @param list<array<string, mixed>>|null $entries
      */
     public function athleteGroupsSortedPage(
         string $sort,
         string $direction,
         int $offset,
-        int $limit
+        int $limit,
+        ?array $entries = null
     ): array {
-        $entries = $this->sortedEntries($this->entries, $sort, $direction);
+        $entries = $this->sortedEntries($entries ?? $this->entries, $sort, $direction);
         $entries = array_slice($entries, max(0, $offset), max(1, $limit));
         $groups = [];
 
@@ -384,10 +532,136 @@ final class EventEntriesViewModel
         return $groups;
     }
 
-    /** @return list<array<string, mixed>> */
-    public function sortedCurrentClubEntries(string $sort, string $direction): array
+    /**
+     * @param list<array<string, mixed>>|null $entries
+     * @return list<array<string, mixed>>
+     */
+    public function sortedCurrentClubEntries(
+        string $sort,
+        string $direction,
+        ?array $entries = null
+    ): array {
+        return $this->sortedEntries($entries ?? $this->currentClubEntries, $sort, $direction);
+    }
+
+    /**
+     * @param array<string, mixed> $club
+     * @param array<string, string> $filters
+     */
+    private function clubMatchesFilters(array $club, array $filters): bool
     {
-        return $this->sortedEntries($this->currentClubEntries, $sort, $direction);
+        $clubId = (int) ($club['id'] ?? 0);
+        foreach ($filters as $field => $filter) {
+            $filter = trim($filter);
+            if ($filter === '') {
+                continue;
+            }
+
+            $values = match ($field) {
+                'club' => [(string) ($club['club_name'] ?? '')],
+                'federal_code' => [(string) ($club['federal_code'] ?? '')],
+                'athletes' => [(string) ($this->clubAthleteCounts[$clubId] ?? 0)],
+                'breakdown' => $this->clubBreakdownFilterValues($clubId),
+                default => null,
+            };
+            if ($values !== null && !self::filterMatchesAnyValue($filter, $values)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** @return list<string> */
+    private function clubBreakdownFilterValues(int $clubId): array
+    {
+        $values = [];
+        foreach ($this->dimensions as $dimension) {
+            $counts = $dimension['clubCounts'][$clubId] ?? [];
+            $values[] = (string) $dimension['title'];
+            foreach ($dimension['segments'] as $segment) {
+                $count = (int) ($counts[$segment['label']] ?? 0);
+                if ($count <= 0) {
+                    continue;
+                }
+                $displayLabel = (string) $segment['displayLabel'];
+                $values[] = (string) $segment['label'];
+                $values[] = $displayLabel;
+                $values[] = (string) $count;
+                $values[] = $displayLabel . ': ' . $count;
+            }
+        }
+
+        return $values;
+    }
+
+    /** @param array<string, mixed> $entry */
+    private static function competitionGroupKey(array $entry): string
+    {
+        $ageKey = trim((string) ($entry['age_key'] ?? ''));
+        if ($ageKey === '') {
+            $ageKey = mb_strtolower(trim((string) ($entry['age_category'] ?? '')), 'UTF-8');
+        }
+        $weightKey = mb_strtolower(trim((string) ($entry['weight_category'] ?? '')), 'UTF-8');
+        $weightKey = preg_replace('/\s+/u', '', $weightKey) ?? $weightKey;
+        $weightKey = preg_replace('/kg$/u', '', $weightKey) ?? $weightKey;
+
+        return $ageKey . "\0" . $weightKey;
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     * @param array<string, string> $filters
+     */
+    private static function entryMatchesFilters(array $entry, array $filters): bool
+    {
+        foreach ($filters as $field => $filter) {
+            $filter = trim($filter);
+            if ($filter === '') {
+                continue;
+            }
+
+            $values = match ($field) {
+                'age_class' => [(string) ($entry['age_category'] ?? '')],
+                'weight_category' => [
+                    (string) ($entry['weight_category'] ?? ''),
+                    (string) ($entry['weight_label'] ?? ''),
+                ],
+                'athlete' => [
+                    (string) ($entry['athlete_name'] ?? ''),
+                    (string) ($entry['last_name'] ?? ''),
+                    (string) ($entry['first_name'] ?? ''),
+                ],
+                'club' => [(string) ($entry['club_name'] ?? '')],
+                'gender' => [
+                    (string) ($entry['gender'] ?? ''),
+                    (string) ($entry['gender_label'] ?? ''),
+                ],
+                'weight' => [(string) ($entry['weight_display'] ?? '')],
+                'belt' => [
+                    (string) ($entry['belt'] ?? ''),
+                    (string) ($entry['belt_label'] ?? ''),
+                ],
+                default => null,
+            };
+            if ($values !== null && !self::filterMatchesAnyValue($filter, $values)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** @param list<string> $values */
+    private static function filterMatchesAnyValue(string $filter, array $values): bool
+    {
+        foreach ($values as $value) {
+            if (mb_stripos($value, $filter, 0, 'UTF-8') !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

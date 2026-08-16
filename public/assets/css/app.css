@@ -1105,6 +1105,12 @@ tr.club-row--current td {
     border-radius: 12px;
 }
 
+.club-badge--icon {
+    min-width: 2rem;
+    padding-inline: 6px;
+    text-align: center;
+}
+
 /* Accessibility */
 .skip-link {
     position: absolute;
@@ -2761,16 +2767,59 @@ html[data-theme="dark"] .theme-toggle:hover .theme-toggle-icon {
     margin-top: 1rem;
 }
 
-.closed-event-club-filter {
+.table-filter-form {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) auto auto;
     gap: 12px;
-    align-items: end;
     margin: 18px 0 12px;
+    padding: 14px;
+    border: 1px solid #d8e1ed;
+    border-radius: 10px;
+    background: #f7f9fc;
 }
 
-.closed-event-club-filter__field label {
+.table-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    gap: 12px;
+}
+
+.table-filter-field {
+    min-width: 0;
+}
+
+.table-filter-field label {
     margin-bottom: 6px;
+}
+
+.table-filter-field input,
+.table-filter-field select {
+    width: 100%;
+    margin: 0;
+}
+
+.table-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.opponent-groups {
+    display: grid;
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.opponent-group {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid #d8e1ed;
+    border-radius: 10px;
+    background: #f7f9fc;
+}
+
+.opponent-group h3 {
+    margin: 0 0 8px;
 }
 
 .closed-event-club-entries__count {
@@ -2899,8 +2948,8 @@ html[data-theme="dark"] .theme-toggle:hover .theme-toggle-icon {
 }
 
 @media (max-width: 700px) {
-    .closed-event-club-filter {
-        grid-template-columns: 1fr;
+    .table-filter-actions .btn {
+        flex: 1 1 150px;
     }
 
     .entries-category-weight-chart {
@@ -3149,6 +3198,16 @@ html[data-theme="dark"] .entries-chart-card {
     border-color: #526b8d;
     background: #172841;
     box-shadow: 0 5px 14px rgba(0, 0, 0, .22);
+}
+
+html[data-theme="dark"] .table-filter-form {
+    border-color: #405675;
+    background: #203653;
+}
+
+html[data-theme="dark"] .opponent-group {
+    border-color: #405675;
+    background: #172841;
 }
 
 html[data-theme="dark"] .entries-category-weight-chart {

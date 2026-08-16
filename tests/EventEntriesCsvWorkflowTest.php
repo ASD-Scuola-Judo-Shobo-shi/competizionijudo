@@ -118,24 +118,31 @@ final class EventEntriesCsvWorkflowTest extends TestCase
         ], $rows[1]);
     }
 
-    public function testClubCanExportOnlyItsClosedEventEntriesForTheSelectedWeight(): void
+    public function testClubCanExportOnlyItsClosedEventEntriesForTheSelectedTableFilters(): void
     {
         $this->database->exec(
             "INSERT INTO clubs (id, federal_code, name, approved_at) VALUES (202, 'SYN-202', 'Foreign Club', '2026-01-01 00:00:00');
              INSERT INTO athletes
                 (id, last_name, first_name, gender, birth_date, weight_kg, belt, membership_number)
-             VALUES (302, 'Foreign', 'Athlete', 'F', '2012-06-07', 42, 'blue', 'FOREIGN-001');
+             VALUES (302, 'Foreign', 'Athlete', 'F', '2012-06-07', 42, 'blue', 'FOREIGN-001'),
+                    (303, 'Other', 'Own', 'F', '2012-08-09', 42, 'yellow', 'OTHER-001');
              INSERT INTO entries
                 (id, event_id, club_id, athlete_id, snapshot_last_name, snapshot_first_name, snapshot_gender,
                  snapshot_weight_kg, snapshot_belt, snapshot_membership_number, snapshot_birth_date,
                  snapshot_program, snapshot_weight_category)
              VALUES (802, 701, 202, 302, 'Foreign', 'Athlete', 'F', 42, 'blue', 'FOREIGN-001',
-                     '2012-06-07', 'competitive', '-42 kg')"
+                     '2012-06-07', 'competitive', '-42 kg'),
+                    (803, 701, 201, 303, 'Other', 'Own', 'F', 42, 'yellow', 'OTHER-001',
+                     '2012-08-09', 'competitive', '-42 kg')"
         );
         Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $request = new Request('GET', '/events/entries/export', [
             'event' => '701',
             'weight_category' => '-42 kg',
+            'club_entries_filter_athlete' => 'Snapshot',
+            'club_entries_filter_gender' => 'M',
+            'club_entries_filter_weight' => '42.5',
+            'club_entries_filter_belt' => 'green',
         ]);
 
         $response = (new EventController($this->view, $request))->exportClubEntries($request);
@@ -150,6 +157,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
         self::assertSame('Snapshot', $rows[1][2]);
         self::assertSame("'-42 kg", $rows[1][10]);
         self::assertStringNotContainsString('Foreign', $response->content());
+        self::assertStringNotContainsString('Other', $response->content());
     }
 
     public function testClubEntryExportIsUnavailableUntilTheEventCloses(): void

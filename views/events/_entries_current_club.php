@@ -4,44 +4,61 @@
 /** @var \App\Presentation\EventEntriesViewModel $entryReport */
 /** @var list<array<string, mixed>> $currentClubEntries */
 /** @var array{page:int, per_page:int, total:int, last_page:int, offset:int, links:string} $currentClubPagination */
-/** @var array{column:string, direction:'asc'|'desc'} $currentClubSort */
-/** @var array{column:string, direction:'asc'|'desc'} $entryClubsSort */
-/** @var array{column:string, direction:'asc'|'desc'} $entryAthletesSort */
-$clubExportUrl = '/events/entries/export?event=' . rawurlencode((string) $event->id);
-if ($entryReport->selectedWeightCategory !== '') {
-    $clubExportUrl .= '&weight_category=' . rawurlencode($entryReport->selectedWeightCategory);
+/** @var array<string, string> $currentClubFilters */
+/** @var array<string, string> $entriesQueryState */
+/** @var string $currentClubFilterResetUrl */
+/** @var string $clubEntriesExportUrl */
+$weightCategoryOptions = ['' => __('events.entries_all_weights')];
+foreach ($entryReport->currentClubWeightCategories as $weightCategory) {
+    $weightCategoryOptions[$weightCategory] = $weightCategory;
 }
+$tableFilterId = 'current-club-entries';
+$tableFilterLabel = __('events.entries_filter_table', [
+    'table' => __('events.entries_current_club_title'),
+]);
+$tableFilterFields = [
+    [
+        'name' => 'club_entries_filter_athlete',
+        'label' => __('club.area.table.athlete'),
+        'value' => $currentClubFilters['athlete'] ?? '',
+    ],
+    [
+        'name' => 'club_entries_filter_gender',
+        'label' => __('club.area.table.gender'),
+        'value' => $currentClubFilters['gender'] ?? '',
+    ],
+    [
+        'name' => 'club_entries_filter_weight',
+        'label' => __('club.area.table.weight'),
+        'value' => $currentClubFilters['weight'] ?? '',
+        'inputmode' => 'decimal',
+    ],
+    [
+        'name' => 'weight_category',
+        'label' => __('club.area.table.weight_category'),
+        'value' => $currentClubFilters['weight_category'] ?? '',
+        'options' => $weightCategoryOptions,
+    ],
+    [
+        'name' => 'club_entries_filter_belt',
+        'label' => __('club.area.table.belt'),
+        'value' => $currentClubFilters['belt'] ?? '',
+    ],
+];
+$tableFilterState = $entriesQueryState;
+$tableFilterResetUrl = $currentClubFilterResetUrl;
+$tableFilterDownloadUrl = $clubEntriesExportUrl;
+$currentClubFiltersActive = count(array_filter(
+    $currentClubFilters,
+    static fn(string $value): bool => $value !== ''
+)) > 0;
 ?>
 
 <section class="card closed-event-club-entries">
     <h2><?= e(__('events.entries_current_club_title')) ?></h2>
     <p><?= e(__('events.entries_current_club_help')) ?></p>
 
-    <form method="get" action="<?= e(base_url('/events/entries')) ?>" class="closed-event-club-filter">
-        <input type="hidden" name="event" value="<?= e((string) $event->id) ?>">
-        <input type="hidden" name="club_entries_sort" value="<?= e($currentClubSort['column']) ?>">
-        <input type="hidden" name="club_entries_direction" value="<?= e($currentClubSort['direction']) ?>">
-        <input type="hidden" name="clubs_sort" value="<?= e($entryClubsSort['column']) ?>">
-        <input type="hidden" name="clubs_direction" value="<?= e($entryClubsSort['direction']) ?>">
-        <input type="hidden" name="athletes_sort" value="<?= e($entryAthletesSort['column']) ?>">
-        <input type="hidden" name="athletes_direction" value="<?= e($entryAthletesSort['direction']) ?>">
-        <div class="closed-event-club-filter__field">
-            <label for="club-weight-category"><?= e(__('events.entries_weight_filter')) ?></label>
-            <select id="club-weight-category" name="weight_category">
-                <option value=""><?= e(__('events.entries_all_weights')) ?></option>
-                <?php foreach ($entryReport->currentClubWeightCategories as $weightCategory) : ?>
-                    <option
-                        value="<?= e($weightCategory) ?>"
-                        <?= $entryReport->selectedWeightCategory === $weightCategory ? 'selected' : '' ?>
-                    ><?= e($weightCategory) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <button class="btn" type="submit"><?= e(__('events.entries_apply_weight_filter')) ?></button>
-        <a class="btn green" href="<?= e(base_url($clubExportUrl)) ?>">
-            <?= e(__('events.entries_download_filtered')) ?>
-        </a>
-    </form>
+    <?php require __DIR__ . '/_entries_table_filters.php'; ?>
 
     <p class="closed-event-club-entries__count">
         <?= e(__('events.entries_filtered_count', [
@@ -49,7 +66,9 @@ if ($entryReport->selectedWeightCategory !== '') {
         ])) ?>
     </p>
 
-    <?php if ($currentClubEntries === []) : ?>
+    <?php if ($currentClubEntries === [] && $currentClubFiltersActive) : ?>
+        <p><?= e(__('events.entries_no_filter_results')) ?></p>
+    <?php elseif ($currentClubEntries === []) : ?>
         <p><?= e(__('club.area.no_entries')) ?></p>
     <?php else : ?>
         <div

@@ -677,6 +677,8 @@ final class EventLifecycleTest extends TestCase
         self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
         self::assertStringNotContainsString(__('events.entries_class_weight_breakdown'), $response->content());
         self::assertStringNotContainsString(__('events.entries_club_breakdown'), $response->content());
+        self::assertStringNotContainsString('name="clubs_filter_breakdown"', $response->content());
+        self::assertStringNotContainsString('closed-event-opponents', $response->content());
         self::assertStringNotContainsString('OwnFamily OwnGiven', $response->content());
     }
 
@@ -701,7 +703,7 @@ final class EventLifecycleTest extends TestCase
         ]);
 
         self::assertSame(200, $response->status());
-        self::assertSame(2, substr_count($response->content(), 'Paged50 Athlete'));
+        self::assertSame(3, substr_count($response->content(), 'Paged50 Athlete'));
         self::assertStringContainsString('athletes_page=1', $response->content());
         self::assertStringContainsString('club_entries_page=1', $response->content());
     }
@@ -725,6 +727,104 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString(e(__('events.entries_shared_roster_help')), $response->content());
         self::assertStringContainsString('href="/privacy"', $response->content());
         self::assertStringContainsString('href="/terms"', $response->content());
+        self::assertStringContainsString('closed-event-opponents', $response->content());
+    }
+
+    public function testClosedEntriesGroupOtherClubOpponentsAfterTheCurrentClubTable(): void
+    {
+        $this->insertEvent(closed: true);
+        $this->database->prepare(
+            'INSERT INTO athletes (
+                id, club_id, last_name, first_name, gender, birth_date,
+                weight_kg, weight_category, belt, program, membership_number, notes
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([
+            304,
+            202,
+            'MatchedForeign',
+            'Opponent',
+            'M',
+            '2012-01-01',
+            40.0,
+            '-40',
+            'yellow',
+            'competitive',
+            'MATCHED-FOREIGN',
+            null,
+        ]);
+        $statement = $this->database->prepare(
+            'INSERT INTO entries (
+                event_id, club_id, athlete_id, snapshot_weight_kg, snapshot_weight_category
+             ) VALUES (?, ?, ?, ?, ?)'
+        );
+        $statement->execute([101, 201, 301, null, null]);
+        $statement->execute([101, 201, 303, 55, '-55 kg']);
+        $statement->execute([101, 202, 302, null, null]);
+        $statement->execute([101, 202, 304, null, null]);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $response = $this->dispatchEntries(['event' => '101']);
+
+        self::assertSame(200, $response->status());
+        $currentClubPosition = strpos($response->content(), 'class="card closed-event-club-entries"');
+        $opponentsPosition = strpos($response->content(), 'class="card closed-event-opponents"');
+        $clubsPosition = strpos($response->content(), e(__('events.entries_clubs_heading')));
+        self::assertIsInt($currentClubPosition);
+        self::assertIsInt($opponentsPosition);
+        self::assertIsInt($clubsPosition);
+        self::assertLessThan($opponentsPosition, $currentClubPosition);
+        self::assertLessThan($clubsPosition, $opponentsPosition);
+
+        preg_match(
+            '/<section class="card closed-event-opponents">(?<opponents>.*?)<\/section>/s',
+            $response->content(),
+            $matches
+        );
+        $opponentsSection = (string) ($matches['opponents'] ?? '');
+        self::assertSame(2, substr_count($opponentsSection, 'class="responsive-table opponent-table"'));
+        self::assertStringContainsString('-42 kg', $opponentsSection);
+        self::assertStringContainsString('-55 kg', $opponentsSection);
+        self::assertStringContainsString('OwnFamily OwnGiven', $opponentsSection);
+        self::assertStringContainsString('FailureFamily FailureGiven', $opponentsSection);
+        self::assertStringContainsString('MatchedForeign Opponent', $opponentsSection);
+        self::assertStringNotContainsString('ForeignFamily ForeignGiven', $opponentsSection);
+        self::assertSame(2, substr_count($opponentsSection, 'class="club-row--current"'));
+        self::assertSame(
+            2,
+            substr_count($opponentsSection, 'class="club-badge--current club-badge--icon"')
+        );
+        self::assertSame(2, substr_count($opponentsSection, '>👥</span>'));
+        self::assertStringContainsString('data-client-pagination="50"', $opponentsSection);
+
+        $filteredResponse = $this->dispatchEntries([
+            'event' => '101',
+            'opponents_filter_age_class' => 'Esordienti',
+            'opponents_filter_weight_category' => '-42',
+            'opponents_filter_athlete' => 'MatchedForeign',
+            'opponents_filter_club' => 'Foreign',
+            'opponents_filter_gender' => 'Maschio',
+            'opponents_filter_belt' => 'Gialla',
+        ]);
+        preg_match(
+            '/<section class="card closed-event-opponents">(?<opponents>.*?)<\/section>/s',
+            $filteredResponse->content(),
+            $filteredMatches
+        );
+        $filteredSection = (string) ($filteredMatches['opponents'] ?? '');
+        self::assertSame(1, substr_count($filteredSection, 'class="responsive-table opponent-table"'));
+        self::assertStringContainsString('MatchedForeign Opponent', $filteredSection);
+        self::assertStringNotContainsString('-55 kg', $filteredSection);
+        $filterNames = [
+            'opponents_filter_age_class',
+            'opponents_filter_weight_category',
+            'opponents_filter_athlete',
+            'opponents_filter_club',
+            'opponents_filter_gender',
+            'opponents_filter_belt',
+        ];
+        foreach ($filterNames as $filterName) {
+            self::assertStringContainsString('name="' . $filterName . '"', $filteredSection);
+        }
     }
 
     public function testClubMustAcceptCurrentAgreementsBeforeViewingOtherClubsAthletes(): void
@@ -744,6 +844,9 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
         self::assertStringNotContainsString('ForeignFamily ForeignGiven', $response->content());
         self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
+        self::assertStringNotContainsString('name="athletes_filter_athlete"', $response->content());
+        self::assertStringNotContainsString('closed-event-opponents', $response->content());
+        self::assertStringNotContainsString('name="opponents_filter_athlete"', $response->content());
         self::assertStringContainsString(
             e(__('events.entries_roster_agreements_required')),
             $response->content()
@@ -783,6 +886,7 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
         self::assertStringNotContainsString('ForeignFamily ForeignGiven', $response->content());
         self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
+        self::assertStringNotContainsString('closed-event-opponents', $response->content());
         self::assertStringNotContainsString(
             __('events.entries_roster_agreements_required'),
             $response->content()
@@ -806,6 +910,7 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
         self::assertStringContainsString('ForeignFamily ForeignGiven', $response->content());
         self::assertStringContainsString(__('events.entries_athletes_heading'), $response->content());
+        self::assertStringNotContainsString('closed-event-opponents', $response->content());
     }
 
     public function testClosedEntriesCanFilterTheCurrentClubByWeightCategory(): void
@@ -847,6 +952,136 @@ final class EventLifecycleTest extends TestCase
         );
     }
 
+    public function testClosedEntryTablesExposeAndApplyAFilterForEveryVisibleColumn(): void
+    {
+        $this->insertEvent(closed: true);
+        $insert = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        $insert->execute([101, 201, 301]);
+        $insert->execute([101, 201, 303]);
+        $insert->execute([101, 202, 302]);
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $response = $this->dispatchEntries([
+            'event' => '101',
+            'clubs_filter_club' => 'Foreign',
+            'clubs_filter_federal_code' => 'FOREIGN',
+            'clubs_filter_athletes' => '1',
+            'clubs_filter_breakdown' => 'Femmina: 1',
+            'athletes_filter_age_class' => 'Esordienti',
+            'athletes_filter_weight_category' => '-40 kg',
+            'athletes_filter_athlete' => 'ForeignFamily',
+            'athletes_filter_club' => 'Foreign',
+            'athletes_filter_gender' => 'Femmina',
+            'athletes_filter_belt' => 'Bianca',
+            'club_entries_filter_athlete' => 'OwnFamily',
+            'club_entries_filter_gender' => 'Maschio',
+            'club_entries_filter_weight' => '40',
+            'weight_category' => '-42 kg',
+            'club_entries_filter_belt' => 'Bianca',
+        ]);
+
+        self::assertSame(200, $response->status());
+        $filterNames = [
+            'clubs_filter_club',
+            'clubs_filter_federal_code',
+            'clubs_filter_athletes',
+            'clubs_filter_breakdown',
+            'athletes_filter_age_class',
+            'athletes_filter_weight_category',
+            'athletes_filter_athlete',
+            'athletes_filter_club',
+            'athletes_filter_gender',
+            'athletes_filter_belt',
+            'club_entries_filter_athlete',
+            'club_entries_filter_gender',
+            'club_entries_filter_weight',
+            'weight_category',
+            'club_entries_filter_belt',
+        ];
+        foreach ($filterNames as $filterName) {
+            self::assertStringContainsString('name="' . $filterName . '"', $response->content());
+        }
+
+        $clubsHeading = preg_quote(e(__('events.entries_clubs_heading')), '/');
+        $athletesHeading = preg_quote(e(__('events.entries_athletes_heading')), '/');
+        self::assertMatchesRegularExpression(
+            '/<section class="card">\s*<h2>' . $clubsHeading
+                . '<\/h2>.*?<tbody>(?<clubs>.*?)<\/tbody>/s',
+            $response->content()
+        );
+        preg_match(
+            '/<section class="card">\s*<h2>' . $clubsHeading
+                . '<\/h2>.*?<tbody>(?<clubs>.*?)<\/tbody>/s',
+            $response->content(),
+            $clubMatches
+        );
+        self::assertStringContainsString('Foreign Club', (string) ($clubMatches['clubs'] ?? ''));
+        self::assertStringNotContainsString('Own Club', (string) ($clubMatches['clubs'] ?? ''));
+
+        $athletesPattern = '/<section class="card">\s*<h2>' . $athletesHeading
+            . '<\/h2>.*?<tbody>(?<athletes>.*?)<\/tbody>/s';
+        self::assertMatchesRegularExpression($athletesPattern, $response->content());
+        preg_match(
+            $athletesPattern,
+            $response->content(),
+            $athleteMatches
+        );
+        self::assertStringContainsString(
+            'ForeignFamily ForeignGiven',
+            (string) ($athleteMatches['athletes'] ?? '')
+        );
+        self::assertStringNotContainsString(
+            'OwnFamily OwnGiven',
+            (string) ($athleteMatches['athletes'] ?? '')
+        );
+
+        preg_match(
+            '/<section class="card closed-event-club-entries">.*?<tbody>'
+                . '(?<current>.*?)<\/tbody>/s',
+            $response->content(),
+            $currentClubMatches
+        );
+        self::assertStringContainsString(
+            'OwnFamily OwnGiven',
+            (string) ($currentClubMatches['current'] ?? '')
+        );
+        self::assertStringNotContainsString(
+            'FailureFamily FailureGiven',
+            (string) ($currentClubMatches['current'] ?? '')
+        );
+        self::assertStringContainsString(
+            'club_entries_filter_athlete=OwnFamily',
+            html_entity_decode($response->content(), ENT_QUOTES | ENT_HTML5, 'UTF-8')
+        );
+    }
+
+    public function testCurrentClubFiltersAreAppliedBeforePagination(): void
+    {
+        $this->insertEvent(closed: true);
+        $entry = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        $entry->execute([101, 201, 301]);
+        for ($index = 1; $index <= 50; $index++) {
+            $athleteId = 499 + $index;
+            $this->insertOwnAthlete($athleteId, sprintf('Paged%02d', $index), 'Athlete');
+            $entry->execute([101, 201, $athleteId]);
+        }
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $response = $this->dispatchEntries([
+            'event' => '101',
+            'club_entries_filter_athlete' => 'OwnFamily',
+            'club_entries_page' => '2',
+        ]);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
+        self::assertStringContainsString(__('events.entries_filtered_count', ['count' => '1']), $response->content());
+    }
+
     public function testCurrentClubWeightToolsAreHiddenWhileTheEventIsOpen(): void
     {
         $today = date('Y-m-d');
@@ -866,6 +1101,7 @@ final class EventLifecycleTest extends TestCase
         self::assertStringNotContainsString('/events/entries/export', $response->content());
         self::assertStringNotContainsString('ForeignFamily ForeignGiven', $response->content());
         self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
+        self::assertStringNotContainsString('closed-event-opponents', $response->content());
     }
 
     public function testClosedEventExceptionRegistrationCreatesAnEntrySnapshot(): void

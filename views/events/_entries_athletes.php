@@ -4,6 +4,52 @@
 /** @var int|null $loggedInClubId */
 /** @var list<array{category:string, weight:string, ageMin:int, athletes:list<array<string, mixed>>}> $entryAthleteGroups */
 /** @var array{page:int, per_page:int, total:int, last_page:int, offset:int, links:string} $entryAthletesPagination */
+/** @var array<string, string> $entryAthleteFilters */
+/** @var array<string, string> $entriesQueryState */
+/** @var string $entryAthletesFilterResetUrl */
+$tableFilterId = 'entry-athletes';
+$tableFilterLabel = __('events.entries_filter_table', [
+    'table' => __('events.entries_athletes_heading'),
+]);
+$tableFilterFields = [
+    [
+        'name' => 'athletes_filter_age_class',
+        'label' => __('club.area.table.age_class'),
+        'value' => $entryAthleteFilters['age_class'] ?? '',
+    ],
+    [
+        'name' => 'athletes_filter_weight_category',
+        'label' => __('club.area.table.weight_category'),
+        'value' => $entryAthleteFilters['weight_category'] ?? '',
+    ],
+    [
+        'name' => 'athletes_filter_athlete',
+        'label' => __('club.area.table.athlete'),
+        'value' => $entryAthleteFilters['athlete'] ?? '',
+    ],
+    [
+        'name' => 'athletes_filter_club',
+        'label' => __('club.area.table.club'),
+        'value' => $entryAthleteFilters['club'] ?? '',
+    ],
+    [
+        'name' => 'athletes_filter_gender',
+        'label' => __('club.area.table.gender'),
+        'value' => $entryAthleteFilters['gender'] ?? '',
+    ],
+    [
+        'name' => 'athletes_filter_belt',
+        'label' => __('club.area.table.belt'),
+        'value' => $entryAthleteFilters['belt'] ?? '',
+    ],
+];
+$tableFilterState = $entriesQueryState;
+$tableFilterResetUrl = $entryAthletesFilterResetUrl;
+$tableFilterDownloadUrl = null;
+$entryAthleteFiltersActive = count(array_filter(
+    $entryAthleteFilters,
+    static fn(string $value): bool => $value !== ''
+)) > 0;
 ?>
 
 <section class="card">
@@ -15,7 +61,10 @@
             <a href="<?= e(base_url('/terms')) ?>"><?= e(__('events.entries_shared_roster_terms')) ?></a>
         </p>
     <?php endif; ?>
-    <?php if ($entryAthleteGroups === []) : ?>
+    <?php require __DIR__ . '/_entries_table_filters.php'; ?>
+    <?php if ($entryAthleteGroups === [] && $entryAthleteFiltersActive) : ?>
+        <p><?= e(__('events.entries_no_filter_results')) ?></p>
+    <?php elseif ($entryAthleteGroups === []) : ?>
         <p><?= e(__('club.area.no_entries')) ?></p>
     <?php else : ?>
         <div
