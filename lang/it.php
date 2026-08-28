@@ -481,6 +481,7 @@ return [
         'entries_download_filtered' => 'Scarica CSV',
         'entries_filtered_count' => 'Atleti visualizzati: {count}',
         'poster_not_available' => 'Locandina non disponibile',
+        'poster_login_required' => 'Accedi come società per vedere la locandina',
         'poster_pdf' => 'Locandina PDF',
         'poster_alt' => 'Locandina evento {name}',
         'download_poster' => 'Locandina',

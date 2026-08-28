@@ -2,6 +2,7 @@
 /** @var array $events */
 /** @var int|null $loggedInClubId */
 /** @var array<int, bool> $eventExceptions */
+/** @var bool $canViewPoster */
 ?>
 <div class="card">
     <?php if (empty($events)) : ?>
@@ -9,6 +10,16 @@
     <?php endif; ?>
 
 <?php foreach ($events as $ev) : ?>
+        <?php
+        $detailsUrl = base_url('/events/details?event=' . (string) $ev->id);
+        $posterUrl = $canViewPoster && $ev->poster_file
+            ? base_url('/events/poster?event=' . (string) $ev->id)
+            : null;
+        $posterExtension = $ev->poster_file
+            ? strtolower(pathinfo($ev->poster_file, PATHINFO_EXTENSION))
+            : '';
+        $isImagePoster = in_array($posterExtension, ['jpg', 'jpeg', 'png'], true);
+        ?>
         <div class="event-card-public">
             <?php if ($ev->closed) : ?>
                 <div class="event-badge-closed event-closed-badge event-closed-badge--corner">
@@ -16,25 +27,29 @@
                 </div>
             <?php endif; ?>
             <div class="event-poster">
-    <?php if ($ev->poster_file) : ?>
-        <?php $ext = strtolower(pathinfo($ev->poster_file, PATHINFO_EXTENSION)); ?>
-        <?php if (in_array($ext, ['jpg', 'jpeg', 'png'], true)) : ?>
-                    <a href="<?= e(base_url((string) $ev->poster_file)) ?>" target="_blank">
-                        <img src="<?= e(base_url((string) $ev->poster_file)) ?>" alt="<?= e(__('events.poster_alt', ['name' => $ev->name])) ?>">
-                    </a>
-        <?php else : ?>
-                    <div class="poster-pdf">
-                        <strong><?= e(__('events.poster_pdf')) ?></strong><br>
-                        <a class="btn orange" href="<?= e(base_url((string) $ev->poster_file)) ?>" target="_blank" download><?= e(__('events.download_poster')) ?></a>
-                    </div>
-        <?php endif; ?>
-    <?php else : ?>
-                <div class="poster-placeholder">
-                    <span class="poster-placeholder-label">
-                        <strong><?= e(__('events.poster_not_available')) ?></strong>
-                    </span>
-                </div>
-    <?php endif; ?>
+                <a
+                    class="event-poster-link"
+                    href="<?= e($detailsUrl) ?>"
+                    aria-label="<?= e(__('events.details') . ': ' . $ev->name) ?>"
+                >
+                    <?php if ($posterUrl && $isImagePoster) : ?>
+                        <img src="<?= e($posterUrl) ?>" alt="<?= e(__('events.poster_alt', ['name' => $ev->name])) ?>">
+                    <?php elseif ($posterUrl) : ?>
+                        <span class="poster-pdf">
+                            <strong><?= e(__('events.poster_pdf')) ?></strong>
+                        </span>
+                    <?php else : ?>
+                        <span class="poster-placeholder">
+                            <span class="poster-placeholder-label">
+                                <strong>
+                                    <?= e($ev->poster_file
+                                        ? __('events.poster_login_required')
+                                        : __('events.poster_not_available')) ?>
+                                </strong>
+                            </span>
+                        </span>
+                    <?php endif; ?>
+                </a>
             </div>
 
             <div class="event-info">

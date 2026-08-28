@@ -52,6 +52,7 @@ return static function (App\Core\Router $router): void {
     // Events managed by MVC
     $router->get('/events', [EventController::class, 'index']);
     $router->get('/events/details', [EventController::class, 'details']);
+    $router->get('/events/poster', [EventController::class, 'poster'], AuthContext::CLUB);
     $router->get('/events/entries', [EventController::class, 'entries']);
     $router->get('/events/entries/export', [EventController::class, 'exportClubEntries'], AuthContext::CLUB);
     $router->get('/events/register', [EventController::class, 'register'], AuthContext::CLUB);
@@ -71,6 +72,7 @@ return static function (App\Core\Router $router): void {
     $router->post('/admin/clubs/delete', [\App\Controller\AdminController::class, 'deleteClub'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/events/poster', [EventController::class, 'poster'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events', [\App\Controller\AdminController::class, 'manageEvents'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/update-inline', [\App\Controller\AdminController::class, 'updateEventInline'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/export', [\App\Controller\AdminController::class, 'exportEventEntries'], AuthContext::ADMINISTRATOR);

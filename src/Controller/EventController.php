@@ -22,6 +22,7 @@ use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
 use App\Presentation\EventEntriesViewModel;
 use App\Service\EventEntriesCsvTransfer;
+use App\Service\EventUploadStorage;
 use App\Service\ClubQuota;
 use App\Service\PasswordResetMailer;
 use App\Service\PasswordResetMailerFactory;
@@ -64,14 +65,17 @@ final class EventController extends Controller
         'gender' => 'opponents_filter_gender',
         'belt' => 'opponents_filter_belt',
     ];
+    private readonly EventUploadStorage $eventUploadStorage;
 
     public function __construct(
         View $view,
         Request $request,
         ?Logger $logger = null,
-        private ?PasswordResetMailer $registrationMailer = null
+        private ?PasswordResetMailer $registrationMailer = null,
+        ?EventUploadStorage $eventUploadStorage = null
     ) {
         parent::__construct($view, $request, $logger);
+        $this->eventUploadStorage = $eventUploadStorage ?? new EventUploadStorage();
     }
 
     public function index(Request $request): Response
@@ -85,6 +89,7 @@ final class EventController extends Controller
             'title' => __('nav.events'),
             'events' => $events,
             'canViewEntries' => $this->canViewEntries(),
+            'canViewPoster' => $loggedInClubId !== null,
             'loggedInClubId' => $loggedInClubId !== null ? (int) $loggedInClubId : null,
             'eventExceptions' => $this->resolveEventExceptions($events),
         ]);
@@ -117,6 +122,7 @@ final class EventController extends Controller
                 'upcomingEvents' => $upcomingEvents,
                 'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
                 'canViewEntries' => $this->canViewEntries(),
+                'canViewPoster' => $clubId !== null,
                 'hasRegistrationException' => $hasRegistrationException,
                 'registrationOptions' => $event->registrationOptions(),
             ]);
@@ -130,8 +136,52 @@ final class EventController extends Controller
             'upcomingEvents' => $upcomingEvents,
             'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
             'canViewEntries' => $this->canViewEntries(),
+            'canViewPoster' => $clubId !== null,
             'hasRegistrationException' => false,
             'registrationOptions' => [],
+        ]);
+    }
+
+    public function poster(Request $request): Response
+    {
+        Session::start();
+        $isAdministrator = AuthContext::isAdministrator();
+        if (AuthContext::clubId() === null && !$isAdministrator) {
+            return $this->redirect(
+                str_starts_with($request->path(), '/admin/') ? '/admin/login' : '/clubs/login'
+            );
+        }
+
+        $eventId = (int) ($request->query('event') ?? $request->input('event') ?? 0);
+        $event = $eventId > 0
+            ? ($isAdministrator ? Event::findById($eventId) : Event::findPublishedById($eventId))
+            : null;
+        $fallback = $isAdministrator ? '/admin/events' : '/events';
+        if ($event === null || $event->poster_file === null) {
+            return $this->redirect($fallback);
+        }
+
+        try {
+            $poster = $this->eventUploadStorage->read($event->poster_file);
+        } catch (Throwable $exception) {
+            $this->reportFailure('event.poster_read_failed', $exception, $request);
+
+            return $this->redirect($fallback);
+        }
+
+        if ($poster === null) {
+            return $this->redirect($fallback);
+        }
+
+        $disposition = $poster['mime_type'] === 'application/pdf' ? 'attachment' : 'inline';
+
+        return new Response($poster['contents'], 200, [
+            'Content-Type' => $poster['mime_type'],
+            'Content-Disposition' => $disposition . '; filename="' . $poster['filename'] . '"',
+            'Content-Length' => (string) strlen($poster['contents']),
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'Cross-Origin-Resource-Policy' => 'same-origin',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

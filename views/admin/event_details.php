@@ -179,7 +179,7 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
         <label><?= e($isEdit ? __('admin.edit.poster') : __('admin.event_details.poster')) ?></label>
         <input type="file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->poster_file)) : ?>
-            <p><a href="<?= e(base_url((string) $event->poster_file)) ?>" target="_blank"><?= e(__('events.view_current_poster')) ?></a></p>
+            <p><a href="<?= e(base_url('/admin/events/poster?event=' . (string) $event->id)) ?>" target="_blank"><?= e(__('events.view_current_poster')) ?></a></p>
         <?php endif; ?>
 
         <label><?= e($isEdit ? __('admin.edit.info_file') : __('admin.event_details.info_file')) ?></label>

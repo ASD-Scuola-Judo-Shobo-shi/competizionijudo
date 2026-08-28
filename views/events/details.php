@@ -4,6 +4,7 @@
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var array<int, bool> $eventExceptions */
 /** @var bool $canViewEntries */
+/** @var bool $canViewPoster */
 /** @var bool $hasRegistrationException */
 /** @var list<\App\Model\EventRegistrationOption>|null $registrationOptions */
 $registrationOptions ??= [];
@@ -11,7 +12,9 @@ $registrationOptions ??= [];
 
 <?php if ($event !== null) : ?>
     <?php
-    $posterUrl = $event->poster_file ? base_url((string) $event->poster_file) : null;
+    $posterUrl = $canViewPoster && $event->poster_file
+        ? base_url('/events/poster?event=' . (string) $event->id)
+        : null;
     $posterExt = $event->poster_file ? strtolower(pathinfo($event->poster_file, PATHINFO_EXTENSION)) : '';
     $isImagePoster = in_array($posterExt, ['jpg', 'jpeg', 'png'], true);
 
@@ -36,6 +39,12 @@ $registrationOptions ??= [];
                     <div class="poster-pdf">
                         <strong><?= e(__('events.poster_pdf')) ?></strong><br>
                         <a class="btn orange" href="<?= e($posterUrl) ?>" target="_blank" download><?= e(__('events.download_poster')) ?></a>
+                    </div>
+                <?php elseif ($event->poster_file && !$canViewPoster) : ?>
+                    <div class="poster-placeholder">
+                        <span class="poster-placeholder-label">
+                            <strong><?= e(__('events.poster_login_required')) ?></strong>
+                        </span>
                     </div>
                 <?php else : ?>
                     <div class="poster-placeholder">

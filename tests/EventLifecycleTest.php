@@ -22,6 +22,7 @@ use App\Model\EventRegistrationException;
 use App\Model\Event;
 use App\Security\CredentialFingerprint;
 use App\Service\EventEntriesCsvTransfer;
+use App\Service\EventUploadStorage;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -101,6 +102,64 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString(__('events.registration_option_default'), $plainText);
         self::assertStringContainsString('Future Public Event', $plainText);
         self::assertStringContainsString('href="/events/details?event=102"', $response->content());
+    }
+
+    public function testPosterEndpointRequiresAuthenticationAndStreamsThePublishedPoster(): void
+    {
+        $this->insertEvent();
+        $application = new Application(dirname(__DIR__));
+        (require dirname(__DIR__) . '/routes/web.php')($application->router());
+
+        $anonymous = $application->handle(new Request(
+            'GET',
+            '/events/poster?event=101',
+            ['event' => '101']
+        ));
+        $anonymousAdmin = $application->handle(new Request(
+            'GET',
+            '/admin/events/poster?event=101',
+            ['event' => '101']
+        ));
+
+        self::assertSame(302, $anonymous->status());
+        self::assertSame('/clubs/login', $anonymous->headers()['Location']);
+        self::assertSame(302, $anonymousAdmin->status());
+        self::assertSame('/admin/login', $anonymousAdmin->headers()['Location']);
+
+        $publicRoot = sys_get_temp_dir() . '/competizionijudo-poster-' . bin2hex(random_bytes(8));
+        mkdir($publicRoot . '/uploads/events', 0755, true);
+        $poster = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+            true
+        );
+        self::assertIsString($poster);
+        file_put_contents($publicRoot . '/uploads/events/poster_synthetic.png', $poster);
+
+        try {
+            Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+            $request = new Request('GET', '/events/poster?event=101', ['event' => '101']);
+            $response = (new EventController(
+                $this->view,
+                $request,
+                null,
+                null,
+                new EventUploadStorage($publicRoot)
+            ))->poster($request);
+
+            self::assertSame(200, $response->status());
+            self::assertSame($poster, $response->content());
+            self::assertSame('image/png', $response->headers()['Content-Type']);
+            self::assertSame(
+                'inline; filename="poster_synthetic.png"',
+                $response->headers()['Content-Disposition']
+            );
+            self::assertSame('private, no-store, max-age=0', $response->headers()['Cache-Control']);
+        } finally {
+            unlink($publicRoot . '/uploads/events/poster_synthetic.png');
+            rmdir($publicRoot . '/uploads/events');
+            rmdir($publicRoot . '/uploads');
+            rmdir($publicRoot);
+        }
     }
 
     /**
@@ -259,6 +318,14 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('Future Admin Event', $response->content());
         self::assertStringContainsString(
             'href="/admin/events/details?event_id=102"',
+            $response->content()
+        );
+        self::assertStringContainsString(
+            'href="/admin/events/poster?event=101"',
+            $response->content()
+        );
+        self::assertStringNotContainsString(
+            'href="/uploads/events/poster_synthetic.png"',
             $response->content()
         );
         self::assertStringNotContainsString('href="/events/details?event=102"', $response->content());
@@ -1385,7 +1452,7 @@ final class EventLifecycleTest extends TestCase
             'only_competitive',
             $description,
             null,
-            'uploads/synthetic-poster.pdf',
+            'uploads/events/poster_synthetic.png',
             null,
             $published ? 1 : 0,
             $closed ? 1 : 0,

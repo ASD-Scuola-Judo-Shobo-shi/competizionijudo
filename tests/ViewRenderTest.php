@@ -124,12 +124,14 @@ final class ViewRenderTest extends TestCase
         $authorized = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => true,
+            'canViewPoster' => false,
             'loggedInClubId' => null,
             'eventExceptions' => [],
         ], $this->layoutData('/events')));
         $anonymous = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => false,
+            'canViewPoster' => false,
             'loggedInClubId' => null,
             'eventExceptions' => [],
         ], $this->layoutData('/events')));
@@ -140,6 +142,81 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('>Entries</a>', $authorized);
         // Entries link should now be visible to all visitors
         self::assertStringContainsString('/events/entries?event=101', $anonymous);
+    }
+
+    public function testEventPostersLinkToDetailsAndRequireAClubLoginToRender(): void
+    {
+        Localization::setLocale('en');
+        $_GET = [];
+        $event = new Event(
+            101,
+            'Synthetic Poster Event',
+            '2026-06-29',
+            'Synthetic Venue',
+            'Synthetic Organizer',
+            '2026-06-28',
+            'only_competitive',
+            null,
+            null,
+            'uploads/events/poster_synthetic.png',
+            null,
+            true,
+            false,
+            null
+        );
+        $view = new View(dirname(__DIR__) . '/views');
+        $indexData = [
+            'events' => [$event],
+            'canViewEntries' => true,
+            'loggedInClubId' => null,
+            'eventExceptions' => [],
+        ];
+
+        $anonymousIndex = $view->render('events/index', array_merge(
+            $indexData,
+            ['canViewPoster' => false],
+            $this->layoutData('/events')
+        ));
+        $clubIndex = $view->render('events/index', array_merge(
+            $indexData,
+            ['canViewPoster' => true],
+            $this->layoutData('/events')
+        ));
+
+        self::assertMatchesRegularExpression(
+            '#<div class="event-poster">\s*<a\s+class="event-poster-link"\s+href="/events/details\?event=101"#s',
+            $anonymousIndex
+        );
+        self::assertStringContainsString('Club login required to view poster', $anonymousIndex);
+        self::assertStringNotContainsString('/events/poster?event=101', $anonymousIndex);
+        self::assertStringNotContainsString('uploads/events/poster_synthetic.png', $anonymousIndex);
+        self::assertStringContainsString('href="/events/details?event=101"', $clubIndex);
+        self::assertStringContainsString('src="/events/poster?event=101"', $clubIndex);
+        self::assertStringNotContainsString('uploads/events/poster_synthetic.png', $clubIndex);
+
+        $detailsData = [
+            'event' => $event,
+            'upcomingEvents' => [],
+            'eventExceptions' => [],
+            'canViewEntries' => true,
+            'hasRegistrationException' => false,
+            'registrationOptions' => [],
+        ];
+        $anonymousDetails = $view->render('events/details', array_merge(
+            $detailsData,
+            ['canViewPoster' => false],
+            $this->layoutData('/events/details')
+        ));
+        $clubDetails = $view->render('events/details', array_merge(
+            $detailsData,
+            ['canViewPoster' => true],
+            $this->layoutData('/events/details')
+        ));
+
+        self::assertStringContainsString('Club login required to view poster', $anonymousDetails);
+        self::assertStringNotContainsString('/events/poster?event=101', $anonymousDetails);
+        self::assertStringContainsString('src="/events/poster?event=101"', $clubDetails);
+        self::assertStringNotContainsString('uploads/events/poster_synthetic.png', $clubDetails);
     }
 
     public function testEventEntriesChartsUseResponsiveCardsAndSplitBeltColors(): void

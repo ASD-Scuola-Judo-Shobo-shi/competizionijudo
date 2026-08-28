@@ -481,6 +481,7 @@ return [
         'entries_download_filtered' => 'Download CSV',
         'entries_filtered_count' => 'Athletes shown: {count}',
         'poster_not_available' => 'Poster not available',
+        'poster_login_required' => 'Club login required to view poster',
         'poster_pdf' => 'Poster PDF',
         'poster_alt' => 'Event poster {name}',
         'download_poster' => 'Poster',
