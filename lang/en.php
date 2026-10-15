@@ -46,7 +46,7 @@ return [
         'register' => [
             'title' => 'Club registration',
             'heading' => 'Club registration',
-            'club_name' => 'Name',
+            'club_name' => 'Club name',
             'federal_code' => 'Federal code',
             'club_email' => 'Email (also used to log in)',
             'email_warning' => 'This email address may be malformed.',

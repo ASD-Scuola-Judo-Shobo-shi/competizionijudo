@@ -46,7 +46,7 @@ return [
         'register' => [
             'title' => 'Registrazione società',
             'heading' => 'Registrazione società',
-            'club_name' => 'Nome',
+            'club_name' => 'Nome società',
             'federal_code' => 'Codice federale',
             'club_email' => 'Email (usata anche per accedere)',
             'email_warning' => 'Questo indirizzo email potrebbe non essere valido.',
