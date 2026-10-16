@@ -22,6 +22,7 @@ use App\Model\EventRegistrationException;
 use App\Model\Event;
 use App\Security\CredentialFingerprint;
 use App\Service\EventEntriesCsvTransfer;
+use App\Service\EventRegistrationSelection;
 use App\Service\EventUploadStorage;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -517,6 +518,204 @@ final class EventLifecycleTest extends TestCase
                 'SELECT athlete_id FROM entries WHERE event_id = 101 ORDER BY athlete_id'
             )->fetchAll(PDO::FETCH_COLUMN)
         );
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function initialRegistrationStates(): iterable
+    {
+        yield 'select a new athlete' => [false];
+        yield 'deselect an enrolled athlete' => [true];
+    }
+
+    #[DataProvider('initialRegistrationStates')]
+    public function testDraftSelectionSurvivesPagingAndSortingUntilAllPagesAreSaved(bool $initiallyRegistered): void
+    {
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: date('Y-m-d'));
+        for ($index = 1; $index <= 50; $index++) {
+            $this->insertOwnAthlete(399 + $index, sprintf('Paged%02d', $index), 'Athlete');
+        }
+        $entry = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (101, 201, ?)'
+        );
+        $entry->execute([400]);
+        if ($initiallyRegistered) {
+            $entry->execute([301]);
+        }
+        $this->database->exec(
+            "INSERT INTO event_registration_options (
+                id, event_id, name, fee_cents, is_default, is_active, sort_order
+             ) VALUES (502, 101, 'Premium', 2500, 0, 1, 1)"
+        );
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+        $pageOneSelection = $initiallyRegistered ? ['400'] : ['301', '400'];
+        $originalEntryCount = $this->entryCount();
+
+        // Navigation must work before a required registration option is chosen.
+        $navigation = $this->dispatchRegistration(['event' => '101'], [
+            'registration_action' => 'navigate',
+            'athletes' => $pageOneSelection,
+            'next_page' => '2',
+        ]);
+        self::assertSame(303, $navigation->status());
+        self::assertSame(
+            '/events/register?event=101&athletes_page=2&registration_sort=athlete&registration_direction=asc',
+            $navigation->headers()['Location']
+        );
+        self::assertSame($originalEntryCount, $this->entryCount());
+
+        $secondPage = $this->dispatchRegistration(['event' => '101', 'athletes_page' => '2']);
+        $document = new \DOMDocument();
+        @$document->loadHTML($secondPage->content());
+        $xpath = new \DOMXPath($document);
+        self::assertSame(0, $xpath->query('//*[@id="save-changes-btn"]/@disabled')->length);
+        self::assertSame(0, $xpath->query('//*[@id="change-indicator"]/@hidden')->length);
+
+        $sortNavigation = $this->dispatchRegistration(['event' => '101', 'athletes_page' => '2'], [
+            'registration_action' => 'navigate',
+            'athletes' => ['449'],
+            'registration_option_id' => '502',
+            'next_page' => '1',
+            'next_sort' => 'weight',
+            'next_direction' => 'desc',
+        ]);
+        self::assertSame(303, $sortNavigation->status());
+        self::assertStringContainsString('registration_sort=weight', $sortNavigation->headers()['Location']);
+        self::assertSame($originalEntryCount, $this->entryCount());
+
+        $pageOneQuery = ['event' => '101', 'registration_sort' => 'weight', 'registration_direction' => 'desc'];
+        $firstPage = $this->dispatchRegistration($pageOneQuery);
+        @$document->loadHTML($firstPage->content());
+        $xpath = new \DOMXPath($document);
+        self::assertSame(
+            $initiallyRegistered ? 0 : 1,
+            $xpath->query('//input[@name="athletes[]" and @value="301"]/@checked')->length
+        );
+        self::assertSame(1, $xpath->query('//option[@value="502"]/@selected')->length);
+
+        $saved = $this->dispatchRegistration($pageOneQuery, [
+            'athletes' => $pageOneSelection,
+            'registration_option_id' => '502',
+        ]);
+        self::assertSame(302, $saved->status());
+        self::assertSame(
+            $initiallyRegistered ? [400, 449] : [301, 400, 449],
+            $this->database->query(
+                'SELECT athlete_id FROM entries WHERE event_id = 101 ORDER BY athlete_id'
+            )->fetchAll(PDO::FETCH_COLUMN)
+        );
+        self::assertSame(502, $this->database->query(
+            'SELECT registration_option_id FROM entries WHERE athlete_id = 449'
+        )->fetchColumn());
+        self::assertSame([], (new EventRegistrationSelection(201, 101))->changes());
+
+        $savedPage = $this->dispatchRegistration(['event' => '101', 'athletes_page' => '2']);
+        @$document->loadHTML($savedPage->content());
+        $xpath = new \DOMXPath($document);
+        self::assertSame(1, $xpath->query('//input[@value="449"]/@checked')->length);
+        self::assertSame(1, $xpath->query('//*[@id="save-changes-btn"]/@disabled')->length);
+    }
+
+    public function testNavigationCannotStageForeignOrUnvisitedAthletesAndSaveRechecksOwnership(): void
+    {
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: date('Y-m-d'));
+        for ($index = 1; $index <= 50; $index++) {
+            $this->insertOwnAthlete(399 + $index, sprintf('Paged%02d', $index), 'Athlete');
+        }
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $this->dispatchRegistration(['event' => '101'], [
+            'registration_action' => 'navigate',
+            'athletes' => ['301', '302', '449'],
+            'next_page' => '2',
+            'next_sort' => 'invalid',
+            'next_direction' => 'invalid',
+        ]);
+        self::assertSame([301 => true], (new EventRegistrationSelection(201, 101))->changes());
+        self::assertSame(0, $this->entryCount());
+
+        // A staged athlete may change clubs before the user saves another page.
+        $this->database->exec('UPDATE athletes SET club_id = 202 WHERE id = 301');
+        $this->dispatchRegistration(['event' => '101', 'athletes_page' => '2'], [
+            'athletes' => ['449'],
+            'registration_option_id' => '501',
+        ]);
+
+        self::assertSame([449], $this->database->query('SELECT athlete_id FROM entries')->fetchAll(PDO::FETCH_COLUMN));
+        $feedback = $this->dispatchRegistration(['event' => '101']);
+        self::assertStringContainsString(__('events.registration_rejected', ['count' => '1']), $feedback->content());
+    }
+
+    public function testInvalidRegistrationOptionPreservesTheDraftForCorrection(): void
+    {
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: date('Y-m-d'));
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $response = $this->dispatchRegistration(['event' => '101'], [
+            'athletes' => ['301'],
+            'registration_option_id' => '999',
+        ]);
+        self::assertSame(302, $response->status());
+        self::assertSame(0, $this->entryCount());
+        $page = $this->dispatchRegistration(['event' => '101']);
+        $document = new \DOMDocument();
+        @$document->loadHTML($page->content());
+        self::assertSame(1, (new \DOMXPath($document))->query('//input[@value="301"]/@checked')->length);
+        self::assertStringContainsString(e(__('events.registration_option_required')), $page->content());
+    }
+
+    public function testDraftNavigationRequiresCsrfValidation(): void
+    {
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: date('Y-m-d'));
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+        $application = new Application(dirname(__DIR__));
+        (require dirname(__DIR__) . '/routes/web.php')($application->router());
+
+        $response = $application->handle(new Request('POST', '/events/register', ['event' => '101'], [
+            'csrf_token' => 'invalid',
+            'registration_action' => 'navigate',
+            'athletes' => ['301'],
+            'next_page' => '2',
+        ]));
+
+        self::assertSame(419, $response->status());
+        self::assertSame([], (new EventRegistrationSelection(201, 101))->changes());
+        self::assertSame(0, $this->entryCount());
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function registrationAthleteCounts(): iterable
+    {
+        yield 'one athlete' => [1];
+        yield 'seventy-five athletes' => [75];
+    }
+
+    #[DataProvider('registrationAthleteCounts')]
+    public function testDraftNavigationUsesSevenQueriesRegardlessOfAthleteCount(int $athleteCount): void
+    {
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: date('Y-m-d'));
+        $this->database->exec('DELETE FROM athletes WHERE id = 303');
+        for ($index = 2; $index <= $athleteCount; $index++) {
+            $this->insertOwnAthlete(399 + $index, sprintf('Paged%02d', $index), 'Athlete');
+        }
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::exactly(7))->method('prepare')->willReturnCallback(
+            fn(string $sql, array $options = []): \PDOStatement|false => $this->database->prepare($sql, $options)
+        );
+        $database->expects(self::never())->method('query');
+        $this->databaseConnection->setValue(null, $database);
+
+        $response = $this->dispatchRegistration(['event' => '101'], [
+            'registration_action' => 'navigate',
+            'athletes' => ['301'],
+            'registration_option_id' => '501',
+            'next_page' => '2',
+        ]);
+
+        self::assertSame(303, $response->status());
+        self::assertSame([301 => true], (new EventRegistrationSelection(201, 101))->changes());
+        self::assertSame(0, $this->entryCount());
     }
 
     public function testRegistrationAttemptWithoutWeightIsRejectedAndWarned(): void
@@ -1535,6 +1734,22 @@ final class EventLifecycleTest extends TestCase
         (require dirname(__DIR__) . '/routes/web.php')($application->router());
 
         return $application->handle(new Request('GET', '/events/entries', $query));
+    }
+
+    /**
+     * @param array<string, string> $query
+     * @param array<string, mixed>|null $post
+     */
+    private function dispatchRegistration(array $query, ?array $post = null): Response
+    {
+        $request = new Request(
+            $post === null ? 'GET' : 'POST',
+            '/events/register',
+            $query,
+            $post === null ? [] : array_merge(['csrf_token' => csrf_token()], $post)
+        );
+
+        return (new EventController($this->view, $request, null, new FakePasswordResetMailer()))->register($request);
     }
 
     private function startCleanSession(): void

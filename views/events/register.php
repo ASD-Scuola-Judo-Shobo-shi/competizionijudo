@@ -3,6 +3,8 @@
 /** @var \App\Model\Event|null $event */
 /** @var list<\App\Model\Athlete> $athletes */
 /** @var list<int> $registered */
+/** @var list<int>|null $selectedAthleteIds */
+/** @var array<int, bool>|null $selectionChanges */
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var array<int, bool> $eventExceptions */
 /** @var bool $hasRegistrationException */
@@ -17,6 +19,8 @@
 $athletePagination ??= paginate(count($athletes), 1, 50, 'athletes_page');
 $registrationSort ??= ['column' => 'athlete', 'direction' => 'asc'];
 $preserveRegistrationSort ??= false;
+$selectedAthleteIds ??= $registered;
+$selectionChanges ??= [];
 $clubEntryQuotaRemaining = $clubEntryQuotaRemaining ?? 0;
 $clubEntryQuotaLimit = $clubEntryQuotaLimit ?? 0;
 $showRegistrationFeedback = $registrationFeedback !== null
@@ -116,7 +120,12 @@ if ($preserveRegistrationSort) {
                         <?php endif; ?>
                         <form method="post" action="<?= e(base_url($registrationFormUrl)) ?>" id="registration-form">
                             <?= csrf_field() ?>
+                            <input type="hidden" name="registration_action" value="save">
+                            <input type="hidden" name="next_page" value="1">
+                            <input type="hidden" name="next_sort" value="">
+                            <input type="hidden" name="next_direction" value="">
                             <p><?= e(__('events.register_select')) ?></p>
+                            <p class="field-help"><?= e(__('events.register_selection_help')) ?></p>
                             <div
                                 class="table-scroll table-scroll--wide table-scroll--responsive"
                                 role="region"
@@ -146,6 +155,7 @@ if ($preserveRegistrationSort) {
                                         <?php
                                         $athleteName = $athlete->last_name . ' ' . $athlete->first_name;
                                         $isRegistered = in_array($athlete->id, $registered, true);
+                                        $isSelected = in_array($athlete->id, $selectedAthleteIds, true);
                                         $hasWeight = $athlete->weight_kg !== null && $athlete->weight_kg > 0;
                                         $cannotRegister = !$hasWeight && !$isRegistered;
                                         ?>
@@ -154,7 +164,7 @@ if ($preserveRegistrationSort) {
                                                 <input type="checkbox"
                                                     name="athletes[]"
                                                     value="<?= e((string) $athlete->id) ?>"
-                                                    <?= $isRegistered ? 'checked' : '' ?>
+                                                    <?= $isSelected ? 'checked' : '' ?>
                                                     <?= $cannotRegister ? 'disabled' : '' ?>
                                                     aria-label="<?= e(__('events.register_select') . ': ' . $athleteName) ?>"
                                                     data-registered="<?= $isRegistered ? 'true' : 'false' ?>">
@@ -222,7 +232,7 @@ if ($preserveRegistrationSort) {
                             </div>
 
                             <div class="registration-actions">
-                                <button class="btn green" type="submit" id="save-changes-btn" disabled><?= e(__('events.register_save_changes')) ?></button>
+                                <button class="btn green" type="submit" id="save-changes-btn" <?= $selectionChanges === [] ? 'disabled' : '' ?>><?= e(__('events.register_save_changes')) ?></button>
                                 <?php if ($showRegistrationFeedback) : ?>
                                     <span class="change-indicator" id="feedback-indicator">
                                         <?php
@@ -251,11 +261,10 @@ if ($preserveRegistrationSort) {
                                         echo e(implode('; ', $parts));
                                         ?>
                                     </span>
-                                <?php else : ?>
-                                    <span class="change-indicator" id="change-indicator" hidden>
-                                        <?= e(__('events.register_unsaved_changes')) ?>
-                                    </span>
                                 <?php endif; ?>
+                                <span class="change-indicator" id="change-indicator" <?= $selectionChanges === [] ? 'hidden' : '' ?>>
+                                    <?= e(__('events.register_unsaved_changes')) ?>
+                                </span>
                             </div>
 
                             <?php if (($registrationFeedback['payment_summary'] ?? null) !== null) : ?>
@@ -419,19 +428,25 @@ if ($preserveRegistrationSort) {
 
     <script nonce="<?= e($cspNonce) ?>">
         document.addEventListener('DOMContentLoaded', function() {
-            const checkboxes = document.querySelectorAll('input[name="athletes[]"]');
+            const form = document.getElementById('registration-form');
+            if (!form) {
+                return;
+            }
+            const checkboxes = form.querySelectorAll('input[name="athletes[]"]');
             const saveBtn = document.getElementById('save-changes-btn');
             const changeIndicator = document.getElementById('change-indicator');
+            const changes = new Map(Object.entries(<?= json_encode((object) $selectionChanges) ?>));
 
             function checkForChanges() {
-                let hasChanges = false;
                 checkboxes.forEach(cb => {
                     const wasRegistered = cb.dataset.registered === 'true';
-                    const isNowChecked = cb.checked;
-                    if (wasRegistered !== isNowChecked) {
-                        hasChanges = true;
+                    if (wasRegistered !== cb.checked) {
+                        changes.set(cb.value, cb.checked);
+                    } else {
+                        changes.delete(cb.value);
                     }
                 });
+                const hasChanges = changes.size > 0;
 
                 if (saveBtn) {
                     saveBtn.disabled = !hasChanges;
@@ -443,6 +458,26 @@ if ($preserveRegistrationSort) {
 
             checkboxes.forEach(cb => {
                 cb.addEventListener('change', checkForChanges);
+            });
+            checkForChanges();
+
+            form.addEventListener('click', function(event) {
+                const link = event.target.closest('.pagination a, a.table-sort-button');
+                if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+                    return;
+                }
+                event.preventDefault();
+                if (link.getAttribute('aria-disabled') === 'true') {
+                    return;
+                }
+
+                const target = new URL(link.href, window.location.href);
+                form.elements.registration_action.value = 'navigate';
+                form.elements.next_page.value = target.searchParams.get('athletes_page') ?? '1';
+                form.elements.next_sort.value = target.searchParams.get('registration_sort') ?? 'athlete';
+                form.elements.next_direction.value = target.searchParams.get('registration_direction') ?? 'asc';
+                form.noValidate = true;
+                form.requestSubmit();
             });
         });
     </script>

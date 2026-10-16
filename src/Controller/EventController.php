@@ -22,6 +22,7 @@ use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
 use App\Presentation\EventEntriesViewModel;
 use App\Service\EventEntriesCsvTransfer;
+use App\Service\EventRegistrationSelection;
 use App\Service\EventUploadStorage;
 use App\Service\ClubQuota;
 use App\Service\PasswordResetMailer;
@@ -34,6 +35,7 @@ final class EventController extends Controller
 {
     private const REGISTRATION_FEEDBACK_PREFIX = 'event_registration_';
     private const REGISTRATION_ATHLETES_PER_PAGE = 50;
+    private const REGISTRATION_SORT_COLUMNS = ['athlete', 'birth', 'weight', 'weight_category', 'current_option'];
     private const ENTRIES_PER_PAGE = 50;
     private const ENTRY_FILTER_MAX_LENGTH = 100;
     private const ENTRY_CLUB_FILTER_PARAMETERS = [
@@ -259,7 +261,7 @@ final class EventController extends Controller
         $registrationSort = resolve_table_sort(
             $request->query('registration_sort'),
             $request->query('registration_direction'),
-            ['athlete', 'birth', 'weight', 'weight_category', 'current_option'],
+            self::REGISTRATION_SORT_COLUMNS,
             'athlete'
         );
         $preserveRegistrationSort = $request->query('registration_sort') !== null
@@ -285,12 +287,40 @@ final class EventController extends Controller
                 . '&registration_direction=' . rawurlencode($registrationSort['direction']);
         }
 
+        $selection = new EventRegistrationSelection($clubId, $eventId);
         if ($request->method() === 'POST') {
             $selectedOptionId = (int) ($request->post('registration_option_id') ?? 0);
             $selectedOption = EventRegistrationOption::activeForEventById(
                 $eventId,
                 $selectedOptionId
             );
+
+            // Keep page navigation as a draft; enrollment only happens on Save changes.
+            $currentEnrollmentDetails = Entry::enrollmentDetailsByClubEvent($eventId, $clubId);
+            $currentlyRegistered = array_keys($currentEnrollmentDetails);
+            $rejectedCount = $selection->updatePage(
+                $editableAthleteIds,
+                $request->post('athletes', []),
+                $currentlyRegistered,
+                $selectedOption?->id
+            );
+            if ($request->post('registration_action') === 'navigate') {
+                $nextSort = resolve_table_sort(
+                    $request->post('next_sort'),
+                    $request->post('next_direction'),
+                    self::REGISTRATION_SORT_COLUMNS,
+                    'athlete'
+                );
+                $nextPage = max(1, (int) $request->post('next_page', 1));
+
+                return $this->redirect('/events/register?' . http_build_query([
+                    'event' => $eventId,
+                    'athletes_page' => $nextPage,
+                    'registration_sort' => $nextSort['column'],
+                    'registration_direction' => $nextSort['direction'],
+                ]), 303);
+            }
+
             if ($selectedOption === null) {
                 $hasRegistrationOptions = $event->registrationOptions() !== [];
                 Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $eventId, [
@@ -309,40 +339,15 @@ final class EventController extends Controller
                 return $this->redirect($registrationRedirect);
             }
 
-            // Handle registration/unregistration action based on checkbox states
-            $athleteIds = $request->input('athletes', []);
-            if (!is_array($athleteIds)) {
-                $athleteIds = [$athleteIds];
-            }
+            $validAthleteIds = $selection->selectedAthleteIds($currentlyRegistered);
 
-            // Load the persisted option snapshot before removals delete any entries.
-            $currentEnrollmentDetails = Entry::enrollmentDetailsByClubEvent($eventId, $clubId);
-            $currentlyRegistered = array_keys($currentEnrollmentDetails);
-
-            // Validate and filter athlete IDs - count invalid ones as rejected
-            $validAthleteIds = [];
-            $rejectedCount = 0;
-            foreach ($athleteIds as $athleteId) {
-                if (
-                    is_numeric($athleteId)
-                    && (int) $athleteId > 0
-                    && in_array((int) $athleteId, $editableAthleteIds, true)
-                ) {
-                    $validAthleteIds[] = (int) $athleteId;
-                } else {
-                    $rejectedCount++;
-                }
-            }
-            $validAthleteIds = array_values(array_unique($validAthleteIds));
-
-            // Only the displayed, server-resolved page is editable. Registrations
-            // on other pages must remain unchanged when their checkboxes are absent.
+            // Apply changes from every visited page, preserving untouched registrations.
             $currentlyRegisteredOnPage = array_values(array_intersect(
                 $currentlyRegistered,
                 $editableAthleteIds
             ));
             $toRegister = array_values(array_diff($validAthleteIds, $currentlyRegistered));
-            $toUnregister = array_values(array_diff($currentlyRegisteredOnPage, $validAthleteIds));
+            $toUnregister = array_values(array_diff($currentlyRegistered, $validAthleteIds));
 
             $feedback = [
                 'added' => 0,
@@ -484,6 +489,7 @@ final class EventController extends Controller
             ];
 
             Session::flash(self::REGISTRATION_FEEDBACK_PREFIX . $eventId, $flashFeedback);
+            $selection->clear();
 
             return $this->redirect($registrationRedirect);
         }
@@ -500,12 +506,21 @@ final class EventController extends Controller
                 break;
             }
         }
+        $draftOptionId = $selection->optionId();
+        foreach ($registrationOptions as $registrationOption) {
+            if ($registrationOption->id === $draftOptionId) {
+                $defaultRegistrationOptionId = $registrationOption->id;
+                break;
+            }
+        }
 
         return $this->view('events/register', [
             'title' => __('events.registration') . ' - ' . $event->name,
             'event' => $event,
             'athletes' => $athletes,
             'registered' => $registered,
+            'selectedAthleteIds' => $selection->selectedAthleteIds($registered),
+            'selectionChanges' => $selection->changes(),
             'upcomingEvents' => $upcomingEvents,
             'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
             'registrationFeedback' => $registrationFeedback,

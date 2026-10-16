@@ -391,6 +391,7 @@ return [
         'register_no_athletes' => 'No athletes are available for registration.',
         'register_save_changes' => 'Save changes',
         'register_unsaved_changes' => '(unsaved changes)',
+        'register_selection_help' => 'Selections are kept as you move between pages or sort the list. Save changes to apply all selections.',
         'register_submit' => 'Register selected athletes',
         'registration_option' => 'Registration option',
         'registration_fees' => 'Registration fees',

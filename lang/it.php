@@ -391,6 +391,7 @@ return [
         'register_no_athletes' => 'Nessun atleta disponibile per l\'iscrizione.',
         'register_save_changes' => 'Salva modifiche',
         'register_unsaved_changes' => '(modifiche non salvate)',
+        'register_selection_help' => 'Le selezioni vengono mantenute quando cambi pagina o ordini la lista. Salva le modifiche per applicare tutte le selezioni.',
         'register_submit' => 'Iscrivi atleti selezionati',
         'registration_option' => 'Opzione di iscrizione',
         'registration_fees' => 'Quote di iscrizione',
