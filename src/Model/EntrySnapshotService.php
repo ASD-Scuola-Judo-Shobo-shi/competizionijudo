@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Service\TournamentData;
 use PDO;
 use RuntimeException;
 
@@ -15,15 +16,24 @@ final class EntrySnapshotService
 
     public function consolidate(int $eventId, string $eventDate): void
     {
+        $ended = TournamentData::now() >= TournamentData::cutoff($eventDate);
+        $source = $ended ? 'r' : 'a';
+        $revisionJoin = $ended
+            ? 'LEFT JOIN athlete_revisions r ON r.id = (
+                SELECT revision.id FROM athlete_revisions revision
+                WHERE revision.athlete_id = en.athlete_id AND revision.club_id = en.club_id
+                  AND revision.recorded_at < ?
+                ORDER BY revision.recorded_at DESC, revision.id DESC LIMIT 1
+            )' : '';
         $entries = $this->database->prepare(
-            'SELECT en.id, a.last_name, a.first_name, a.gender, a.birth_date,
-                    a.weight_kg, a.belt, a.membership_number
+            'SELECT en.id, ' . $source . '.last_name, ' . $source . '.first_name, '
+                . $source . '.gender, ' . $source . '.birth_date, '
+                . $source . '.weight_kg, ' . $source . '.belt, ' . $source . '.membership_number
              FROM entries en
-             JOIN athletes a ON a.id = en.athlete_id
-             WHERE en.event_id = ?
-             ORDER BY en.id'
+             JOIN athletes a ON a.id = en.athlete_id ' . $revisionJoin . '
+             WHERE en.event_id = ? AND en.snapshot_at IS NULL ORDER BY en.id'
         );
-        $entries->execute([$eventId]);
+        $entries->execute($ended ? [TournamentData::cutoff($eventDate), $eventId] : [$eventId]);
         $update = $this->database->prepare(
             'UPDATE entries
              SET snapshot_last_name = ?, snapshot_first_name = ?, snapshot_gender = ?,
@@ -48,8 +58,8 @@ final class EntrySnapshotService
                 $entry['weight_kg'],
                 $entry['belt'],
                 $entry['membership_number'],
-                $category['type'],
-                $category['weight_category'],
+                $entry['birth_date'] !== null ? $category['type'] : null,
+                $entry['birth_date'] !== null ? $category['weight_category'] : null,
                 $entry['id'],
                 $eventId,
             ]);
@@ -73,12 +83,16 @@ final class EntrySnapshotService
              FROM entries en
              JOIN athletes a ON a.id = en.athlete_id
              JOIN events e ON e.id = en.event_id
-             WHERE en.event_id = ? AND en.club_id = ? AND en.athlete_id = ? AND e.closed = 1'
+             WHERE en.event_id = ? AND en.club_id = ? AND en.athlete_id = ? AND e.closed = 1
+               AND en.snapshot_at IS NULL'
         );
         $entryStatement->execute([$eventId, $clubId, $athleteId]);
         $entry = $entryStatement->fetch();
         if ($entry === false) {
             return false;
+        }
+        if (TournamentData::now() >= TournamentData::cutoff((string) $entry['event_date'])) {
+            throw new RuntimeException('An ended event cannot snapshot newly registered athlete data.');
         }
 
         $category = JudoCategory::calculate(

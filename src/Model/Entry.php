@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Service\TournamentData;
+
 final class Entry
 {
     public function __construct(
@@ -37,9 +39,47 @@ final class Entry
     public static function findByEvent(
         int $eventId,
         ?int $clubId,
-        ?bool $eventClosed = null
+        ?bool $eventClosed = null,
+        ?string $eventDate = null
     ): array {
-        return self::queryByEvent($eventId, $clubId, $eventClosed, null, 0, 'club_name', 'asc');
+        return self::queryByEvent($eventId, $clubId, $eventClosed, null, 0, 'club_name', 'asc', $eventDate);
+    }
+
+    /**
+     * Read the consolidated tournament record without filling missing values
+     * from the athlete's current profile or recalculating saved categories.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function findSnapshotsByEvent(int $eventId, ?int $clubId = null): array
+    {
+        $sql = 'SELECT en.id AS entry_id, c.id AS club_id,
+                    c.name AS club_name, c.federal_code AS federal_code,
+                    en.snapshot_last_name AS last_name,
+                    en.snapshot_first_name AS first_name,
+                    en.snapshot_gender AS gender,
+                    en.snapshot_birth_date AS birth_date,
+                    en.snapshot_weight_kg AS weight_kg,
+                    en.snapshot_belt AS belt,
+                    en.snapshot_membership_number AS membership_number,
+                    en.snapshot_program AS type,
+                    en.snapshot_weight_category AS weight_category,
+                    e.name AS event_name, e.date AS event_date
+                FROM entries en
+                JOIN clubs c ON c.id = en.club_id
+                JOIN events e ON e.id = en.event_id
+                WHERE en.event_id = ? AND e.closed = 1';
+        $parameters = [$eventId];
+        if ($clubId !== null) {
+            $sql .= ' AND en.club_id = ?';
+            $parameters[] = $clubId;
+        }
+        $sql .= ' ORDER BY c.name, en.snapshot_last_name, en.snapshot_first_name, en.athlete_id';
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($parameters);
+
+        return $statement->fetchAll() ?: [];
     }
 
     public static function countByEvent(int $eventId, ?int $clubId): int
@@ -65,7 +105,8 @@ final class Entry
         int $limit,
         int $offset,
         string $sort = 'club_name',
-        string $direction = 'asc'
+        string $direction = 'asc',
+        ?string $eventDate = null
     ): array {
         return self::queryByEvent(
             $eventId,
@@ -74,7 +115,8 @@ final class Entry
             max(1, $limit),
             max(0, $offset),
             $sort,
-            $direction
+            $direction,
+            $eventDate
         );
     }
 
@@ -86,29 +128,42 @@ final class Entry
         ?int $limit,
         int $offset,
         string $sort,
-        string $direction
+        string $direction,
+        ?string $eventDate
     ): array {
-        $eventClosed ??= self::eventIsClosed($eventId);
-        $lastName = self::athleteValueExpression($eventClosed, 'snapshot_last_name', 'last_name');
-        $firstName = self::athleteValueExpression($eventClosed, 'snapshot_first_name', 'first_name');
-        $gender = self::athleteValueExpression($eventClosed, 'snapshot_gender', 'gender');
-        $weight = self::athleteValueExpression($eventClosed, 'snapshot_weight_kg', 'weight_kg');
-        $belt = self::athleteValueExpression($eventClosed, 'snapshot_belt', 'belt');
+        if ($eventClosed === null || (!$eventClosed && $eventDate === null)) {
+            $statement = Database::connection()->prepare('SELECT closed, date FROM events WHERE id = ?');
+            $statement->execute([$eventId]);
+            $event = $statement->fetch();
+            $eventClosed ??= !empty($event['closed']);
+            $eventDate ??= (string) ($event['date'] ?? '');
+        }
+        $ended = !$eventClosed && $eventDate !== '' && $eventDate !== null
+            && TournamentData::now() >= TournamentData::cutoff($eventDate);
+        $liveAlias = $ended ? 'r' : 'a';
+        $lastName = self::athleteValueExpression($eventClosed, 'snapshot_last_name', 'last_name', $liveAlias);
+        $firstName = self::athleteValueExpression($eventClosed, 'snapshot_first_name', 'first_name', $liveAlias);
+        $gender = self::athleteValueExpression($eventClosed, 'snapshot_gender', 'gender', $liveAlias);
+        $weight = self::athleteValueExpression($eventClosed, 'snapshot_weight_kg', 'weight_kg', $liveAlias);
+        $belt = self::athleteValueExpression($eventClosed, 'snapshot_belt', 'belt', $liveAlias);
         $membershipNumber = self::athleteValueExpression(
             $eventClosed,
             'snapshot_membership_number',
-            'membership_number'
+            'membership_number',
+            $liveAlias
         );
         $birthDate = self::athleteValueExpression(
             $eventClosed,
             'snapshot_birth_date',
-            'birth_date'
+            'birth_date',
+            $liveAlias
         );
-        $type = $eventClosed ? 'en.snapshot_program' : "''";
-        $weightCategory = $eventClosed ? 'en.snapshot_weight_category' : "''";
+        $usesSnapshot = $eventClosed ? '1' : '(e.closed = 1 OR en.snapshot_at IS NOT NULL)';
+        $type = 'CASE WHEN ' . $usesSnapshot . " THEN en.snapshot_program ELSE '' END";
+        $weightCategory = 'CASE WHEN ' . $usesSnapshot . " THEN en.snapshot_weight_category ELSE '' END";
 
         $sql = sprintf(
-            'SELECT en.id AS entry_id, c.id AS club_id,
+            'SELECT en.id AS entry_id, en.athlete_id, %s AS uses_snapshot, c.id AS club_id,
                 c.name AS club_name, c.federal_code AS federal_code,
                 %s AS last_name,
                 %s AS first_name,
@@ -125,6 +180,7 @@ final class Entry
             JOIN athletes a ON a.id = en.athlete_id
             JOIN events e ON e.id = en.event_id
             WHERE en.event_id = ?',
+            $usesSnapshot,
             $lastName,
             $firstName,
             $gender,
@@ -137,6 +193,19 @@ final class Entry
         );
 
         $params = [$eventId];
+        if ($ended) {
+            $sql = str_replace(
+                'WHERE en.event_id = ?',
+                'LEFT JOIN athlete_revisions r ON r.id = (
+                    SELECT revision.id FROM athlete_revisions revision
+                    WHERE revision.athlete_id = en.athlete_id AND revision.club_id = en.club_id
+                      AND revision.recorded_at < ?
+                    ORDER BY revision.recorded_at DESC, revision.id DESC LIMIT 1
+                ) WHERE en.event_id = ?',
+                $sql
+            );
+            array_unshift($params, TournamentData::cutoff((string) $eventDate));
+        }
         if ($clubId !== null) {
             $sql .= ' AND c.id = ?';
             $params[] = $clubId;
@@ -185,7 +254,7 @@ final class Entry
             $stmt->execute($params);
         } else {
             foreach ($params as $index => $parameter) {
-                $stmt->bindValue($index + 1, $parameter, \PDO::PARAM_INT);
+                $stmt->bindValue($index + 1, $parameter, is_int($parameter) ? \PDO::PARAM_INT : \PDO::PARAM_STR);
             }
             $stmt->bindValue(count($params) + 1, $limit, \PDO::PARAM_INT);
             $stmt->bindValue(count($params) + 2, $offset, \PDO::PARAM_INT);
@@ -193,7 +262,7 @@ final class Entry
         }
         $rows = $stmt->fetchAll() ?: [];
         foreach ($rows as &$row) {
-            if (!$eventClosed || empty($row['weight_category'])) {
+            if (empty($row['uses_snapshot']) && (!$ended || !empty($row['birth_date']))) {
                 $category = JudoCategory::calculate(
                     (string) ($row['birth_date'] ?? ''),
                     (string) ($row['gender'] ?? ''),
@@ -212,13 +281,17 @@ final class Entry
     private static function athleteValueExpression(
         bool $eventClosed,
         string $snapshotColumn,
-        string $athleteColumn
+        string $athleteColumn,
+        string $liveAlias
     ): string {
-        if (!$eventClosed) {
-            return 'a.' . $athleteColumn;
-        }
-
-        return sprintf('COALESCE(en.%s, a.%s)', $snapshotColumn, $athleteColumn);
+        return $eventClosed
+            ? 'en.' . $snapshotColumn
+            : sprintf(
+                'CASE WHEN e.closed = 1 OR en.snapshot_at IS NOT NULL THEN en.%s ELSE %s.%s END',
+                $snapshotColumn,
+                $liveAlias,
+                $athleteColumn
+            );
     }
 
     private static function beltSortExpression(string $expression): string
@@ -234,14 +307,6 @@ final class Entry
         );
 
         return 'CASE ' . $expression . ' ' . implode(' ', $order) . ' ELSE 999 END';
-    }
-
-    private static function eventIsClosed(int $eventId): bool
-    {
-        $statement = Database::connection()->prepare('SELECT closed FROM events WHERE id = ?');
-        $statement->execute([$eventId]);
-
-        return !empty($statement->fetchColumn());
     }
 
     /** @return list<array<string, mixed>> */

@@ -790,6 +790,7 @@ function assertCleanWritesAndReads(PDO $database): void
     )->fetchColumn();
 
     assertSameValue('50.00', $weight, 'Clean schema athlete write or entry read failed.');
+    assertEntryDataReviewWorkflow($database);
 
     $database->exec('DELETE FROM events WHERE id = 301');
     assertSameValue(
@@ -804,6 +805,70 @@ function assertCleanWritesAndReads(PDO $database): void
         )->fetchColumn(),
         'Deleting an event did not cascade to its registration options.'
     );
+}
+
+function assertEntryDataReviewWorkflow(PDO $database): void
+{
+    assertSameValue(
+        1,
+        (int) $database->query('SELECT COUNT(*) FROM athlete_revisions WHERE athlete_id = 201')->fetchColumn(),
+        'An athlete insert did not create exactly one revision.'
+    );
+    $database->exec("UPDATE athletes SET notes = 'Synthetic note' WHERE id = 201");
+    assertSameValue(
+        1,
+        (int) $database->query('SELECT COUNT(*) FROM athlete_revisions WHERE athlete_id = 201')->fetchColumn(),
+        'A note-only edit created an unnecessary tournament revision.'
+    );
+    $database->exec("UPDATE events SET date = '2099-07-01', closed = 1 WHERE id = 301");
+    (new App\Model\EntrySnapshotService($database))->consolidate(301, '2099-07-01');
+    $database->exec("UPDATE athletes SET last_name = 'Revised', weight_kg = 55 WHERE id = 201");
+    assertSameValue(
+        2,
+        (int) $database->query('SELECT COUNT(*) FROM athlete_revisions WHERE athlete_id = 201')->fetchColumn(),
+        'An athlete edit did not create an immutable revision.'
+    );
+    $database->exec("UPDATE athletes SET last_name = 'REVISED' WHERE id = 201");
+    assertSameValue(
+        3,
+        (int) $database->query('SELECT COUNT(*) FROM athlete_revisions WHERE athlete_id = 201')->fetchColumn(),
+        'A case-only name correction was lost under the database collation.'
+    );
+    $entryId = (int) $database->query('SELECT id FROM entries WHERE event_id = 301')->fetchColumn();
+    $revisionId = (int) $database->query('SELECT MAX(id) FROM athlete_revisions WHERE athlete_id = 201')->fetchColumn();
+    $service = new App\Service\EntryDataReviewService($database);
+    $details = $service->details(301, $entryId, 101);
+    $snapshotAt = $details['entry']['snapshot_at'];
+    $service->requestRevision(301, $entryId, $revisionId, 101, 'Synthetic correction', $details['fingerprint']);
+    assertSameValue('Synthetic', $service->details(301, $entryId, 101)['current']['last_name'], 'Pending request changed data.');
+    $reviewId = (int) $database->query('SELECT MAX(id) FROM entry_data_reviews')->fetchColumn();
+    $service->decide(301, $entryId, $reviewId, true, 'Synthetic approval');
+    $approved = $service->details(301, $entryId, 101);
+    assertSameValue('REVISED', $approved['current']['last_name'], 'MySQL approval did not apply its revision.');
+    assertSameValue($snapshotAt, $approved['entry']['snapshot_at'], 'MySQL approval extended snapshot retention.');
+    $connection = new ReflectionProperty(App\Model\Database::class, 'pdo');
+    $original = $connection->getValue();
+    $connection->setValue(null, $database);
+    try {
+        $database->exec("UPDATE events SET closed = 0, date = '2000-01-01' WHERE id = 301;");
+        assertSameValue(
+            'REVISED',
+            App\Model\Entry::findByEvent(301, 101, false, '2000-01-01')[0]['last_name'],
+            'Reopening an ended tournament lost its approved override.'
+        );
+        $database->exec('UPDATE entries SET snapshot_at = NULL WHERE event_id = 301');
+        assertSameValue(
+            null,
+            App\Model\Entry::findByEvent(301, 101, false, '2000-01-01')[0]['last_name'],
+            'MySQL historical query fell back to post-cutoff athlete data.'
+        );
+        $database->exec("UPDATE events SET date = '2099-07-01', closed = 1 WHERE id = 301");
+        (new App\Model\EntrySnapshotService($database))->consolidate(301, '2099-07-01');
+        $database->exec('DELETE FROM entries WHERE id = ' . $entryId);
+        assertSameValue(0, (int) $database->query('SELECT COUNT(*) FROM entry_data_reviews')->fetchColumn(), 'Review cascade failed.');
+    } finally {
+        $connection->setValue(null, $original);
+    }
 }
 
 function assertPreSquashDataPreserved(PDO $database): void

@@ -98,6 +98,31 @@ one year and expired account-workflow records. Event uploads are deleted when
 replaced or when their event is deleted.
 Administrators are warned to export live athlete records before deleting a club.
 
+Clubs can request a tournament data update from each athlete in a closed roster
+(`/events/entry-data`). Administrators review the exact before/after values via
+`/admin/events/pending-updates`, or edit a tournament entry directly via
+`/admin/events/entry-data`. Approval updates only that tournament's snapshot;
+its screens and CSV exports use the approved values. Rejection preserves the
+existing record. Requests and decisions retain reasons and the administrator
+role; the application currently uses a shared administrator identity.
+
+Athlete inserts and relevant edits record revisions through MySQL triggers,
+including spreadsheet imports and duplicate reconciliation. Apply the forward
+migration with a database account that can create triggers before serving the
+new release. Revision tracking starts at deployment; existing snapshots are
+preserved and earlier athlete revisions cannot be reconstructed. The cutoff is
+the end of the tournament date in `Europe/Rome`, with revision timestamps stored
+in UTC. An administrator may approve an eligible revision later, but cannot
+apply a newly entered correction after that cutoff. Ended tournaments that were
+left open use only eligible recorded revisions or an existing approved snapshot.
+
+`/admin/events/outliers` reviews all enrolled athletes using tournament-year
+age and the configurable thresholds in `config/entry_review.php`. These broad
+review prompts never change or reject an entry. Review history is removed with
+its tournament entry. Daily privacy purge removes unreferenced revisions older
+than one year, retaining the latest revision corresponding to the live profile;
+approval never refreshes an existing snapshot's retention date.
+
 ### Repairing historical athlete duplicates
 
 Imports made before the case-insensitive identity reconciliation was introduced

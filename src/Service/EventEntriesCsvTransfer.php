@@ -34,9 +34,12 @@ final class EventEntriesCsvTransfer
         int $eventId,
         bool $eventClosed,
         ?int $clubId = null,
-        ?string $weightCategory = null
+        ?string $weightCategory = null,
+        ?string $eventDate = null
     ): string {
-        $entries = Entry::findByEvent($eventId, $clubId, $eventClosed);
+        $entries = $eventClosed
+            ? Entry::findSnapshotsByEvent($eventId, $clubId)
+            : Entry::findByEvent($eventId, $clubId, false, $eventDate);
         if ($weightCategory !== null) {
             $entries = array_values(array_filter(
                 $entries,

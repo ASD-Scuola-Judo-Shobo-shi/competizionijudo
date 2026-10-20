@@ -6,6 +6,7 @@ namespace Tests;
 
 use App\Model\Database;
 use App\Model\Entry;
+use App\Service\EventEntriesCsvTransfer;
 use PDO;
 use PDOStatement;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -75,6 +76,46 @@ final class EntryEnrollmentQueryCountTest extends TestCase
         self::assertSame('SYN-201', $enrolledAthletes[0]['federal_code']);
     }
 
+    #[DataProvider('enrollmentCounts')]
+    public function testSnapshotCsvExportUsesOneQueryAsTheNumberOfAthletesGrows(int $enrollmentCount): void
+    {
+        $statement = $this->createMock(PDOStatement::class);
+        $statement->expects(self::once())->method('execute')->with([101])->willReturn(true);
+        $statement->expects(self::once())->method('fetchAll')->willReturn(array_fill(0, $enrollmentCount, [
+            'club_name' => 'Synthetic Club',
+            'federal_code' => 'SYN-201',
+            'last_name' => 'Snapshot',
+        ]));
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::once())->method('prepare')->willReturn($statement);
+        $database->expects(self::never())->method('query');
+        $this->databaseConnection->setValue(null, $database);
+
+        $csv = (new EventEntriesCsvTransfer())->export(101, true);
+
+        self::assertSame($enrollmentCount, substr_count($csv, 'Snapshot'));
+    }
+
+    #[DataProvider('enrollmentCounts')]
+    public function testEndedOpenEventCsvUsesOneQueryAsTheNumberOfAthletesGrows(int $enrollmentCount): void
+    {
+        $statement = $this->createMock(PDOStatement::class);
+        $statement->expects(self::once())->method('execute')->with(['2000-01-01 23:00:00', 101])->willReturn(true);
+        $statement->expects(self::once())->method('fetchAll')->willReturn(array_fill(0, $enrollmentCount, [
+            'last_name' => 'EligibleRevision', 'uses_snapshot' => 0, 'birth_date' => null,
+        ]));
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::once())->method('prepare')
+            ->with(self::callback(static fn(string $sql): bool => str_contains($sql, 'LEFT JOIN athlete_revisions r')))
+            ->willReturn($statement);
+        $database->expects(self::never())->method('query');
+        $this->databaseConnection->setValue(null, $database);
+
+        $csv = (new EventEntriesCsvTransfer())->export(101, false, eventDate: '2000-01-01');
+
+        self::assertSame($enrollmentCount, substr_count($csv, 'EligibleRevision'));
+    }
+
     /** @return PDO&MockObject */
     private function databaseReturning(PDOStatement $statement): PDO
     {
@@ -83,7 +124,7 @@ final class EntryEnrollmentQueryCountTest extends TestCase
             ->method('prepare')
             ->with(self::callback(static function (string $sql): bool {
                 self::assertStringContainsString(
-                    'COALESCE(en.snapshot_last_name, a.last_name)',
+                    'en.snapshot_last_name AS last_name',
                     $sql
                 );
                 self::assertStringContainsString('JOIN clubs c', $sql);

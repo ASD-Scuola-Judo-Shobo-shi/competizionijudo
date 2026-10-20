@@ -56,6 +56,8 @@ return static function (App\Core\Router $router): void {
     $router->get('/events/entries', [EventController::class, 'entries']);
     $router->get('/events/entries/export', [EventController::class, 'exportClubEntries'], AuthContext::CLUB);
     $router->get('/events/entries/print', [\App\Controller\EventEntriesPrintController::class, 'download'], AuthContext::CLUB);
+    $router->get('/events/entry-data', [\App\Controller\EntryDataController::class, 'clubReview'], AuthContext::CLUB);
+    $router->post('/events/entry-data', [\App\Controller\EntryDataController::class, 'clubReview'], AuthContext::CLUB);
     $router->get('/events/register', [EventController::class, 'register'], AuthContext::CLUB);
     $router->post('/events/register', [EventController::class, 'register'], AuthContext::CLUB);
 
@@ -76,6 +78,10 @@ return static function (App\Core\Router $router): void {
     $router->post('/admin/clubs/approve', [\App\Controller\AdminController::class, 'approveClub'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/delete', [\App\Controller\AdminController::class, 'deleteClub'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/events/entry-data', [\App\Controller\EntryDataController::class, 'adminReview'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/events/entry-data', [\App\Controller\EntryDataController::class, 'adminReview'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/events/pending-updates', [\App\Controller\EntryDataController::class, 'pending'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/events/outliers', [\App\Controller\EntryDataController::class, 'outliers'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/poster', [EventController::class, 'poster'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events', [\App\Controller\AdminController::class, 'manageEvents'], AuthContext::ADMINISTRATOR);

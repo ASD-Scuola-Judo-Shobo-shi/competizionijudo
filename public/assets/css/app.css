@@ -3786,3 +3786,20 @@ html[data-theme="dark"] .table-actions button.table-action-icon:hover {
 .club-entries-heading h2 {
     margin: 0;
 }
+
+.entry-data-review details {
+    margin-block: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color, #888);
+    border-radius: .5rem;
+}
+
+.entry-data-review summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.entry-data-review summary:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 4px;
+}

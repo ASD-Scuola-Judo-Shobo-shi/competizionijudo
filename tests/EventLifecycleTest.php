@@ -48,6 +48,8 @@ final class EventLifecycleTest extends TestCase
         $this->database = new PDO('sqlite::memory:');
         $this->database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->createSchemaAndActors();
+        \Tests\Support\EntryReviewSchema::install($this->database);
+        \Tests\Support\EntryReviewSchema::recordProfiles($this->database, '2026-01-01 00:00:00');
         $this->databaseConnection->setValue(null, $this->database);
 
         $this->startCleanSession();
@@ -256,6 +258,7 @@ final class EventLifecycleTest extends TestCase
             101, 202, 302, 'SnapshotForeign', 'Athlete', 'F', '2013-02-03', 39,
             'yellow', 'SNAPSHOT-FOREIGN', 'competitive', '-40 kg',
         ]);
+        $this->snapshotRosterFixtures();
         Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $request = new Request('GET', '/admin/events/details', ['event_id' => '101']);
 
@@ -390,10 +393,9 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('club_id=201', $response->content());
     }
 
-    public function testOpenEntryReadDoesNotRequireClosedEventSnapshotColumns(): void
+    public function testOpenEntryReadUsesLiveDataWithoutASnapshot(): void
     {
         $this->seedEntriesForTwoClubs();
-        $this->database->exec('ALTER TABLE entries DROP COLUMN snapshot_birth_date');
 
         $response = $this->dispatchEntries(['event' => '101']);
 
@@ -913,7 +915,7 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString('Synthetic Event', $response->content());
     }
 
-    public function testClosedEntriesWithMissingSnapshotsUseTheCurrentAthleteData(): void
+    public function testClosedEntriesWithMissingSnapshotsNeverUseTheCurrentAthleteData(): void
     {
         $this->insertEvent(closed: true);
         $this->database->prepare(
@@ -924,9 +926,9 @@ final class EventLifecycleTest extends TestCase
         $response = $this->dispatchEntries(['event' => '101']);
 
         self::assertSame(200, $response->status());
-        self::assertStringContainsString('OwnFamily', $response->content());
-        self::assertStringContainsString('Bianca', $response->content());
-        self::assertStringContainsString('-42 kg', $response->content());
+        self::assertStringNotContainsString('OwnFamily', $response->content());
+        self::assertStringNotContainsString('Bianca', $response->content());
+        self::assertStringNotContainsString('-42 kg', $response->content());
     }
 
     public function testAnonymousClosedEntriesHideAthleteLevelTable(): void
@@ -936,6 +938,7 @@ final class EventLifecycleTest extends TestCase
             'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
         )->execute([101, 201, 301]);
 
+        $this->snapshotRosterFixtures();
         $response = $this->dispatchEntries(['event' => '101']);
 
         self::assertSame(200, $response->status());
@@ -960,6 +963,7 @@ final class EventLifecycleTest extends TestCase
             $this->insertOwnAthlete($athleteId, sprintf('Paged%02d', $index), 'Athlete');
             $entry->execute([101, 201, $athleteId]);
         }
+        $this->snapshotRosterFixtures();
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries([
@@ -982,6 +986,7 @@ final class EventLifecycleTest extends TestCase
         );
         $statement->execute([101, 201, 301]);
         $statement->execute([101, 202, 302]);
+        $this->snapshotRosterFixtures();
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries(['event' => '101']);
@@ -1027,6 +1032,7 @@ final class EventLifecycleTest extends TestCase
         $statement->execute([101, 201, 303, 55, '-55 kg']);
         $statement->execute([101, 202, 302, null, null]);
         $statement->execute([101, 202, 304, null, null]);
+        $this->snapshotRosterFixtures();
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries(['event' => '101']);
@@ -1102,6 +1108,7 @@ final class EventLifecycleTest extends TestCase
         $statement->execute([101, 201, 301]);
         $statement->execute([101, 202, 302]);
         $this->database->exec('DELETE FROM club_terms_acceptances WHERE club_id = 201');
+        $this->snapshotRosterFixtures();
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries(['event' => '101']);
@@ -1126,6 +1133,7 @@ final class EventLifecycleTest extends TestCase
         $this->database->prepare(
             'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
         )->execute([101, 202, 302]);
+        $this->snapshotRosterFixtures();
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries(['event' => '101']);
@@ -1144,6 +1152,7 @@ final class EventLifecycleTest extends TestCase
         $statement->execute([101, 201, 301]);
         $statement->execute([101, 202, 302]);
         EventRegistrationException::setForEvent(101, [201]);
+        $this->snapshotRosterFixtures();
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries(['event' => '101']);
@@ -1167,6 +1176,7 @@ final class EventLifecycleTest extends TestCase
         );
         $statement->execute([101, 201, 301]);
         $statement->execute([101, 202, 302]);
+        $this->snapshotRosterFixtures();
         Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
 
         $request = new Request('GET', '/events/entries', ['event' => '101']);
@@ -1190,6 +1200,7 @@ final class EventLifecycleTest extends TestCase
         $insert->execute([101, 201, 301, 40, '-42 kg']);
         $insert->execute([101, 201, 303, 55, '-55 kg']);
         $insert->execute([101, 202, 302, 40, '-42 kg']);
+        $this->snapshotRosterFixtures();
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries([
@@ -1227,6 +1238,7 @@ final class EventLifecycleTest extends TestCase
         $insert->execute([101, 201, 301]);
         $insert->execute([101, 201, 303]);
         $insert->execute([101, 202, 302]);
+        $this->snapshotRosterFixtures();
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries([
@@ -1335,6 +1347,7 @@ final class EventLifecycleTest extends TestCase
             $this->insertOwnAthlete($athleteId, sprintf('Paged%02d', $index), 'Athlete');
             $entry->execute([101, 201, $athleteId]);
         }
+        $this->snapshotRosterFixtures();
         Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
 
         $response = $this->dispatchEntries([
@@ -1429,7 +1442,7 @@ final class EventLifecycleTest extends TestCase
 
     public function testClosedEventExceptionRegistrationCreatesAnEntrySnapshot(): void
     {
-        $this->insertEvent(closed: true);
+        $this->insertEvent(closed: true, date: date('Y-m-d', strtotime('+1 day')));
         EventRegistrationException::setForEvent(101, [201]);
 
         $result = (new EntryRegistrationRepository($this->database))->register(
@@ -1767,6 +1780,34 @@ final class EventLifecycleTest extends TestCase
             'OWN-' . $id,
             null,
         ]);
+        \Tests\Support\EntryReviewSchema::recordProfiles($this->database, '2026-01-01 00:00:00');
+    }
+
+    private function snapshotRosterFixtures(): void
+    {
+        $rows = $this->database->query(
+            'SELECT en.id AS entry_id, a.*, e.date AS event_date, en.snapshot_weight_kg, en.snapshot_weight_category
+             FROM entries en JOIN athletes a ON a.id = en.athlete_id
+             JOIN events e ON e.id = en.event_id WHERE e.closed = 1 AND en.snapshot_last_name IS NULL'
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $statement = $this->database->prepare(
+            'UPDATE entries SET snapshot_last_name = ?, snapshot_first_name = ?, snapshot_gender = ?,
+             snapshot_birth_date = ?, snapshot_weight_kg = ?, snapshot_belt = ?, snapshot_membership_number = ?,
+             snapshot_program = ?, snapshot_weight_category = ?, snapshot_at = CURRENT_TIMESTAMP WHERE id = ?'
+        );
+        foreach ($rows as $row) {
+            $category = \App\Model\JudoCategory::calculate(
+                $row['birth_date'],
+                $row['gender'],
+                (float) $row['weight_kg'],
+                (int) substr($row['event_date'], 0, 4)
+            );
+            $statement->execute([
+                $row['last_name'], $row['first_name'], $row['gender'], $row['birth_date'],
+                $row['snapshot_weight_kg'] ?? $row['weight_kg'], $row['belt'], $row['membership_number'],
+                $category['type'], $row['snapshot_weight_category'] ?? $category['weight_category'], $row['entry_id'],
+            ]);
+        }
     }
 
     private function seedEntriesForTwoClubs(): void

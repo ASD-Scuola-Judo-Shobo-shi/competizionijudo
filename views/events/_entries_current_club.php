@@ -97,6 +97,9 @@ $currentClubFiltersActive = count(array_filter(
                         <th scope="col" data-sort-key="weight"><?= e(__('club.area.table.weight')) ?></th>
                         <th scope="col" data-sort-key="weight_category"><?= e(__('club.area.table.weight_category')) ?></th>
                         <th scope="col" data-sort-key="belt"><?= e(__('club.area.table.belt')) ?></th>
+                        <?php if ($event->closed) : ?>
+                            <th scope="col"><?= e(__('entry_review.title')) ?></th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -125,6 +128,11 @@ $currentClubFiltersActive = count(array_filter(
                                 require dirname(__DIR__) . '/components/belt_badge.php';
                                 ?>
                             </td>
+                            <?php if ($event->closed) : ?>
+                                <td data-label="<?= e(__('entry_review.title')) ?>">
+                                    <a href="<?= e(base_url('/events/entry-data?event_id=' . $event->id . '&entry_id=' . (int) ($athlete['entry_id'] ?? 0))) ?>"><?= e(__('entry_review.request')) ?></a>
+                                </td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

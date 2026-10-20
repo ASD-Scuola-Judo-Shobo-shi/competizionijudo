@@ -26,6 +26,10 @@ $entryTypePresentation = static function (string $value): array {
         <?= e(__('admin.event_details.enrolled_athletes')) ?>
         (<?= e((string) $enrollmentPagination['total']) ?>)
     </h2>
+    <div class="form-actions">
+        <a class="btn" href="<?= e(base_url('/admin/events/pending-updates?event_id=' . $event->id)) ?>"><?= e(__('entry_review.pending_title')) ?></a>
+        <a class="btn" href="<?= e(base_url('/admin/events/outliers?event_id=' . $event->id)) ?>"><?= e(__('entry_review.outliers.title')) ?></a>
+    </div>
     <?php if ($enrolledClubs !== []) : ?>
         <form
             method="get"
@@ -88,6 +92,7 @@ $entryTypePresentation = static function (string $value): array {
                                 </abbr>
                             </th>
                         <?php endforeach; ?>
+                        <th scope="col"><?= e(__('entry_review.title')) ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -127,6 +132,9 @@ $entryTypePresentation = static function (string $value): array {
                                     <?php endif; ?>
                                 </td>
                             <?php endforeach; ?>
+                            <td data-label="<?= e(__('entry_review.title')) ?>">
+                                <a class="btn" href="<?= e(base_url('/admin/events/entry-data?event_id=' . $event->id . '&entry_id=' . (int) $enrolledAthlete['entry_id'])) ?>"><?= e(__('entry_review.edit')) ?></a>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

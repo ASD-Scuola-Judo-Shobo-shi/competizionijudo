@@ -56,6 +56,7 @@ $email = (string) ($privacy['contact_email'] ?? '');
         <li><?= e(__('privacy.live_retention')) ?></li>
         <li><?= e(__('privacy.snapshot_retention')) ?></li>
         <li><?= e(__('privacy.legacy_entry_retention')) ?></li>
+        <li><?= e(__('privacy.revision_retention')) ?></li>
         <li><?= e(__('privacy.account_workflow_retention')) ?></li>
         <li><?= e(__('privacy.event_retention')) ?></li>
         <li><?= e(__('privacy.upload_retention')) ?></li>

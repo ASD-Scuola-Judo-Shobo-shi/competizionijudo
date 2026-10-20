@@ -39,7 +39,7 @@ These are current limitations, not claims of an active exploit:
 | Priority | Limitation | Required direction | Review tracker |
 | --- | --- | --- | --- |
 | High | Administration uses one shared environment-defined identity without a second factor or per-operator audit identity. | Introduce individual administrators, revocation, a selected strong second factor, and break-glass recovery. | [PR-32](review-tracking-2026-07-13.md) |
-| Medium | Individual administrator mutations are not recorded in a durable audit trail; host backup, restore, rotation, and scheduled purge evidence remain operational controls. | Add actor-aware audit events and record periodic restore/retention checks outside public logs. | [PR-30](review-tracking-2026-07-13.md) |
+| Medium | Tournament athlete corrections record exact before/after data, request and decision times, reasons, and the shared administrator role. Other administrator mutations do not yet have a durable audit trail; host backup, restore, rotation, and scheduled purge evidence remain operational controls. | Add individual actor identity and broader audit events; record periodic restore/retention checks outside public logs. | [PR-30](review-tracking-2026-07-13.md) |
 
 The previously listed club-approval/quota, composite entry-ownership, and CSP
 inline-code limitations are implemented; see the rows above, the migration

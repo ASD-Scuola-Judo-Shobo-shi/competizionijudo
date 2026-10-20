@@ -590,7 +590,7 @@ final class AdminController extends Controller
         $truncatedSlug = trim(substr($slug, 0, 16), '-');
         $filename = sprintf('event-entries-%s-%s.csv', $date, $truncatedSlug);
 
-        $csv = (new EventEntriesCsvTransfer())->export($event->id, $event->closed);
+        $csv = (new EventEntriesCsvTransfer())->export($event->id, $event->closed, eventDate: $event->date);
 
         return new Response($csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -658,7 +658,8 @@ final class AdminController extends Controller
                 $enrollmentPagination['per_page'],
                 $enrollmentPagination['offset'],
                 $enrollmentSort['column'],
-                $enrollmentSort['direction']
+                $enrollmentSort['direction'],
+                $event->date
             )
             : [];
 

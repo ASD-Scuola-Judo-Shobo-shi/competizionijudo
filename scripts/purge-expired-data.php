@@ -7,6 +7,7 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 use App\Core\FileLogger;
 use App\Model\Database;
 use App\Service\AccountWorkflowRetentionService;
+use App\Service\AthleteRevisionRetentionService;
 use App\Service\EntrySnapshotRetentionService;
 use App\Service\PrivacyPurgeEvidence;
 
@@ -19,6 +20,7 @@ try {
         ->format('Y-m-d H:i:s');
     $database = Database::connection();
     $entryCount = (new EntrySnapshotRetentionService($database))->purgeBefore($cutoff);
+    $revisionCount = (new AthleteRevisionRetentionService($database))->purgeBefore($cutoff);
     $accountCounts = (new AccountWorkflowRetentionService($database))->purgeExpired(
         $now->format('Y-m-d H:i:s')
     );
@@ -29,6 +31,7 @@ try {
     }
     $evidence->record('ok', [
         'entries_purged' => $entryCount,
+        'athlete_revisions_purged' => $revisionCount,
         'registration_confirmations_purged' => $accountCounts['registration_confirmations'],
         'password_reset_tokens_purged' => $accountCounts['password_reset_tokens'],
         'log_retention_days' => (int) env('APP_LOG_RETENTION_DAYS', '30'),

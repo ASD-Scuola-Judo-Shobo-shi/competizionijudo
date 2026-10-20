@@ -121,21 +121,19 @@ final class EventEntriesPrintTest extends TestCase
         }
     }
 
-    public function testClosedPdfUsesSnapshotValues(): void
+    public function testClosedPdfUsesSnapshotsAndPreservesMissingSnapshotValues(): void
     {
         $this->database->exec(
             "UPDATE events SET closed = 1 WHERE id = 101;
              UPDATE entries SET snapshot_last_name = 'Consolidated', snapshot_first_name = 'Athlete',
-                snapshot_gender = 'M', snapshot_birth_date = '2085-02-03', snapshot_weight_kg = 43.5,
-                snapshot_belt = 'blue', snapshot_weight_category = '-48 kg' WHERE id = 401"
+                snapshot_gender = 'M', snapshot_birth_date = '2085-02-03', snapshot_weight_kg = NULL,
+                snapshot_belt = NULL, snapshot_weight_category = '-48 kg' WHERE id = 401"
         );
 
         $streams = $this->decodedStreams($this->download()->content());
 
         $this->assertPdfContains('Consolidated', $streams);
         $this->assertPdfContains('-48 kg', $streams);
-        $this->assertPdfContains('43.5 kg', $streams);
-        $this->assertPdfContains('Blue', $streams);
         $this->assertPdfOmits('OwnFamily', $streams);
         $this->assertPdfOmits('39.5 kg', $streams);
         $this->assertPdfOmits('Green', $streams);

@@ -7,10 +7,12 @@ namespace Tests;
 use App\Controller\AdminController;
 use App\Controller\EventController;
 use App\Core\Request;
+use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
 use App\Model\Database;
 use PDO;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
@@ -90,11 +92,11 @@ final class EventEntriesCsvWorkflowTest extends TestCase
         self::assertCount(2, $rows);
     }
 
-    public function testOpenEventExportDoesNotRequireClosedEventSnapshotColumns(): void
+    public function testOpenEventExportUsesLiveDataWithoutASnapshot(): void
     {
         $this->database->exec(
-            'UPDATE events SET closed = 0 WHERE id = 701;
-             ALTER TABLE entries DROP COLUMN snapshot_birth_date'
+            "UPDATE events SET closed = 0, date = '" . date('Y-m-d', strtotime('+1 day'))
+                . "' WHERE id = 701; UPDATE entries SET snapshot_at = NULL"
         );
         Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $request = new Request('GET', '/admin/events/export', ['event_id' => '701']);
@@ -115,6 +117,99 @@ final class EventEntriesCsvWorkflowTest extends TestCase
             'LIVE-001',
             'competitive',
             "'-40 kg",
+        ], $rows[1]);
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function exportRoles(): iterable
+    {
+        yield 'administrator' => [true];
+        yield 'club' => [false];
+    }
+
+    #[DataProvider('exportRoles')]
+    public function testClosedEventExportsPreserveNullSnapshotFields(bool $administrator): void
+    {
+        $this->database->exec(
+            'UPDATE entries
+             SET snapshot_weight_kg = NULL, snapshot_belt = NULL, snapshot_membership_number = NULL
+             WHERE id = 801'
+        );
+
+        $response = $this->exportEventEntries($administrator);
+
+        self::assertSame(200, $response->status());
+        $rows = $this->parseCsv($response->content());
+        self::assertCount(2, $rows);
+        self::assertSame([
+            "'=Formula Club",
+            'SYN-201',
+            'Snapshot',
+            'Athlete',
+            'M',
+            '2012-04-05',
+            '',
+            '',
+            '',
+            'Pre-competitive',
+            "'-42 kg",
+        ], $rows[1]);
+    }
+
+    #[DataProvider('exportRoles')]
+    public function testClosedEventExportsNeverReplaceMissingSnapshotsWithLiveData(bool $administrator): void
+    {
+        $this->database->exec(
+            'UPDATE entries
+             SET snapshot_last_name = NULL, snapshot_first_name = NULL, snapshot_gender = NULL,
+                 snapshot_birth_date = NULL, snapshot_weight_kg = NULL, snapshot_belt = NULL,
+                 snapshot_membership_number = NULL, snapshot_program = NULL, snapshot_weight_category = NULL
+             WHERE id = 801'
+        );
+
+        $response = $this->exportEventEntries($administrator);
+
+        self::assertSame(200, $response->status());
+        $rows = $this->parseCsv($response->content());
+        self::assertCount(2, $rows);
+        self::assertSame(array_fill(0, 9, ''), array_slice($rows[1], 2));
+    }
+
+    #[DataProvider('exportRoles')]
+    public function testClosedEventExportsFollowSnapshotUpdatesAndIgnoreLaterProfileEdits(bool $administrator): void
+    {
+        $initial = $this->exportEventEntries($administrator);
+        self::assertSame('Snapshot', $this->parseCsv($initial->content())[1][2]);
+        $this->database->exec(
+            "UPDATE entries
+             SET snapshot_last_name = 'Reviewed', snapshot_first_name = 'Revision', snapshot_gender = 'F',
+                 snapshot_birth_date = '2013-02-03', snapshot_weight_kg = 45.5, snapshot_belt = 'blue',
+                 snapshot_membership_number = 'REVIEWED-001', snapshot_program = 'competitive',
+                 snapshot_weight_category = '-48 kg'
+             WHERE id = 801;
+             UPDATE athletes
+             SET last_name = 'Later', first_name = 'Profile', gender = 'M', birth_date = '2010-01-02',
+                 weight_kg = 60, belt = 'brown', membership_number = 'LATER-001'
+             WHERE id = 301"
+        );
+
+        $response = $this->exportEventEntries($administrator);
+
+        self::assertSame(200, $response->status());
+        $rows = $this->parseCsv($response->content());
+        self::assertCount(2, $rows);
+        self::assertSame([
+            "'=Formula Club",
+            'SYN-201',
+            'Reviewed',
+            'Revision',
+            'F',
+            '2013-02-03',
+            '45.5',
+            'blue',
+            'REVIEWED-001',
+            'competitive',
+            "'-48 kg",
         ], $rows[1]);
     }
 
@@ -192,6 +287,21 @@ final class EventEntriesCsvWorkflowTest extends TestCase
         self::assertSame('/admin/login', $response->headers()['Location']);
     }
 
+    private function exportEventEntries(bool $administrator): Response
+    {
+        if ($administrator) {
+            Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+            $request = new Request('GET', '/admin/events/export', ['event_id' => '701']);
+
+            return (new AdminController($this->view, $request))->exportEventEntries($request);
+        }
+
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $request = new Request('GET', '/events/entries/export', ['event' => '701']);
+
+        return (new EventController($this->view, $request))->exportClubEntries($request);
+    }
+
     /** @return list<list<string|null>> */
     private function parseCsv(string $csv): array
     {
@@ -260,7 +370,8 @@ final class EventEntriesCsvWorkflowTest extends TestCase
                 snapshot_membership_number TEXT,
                 snapshot_birth_date TEXT,
                 snapshot_program TEXT,
-                snapshot_weight_category TEXT
+                snapshot_weight_category TEXT,
+                snapshot_at TEXT
             )'
         );
     }

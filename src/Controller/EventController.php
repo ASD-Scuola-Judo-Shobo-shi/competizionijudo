@@ -604,7 +604,7 @@ final class EventController extends Controller
             : $this->emptyEntryFilters(self::ENTRY_OPPONENT_FILTER_PARAMETERS);
 
         $clubs = Entry::findClubsByEvent($eventId, null);
-        $rows = Entry::findByEvent($eventId, null, $event->closed);
+        $rows = Entry::findByEvent($eventId, null, $event->closed, $event->date);
         $entryReport = EventEntriesViewModel::fromRows(
             $rows,
             $clubs,
@@ -789,7 +789,7 @@ final class EventController extends Controller
         }
 
         $currentClubFilters = $this->entryFilters($request, self::CURRENT_CLUB_FILTER_PARAMETERS);
-        $rows = Entry::findByEvent($eventId, $clubId, true);
+        $rows = Entry::findSnapshotsByEvent($eventId, $clubId);
         $weightCategories = EventEntriesViewModel::weightCategories($rows);
         $weightCategory = $currentClubFilters['weight_category'];
         if ($weightCategory !== '' && !in_array($weightCategory, $weightCategories, true)) {

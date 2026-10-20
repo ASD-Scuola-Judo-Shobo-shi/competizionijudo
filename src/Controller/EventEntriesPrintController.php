@@ -35,7 +35,7 @@ final class EventEntriesPrintController extends Controller
             return $this->redirect('/clubs/login');
         }
 
-        $rows = Entry::findByEvent($eventId, $clubId, $event->closed);
+        $rows = Entry::findByEvent($eventId, $clubId, $event->closed, $event->date);
         $report = EventEntriesViewModel::fromRows($rows, [], $clubId);
         $pdf = (new EventEntriesPdf($this->view))->render(
             $event,

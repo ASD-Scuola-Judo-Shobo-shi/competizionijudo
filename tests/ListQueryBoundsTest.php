@@ -66,7 +66,7 @@ final class ListQueryBoundsTest extends TestCase
 
     public function testClubAndAthletePagesBoundReturnedRows(): void
     {
-        $this->insertEvent(101, 'Synthetic Event', '2026-07-01', true, false);
+        $this->insertEvent(101, 'Synthetic Event', '2099-07-01', true, false);
         for ($id = 1; $id <= 55; $id++) {
             $this->insertClub($id, sprintf('Club %02d', $id));
             $this->insertAthlete(1000 + $id, 1, sprintf('Athlete %02d', $id));
@@ -117,7 +117,7 @@ final class ListQueryBoundsTest extends TestCase
 
     public function testPagesSortTheCompleteDatasetBeforeApplyingTheirLimit(): void
     {
-        $this->insertEvent(101, 'Synthetic Event', '2026-07-01', true, false);
+        $this->insertEvent(101, 'Synthetic Event', '2099-07-01', true, false);
         for ($id = 1; $id <= 12; $id++) {
             $this->insertClub($id, sprintf('Club %02d', $id));
             $this->insertAthlete(1000 + $id, 1, sprintf('Athlete %02d', $id));
@@ -170,7 +170,10 @@ final class ListQueryBoundsTest extends TestCase
         $this->database->exec(
             'CREATE TABLE entries (
                 id INTEGER PRIMARY KEY, event_id INTEGER NOT NULL, club_id INTEGER NOT NULL,
-                athlete_id INTEGER NOT NULL, created_at TEXT NOT NULL
+                athlete_id INTEGER NOT NULL, created_at TEXT NOT NULL, snapshot_at TEXT,
+                snapshot_last_name TEXT, snapshot_first_name TEXT, snapshot_gender TEXT, snapshot_birth_date TEXT,
+                snapshot_weight_kg REAL, snapshot_belt TEXT, snapshot_membership_number TEXT,
+                snapshot_program TEXT, snapshot_weight_category TEXT
             )'
         );
     }
@@ -211,7 +214,7 @@ final class ListQueryBoundsTest extends TestCase
 
     private function insertEntry(int $id, int $eventId, int $clubId, int $athleteId): void
     {
-        $statement = $this->database->prepare('INSERT INTO entries VALUES (?, ?, ?, ?, ?)');
+        $statement = $this->database->prepare('INSERT INTO entries (id, event_id, club_id, athlete_id, created_at) VALUES (?, ?, ?, ?, ?)');
         $statement->execute([$id, $eventId, $clubId, $athleteId, '2026-06-29 12:00:00']);
     }
 }

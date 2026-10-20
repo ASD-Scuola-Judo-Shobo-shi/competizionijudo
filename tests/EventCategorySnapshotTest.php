@@ -30,6 +30,8 @@ final class EventCategorySnapshotTest extends TestCase
         $this->database = new PDO('sqlite::memory:');
         $this->database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->createSchemaAndData();
+        \Tests\Support\EntryReviewSchema::install($this->database);
+        \Tests\Support\EntryReviewSchema::recordProfiles($this->database, '2026-01-01 00:00:00');
         $this->databaseConnection->setValue(null, $this->database);
         Session::destroy();
         Session::start();

@@ -116,7 +116,7 @@ final class DeleteActionsTest extends TestCase
              (id, name, date, location, organizer, registration_deadline, type, description, notes,
               max_participants, poster_file, info_file, published, closed)
              VALUES
-             (501, 'Synthetic event', '2026-07-01', 'Test city', '', '', 'only_competitive', '', '',
+             (501, 'Synthetic event', '2099-07-01', 'Test city', '', '', 'only_competitive', '', '',
               NULL, 'uploads/events/old-poster.pdf', 'uploads/events/old-info.pdf', 1, 0)"
         );
         $this->setDatabase($database);
@@ -158,7 +158,7 @@ final class DeleteActionsTest extends TestCase
              (id, name, date, location, organizer, registration_deadline, type, description, notes,
               max_participants, poster_file, info_file, published, closed)
              VALUES
-             (502, 'Synthetic event', '2026-07-01', 'Test city', '', '', 'only_competitive', '', '',
+             (502, 'Synthetic event', '2099-07-01', 'Test city', '', '', 'only_competitive', '', '',
               NULL, 'uploads/events/old-poster.png', NULL, 1, 0)"
         );
         $database->exec(
@@ -187,7 +187,7 @@ final class DeleteActionsTest extends TestCase
             'csrf_token' => csrf_token(),
             'event_id' => '502',
             'name' => 'Synthetic event',
-            'date' => '2026-07-01',
+            'date' => '2099-07-01',
             'location' => 'Test city',
             'organizer' => '',
             'registration_deadline' => '',
@@ -385,7 +385,9 @@ final class DeleteActionsTest extends TestCase
                 club_id INTEGER NOT NULL,
                 athlete_id INTEGER NOT NULL,
                 snapshot_last_name TEXT,
-                snapshot_first_name TEXT
+                snapshot_first_name TEXT, snapshot_at TEXT, snapshot_gender TEXT, snapshot_birth_date TEXT,
+                snapshot_weight_kg REAL, snapshot_belt TEXT, snapshot_membership_number TEXT,
+                snapshot_program TEXT, snapshot_weight_category TEXT
             )'
         );
     }
