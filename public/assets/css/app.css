@@ -3774,3 +3774,15 @@ html[data-theme="dark"] .table-actions button.table-action-icon:hover {
         grid-template-columns: 1fr;
     }
 }
+.club-entries-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.club-entries-heading h2 {
+    margin: 0;
+}

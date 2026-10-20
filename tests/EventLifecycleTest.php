@@ -1348,7 +1348,7 @@ final class EventLifecycleTest extends TestCase
         self::assertStringContainsString(__('events.entries_filtered_count', ['count' => '1']), $response->content());
     }
 
-    public function testCurrentClubWeightToolsAreHiddenWhileTheEventIsOpen(): void
+    public function testOpenEntriesShowOnlyTheCurrentClubAthletesAndPrintableLink(): void
     {
         $today = date('Y-m-d');
         $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')), deadline: $today);
@@ -1363,11 +1363,68 @@ final class EventLifecycleTest extends TestCase
         $response = $this->dispatchEntries(['event' => '101']);
 
         self::assertSame(200, $response->status());
-        self::assertStringNotContainsString('closed-event-club-entries', $response->content());
+        self::assertStringContainsString('closed-event-club-entries', $response->content());
+        self::assertStringContainsString('OwnFamily OwnGiven', $response->content());
+        self::assertStringContainsString('/events/entries/print?event=101', $response->content());
         self::assertStringNotContainsString('/events/entries/export', $response->content());
+        self::assertStringNotContainsString('/events/entry-data?', $response->content());
         self::assertStringNotContainsString('ForeignFamily ForeignGiven', $response->content());
         self::assertStringNotContainsString(__('events.entries_athletes_heading'), $response->content());
         self::assertStringNotContainsString('closed-event-opponents', $response->content());
+    }
+
+    public function testOpenCurrentClubRosterSupportsFiltersAndIndependentPagination(): void
+    {
+        $this->insertEvent(date: date('Y-m-d', strtotime('+1 day')));
+        $entry = $this->database->prepare(
+            'INSERT INTO entries (event_id, club_id, athlete_id) VALUES (?, ?, ?)'
+        );
+        $entry->execute([101, 201, 301]);
+        for ($index = 1; $index <= 51; $index++) {
+            $athleteId = 499 + $index;
+            $this->insertOwnAthlete($athleteId, sprintf('Paged%02d', $index), 'Athlete');
+            $entry->execute([101, 201, $athleteId]);
+        }
+        Session::authenticateClub(201, CredentialFingerprint::forClubPasswordHash('synthetic-hash'));
+
+        $response = $this->dispatchEntries([
+            'event' => '101',
+            'club_entries_filter_athlete' => 'Paged',
+            'club_entries_sort' => 'athlete',
+            'club_entries_page' => '2',
+        ]);
+
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('Paged51 Athlete', $response->content());
+        self::assertStringNotContainsString('Paged01 Athlete', $response->content());
+        self::assertStringNotContainsString('OwnFamily OwnGiven', $response->content());
+        self::assertStringContainsString(__('events.entries_filtered_count', ['count' => '51']), $response->content());
+        self::assertStringContainsString('/events/entries/print?event=101', $response->content());
+    }
+
+    /** @return iterable<string, array{bool, bool}> */
+    public static function nonClubEntryViewers(): iterable
+    {
+        yield 'anonymous open' => [false, false];
+        yield 'anonymous closed' => [false, true];
+        yield 'administrator open' => [true, false];
+        yield 'administrator closed' => [true, true];
+    }
+
+    #[DataProvider('nonClubEntryViewers')]
+    public function testOwnClubCardAndPrintLinkAreHiddenForNonClubViewers(bool $administrator, bool $closed): void
+    {
+        $this->insertEvent(closed: $closed);
+        if ($administrator) {
+            Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+        }
+
+        $request = new Request('GET', '/events/entries', ['event' => '101']);
+        $response = (new EventController($this->view, $request))->entries($request);
+
+        self::assertSame(200, $response->status());
+        self::assertStringNotContainsString('closed-event-club-entries', $response->content());
+        self::assertStringNotContainsString('/events/entries/print', $response->content());
     }
 
     public function testClosedEventExceptionRegistrationCreatesAnEntrySnapshot(): void

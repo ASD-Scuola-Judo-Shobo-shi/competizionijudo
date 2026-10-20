@@ -11,7 +11,7 @@ use SplFileInfo;
 
 final class TablePaginationPolicyTest extends TestCase
 {
-    public function testEveryRecordTableDeclaresServerOrClientPagination(): void
+    public function testEveryScreenRecordTableDeclaresServerOrClientPagination(): void
     {
         $views = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator(dirname(__DIR__) . '/views')
@@ -19,6 +19,11 @@ final class TablePaginationPolicyTest extends TestCase
 
         foreach ($views as $view) {
             if (!$view instanceof SplFileInfo || !$view->isFile() || $view->getExtension() !== 'php') {
+                continue;
+            }
+            // The complete printable roster uses PDF page breaks and repeating headers,
+            // verified by EventEntriesPrintTest rather than interactive pagination.
+            if ($view->getPathname() === dirname(__DIR__) . '/views/events/entries_pdf.php') {
                 continue;
             }
 

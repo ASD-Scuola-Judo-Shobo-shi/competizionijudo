@@ -47,7 +47,7 @@ $tableFilterFields = [
 ];
 $tableFilterState = $entriesQueryState;
 $tableFilterResetUrl = $currentClubFilterResetUrl;
-$tableFilterDownloadUrl = $clubEntriesExportUrl;
+$tableFilterDownloadUrl = $event->closed ? $clubEntriesExportUrl : null;
 $currentClubFiltersActive = count(array_filter(
     $currentClubFilters,
     static fn(string $value): bool => $value !== ''
@@ -55,7 +55,12 @@ $currentClubFiltersActive = count(array_filter(
 ?>
 
 <section class="card closed-event-club-entries">
-    <h2><?= e(__('events.entries_current_club_title')) ?></h2>
+    <div class="club-entries-heading">
+        <h2><?= e(__('events.entries_current_club_title')) ?></h2>
+        <a class="btn" href="<?= e(base_url('/events/entries/print?event=' . $event->id)) ?>">
+            <?= e(__('events.entries_print_pdf')) ?>
+        </a>
+    </div>
     <p><?= e(__('events.entries_current_club_help')) ?></p>
 
     <?php require __DIR__ . '/_entries_table_filters.php'; ?>
@@ -114,7 +119,11 @@ $currentClubFiltersActive = count(array_filter(
                                 <?= e((string) $athlete['weight_category']) ?>
                             </td>
                             <td data-label="<?= e(__('club.area.belt')) ?>">
-                                <?= e((string) $athlete['belt_label']) ?>
+                                <?php
+                                $beltBadge = \App\Model\Belt::tryFromValue((string) $athlete['belt']);
+                                $beltBadgeFallback = (string) $athlete['belt_label'];
+                                require dirname(__DIR__) . '/components/belt_badge.php';
+                                ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

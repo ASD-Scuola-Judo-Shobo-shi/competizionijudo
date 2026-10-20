@@ -134,7 +134,11 @@ $entryOpponentFiltersActive = array_filter(
                                             ?>
                                         </td>
                                         <td data-label="<?= e(__('club.area.belt')) ?>">
-                                            <?= e((string) $athlete['belt_label']) ?>
+                                            <?php
+                                            $beltBadge = \App\Model\Belt::tryFromValue((string) $athlete['belt']);
+                                            $beltBadgeFallback = (string) $athlete['belt_label'];
+                                            require dirname(__DIR__) . '/components/belt_badge.php';
+                                            ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

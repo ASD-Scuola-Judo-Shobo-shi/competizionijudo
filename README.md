@@ -11,6 +11,7 @@ also depends on correct hosting, privacy, mail, backup, and operational setup.
 | --- | --- | --- |
 | Public events and event details | `/events`, `/events/details` | Public |
 | Event entries | `/events/entries` | Public club totals; authenticated aggregates; own-club details; minimized closed rosters for participating clubs with current agreements; complete administrator view |
+| Printable event roster | `/events/entries/print` | Authenticated club; complete own-club athlete list as a color, grayscale-friendly PDF for open or closed events |
 | Privacy notice, Terms of Service, and language switch | `/privacy`, `/terms`, `/language/switch` | Public |
 | Deployment health and build revision | `/health` | Public, minimal JSON |
 | Club registration and login | `/clubs/register`, `/clubs/login` | Public |

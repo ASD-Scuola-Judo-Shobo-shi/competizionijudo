@@ -596,7 +596,7 @@ final class EventController extends Controller
         $entryAthleteFilters = $event->closed && $canViewAllAthleteEntries
             ? $this->entryFilters($request, self::ENTRY_ATHLETE_FILTER_PARAMETERS)
             : $this->emptyEntryFilters(self::ENTRY_ATHLETE_FILTER_PARAMETERS);
-        $currentClubFilters = $event->closed && $clubId !== null
+        $currentClubFilters = $clubId !== null
             ? $this->entryFilters($request, self::CURRENT_CLUB_FILTER_PARAMETERS)
             : $this->emptyEntryFilters(self::CURRENT_CLUB_FILTER_PARAMETERS);
         $entryOpponentFilters = $event->closed && $clubId !== null && $canViewAllAthleteEntries
@@ -608,7 +608,7 @@ final class EventController extends Controller
         $entryReport = EventEntriesViewModel::fromRows(
             $rows,
             $clubs,
-            $event->closed ? $clubId : null,
+            $clubId,
             $currentClubFilters['weight_category']
         );
         $currentClubFilters['weight_category'] = $entryReport->selectedWeightCategory;
@@ -635,7 +635,7 @@ final class EventController extends Controller
         $filteredEntryAthletes = $event->closed && $canViewAllAthleteEntries
             ? $entryReport->filteredEntries($entryAthleteFilters)
             : [];
-        $filteredCurrentClubEntries = $event->closed && $clubId !== null
+        $filteredCurrentClubEntries = $clubId !== null
             ? $entryReport->filteredCurrentClubEntries($currentClubFilters)
             : [];
         $entryOpponentGroups = $event->closed && $clubId !== null && $canViewAllAthleteEntries

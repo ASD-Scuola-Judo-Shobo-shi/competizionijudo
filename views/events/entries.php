@@ -86,7 +86,7 @@ if ($event !== null) {
 <?php if ($event !== null) : ?>
     <?php require __DIR__ . '/_entries_summary.php'; ?>
 
-    <?php if ($event->closed && $loggedInClubId !== null) : ?>
+    <?php if ($loggedInClubId !== null) : ?>
         <?php require __DIR__ . '/_entries_current_club.php'; ?>
     <?php endif; ?>
 

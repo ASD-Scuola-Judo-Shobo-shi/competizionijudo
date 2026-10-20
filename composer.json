@@ -10,7 +10,8 @@
     "ext-pdo": "*",
     "ext-pdo_mysql": "*",
     "ext-xml": "*",
-    "chillerlan/php-qrcode": "^6.0"
+    "chillerlan/php-qrcode": "^6.0",
+    "dompdf/dompdf": "^3.1.6"
   },
   "require-dev": {
     "ext-pcov": "*",
