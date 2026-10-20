@@ -15,16 +15,13 @@ use App\Model\Club;
 use App\Model\ClubDataRightsDeclaration;
 use App\Model\ClubTermsAcceptance;
 use App\Model\Entry;
-use App\Service\AthleteCsvImportException;
 use App\Service\AthleteCsvTransfer;
-use App\Service\AthleteImportIssue;
-use App\Service\AthleteImportReconciliation;
+use App\Service\AthleteCsvUpload;
 use App\Service\ClubQuota;
 use App\Validation\AthleteInputValidator;
 
 final class ClubAreaController extends Controller
 {
-    private const IMPORT_REPORT_LIMIT = 200;
     private const INLINE_FEEDBACK = 'athlete_inline_feedback';
     private const AGREEMENTS_FEEDBACK = 'club_agreements_feedback';
 
@@ -427,168 +424,21 @@ final class ClubAreaController extends Controller
         }
         $returnView = $request->post('return_view') === 'add' ? 'add' : 'list';
         $redirect = '/clubs/area?view=' . $returnView;
-        $file = $request->file('athletes_file') ?? $request->file('athletes_csv');
-        $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
-
-        if ($uploadError === UPLOAD_ERR_NO_FILE) {
-            $this->flashCsvFeedback('error', __('club.area.csv.file_required'));
-            return $this->redirect($redirect);
-        }
-        if ($uploadError !== UPLOAD_ERR_OK) {
-            $this->flashCsvFeedback('error', __('club.area.csv.upload_failed'));
-            return $this->redirect($redirect);
-        }
-
-        $temporaryPath = is_string($file['tmp_name'] ?? null) ? $file['tmp_name'] : '';
-        $declaredSize = (int) ($file['size'] ?? 0);
-        if ($declaredSize > AthleteCsvTransfer::MAX_BYTES) {
-            $this->flashCsvFeedback('error', __('club.area.csv.too_large'));
-            return $this->redirect($redirect);
-        }
-        if (
-            $temporaryPath === ''
-            || !is_file($temporaryPath)
-            || (PHP_SAPI !== 'cli' && !is_uploaded_file($temporaryPath))
-        ) {
-            $this->flashCsvFeedback('error', __('club.area.csv.upload_failed'));
-            return $this->redirect($redirect);
-        }
-
         try {
-            $result = (new AthleteCsvTransfer())->import(
-                $temporaryPath,
+            $feedback = (new AthleteCsvUpload())->import(
+                $request->file('athletes_file') ?? $request->file('athletes_csv'),
                 (int) $clubId,
                 $request->post('merge_incomplete') === '1'
             );
-            $replacements = [
-                'created' => (string) $result->created,
-                'updated' => (string) $result->updated,
-                'unchanged' => (string) $result->unchanged,
-                'skipped' => (string) $result->skipped(),
-            ];
-            $report = array_map(
-                fn(AthleteImportIssue $issue): array => [
-                    'row' => $issue->row,
-                    'identity' => $issue->identity,
-                    'message' => $this->importIssueMessage($issue),
-                    'existing_athlete_id' => $issue->existingAthleteId,
-                ],
-                $result->issues
-            );
-            foreach ($result->reconciliations as $reconciliation) {
-                $report[] = [
-                    'row' => $reconciliation->row,
-                    'identity' => $reconciliation->identity,
-                    'message' => $this->reconciliationMessage($reconciliation),
-                    'existing_athlete_id' => $reconciliation->existingAthleteId,
-                ];
-            }
-            usort(
-                $report,
-                static fn(array $left, array $right): int => $left['row'] <=> $right['row']
-            );
-            $reportCount = count($report);
-            $report = array_slice($report, 0, self::IMPORT_REPORT_LIMIT);
-            $omitted = max(0, $reportCount - count($report));
-
-            if ($result->issues === []) {
-                $this->flashCsvFeedback(
-                    'success',
-                    __('club.area.csv.import_success', $replacements),
-                    $report,
-                    $omitted
-                );
-            } else {
-                $hasImportedRows = $result->created + $result->updated + $result->unchanged > 0;
-                $this->flashCsvFeedback(
-                    $hasImportedRows ? 'warning' : 'error',
-                    __('club.area.csv.import_with_issues', $replacements),
-                    $report,
-                    $omitted
-                );
-            }
-        } catch (AthleteCsvImportException $exception) {
-            $this->flashCsvFeedback('error', $this->csvImportError($exception));
         } catch (\Throwable $exception) {
             $this->reportFailure('club.athlete_csv_import_failed', $exception, $request);
-            $this->flashCsvFeedback('error', __('club.area.csv.import_failed'));
+            $feedback = [
+                'type' => 'error', 'message' => __('club.area.csv.import_failed'), 'report' => [], 'omitted' => 0,
+            ];
         }
+        Session::flash('athlete_csv_feedback', $feedback);
 
         return $this->redirect($redirect);
-    }
-
-    private function csvImportError(AthleteCsvImportException $exception): string
-    {
-        $replacements = $exception->replacements;
-        if ($exception->row !== null) {
-            $replacements['row'] = (string) $exception->row;
-        }
-        if ($exception->validationKeys !== []) {
-            $replacements['errors'] = implode(' ', array_map(
-                static fn(string $key): string => __($key),
-                $exception->validationKeys
-            ));
-        }
-
-        return __($exception->translationKey, $replacements);
-    }
-
-    private function importIssueMessage(AthleteImportIssue $issue): string
-    {
-        $replacements = [
-            'row' => (string) $issue->row,
-            'athlete' => $issue->identity,
-        ];
-        if ($issue->validationKeys !== []) {
-            $replacements['errors'] = implode(' ', array_map(
-                static fn(string $key): string => __($key),
-                $issue->validationKeys
-            ));
-        }
-        if ($issue->fields !== []) {
-            $replacements['fields'] = implode(', ', array_map(
-                static fn(string $field): string => __('club.area.csv.headers.' . $field),
-                $issue->fields
-            ));
-        }
-
-        return __($issue->translationKey, $replacements);
-    }
-
-    private function reconciliationMessage(AthleteImportReconciliation $reconciliation): string
-    {
-        $details = [];
-        foreach ($reconciliation->resolutions as $field => $resolution) {
-            $details[] = __('club.area.csv.headers.' . $field)
-                . ': '
-                . __('club.area.csv.reconciliation.' . $resolution);
-        }
-
-        return __('club.area.csv.reconciled', [
-            'details' => implode('; ', $details),
-        ]);
-    }
-
-    /**
-     * @param list<array{
-     *     row: int,
-     *     identity: string,
-     *     message: string,
-     *     existing_athlete_id: int|null
-     * }> $report
-     */
-    private function flashCsvFeedback(
-        string $type,
-        string $message,
-        array $report = [],
-        int $omitted = 0
-    ): void {
-        Session::flash('athlete_csv_feedback', [
-            'type' => $type,
-            'message' => $message,
-            'report' => $report,
-            'omitted' => $omitted,
-        ]);
     }
 
     private function hasCurrentAgreements(int $clubId): bool

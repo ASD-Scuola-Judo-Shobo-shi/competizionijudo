@@ -1,8 +1,14 @@
 <?php
+
+declare(strict_types=1);
+
 $csvFeedback = is_array($athleteCsvFeedback ?? null) ? $athleteCsvFeedback : null;
 $returnView = ($csvReturnView ?? 'list') === 'add' ? 'add' : 'list';
 $feedbackType = is_string($csvFeedback['type'] ?? null) ? $csvFeedback['type'] : '';
 $importReport = is_array($csvFeedback['report'] ?? null) ? $csvFeedback['report'] : [];
+$csvExportUrl ??= '/clubs/athletes-export';
+$csvImportUrl ??= '/clubs/athletes-import?';
+$csvEditUrl ??= '/clubs/area?view=add&edit=';
 ?>
 <div class="card csv-tools">
     <h3><?= e(__('club.area.csv.title')) ?></h3>
@@ -37,7 +43,7 @@ $importReport = is_array($csvFeedback['report'] ?? null) ? $csvFeedback['report'
                                             <?php if ((int) ($problem['existing_athlete_id'] ?? 0) > 0) : ?>
                                                 <a
                                                     class="btn btn-sm"
-                                                    href="<?= e(base_url('/clubs/area?view=add&edit=' . (string) $problem['existing_athlete_id'])) ?>"
+                                                    href="<?= e(base_url($csvEditUrl . (string) $problem['existing_athlete_id'])) ?>"
                                                 ><?= e(__('club.area.edit')) ?></a>
                                             <?php else : ?>
                                                 —
@@ -68,10 +74,10 @@ $importReport = is_array($csvFeedback['report'] ?? null) ? $csvFeedback['report'
         </div>
     </div>
     <div class="csv-actions">
-        <a class="btn" href="<?= e(base_url('/clubs/athletes-export')) ?>"><?= e(__('club.area.csv.export')) ?></a>
+        <a class="btn" href="<?= e(base_url($csvExportUrl)) ?>"><?= e(__('club.area.csv.export')) ?></a>
         <form
             method="post"
-            action="<?= e(base_url('/clubs/athletes-import?')) ?>"
+            action="<?= e(base_url($csvImportUrl)) ?>"
             enctype="multipart/form-data"
             class="csv-import-form"
         >

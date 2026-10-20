@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Controller\AdminController;
+use App\Controller\AdminAthleteController;
+use App\Core\HttpException;
+use App\Core\Logger;
 use App\Core\Request;
+use App\Core\Router;
 use App\Core\Session;
 use App\Core\View;
 use App\Localization;
@@ -13,6 +17,7 @@ use App\Model\Database;
 use App\Model\Event;
 use App\Presentation\Navigation;
 use PDO;
+use PDOStatement;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
@@ -30,9 +35,19 @@ final class AdminClubAthleteWorkflowTest extends TestCase
         self::assertTrue($connection === null || $connection instanceof PDO);
         $this->originalConnection = $connection;
 
-        $this->database = new PDO('sqlite::memory:');
+        $this->database = new class ('sqlite::memory:') extends PDO {
+            public int $queryCount = 0;
+
+            public function prepare(string $query, array $options = []): PDOStatement|false
+            {
+                $this->queryCount++;
+
+                return parent::prepare($query, $options);
+            }
+        };
         $this->database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->database->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        $this->database->sqliteCreateFunction('LAST_INSERT_ID', fn(): string => $this->database->lastInsertId());
         $this->createSchema();
         $this->seedData();
         $this->databaseConnection->setValue(null, $this->database);
@@ -110,6 +125,398 @@ final class AdminClubAthleteWorkflowTest extends TestCase
             $response->content()
         );
         self::assertStringContainsString('data-label="Notes"', $response->content());
+        self::assertStringContainsString('/admin/clubs/athletes/edit?club_id=201', $response->content());
+        self::assertStringContainsString('club_id=201&amp;athlete_id=301', $response->content());
+        self::assertStringContainsString('/admin/clubs/athletes/delete?club_id=201', $response->content());
+        self::assertStringContainsString('/admin/clubs/athletes/import?club_id=201', $response->content());
+        self::assertStringNotContainsString('/clubs/athletes-import', $response->content());
+    }
+
+    public function testAdministratorCanAddAthletesToAnyClubIncludingUnapprovedClubs(): void
+    {
+        foreach ([201, 202] as $clubId) {
+            $get = new Request('GET', '/admin/clubs/athletes/edit', ['club_id' => $clubId]);
+            $form = (new AdminAthleteController($this->view, $get))->edit($get);
+            self::assertSame(200, $form->status());
+            self::assertStringContainsString('name="membership_number"', $form->content());
+            self::assertStringContainsString('name="notes"', $form->content());
+
+            $request = $this->athleteRequest('edit', $clubId, [
+                'club_id' => 999,
+                'last_name' => 'New ' . $clubId,
+            ]);
+            $response = (new AdminAthleteController($this->view, $request))->edit($request);
+
+            self::assertSame(303, $response->status());
+            self::assertSame('/admin/clubs/athletes?club_id=' . $clubId, $response->headers()['Location']);
+            $statement = $this->database->prepare('SELECT club_id FROM athletes WHERE last_name = ?');
+            $statement->execute(['New ' . $clubId]);
+            self::assertSame($clubId, (int) $statement->fetchColumn());
+        }
+        self::assertSame(5, (int) $this->database->query('SELECT COUNT(*) FROM athletes')->fetchColumn());
+    }
+
+    public function testAdministratorCanEditAllAthleteFieldsWithinEitherSelectedClub(): void
+    {
+        foreach ([201 => 301, 202 => 303] as $clubId => $athleteId) {
+            $get = new Request('GET', '/admin/clubs/athletes/edit', [
+                'club_id' => $clubId, 'athlete_id' => $athleteId,
+            ]);
+            $form = (new AdminAthleteController($this->view, $get))->edit($get);
+            self::assertSame(200, $form->status());
+            self::assertStringContainsString('value="' . ($clubId === 201 ? 'Own' : 'Foreign') . '"', $form->content());
+
+            $request = $this->athleteRequest('edit', $clubId, [
+                'club_id' => 999,
+                'weight_kg' => '54,5',
+                'notes' => 'Updated <notes>',
+            ], $athleteId);
+            $response = (new AdminAthleteController($this->view, $request))->edit($request);
+
+            self::assertSame(303, $response->status());
+            $athlete = $this->database->query('SELECT * FROM athletes WHERE id = ' . $athleteId)->fetch();
+            self::assertSame($clubId, (int) $athlete['club_id']);
+            self::assertSame('Synthetic', $athlete['last_name']);
+            self::assertSame('Updated', $athlete['first_name']);
+            self::assertSame('F', $athlete['gender']);
+            self::assertSame('2013-04-05', $athlete['birth_date']);
+            self::assertSame(54.5, (float) $athlete['weight_kg']);
+            self::assertSame('blue', $athlete['belt']);
+            self::assertSame('SYN-NEW', $athlete['membership_number']);
+            self::assertSame('Updated <notes>', $athlete['notes']);
+        }
+        self::assertSame('Second', $this->database->query('SELECT last_name FROM athletes WHERE id = 302')->fetchColumn());
+    }
+
+    public function testInvalidInputKeepsSubmittedValuesAndDoesNotChangeAthlete(): void
+    {
+        $request = $this->athleteRequest('edit', 201, [
+            'last_name' => '<Submitted>', 'gender' => 'X', 'birth_date' => 'invalid', 'weight_kg' => '0',
+            'belt' => 'invalid', 'notes' => str_repeat('x', 2001),
+        ], 301);
+        $response = (new AdminAthleteController($this->view, $request))->edit($request);
+
+        self::assertSame(422, $response->status());
+        self::assertStringContainsString('value="&lt;Submitted&gt;"', $response->content());
+        self::assertStringContainsString(__('validation.athlete_weight_invalid'), $response->content());
+        self::assertStringContainsString(__('validation.athlete_notes_too_long'), $response->content());
+        self::assertSame('Own', $this->database->query('SELECT last_name FROM athletes WHERE id = 301')->fetchColumn());
+    }
+
+    public function testAthletesFromAnotherClubCannotBeReadChangedOrDeletedUnderSelectedClub(): void
+    {
+        foreach (['GET', 'POST'] as $method) {
+            foreach ([0, 303, 999] as $athleteId) {
+                $request = $method === 'POST'
+                    ? $this->athleteRequest('edit', 201, [], $athleteId)
+                    : new Request('GET', '/admin/clubs/athletes/edit', [
+                        'club_id' => 201, 'athlete_id' => $athleteId,
+                    ]);
+                try {
+                    (new AdminAthleteController($this->view, $request))->edit($request);
+                    self::fail('An invalid or foreign athlete was accepted.');
+                } catch (HttpException $exception) {
+                    self::assertSame(404, $exception->statusCode());
+                }
+            }
+        }
+        $request = $this->athleteRequest('delete', 201, ['athlete_id' => 303]);
+        try {
+            (new AdminAthleteController($this->view, $request))->delete($request);
+            self::fail('A foreign athlete was accepted for deletion.');
+        } catch (HttpException $exception) {
+            self::assertSame(404, $exception->statusCode());
+        }
+        self::assertSame('Foreign', $this->database->query('SELECT last_name FROM athletes WHERE id = 303')->fetchColumn());
+    }
+
+    public function testAdministratorCanDeleteAthleteWhilePreservingClosedEntrySnapshot(): void
+    {
+        $this->database->exec('PRAGMA foreign_keys = ON');
+        $this->database->exec(
+            'CREATE TABLE entries (
+                id INTEGER PRIMARY KEY,
+                athlete_id INTEGER REFERENCES athletes(id) ON DELETE SET NULL,
+                snapshot_last_name TEXT
+            )'
+        );
+        $this->database->exec("INSERT INTO entries VALUES (1, 303, 'Historical Synthetic')");
+        $request = $this->athleteRequest('delete', 202, ['athlete_id' => 303]);
+
+        $response = (new AdminAthleteController($this->view, $request))->delete($request);
+
+        self::assertSame(303, $response->status());
+        self::assertSame('/admin/clubs/athletes?club_id=202', $response->headers()['Location']);
+        self::assertSame(2, (int) $this->database->query('SELECT COUNT(*) FROM athletes')->fetchColumn());
+        self::assertSame(
+            ['athlete_id' => null, 'snapshot_last_name' => 'Historical Synthetic'],
+            $this->database->query('SELECT athlete_id, snapshot_last_name FROM entries')->fetch()
+        );
+    }
+
+    public function testAdministratorImportsCreateAndUpdateOnlyTheSelectedClub(): void
+    {
+        foreach ([201 => 'OWN-001', 202 => 'FOREIGN-001'] as $clubId => $membership) {
+            $response = $this->importCsv($clubId, implode("\n", [
+                'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+                'Revised,Athlete,F,2013-04-05,44,blue,' . $membership,
+                'New,Athlete,F,2013-04-05,42,yellow,NEW-' . $clubId,
+                'Invalid,Athlete,X,invalid,0,invalid,INVALID',
+            ]));
+            self::assertSame(303, $response->status());
+            self::assertSame('/admin/clubs/athletes?club_id=' . $clubId, $response->headers()['Location']);
+            $request = new Request('GET', '/admin/clubs/athletes', ['club_id' => $clubId]);
+            $page = (new AdminController($this->view, $request))->clubAthletes($request);
+            self::assertStringContainsString('1 added, 1 updated', $page->content());
+            self::assertStringContainsString('1 skipped', $page->content());
+            self::assertStringContainsString('Row 4', $page->content());
+            self::assertStringContainsString('Revised Athlete', $page->content());
+        }
+        self::assertSame(5, (int) $this->database->query('SELECT COUNT(*) FROM athletes')->fetchColumn());
+        self::assertSame('Second', $this->database->query('SELECT last_name FROM athletes WHERE id = 302')->fetchColumn());
+    }
+
+    public function testImportRejectsForeignAthleteIdsAndReportLinksStayInAdminClub(): void
+    {
+        $this->importCsv(201, implode("\n", [
+            'athlete_id,last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+            '303,Foreign,Athlete,F,2012-03-03,44,blue,',
+            '301,Own,Athlete,M,2010-01-01,51,green_blue,OWN-001',
+        ]));
+        $request = new Request('GET', '/admin/clubs/athletes', ['club_id' => 201]);
+        $page = (new AdminController($this->view, $request))->clubAthletes($request);
+
+        self::assertStringContainsString('1 skipped', $page->content());
+        self::assertSame(42.0, (float) $this->database->query('SELECT weight_kg FROM athletes WHERE id = 303')->fetchColumn());
+        self::assertStringNotContainsString('/clubs/area?view=add', $page->content());
+        self::assertStringNotContainsString('athlete_id=303', $page->content());
+    }
+
+    public function testIncompleteImportCanBeReviewedAndExplicitlyMergedInSelectedClub(): void
+    {
+        $csv = "last_name,first_name,gender,birth_date,weight_kg,belt,membership_number\n"
+            . 'Renamed,Athlete,,2010-01-01,51,,OWN-001';
+        $this->importCsv(201, $csv);
+        $request = new Request('GET', '/admin/clubs/athletes', ['club_id' => 201]);
+        $page = (new AdminController($this->view, $request))->clubAthletes($request);
+        $document = new \DOMDocument();
+        @$document->loadHTML($page->content());
+        $links = (new \DOMXPath($document))->query('//div[@class="import-report"]//a/@href');
+        self::assertNotFalse($links);
+        self::assertSame('/admin/clubs/athletes/edit?club_id=201&athlete_id=301', $links->item(0)?->nodeValue);
+
+        $this->importCsv(201, $csv, true);
+        $feedback = Session::pullFlash(AdminAthleteController::importFeedbackKey(201));
+        self::assertSame('success', $feedback['type']);
+        self::assertSame('Renamed', $this->database->query('SELECT last_name FROM athletes WHERE id = 301')->fetchColumn());
+        self::assertSame('green_blue', $this->database->query('SELECT belt FROM athletes WHERE id = 301')->fetchColumn());
+    }
+
+    public function testImportUploadFailuresAreReportedWithoutChangingData(): void
+    {
+        $cases = [
+            [['error' => UPLOAD_ERR_PARTIAL], 'club.area.csv.upload_failed'],
+            [['error' => UPLOAD_ERR_OK, 'size' => 2_097_153], 'club.area.csv.too_large'],
+            [['error' => UPLOAD_ERR_OK, 'tmp_name' => '/nonexistent/synthetic.csv'], 'club.area.csv.upload_failed'],
+        ];
+        foreach ($cases as [$file, $key]) {
+            $request = new Request('POST', '/admin/clubs/athletes/import', ['club_id' => 201], [
+                'csrf_token' => csrf_token(),
+            ], [], null, ['athletes_file' => $file]);
+            $response = (new AdminAthleteController($this->view, $request))->import($request);
+            self::assertSame(303, $response->status());
+            $feedback = Session::pullFlash(AdminAthleteController::importFeedbackKey(201));
+            self::assertSame('error', $feedback['type']);
+            self::assertSame(__($key), $feedback['message']);
+        }
+        $this->importCsv(201, "unsupported,headings\nsynthetic,values");
+        $feedback = Session::pullFlash(AdminAthleteController::importFeedbackKey(201));
+        self::assertSame(__('club.area.csv.invalid_header'), $feedback['message']);
+        self::assertSame(3, (int) $this->database->query('SELECT COUNT(*) FROM athletes')->fetchColumn());
+    }
+
+    public function testLargeImportReportsAreCappedAndShowTheOmittedCount(): void
+    {
+        $csv = ['last_name,first_name,gender,birth_date,weight_kg,belt,membership_number'];
+        for ($index = 0; $index < 205; $index++) {
+            $csv[] = 'Synthetic' . $index . ',Athlete,X,invalid,0,invalid,INVALID-' . $index;
+        }
+        $this->importCsv(201, implode("\n", $csv));
+        $feedback = Session::pullFlash(AdminAthleteController::importFeedbackKey(201));
+        self::assertSame('error', $feedback['type']);
+        self::assertCount(200, $feedback['report']);
+        self::assertSame(5, $feedback['omitted']);
+    }
+
+    public function testQuotaAppliesToAdminCreationAndImportWhileAllowingEdits(): void
+    {
+        $original = $_ENV['CLUB_ATHLETE_LIMIT'] ?? null;
+        $_ENV['CLUB_ATHLETE_LIMIT'] = '2';
+        try {
+            $create = $this->athleteRequest('edit', 201);
+            $response = (new AdminAthleteController($this->view, $create))->edit($create);
+            self::assertSame(422, $response->status());
+            self::assertStringContainsString(__('errors.athlete_quota_exceeded', ['limit' => '2']), $response->content());
+            $this->importCsv(201, "last_name,first_name,gender,birth_date,weight_kg,belt\nNew,Athlete,F,2013-04-05,44,blue");
+            $feedback = Session::pullFlash(AdminAthleteController::importFeedbackKey(201));
+            self::assertSame('error', $feedback['type']);
+            $edit = $this->athleteRequest('edit', 201, [], 301);
+            self::assertSame(303, (new AdminAthleteController($this->view, $edit))->edit($edit)->status());
+            self::assertSame(3, (int) $this->database->query('SELECT COUNT(*) FROM athletes')->fetchColumn());
+        } finally {
+            if ($original === null) {
+                unset($_ENV['CLUB_ATHLETE_LIMIT']);
+            } else {
+                $_ENV['CLUB_ATHLETE_LIMIT'] = $original;
+            }
+        }
+    }
+
+    public function testAdminAthleteRoutesRejectAnonymousAndClubUsersAndRequireCsrf(): void
+    {
+        $router = new Router($this->view);
+        (require dirname(__DIR__) . '/routes/web.php')($router);
+        foreach (['anonymous', 'club'] as $role) {
+            $this->destroySession();
+            Session::start();
+            if ($role === 'club') {
+                Session::authenticateClub(201, hash('sha256', 'synthetic-club-credential'));
+            }
+            foreach (['edit', 'delete', 'import'] as $action) {
+                $request = $this->athleteRequest($action, 201);
+                $response = $router->dispatch($request);
+                self::assertSame('/admin/login', $response->headers()['Location']);
+                $controller = new AdminAthleteController($this->view, $request);
+                self::assertSame('/admin/login', $controller->$action($request)->headers()['Location']);
+            }
+            $response = $router->dispatch(new Request('GET', '/admin/clubs/athletes/edit', ['club_id' => 201]));
+            self::assertSame('/admin/login', $response->headers()['Location']);
+        }
+
+        Session::authenticateAdministrator(hash('sha256', 'synthetic-administrator-credential'));
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::never())->method('prepare');
+        $this->databaseConnection->setValue(null, $database);
+        foreach (['edit', 'delete', 'import'] as $action) {
+            $request = $this->athleteRequest($action, 201, ['csrf_token' => 'synthetic-invalid']);
+            try {
+                $router->dispatch($request);
+                self::fail('An invalid CSRF token was accepted.');
+            } catch (HttpException $exception) {
+                self::assertSame(419, $exception->statusCode());
+            }
+        }
+    }
+
+    public function testDeleteAndImportHaveNoGetRouteAndUnknownClubsCannotBeChanged(): void
+    {
+        $router = new Router($this->view);
+        (require dirname(__DIR__) . '/routes/web.php')($router);
+        foreach (['delete', 'import'] as $action) {
+            try {
+                $router->dispatch(new Request('GET', '/admin/clubs/athletes/' . $action, ['club_id' => 201]));
+                self::fail('A state-changing GET route exists.');
+            } catch (HttpException $exception) {
+                self::assertSame(405, $exception->statusCode());
+            }
+        }
+        foreach (['edit', 'delete', 'import'] as $action) {
+            $request = $this->athleteRequest($action, 999);
+            self::assertSame('/admin/clubs', $router->dispatch($request)->headers()['Location']);
+        }
+    }
+
+    public function testImportFeedbackIsKeptForTheSelectedClub(): void
+    {
+        $request = $this->athleteRequest('import', 201);
+        (new AdminAthleteController($this->view, $request))->import($request);
+        $foreign = new Request('GET', '/admin/clubs/athletes', ['club_id' => 202]);
+        $foreignPage = (new AdminController($this->view, $foreign))->clubAthletes($foreign);
+        self::assertStringNotContainsString(__('club.area.csv.file_required'), $foreignPage->content());
+
+        $own = new Request('GET', '/admin/clubs/athletes', ['club_id' => 201]);
+        $ownPage = (new AdminController($this->view, $own))->clubAthletes($own);
+        self::assertStringContainsString(__('club.area.csv.file_required'), $ownPage->content());
+    }
+
+    public function testStorageFailuresAreLoggedWithoutExposingDetails(): void
+    {
+        $this->database->exec("CREATE TRIGGER fail_update BEFORE UPDATE ON athletes BEGIN SELECT RAISE(ABORT, 'synthetic database details'); END");
+        $this->database->exec("CREATE TRIGGER fail_delete BEFORE DELETE ON athletes BEGIN SELECT RAISE(ABORT, 'synthetic database details'); END");
+        $logger = $this->createMock(Logger::class);
+        $logger->expects(self::exactly(2))->method('error');
+        $edit = $this->athleteRequest('edit', 201, [], 301);
+        $response = (new AdminAthleteController($this->view, $edit, $logger))->edit($edit);
+        self::assertSame(422, $response->status());
+        self::assertStringContainsString(__('errors.save_failed'), $response->content());
+        self::assertStringNotContainsString('synthetic database details', $response->content());
+        $delete = $this->athleteRequest('delete', 201, ['athlete_id' => 301]);
+        self::assertSame(303, (new AdminAthleteController($this->view, $delete, $logger))->delete($delete)->status());
+        $feedback = Session::pullFlash(AdminAthleteController::feedbackKey(201));
+        self::assertSame('error', $feedback['type']);
+        self::assertSame(3, (int) $this->database->query('SELECT COUNT(*) FROM athletes')->fetchColumn());
+    }
+
+    public function testAdminAthletePageQueryCountStaysConstantAndRowsRemainPaginated(): void
+    {
+        $request = new Request('GET', '/admin/clubs/athletes', ['club_id' => 201]);
+        $this->database->queryCount = 0;
+        (new AdminController($this->view, $request))->clubAthletes($request);
+        self::assertSame(3, $this->database->queryCount);
+        for ($index = 0; $index < 75; $index++) {
+            $this->database->prepare(
+                'INSERT INTO athletes (club_id, last_name, first_name, gender, birth_date, weight_kg, belt)
+                 VALUES (201, ?, ?, ?, ?, ?, ?)'
+            )->execute(['Synthetic ' . $index, 'Athlete', 'M', '2013-04-05', 44, 'blue']);
+        }
+        $this->database->queryCount = 0;
+        $page = (new AdminController($this->view, $request))->clubAthletes($request);
+        self::assertSame(3, $this->database->queryCount);
+        self::assertSame(50, substr_count($page->content(), 'name="athlete_id"'));
+        self::assertStringContainsString('page=2', $page->content());
+    }
+
+    /** @param array<string, mixed> $post */
+    private function athleteRequest(string $action, int $clubId, array $post = [], ?int $athleteId = null): Request
+    {
+        $query = ['club_id' => $clubId];
+        if ($athleteId !== null) {
+            $query['athlete_id'] = $athleteId;
+        }
+
+        return new Request('POST', '/admin/clubs/athletes/' . $action, $query, array_merge([
+            'csrf_token' => csrf_token(),
+            'last_name' => 'Synthetic',
+            'first_name' => 'Updated',
+            'gender' => 'F',
+            'birth_date' => '2013-04-05',
+            'weight_kg' => '44',
+            'belt' => 'blue',
+            'membership_number' => 'SYN-NEW',
+            'notes' => 'Synthetic notes',
+        ], $post));
+    }
+
+    private function importCsv(int $clubId, string $csv, bool $mergeIncomplete = false): \App\Core\Response
+    {
+        $path = tempnam(sys_get_temp_dir(), 'admin-athletes-');
+        self::assertNotFalse($path);
+        file_put_contents($path, $csv);
+        try {
+            $request = new Request('POST', '/admin/clubs/athletes/import', ['club_id' => $clubId], [
+                'csrf_token' => csrf_token(),
+                'merge_incomplete' => $mergeIncomplete ? '1' : '0',
+            ], [], null, ['athletes_file' => [
+                'name' => 'synthetic.csv',
+                'tmp_name' => $path,
+                'error' => UPLOAD_ERR_OK,
+                'size' => filesize($path),
+            ]]);
+
+            return (new AdminAthleteController($this->view, $request))->import($request);
+        } finally {
+            unlink($path);
+        }
     }
 
     public function testEventAdministrationUsesAResponsiveTableWithStatusAndCounts(): void

@@ -65,6 +65,10 @@ return static function (App\Core\Router $router): void {
     $router->get('/admin/clubs', [\App\Controller\AdminController::class, 'manageClubs'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/athletes', [\App\Controller\AdminController::class, 'clubAthletes'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/athletes/export', [\App\Controller\AdminController::class, 'exportClubAthletes'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/clubs/athletes/edit', [\App\Controller\AdminAthleteController::class, 'edit'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/clubs/athletes/edit', [\App\Controller\AdminAthleteController::class, 'edit'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/clubs/athletes/delete', [\App\Controller\AdminAthleteController::class, 'delete'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/clubs/athletes/import', [\App\Controller\AdminAthleteController::class, 'import'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/maintenance/athlete-duplicates', [AthleteMaintenanceController::class, 'duplicates'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/maintenance/athlete-duplicates', [AthleteMaintenanceController::class, 'duplicates'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/update-inline', [\App\Controller\AdminController::class, 'updateClubInline'], AuthContext::ADMINISTRATOR);

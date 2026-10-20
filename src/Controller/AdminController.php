@@ -335,6 +335,11 @@ final class AdminController extends Controller
             'club' => $club,
             'athletes' => $athletes,
             'pagination' => $pagination,
+            'athleteFeedback' => Session::pullFlash(AdminAthleteController::feedbackKey($club->id)),
+            'athleteCsvFeedback' => Session::pullFlash(AdminAthleteController::importFeedbackKey($club->id)),
+            'csvExportUrl' => '/admin/clubs/athletes/export?club_id=' . $club->id,
+            'csvImportUrl' => '/admin/clubs/athletes/import?club_id=' . $club->id,
+            'csvEditUrl' => '/admin/clubs/athletes/edit?club_id=' . $club->id . '&athlete_id=',
         ]);
     }
 

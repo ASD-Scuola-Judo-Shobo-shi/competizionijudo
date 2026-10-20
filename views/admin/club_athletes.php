@@ -1,4 +1,9 @@
-<?php /** @var \App\Model\Club $club */ ?>
+<?php
+
+declare(strict_types=1);
+
+/** @var \App\Model\Club $club */
+?>
 <?php /** @var list<\App\Model\Athlete> $athletes */ ?>
 <?php /** @var array{page: int, per_page: int, total: int, last_page: int, offset: int, links: string} $pagination */ ?>
 <section class="card admin-list-page">
@@ -14,12 +19,17 @@
             <a class="btn gray" href="<?= e(base_url('/admin/clubs')) ?>">
                 <?= e(__('admin.clubs.back_to_clubs')) ?>
             </a>
-            <a
-                class="btn"
-                href="<?= e(base_url('/admin/clubs/athletes/export?club_id=' . $club->id)) ?>"
-            ><?= e(__('admin.clubs.export_athletes')) ?></a>
+            <a class="btn green" href="<?= e(base_url('/admin/clubs/athletes/edit?club_id=' . $club->id)) ?>">
+                <?= e(__('club.area.add_athlete')) ?>
+            </a>
         </div>
     </header>
+
+    <?php if (is_array($athleteFeedback ?? null)) : ?>
+        <div class="notice<?= ($athleteFeedback['type'] ?? '') === 'success' ? ' success' : '' ?>" role="status">
+            <?= e((string) ($athleteFeedback['message'] ?? '')) ?>
+        </div>
+    <?php endif; ?>
 
     <?php if (empty($athletes)) : ?>
         <p class="admin-list-empty"><?= e(__('admin.clubs.no_athletes')) ?></p>
@@ -47,6 +57,7 @@
                         <th scope="col" data-sort-key="weight_category"><?= e(__('club.area.table.weight_category')) ?></th>
                         <th scope="col" data-sort-key="membership_number"><?= e(__('club.area.table.membership_number')) ?></th>
                         <th scope="col" data-sort-key="notes"><?= e(__('club.area.table.notes')) ?></th>
+                        <th scope="col" data-sortable="false"><?= e(__('club.area.actions')) ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -101,6 +112,18 @@
                             <td data-label="<?= e(__('club.area.notes')) ?>">
                                 <?= nl2br(e($athlete->notes ?? __('admin.common.not_available'))) ?>
                             </td>
+                            <td class="table-actions-cell" data-label="<?= e(__('club.area.actions')) ?>">
+                                <div class="table-actions admin-table-actions">
+                                    <a class="btn btn-sm" href="<?= e(base_url('/admin/clubs/athletes/edit?club_id=' . $club->id . '&athlete_id=' . $athlete->id)) ?>">
+                                        <?= e(__('club.area.edit')) ?>
+                                    </a>
+                                    <form method="post" action="<?= e(base_url('/admin/clubs/athletes/delete?club_id=' . $club->id)) ?>" data-confirm="<?= e(__('club.area.confirm_delete_athlete')) ?>">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="athlete_id" value="<?= (int) $athlete->id ?>">
+                                        <button class="btn red btn-sm" type="submit"><?= e(__('club.area.delete')) ?></button>
+                                    </form>
+                                </div>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -110,3 +133,4 @@
 
     <?= $pagination['links'] ?>
 </section>
+<?php require dirname(__DIR__) . '/club/_athlete_csv_tools.php'; ?>
