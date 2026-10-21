@@ -122,9 +122,14 @@ coverage threshold.
 
 ## Git and handoff
 
-- Do not commit, amend, push, open a pull request, or deploy unless the user
-  explicitly asks for that action.
-- Use Conventional Commits for all requested commits, for example:
+- After any task that modifies repository files, run the appropriate checks and
+  commit the task's changes before handing work back, unless the user explicitly
+  requests otherwise. No separate commit approval is required.
+- Stage only task-related changes. Leave existing unrelated working-tree changes
+  uncommitted unless the user explicitly includes them in the task.
+- Do not push, amend, open a pull request, or deploy unless the user explicitly
+  asks for that action.
+- Use Conventional Commits for all commits, for example:
   `fix(events): preserve closed-entry snapshots` or
   `refactor(events): simplify entries presentation`.
 - Keep commits cohesive and avoid unrelated formatting or cleanup.
