@@ -19,6 +19,7 @@ declare(strict_types=1);
         .document-meta { margin-bottom: 14pt; }
         .document-meta p { margin: 3pt 0; }
         .document-total { font-weight: bold; }
+        .club-roster + .club-roster { page-break-before: always; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; }

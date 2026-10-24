@@ -299,6 +299,10 @@ final class EventLifecycleTest extends TestCase
         }
         self::assertStringContainsString(__('admin.event_details.enrolled_athletes') . ' (2)', $plainText);
         self::assertStringContainsString(__('admin.event_details.all_clubs'), $plainText);
+        self::assertStringContainsString(__('admin.event_details.download_club_pdf'), $plainText);
+        self::assertStringContainsString(__('admin.event_details.download_all_clubs_pdf'), $plainText);
+        self::assertStringContainsString('action="/admin/events/entries/print"', $response->content());
+        self::assertStringContainsString('href="/admin/events/entries/print?event_id=101"', $response->content());
         self::assertStringContainsString('SnapshotOwn Athlete', $plainText);
         self::assertStringContainsString('Own Club', $plainText);
         self::assertStringContainsString('OWN-201', $plainText);
@@ -355,6 +359,11 @@ final class EventLifecycleTest extends TestCase
         self::assertSame(200, $filteredResponse->status());
         self::assertStringContainsString('SnapshotOwn', $filteredResponse->content());
         self::assertStringNotContainsString('SnapshotForeign', $filteredResponse->content());
+        self::assertStringContainsString('href="/admin/events/entries/print?event_id=101"', $filteredResponse->content());
+        self::assertMatchesRegularExpression(
+            '/<select id="event-athletes-pdf-club"[^>]*>.*?<option value="201" selected>Own Club<\/option>/s',
+            $filteredResponse->content()
+        );
         self::assertMatchesRegularExpression(
             '/<option\s+value="201"\s+selected\s*>Own Club<\/option>/',
             $filteredResponse->content()

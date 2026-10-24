@@ -78,6 +78,7 @@ return static function (App\Core\Router $router): void {
     $router->post('/admin/clubs/approve', [\App\Controller\AdminController::class, 'approveClub'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/delete', [\App\Controller\AdminController::class, 'deleteClub'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/events/entries/print', [\App\Controller\EventEntriesPrintController::class, 'adminDownload'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/entry-data', [\App\Controller\EntryDataController::class, 'adminReview'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/entry-data', [\App\Controller\EntryDataController::class, 'adminReview'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/pending-updates', [\App\Controller\EntryDataController::class, 'pending'], AuthContext::ADMINISTRATOR);

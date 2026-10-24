@@ -16,13 +16,22 @@ final class EventEntriesPdf
     {
     }
 
-    /** @param list<array<string, mixed>> $athletes Normalized, sorted entries for the signed-in club. */
+    /** @param list<array<string, mixed>> $athletes Normalized, sorted entries for the club. */
     public function render(Event $event, Club $club, array $athletes): string
+    {
+        return $this->renderClubs($event, [[
+            'club_name' => $club->name,
+            'federal_code' => $club->federal_code,
+            'athletes' => $athletes,
+        ]]);
+    }
+
+    /** @param list<array{club_name: string, federal_code: string, athletes: list<array<string, mixed>>}> $clubRosters */
+    public function renderClubs(Event $event, array $clubRosters): string
     {
         $html = $this->view->render('events/entries_pdf', [
             'event' => $event,
-            'club' => $club,
-            'athletes' => $athletes,
+            'clubRosters' => $clubRosters,
             'generatedAt' => date('Y-m-d H:i T'),
         ], 'layouts/entries_pdf');
         $options = new Options();

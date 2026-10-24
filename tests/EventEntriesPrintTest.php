@@ -260,6 +260,257 @@ final class EventEntriesPrintTest extends TestCase
         self::assertSame('/clubs/login', $response->headers()['Location']);
     }
 
+    public function testAdministratorCanDownloadOneClubsCompleteEventRoster(): void
+    {
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+        $this->queries = [];
+
+        $response = $this->adminDownload([
+            'club_id' => '202',
+            'enrollment_page' => '99',
+            'enrollment_filter_athlete' => 'NoMatch',
+        ]);
+
+        self::assertSame(200, $response->status());
+        self::assertSame('application/pdf', $response->headers()['Content-Type']);
+        self::assertSame('attachment; filename="club-202-athletes-event-101.pdf"', $response->headers()['Content-Disposition']);
+        self::assertSame('private, no-store, max-age=0', $response->headers()['Cache-Control']);
+        self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
+        self::assertStringStartsWith('%PDF-', $response->content());
+        self::assertCount(2, $this->queries);
+        $streams = $this->decodedStreams($response->content());
+        foreach (['ForeignFamily', 'ForeignGiven', 'Foreign Club', 'SYN-202', 'Synthetic Tournament'] as $text) {
+            $this->assertPdfContains($text, $streams);
+        }
+        foreach (['OwnFamily', 'AnotherEvent', 'Synthetic Club', 'FOREIGN-MEMBER'] as $text) {
+            $this->assertPdfOmits($text, $streams);
+        }
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function adminClubCounts(): iterable
+    {
+        yield 'two clubs' => [2];
+        yield 'twelve clubs' => [12];
+    }
+
+    #[DataProvider('adminClubCounts')]
+    public function testAdministratorCanDownloadAllClubsWithSeparatePagesAndTwoQueries(int $clubCount): void
+    {
+        for ($index = 3; $index <= $clubCount; $index++) {
+            $id = 500 + $index;
+            $this->database->exec(
+                "INSERT INTO clubs VALUES ($id, 'Paged Club $index', 'SYN-$id');
+                 INSERT INTO entries (id, event_id, club_id, athlete_id) VALUES ($id, 101, $id, 301)"
+            );
+        }
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+        $this->queries = [];
+
+        $response = $this->adminDownload(['enrollment_page' => '99']);
+
+        self::assertSame(200, $response->status());
+        self::assertSame('attachment; filename="all-clubs-athletes-event-101.pdf"', $response->headers()['Content-Disposition']);
+        self::assertCount(2, $this->queries);
+        $streams = $this->decodedStreams($response->content());
+        foreach (['ForeignFamily', 'OwnFamily', 'Foreign Club', 'Synthetic Club', 'SYN-201', 'SYN-202'] as $text) {
+            $this->assertPdfContains($text, $streams);
+        }
+        $this->assertPdfOmits('AnotherEvent', $streams);
+        preg_match_all('~/Type\s*/Page\b~', $response->content(), $pages);
+        self::assertCount($clubCount, $pages[0]);
+        self::assertSame(
+            $clubCount,
+            substr_count($streams, mb_convert_encoding('Synthetic Tournament', 'UTF-16BE', 'UTF-8'))
+        );
+        $foreignPosition = strpos($streams, mb_convert_encoding('Foreign Club', 'UTF-16BE', 'UTF-8'));
+        $ownPosition = strpos($streams, mb_convert_encoding('Synthetic Club', 'UTF-16BE', 'UTF-8'));
+        self::assertIsInt($foreignPosition);
+        self::assertIsInt($ownPosition);
+        self::assertLessThan($ownPosition, $foreignPosition);
+    }
+
+    /** @return iterable<string, array{array<string, string>}> */
+    public static function adminRosterScopes(): iterable
+    {
+        yield 'one club' => [['club_id' => '201']];
+        yield 'all clubs' => [[]];
+    }
+
+    #[DataProvider('adminRosterScopes')]
+    public function testAdministratorPdfIncludesAllAthletesAcrossPagesWithRepeatedHeaders(array $query): void
+    {
+        for ($index = 1; $index <= 75; $index++) {
+            $id = 500 + $index;
+            $this->database->exec(
+                "INSERT INTO athletes (id, last_name, first_name, gender, birth_date, weight_kg, belt)
+                    VALUES ($id, 'Paged$index', 'Athlete', 'F', '2087-01-01', 39.5, 'green');
+                 INSERT INTO entries (id, event_id, club_id, athlete_id) VALUES ($id, 101, 201, $id)"
+            );
+        }
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+        $this->queries = [];
+
+        $response = $this->adminDownload($query + ['enrollment_page' => '99']);
+
+        self::assertSame(200, $response->status());
+        self::assertCount(2, $this->queries);
+        $streams = $this->decodedStreams($response->content());
+        $this->assertPdfContains('OwnFamily', $streams);
+        $this->assertPdfContains('Paged75', $streams);
+        preg_match_all('~/Type\s*/Page\b~', $response->content(), $pages);
+        self::assertGreaterThan(1, count($pages[0]));
+        self::assertSame(
+            count($pages[0]),
+            substr_count($streams, mb_convert_encoding(__('club.area.table.weight_category'), 'UTF-16BE', 'UTF-8'))
+        );
+    }
+
+    #[DataProvider('adminRosterScopes')]
+    public function testAdministratorCanPrintUnpublishedClosedEventsUsingOnlySavedData(array $query): void
+    {
+        $this->database->exec(
+            "UPDATE events SET published = 0, closed = 1 WHERE id = 101;
+             UPDATE entries SET snapshot_last_name = 'Consolidated', snapshot_first_name = 'Athlete',
+                snapshot_birth_date = '2085-02-03', snapshot_weight_category = '-48 kg' WHERE id = 401"
+        );
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+
+        $response = $this->adminDownload($query);
+
+        self::assertSame(200, $response->status());
+        $streams = $this->decodedStreams($response->content());
+        $this->assertPdfContains('Consolidated', $streams);
+        $this->assertPdfContains('-48 kg', $streams);
+        foreach (['OwnFamily', '39.5 kg', 'Green'] as $text) {
+            $this->assertPdfOmits($text, $streams);
+        }
+    }
+
+    public function testAdministratorCanDownloadAnEmptyEventPdfInItalian(): void
+    {
+        $this->database->exec('DELETE FROM entries WHERE event_id = 101');
+        Localization::setLocale('it');
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+
+        $response = $this->adminDownload();
+
+        self::assertSame(200, $response->status());
+        $streams = $this->decodedStreams($response->content());
+        $this->assertPdfContains('Synthetic Tournament', $streams);
+        $this->assertPdfContains(__('admin.event_details.no_enrolled_athletes'), $streams);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>, string}> */
+    public static function invalidAdminDownloads(): iterable
+    {
+        yield 'missing event' => [['event_id' => '0'], '/admin/events'];
+        yield 'unknown event' => [['event_id' => '999'], '/admin/events'];
+        yield 'unknown club' => [['club_id' => '999'], '/admin/events/details?event_id=101'];
+        yield 'club not enrolled in event' => [['event_id' => '102', 'club_id' => '202'], '/admin/events/details?event_id=102'];
+        yield 'empty club' => [['club_id' => ''], '/admin/events/details?event_id=101'];
+        yield 'invalid club' => [['club_id' => 'invalid'], '/admin/events/details?event_id=101'];
+        yield 'negative club' => [['club_id' => '-1'], '/admin/events/details?event_id=101'];
+        yield 'array club' => [['club_id' => ['201']], '/admin/events/details?event_id=101'];
+    }
+
+    #[DataProvider('invalidAdminDownloads')]
+    public function testInvalidAdminDownloadsRedirectWithoutGeneratingAPdf(array $query, string $location): void
+    {
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+
+        $response = $this->adminDownload($query);
+
+        self::assertSame(302, $response->status());
+        self::assertSame($location, $response->headers()['Location']);
+        self::assertSame('', $response->content());
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function nonAdminViewers(): iterable
+    {
+        yield 'anonymous' => [false];
+        yield 'club' => [true];
+    }
+
+    #[DataProvider('nonAdminViewers')]
+    public function testOnlyAdministratorsCanDownloadViaAdminRouteOrController(bool $club): void
+    {
+        Session::invalidateAuthentication();
+        if ($club) {
+            Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        }
+        $this->queries = [];
+        $router = new Router($this->view);
+        (require dirname(__DIR__) . '/routes/web.php')($router);
+        $request = new Request('GET', '/admin/events/entries/print', ['event_id' => '101']);
+        $controllerResponse = (new EventEntriesPrintController($this->view, $request))->adminDownload($request);
+
+        foreach ([$router->dispatch($request), $controllerResponse] as $response) {
+            self::assertSame(302, $response->status());
+            self::assertSame('/admin/login', $response->headers()['Location']);
+        }
+        self::assertSame([], $this->queries);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function pdfUiLanguages(): iterable
+    {
+        foreach (['it', 'en'] as $locale) {
+            foreach (['club', 'admin-club', 'admin-all'] as $scope) {
+                yield $locale . ' ' . $scope => [$locale, $scope];
+            }
+        }
+    }
+
+    #[DataProvider('pdfUiLanguages')]
+    public function testPdfUsesOnlyTheCurrentUiLanguage(string $locale, string $scope): void
+    {
+        Localization::setLocale($locale);
+        if ($scope !== 'club') {
+            Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+        }
+
+        $response = match ($scope) {
+            'admin-club' => $this->adminDownload(['club_id' => '201']),
+            'admin-all' => $this->adminDownload(),
+            default => $this->download(),
+        };
+
+        self::assertSame(200, $response->status());
+        $streams = $this->decodedStreams($response->content());
+        $otherLocale = $locale === 'en' ? 'it' : 'en';
+        foreach (
+            [
+                'events.entries_pdf_title',
+                'events.location',
+                'club.area.table.athlete',
+                'club.area.table.weight_category',
+                'club.area.table.belt',
+                'gender.F',
+                'belt.green',
+            ] as $key
+        ) {
+            $this->assertPdfContains(Localization::transFor($locale, $key), $streams);
+            $this->assertPdfOmits(Localization::transFor($otherLocale, $key), $streams);
+        }
+        $this->assertPdfContains($locale === 'en' ? 'Pre-Cadets A' : 'Esordienti A', $streams);
+        $this->assertPdfOmits($locale === 'en' ? 'Esordienti A' : 'Pre-Cadets A', $streams);
+        $page = ['page' => '1', 'pages' => $scope === 'admin-all' ? '2' : '1'];
+        $this->assertPdfContains(Localization::transFor($locale, 'events.entries_pdf_page', $page), $streams);
+        $this->assertPdfOmits(Localization::transFor($otherLocale, 'events.entries_pdf_page', $page), $streams);
+    }
+
+    /** @param array<string, mixed> $query */
+    private function adminDownload(array $query = []): Response
+    {
+        $request = new Request('GET', '/admin/events/entries/print', $query + ['event_id' => '101']);
+        $router = new Router($this->view);
+        (require dirname(__DIR__) . '/routes/web.php')($router);
+
+        return $router->dispatch($request);
+    }
+
     /** @param array<string, string> $query */
     private function download(array $query = []): Response
     {

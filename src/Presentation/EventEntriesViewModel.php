@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation;
 
+use App\Localization;
 use App\Model\AgeClass;
 use App\Model\Belt;
 use App\Model\Gender;
@@ -544,6 +545,23 @@ final class EventEntriesViewModel
         return $this->sortedEntries($entries ?? $this->currentClubEntries, $sort, $direction);
     }
 
+    /** @return list<array{club_name: string, federal_code: string, athletes: list<array<string, mixed>>}> */
+    public function clubRosters(): array
+    {
+        $rosters = [];
+        foreach ($this->sortedEntries($this->entries, 'club', 'asc') as $entry) {
+            $clubId = (int) $entry['club_id'];
+            $rosters[$clubId] ??= [
+                'club_name' => (string) $entry['club_name'],
+                'federal_code' => (string) $entry['federal_code'],
+                'athletes' => [],
+            ];
+            $rosters[$clubId]['athletes'][] = $entry;
+        }
+
+        return array_values($rosters);
+    }
+
     /**
      * @param array<string, mixed> $club
      * @param array<string, string> $filters
@@ -738,7 +756,7 @@ final class EventEntriesViewModel
         $birthYear = JudoCategory::extractBirthYear($birthDate);
         $eventYear = $eventDate !== '' ? (int) substr($eventDate, 0, 4) : (int) date('Y');
         $ageClass = $birthYear !== null
-            ? AgeClass::calculate($birthYear, $eventYear)
+            ? AgeClass::calculate($birthYear, $eventYear, Localization::getLocale())
             : ['key' => '', 'age_min' => PHP_INT_MAX, 'label' => ''];
         $genderValue = (string) ($row['gender'] ?? '');
         $gender = Gender::tryFromValue($genderValue);

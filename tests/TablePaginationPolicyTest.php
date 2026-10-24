@@ -23,7 +23,12 @@ final class TablePaginationPolicyTest extends TestCase
             }
             // The complete printable roster uses PDF page breaks and repeating headers,
             // verified by EventEntriesPrintTest rather than interactive pagination.
-            if ($view->getPathname() === dirname(__DIR__) . '/views/events/entries_pdf.php') {
+            if (
+                in_array($view->getPathname(), [
+                    dirname(__DIR__) . '/views/events/entries_pdf.php',
+                    dirname(__DIR__) . '/views/events/_entries_club_pdf.php',
+                ], true)
+            ) {
                 continue;
             }
 

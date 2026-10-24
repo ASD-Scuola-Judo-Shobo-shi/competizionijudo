@@ -17,6 +17,45 @@ use App\Service\EventEntriesPdf;
 
 final class EventEntriesPrintController extends Controller
 {
+    public function adminDownload(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+
+        $eventId = (int) $request->query('event_id', '0');
+        $event = $eventId > 0 ? Event::findById($eventId) : null;
+        if ($event === null) {
+            return $this->redirect('/admin/events');
+        }
+
+        $requestedClubId = $request->query('club_id');
+        $clubId = $requestedClubId === null ? null : filter_var($requestedClubId, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]);
+        if ($clubId === false) {
+            return $this->redirect('/admin/events/details?event_id=' . $eventId);
+        }
+
+        $rows = Entry::findByEvent($eventId, $clubId, $event->closed, $event->date);
+        if ($clubId !== null && $rows === []) {
+            return $this->redirect('/admin/events/details?event_id=' . $eventId);
+        }
+        $report = EventEntriesViewModel::fromRows($rows, [], null);
+        $pdf = (new EventEntriesPdf($this->view))->renderClubs($event, $report->clubRosters());
+        $filename = $clubId === null
+            ? 'all-clubs-athletes-event-' . $eventId . '.pdf'
+            : 'club-' . $clubId . '-athletes-event-' . $eventId . '.pdf';
+
+        return new Response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     public function download(Request $request): Response
     {
         Session::start();

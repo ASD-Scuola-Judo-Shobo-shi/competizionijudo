@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /** @var \App\Model\Event $event */
 /** @var list<array<string, mixed>> $enrolledAthletes */
 /** @var list<array<string, mixed>> $enrolledClubs */
@@ -32,6 +34,21 @@ $entryTypePresentation = static function (string $value): array {
         <a class="btn" href="<?= e(base_url('/admin/events/outliers?event_id=' . $event->id)) ?>"><?= e(__('entry_review.outliers.title')) ?></a>
     </div>
     <?php if ($enrolledClubs !== []) : ?>
+        <p class="field-help"><?= e(__('admin.event_details.athlete_pdfs_help')) ?></p>
+        <form method="get" action="<?= e(base_url('/admin/events/entries/print')) ?>" class="closed-event-club-filter">
+            <input type="hidden" name="event_id" value="<?= e((string) $event->id) ?>">
+            <div class="closed-event-club-filter__field">
+                <label for="event-athletes-pdf-club"><?= e(__('admin.event_details.filter_club')) ?></label>
+                <select id="event-athletes-pdf-club" name="club_id" required>
+                    <?php foreach ($enrolledClubs as $enrolledClub) : ?>
+                        <?php $enrolledClubId = (int) $enrolledClub['id']; ?>
+                        <option value="<?= e((string) $enrolledClubId) ?>" <?= $selectedEnrollmentClubId === $enrolledClubId ? 'selected' : '' ?>><?= e((string) $enrolledClub['club_name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button class="btn" type="submit"><?= e(__('admin.event_details.download_club_pdf')) ?></button>
+            <a class="btn" href="<?= e(base_url('/admin/events/entries/print?event_id=' . $event->id)) ?>"><?= e(__('admin.event_details.download_all_clubs_pdf')) ?></a>
+        </form>
         <form
             method="get"
             action="<?= e(base_url('/admin/events/details')) ?>"
