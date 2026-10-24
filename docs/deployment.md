@@ -81,6 +81,11 @@ repository/hosting operator must:
    hosting account does not consult the root router for environment
    directories, the artifact-level dispatch remains operative; keep both
    rules in sync.
+
+   Migration dispatch uses Apache 2.4's `END` flag so later per-directory
+   rewrite passes cannot send the endpoint through the private-directory deny
+   rules. The artifact also stops rewriting paths already below `public/`
+   using a directory-relative rule, which works under both `/prod` and `/dev`.
 6. Verify that `https://www.competizionijudo.it/health` returns HTTP 200 before
    enabling traffic. The workflow renders `.env` inside GitHub Actions and
    uploads it to the target directory after the application files. If an
@@ -102,6 +107,32 @@ do not need database access. Do not create `MIGRATION_DB_*` GitHub entries for
 this flow. Deployment concurrency queues a newer run instead of cancelling an
 active one, so an in-progress migration request is not interrupted by a new
 push.
+
+### Migration endpoint returns an HTML 403 or 500
+
+An Apache HTML error is different from the migration handler's JSON responses:
+an invalid token returns HTTP 401, and a failed authenticated migration returns
+HTTP 500 with a JSON diagnostic. Check routing before rotating the token.
+
+1. Confirm the failed step belongs to the intended deployment revision.
+   Re-running an older workflow uses that older revision's routing files.
+2. Verify `FTP_BASE_DIR` identifies the web directory containing `prod/` and
+   `dev/`, and that the production `FTP_DEPLOY_DIR` is `prod`. Root router
+   checksum verification alone cannot detect an upload to the wrong directory.
+3. Upload the current `root.htaccess` as `.htaccess` in that web root, and the
+   current repository `.htaccess` as `prod/.htaccess` (or `dev/.htaccess`). The
+   deployment workflow handles both uploads. Keep the exact migration dispatch
+   before the private-directory deny rules; SQL files must remain forbidden.
+4. An unauthenticated GET to `/prod/migrations/` should return HTTP 405 from the
+   application, and `/prod/health` should return HTTP 200. If those still return
+   server HTML errors with the correct files in place, inspect the hosting
+   error log and file permissions, and ask the host to check URL/security rules.
+5. Run a new deployment of the corrected revision. Keep the token-authenticated
+   POST in the workflow as the final migration check.
+
+The PHPUnit routing regression uses an isolated Apache server with synthetic
+files, including installations below `/prod` and `/dev` without the root router.
+Install Apache 2 locally to run it; the CI quality job installs it explicitly.
 
 ## Post-deployment security verification
 

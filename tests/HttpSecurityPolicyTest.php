@@ -54,7 +54,7 @@ final class HttpSecurityPolicyTest extends TestCase
     public function testRootApachePolicyDispatchesOnlyExactMigrationEndpointsBeforeDeny(): void
     {
         $policy = $this->rootPolicy();
-        $dispatch = 'RewriteRule ^(?:prod|dev)/migrations/?$ index.php [QSA,L]';
+        $dispatch = 'RewriteRule ^(?:prod|dev)/migrations/?$ index.php [QSA,END]';
         $dispatchPosition = strpos($policy, $dispatch);
         $denyPosition = strpos(
             $policy,
@@ -98,7 +98,7 @@ final class HttpSecurityPolicyTest extends TestCase
     public function testArtifactApachePolicyDispatchesOnlyExactMigrationEndpointsBeforeDeny(): void
     {
         $policy = $this->artifactPolicy();
-        $dispatch = 'RewriteRule ^(?:migrations/?)$ public/index.php [QSA,L]';
+        $dispatch = 'RewriteRule ^(?:migrations/?)$ public/index.php [QSA,END]';
         $dispatchPosition = strpos($policy, $dispatch);
         $denyPosition = strpos($policy, 'RewriteRule ^(?:\.git|\.github|config|docs|lang|migrations|');
 

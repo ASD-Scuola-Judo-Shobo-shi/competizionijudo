@@ -31,7 +31,7 @@ RewriteRule ^ https://www.competizionijudo.it%{REQUEST_URI} [L,R=301]
 # The rule is intentionally unconditional: the production host does not honor
 # method conditions in per-directory context; the application rejects
 # non-POST requests with 405.
-RewriteRule ^(?:prod|dev)/migrations/?$ index.php [QSA,L]
+RewriteRule ^(?:prod|dev)/migrations/?$ index.php [QSA,END]
 
 # Application artifacts live below /prod, /dev, or /legacy. Match both that
 # deployed shape and a directly hosted artifact so existing files never bypass
