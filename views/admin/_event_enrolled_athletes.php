@@ -27,6 +27,7 @@ $entryTypePresentation = static function (string $value): array {
         (<?= e((string) $enrollmentPagination['total']) ?>)
     </h2>
     <div class="form-actions">
+        <a class="btn" href="<?= e(base_url('/admin/events/differences?event_id=' . $event->id)) ?>"><?= e(__('entry_review.differences.title')) ?></a>
         <a class="btn" href="<?= e(base_url('/admin/events/pending-updates?event_id=' . $event->id)) ?>"><?= e(__('entry_review.pending_title')) ?></a>
         <a class="btn" href="<?= e(base_url('/admin/events/outliers?event_id=' . $event->id)) ?>"><?= e(__('entry_review.outliers.title')) ?></a>
     </div>

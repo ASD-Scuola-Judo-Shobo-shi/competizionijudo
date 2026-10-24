@@ -106,6 +106,15 @@ its screens and CSV exports use the approved values. Rejection preserves the
 existing record. Requests and decisions retain reasons and the administrator
 role; the application currently uses a shared administrator identity.
 
+The competition admin page links to `/admin/events/differences`, which compares
+competition page values, current CSV export data, and current athlete profiles.
+Closing registrations freezes entry data even before the competition date.
+Before the event cutoff, administrators can align all differing frozen entries
+with current profiles after entering a reason. Alignment is atomic, rejects
+outdated previews, records an approved review for each changed entry, and
+preserves existing snapshot retention dates. Other competitions and athlete
+profiles are unaffected.
+
 Athlete inserts and relevant edits record revisions through MySQL triggers,
 including spreadsheet imports and duplicate reconciliation. Apply the forward
 migration with a database account that can create triggers before serving the

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Validation\EntryDataInput;
 use PDO;
 use Throwable;
 
@@ -11,6 +12,87 @@ final class EntryDataReviewService
 {
     public function __construct(private readonly PDO $database)
     {
+    }
+
+    /**
+     * @return array{entries:list<array<string, mixed>>, fingerprint:string, canAlign:bool}
+     */
+    public function alignmentPreview(int $eventId, bool $lock = false): array
+    {
+        $locking = $lock && $this->database->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
+        $statement = $this->database->prepare('SELECT id, date, closed FROM events WHERE id = ?'
+            . ($locking ? ' FOR UPDATE' : ''));
+        $statement->execute([$eventId]);
+        $event = $statement->fetch();
+        if ($event === false) {
+            throw new EntryDataReviewException('not_found');
+        }
+        $statement = $this->database->prepare(
+            'SELECT en.*, en.id AS entry_id, c.name AS club_name, c.federal_code,
+                    a.last_name, a.first_name, a.gender, a.birth_date, a.weight_kg, a.belt, a.membership_number,
+                    (SELECT review.id FROM entry_data_reviews review
+                     WHERE review.entry_id = en.id AND review.status = \'approved\'
+                     ORDER BY review.id DESC LIMIT 1) AS last_review_id
+             FROM entries en JOIN athletes a ON a.id = en.athlete_id AND a.club_id = en.club_id
+             JOIN clubs c ON c.id = en.club_id
+             WHERE en.event_id = ? ORDER BY en.id' . ($locking ? ' FOR UPDATE' : '')
+        );
+        $statement->execute([$eventId]);
+        $entries = $statement->fetchAll();
+        foreach ($entries as &$entry) {
+            $entry['event_date'] = $event['date'];
+            $entry['closed'] = $event['closed'];
+        }
+        unset($entry);
+
+        return [
+            'entries' => $entries,
+            'fingerprint' => hash('sha256', TournamentData::json(['event' => $event, 'entries' => $entries])),
+            'canAlign' => TournamentData::now() < TournamentData::cutoff((string) $event['date']),
+        ];
+    }
+
+    public function alignCurrentProfiles(int $eventId, string $fingerprint, string $reason): int
+    {
+        $count = 0;
+        $this->transaction(function () use ($eventId, $fingerprint, $reason, &$count): void {
+            $preview = $this->alignmentPreview($eventId, true);
+            if (!$preview['canAlign']) {
+                throw new EntryDataReviewException('cutoff');
+            }
+            if (!hash_equals($preview['fingerprint'], $fingerprint)) {
+                throw new EntryDataReviewException('stale');
+            }
+            $this->validateReason($reason);
+            foreach ($preview['entries'] as $entry) {
+                if (empty($entry['closed']) && $entry['snapshot_at'] === null) {
+                    continue;
+                }
+                $proposed = TournamentData::categorize($entry, (string) $entry['event_date']);
+                $current = $this->current($entry);
+                $input = array_map(static fn(?string $value): string => $value ?? '', $proposed);
+                if ($input === array_map(static fn(?string $value): string => $value ?? '', $current)) {
+                    continue;
+                }
+                if (EntryDataInput::errors($input) !== []) {
+                    throw new EntryDataReviewException('invalid');
+                }
+                $reviewId = $this->createReview(
+                    $entry,
+                    $proposed,
+                    $reason,
+                    $this->fingerprint($entry, $current),
+                    TournamentData::now(),
+                    null,
+                    null
+                );
+                $this->apply($entry, $proposed);
+                $this->recordDecision($reviewId, 'approved', $reason);
+                $count++;
+            }
+        });
+
+        return $count;
     }
 
     /** @return array<string, mixed> */

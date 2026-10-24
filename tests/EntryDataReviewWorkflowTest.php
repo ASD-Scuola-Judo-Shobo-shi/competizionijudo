@@ -6,6 +6,7 @@ namespace Tests;
 
 use App\Controller\EntryDataController;
 use App\Core\HttpException;
+use App\Core\Logger;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
@@ -384,6 +385,200 @@ final class EntryDataReviewWorkflowTest extends TestCase
         self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM entry_data_reviews')->fetchColumn());
         self::assertSame(1, $retention->purgeBefore('2026-06-01 00:00:00'));
         self::assertSame(0, $retention->purgeBefore('2026-06-01 00:00:00'));
+    }
+
+    public function testDifferenceReportShowsFrozenAndCurrentDataWithoutChangingThem(): void
+    {
+        Session::authenticateAdministrator(hash('sha256', 'synthetic-admin'));
+        $request = new Request('GET', '/admin/events/differences', ['event_id' => '101']);
+        $controller = new EntryDataController(new View(dirname(__DIR__) . '/views'), $request);
+        $before = $this->database->query('SELECT * FROM entries')->fetchAll();
+
+        $response = $controller->differences($request);
+
+        self::assertSame(200, $response->status());
+        self::assertSame('private, no-store, max-age=0', $response->headers()['Cache-Control']);
+        self::assertStringContainsString('0 with differences between competition page and CSV', $response->content());
+        self::assertStringContainsString('Original', $response->content());
+        self::assertStringContainsString('Revised', $response->content());
+        self::assertStringContainsString('/admin/events/align-data', $response->content());
+        self::assertStringNotContainsString('Other tournament', $response->content());
+        self::assertSame($before, $this->database->query('SELECT * FROM entries')->fetchAll());
+    }
+
+    public function testDifferenceReportEscapesValuesAndDisablesAlignmentAfterCutoff(): void
+    {
+        $this->database->exec("UPDATE events SET date = '2020-06-01' WHERE id = 101;
+            UPDATE athletes SET last_name = '<script>synthetic</script>' WHERE id = 301");
+        Session::authenticateAdministrator(hash('sha256', 'synthetic-admin'));
+        $request = new Request('GET', '/admin/events/differences', ['event_id' => '101']);
+        $response = (new EntryDataController(new View(dirname(__DIR__) . '/views'), $request))->differences($request);
+
+        self::assertStringContainsString('&lt;script&gt;synthetic&lt;/script&gt;', $response->content());
+        self::assertStringNotContainsString('<script>synthetic</script>', $response->content());
+        self::assertStringNotContainsString('/admin/events/align-data', $response->content());
+        self::assertStringContainsString('This tournament has ended', $response->content());
+    }
+
+    public function testAlignmentUpdatesOnlyThisEventsSnapshotsAndRecordsApprovalWithoutRenewingRetention(): void
+    {
+        $preview = $this->service->alignmentPreview(101);
+        $otherEvent = $this->database->query('SELECT * FROM entries WHERE event_id = 102')->fetchAll();
+        $profiles = $this->database->query('SELECT * FROM athletes')->fetchAll();
+
+        self::assertSame(1, $this->service->alignCurrentProfiles(101, $preview['fingerprint'], 'Verify current profiles'));
+
+        $details = $this->service->details(101, 401, null);
+        self::assertSame('Revised', $details['current']['last_name']);
+        self::assertSame('45.50', $details['current']['weight_kg']);
+        self::assertSame('2026-01-01 00:00:00', $details['entry']['snapshot_at']);
+        self::assertSame('approved', $details['history'][0]['status']);
+        self::assertSame('Verify current profiles', $details['history'][0]['decision_reason']);
+        self::assertSame('Original', $details['history'][0]['before']['last_name']);
+        self::assertSame('Revised', $details['history'][0]['proposed']['last_name']);
+        self::assertSame($otherEvent, $this->database->query('SELECT * FROM entries WHERE event_id = 102')->fetchAll());
+        self::assertSame($profiles, $this->database->query('SELECT * FROM athletes')->fetchAll());
+        $preview = $this->service->alignmentPreview(101);
+        self::assertSame(0, $this->service->alignCurrentProfiles(101, $preview['fingerprint'], 'Already aligned'));
+    }
+
+    public function testAlignmentSkipsLiveEntriesButUpdatesApprovedEntriesInAnOpenEvent(): void
+    {
+        $this->database->exec('UPDATE events SET closed = 0 WHERE id = 101;
+            UPDATE entries SET snapshot_at = NULL WHERE id = 403');
+        $live = $this->database->query('SELECT * FROM entries WHERE id = 403')->fetch();
+        $preview = $this->service->alignmentPreview(101);
+
+        self::assertSame(1, $this->service->alignCurrentProfiles(101, $preview['fingerprint'], 'Update frozen entry'));
+        self::assertSame($live, $this->database->query('SELECT * FROM entries WHERE id = 403')->fetch());
+        self::assertSame('Revised', $this->service->details(101, 401, null)['current']['last_name']);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function invalidAlignments(): iterable
+    {
+        yield 'ended event' => ["UPDATE events SET date = '2020-01-01' WHERE id = 101", 'cutoff'];
+        yield 'profile edited since preview' => ["UPDATE athletes SET weight_kg = 50 WHERE id = 301", 'stale'];
+        yield 'snapshot edited since preview' => ["UPDATE entries SET snapshot_weight_kg = 50 WHERE id = 401", 'stale'];
+        yield 'event reopened since preview' => ['UPDATE events SET closed = 0 WHERE id = 101', 'stale'];
+    }
+
+    #[DataProvider('invalidAlignments')]
+    public function testAlignmentRejectsOutdatedPreviewsAndEndedEvents(string $change, string $error): void
+    {
+        $preview = $this->service->alignmentPreview(101);
+        $this->database->exec($change);
+        $before = $this->database->query('SELECT * FROM entries')->fetchAll();
+        try {
+            $this->service->alignCurrentProfiles(101, $preview['fingerprint'], 'Synthetic reason');
+            self::fail('Expected rejected alignment');
+        } catch (EntryDataReviewException $exception) {
+            self::assertSame($error, $exception->getMessage());
+        }
+        self::assertSame($before, $this->database->query('SELECT * FROM entries')->fetchAll());
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM entry_data_reviews')->fetchColumn());
+    }
+
+    public function testAlignmentRejectsInvalidProfilesAndRollsBackEarlierUpdates(): void
+    {
+        $this->database->exec("UPDATE athletes SET belt = 'invalid' WHERE id = 302");
+        $preview = $this->service->alignmentPreview(101);
+        try {
+            $this->service->alignCurrentProfiles(101, $preview['fingerprint'], 'Synthetic reason');
+            self::fail('Expected invalid profile rejection');
+        } catch (EntryDataReviewException $exception) {
+            self::assertSame('invalid', $exception->getMessage());
+        }
+        self::assertSame('Original', $this->service->details(101, 401, null)['current']['last_name']);
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM entry_data_reviews')->fetchColumn());
+    }
+
+    public function testAlignmentControllerRequiresAdministratorCsrfAndRecordsFeedback(): void
+    {
+        $request = new Request('POST', '/admin/events/align-data', [], ['event_id' => '101']);
+        $controller = new EntryDataController(new View(dirname(__DIR__) . '/views'), $request);
+        self::assertSame('/admin/login', $controller->align($request)->headers()['Location']);
+        self::assertSame('/admin/login', $controller->differences($request)->headers()['Location']);
+        Session::authenticateClub(201, hash('sha256', 'synthetic-club'));
+        self::assertSame('/admin/login', $controller->align($request)->headers()['Location']);
+        self::assertSame('/admin/login', $controller->differences($request)->headers()['Location']);
+        Session::authenticateAdministrator(hash('sha256', 'synthetic-admin'));
+        try {
+            $controller->align($request);
+            self::fail('Expected CSRF rejection');
+        } catch (HttpException $exception) {
+            self::assertSame(419, $exception->statusCode());
+        }
+        $request = new Request('POST', '/admin/events/align-data', [], [
+            'event_id' => '101', 'csrf_token' => csrf_token(), 'reason' => 'Verified profiles',
+            'fingerprint' => $this->service->alignmentPreview(101)['fingerprint'],
+        ]);
+        self::assertSame(303, $controller->align($request)->status());
+        self::assertSame('1 frozen entries aligned with current athlete profiles.', Session::pullFlash('entry_alignment_101'));
+    }
+
+    public function testAlignmentRequiresAReasonAndDoesNotReuseAnotherEventsPreview(): void
+    {
+        $preview = $this->service->alignmentPreview(101);
+        try {
+            $this->service->alignCurrentProfiles(101, $preview['fingerprint'], '');
+            self::fail('Expected reason validation');
+        } catch (EntryDataReviewException $exception) {
+            self::assertSame('reason', $exception->getMessage());
+        }
+        try {
+            $this->service->alignCurrentProfiles(102, $preview['fingerprint'], 'Synthetic reason');
+            self::fail('Expected event scope validation');
+        } catch (EntryDataReviewException $exception) {
+            self::assertSame('stale', $exception->getMessage());
+        }
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM entry_data_reviews')->fetchColumn());
+    }
+
+    public function testAlignmentControllerHandlesStaleAndMissingEvents(): void
+    {
+        Session::authenticateAdministrator(hash('sha256', 'synthetic-admin'));
+        $request = new Request('POST', '/admin/events/align-data', [], [
+            'event_id' => '101', 'csrf_token' => csrf_token(), 'reason' => 'Synthetic reason', 'fingerprint' => 'stale',
+        ]);
+        $controller = new EntryDataController(new View(dirname(__DIR__) . '/views'), $request);
+        self::assertSame(303, $controller->align($request)->status());
+        self::assertSame(__('entry_review.errors.stale'), Session::pullFlash('entry_alignment_101'));
+        foreach (['differences', 'align'] as $action) {
+            $request = new Request('POST', '/admin/events/' . $action, ['event_id' => '999'], [
+                'event_id' => '999', 'csrf_token' => csrf_token(),
+            ]);
+            try {
+                $controller->{$action}($request);
+                self::fail('Expected missing event response');
+            } catch (HttpException $exception) {
+                self::assertSame(404, $exception->statusCode());
+            }
+        }
+    }
+
+    public function testAlignmentWriteFailureRollsBackAndReturnsAGenericMessage(): void
+    {
+        $this->database->exec("CREATE TRIGGER fail_alignment BEFORE UPDATE OF snapshot_last_name ON entries
+            BEGIN SELECT RAISE(FAIL, 'Synthetic private failure'); END");
+        Session::authenticateAdministrator(hash('sha256', 'synthetic-admin'));
+        $request = new Request('POST', '/admin/events/align-data', [], [
+            'event_id' => '101', 'csrf_token' => csrf_token(), 'reason' => 'Synthetic reason',
+            'fingerprint' => $this->service->alignmentPreview(101)['fingerprint'],
+        ]);
+        $logger = $this->createMock(Logger::class);
+        $logger->expects(self::once())->method('error')->with(
+            'entries.alignment_failed',
+            self::isInstanceOf(\Throwable::class),
+            self::isType('string'),
+            self::isType('array')
+        );
+        $controller = new EntryDataController(new View(dirname(__DIR__) . '/views'), $request, $logger);
+
+        self::assertSame(303, $controller->align($request)->status());
+        self::assertSame(__('errors.save_failed'), Session::pullFlash('entry_alignment_101'));
+        self::assertSame('Original', $this->service->details(101, 401, null)['current']['last_name']);
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM entry_data_reviews')->fetchColumn());
     }
 
     /** @param array<string, mixed> $post */

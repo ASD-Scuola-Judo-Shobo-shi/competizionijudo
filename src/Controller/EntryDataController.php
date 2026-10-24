@@ -15,9 +15,11 @@ use App\Model\ClubTermsAcceptance;
 use App\Model\Database;
 use App\Model\Entry;
 use App\Model\Event;
+use App\Presentation\EntryDataComparison;
 use App\Presentation\EntryOutlierReview;
 use App\Service\EntryDataReviewException;
 use App\Service\EntryDataReviewService;
+use App\Service\EventEntriesCsvTransfer;
 use App\Service\TournamentData;
 use App\Validation\EntryDataInput;
 use Throwable;
@@ -92,6 +94,69 @@ final class EntryDataController extends Controller
             'title' => __('entry_review.outliers.title'), 'event' => $event, 'pagination' => $pagination,
             'outliers' => array_slice($rows, $pagination['offset'], $pagination['per_page']),
         ]);
+    }
+
+    public function differences(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+        $event = Event::findById((int) $request->query('event_id'));
+        if ($event === null) {
+            throw new HttpException(404, __('errors.page_not_found'));
+        }
+        $preview = (new EntryDataReviewService(Database::connection()))->alignmentPreview($event->id);
+        $report = EntryDataComparison::fromRows(
+            Entry::findByEvent($event->id, null, $event->closed, $event->date),
+            (new EventEntriesCsvTransfer())->rows($event->id, $event->closed, eventDate: $event->date),
+            $preview['entries'],
+            $event->date,
+            $event->closed
+        );
+        $pagination = paginate(
+            count($report->differences),
+            max(1, (int) $request->query('page', 1)),
+            50,
+            'page',
+            ['event_id' => $event->id]
+        );
+
+        return $this->view('entries/differences', [
+            'title' => __('entry_review.differences.title'), 'event' => $event, 'report' => $report,
+            'differences' => array_slice($report->differences, $pagination['offset'], $pagination['per_page']),
+            'pagination' => $pagination, 'fingerprint' => $preview['fingerprint'], 'canAlign' => $preview['canAlign'],
+            'feedback' => Session::pullFlash('entry_alignment_' . $event->id),
+        ])->withHeaders(['Cache-Control' => 'private, no-store, max-age=0']);
+    }
+
+    public function align(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+        validate_csrf((string) $request->post('csrf_token'));
+        $eventId = (int) $request->post('event_id');
+        try {
+            $count = (new EntryDataReviewService(Database::connection()))->alignCurrentProfiles(
+                $eventId,
+                $this->postString($request, 'fingerprint'),
+                $this->postString($request, 'reason')
+            );
+            $feedback = __('entry_review.differences.aligned', ['count' => (string) $count]);
+        } catch (EntryDataReviewException $exception) {
+            if ($exception->getMessage() === 'not_found') {
+                throw new HttpException(404, __('errors.page_not_found'));
+            }
+            $feedback = __('entry_review.errors.' . $exception->getMessage());
+        } catch (Throwable $exception) {
+            $this->reportFailure('entries.alignment_failed', $exception, $request);
+            $feedback = __('errors.save_failed');
+        }
+        Session::flash('entry_alignment_' . $eventId, $feedback);
+
+        return $this->redirect('/admin/events/differences?event_id=' . $eventId, 303);
     }
 
     private function review(Request $request, ?int $clubId): Response

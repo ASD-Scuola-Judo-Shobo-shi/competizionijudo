@@ -82,6 +82,8 @@ return static function (App\Core\Router $router): void {
     $router->post('/admin/events/entry-data', [\App\Controller\EntryDataController::class, 'adminReview'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/pending-updates', [\App\Controller\EntryDataController::class, 'pending'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/outliers', [\App\Controller\EntryDataController::class, 'outliers'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/events/differences', [\App\Controller\EntryDataController::class, 'differences'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/events/align-data', [\App\Controller\EntryDataController::class, 'align'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/details', [\App\Controller\AdminController::class, 'eventDetails'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/poster', [EventController::class, 'poster'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events', [\App\Controller\AdminController::class, 'manageEvents'], AuthContext::ADMINISTRATOR);

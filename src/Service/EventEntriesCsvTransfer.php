@@ -37,6 +37,17 @@ final class EventEntriesCsvTransfer
         ?string $weightCategory = null,
         ?string $eventDate = null
     ): string {
+        return $this->exportRows($this->rows($eventId, $eventClosed, $clubId, $weightCategory, $eventDate));
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function rows(
+        int $eventId,
+        bool $eventClosed,
+        ?int $clubId = null,
+        ?string $weightCategory = null,
+        ?string $eventDate = null
+    ): array {
         $entries = $eventClosed
             ? Entry::findSnapshotsByEvent($eventId, $clubId)
             : Entry::findByEvent($eventId, $clubId, false, $eventDate);
@@ -48,7 +59,7 @@ final class EventEntriesCsvTransfer
             ));
         }
 
-        return $this->exportRows($entries);
+        return $entries;
     }
 
     /**

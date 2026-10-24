@@ -6,6 +6,8 @@ namespace Tests;
 
 use App\Model\Database;
 use App\Model\Entry;
+use App\Presentation\EntryDataComparison;
+use App\Service\EntryDataReviewService;
 use App\Service\EventEntriesCsvTransfer;
 use PDO;
 use PDOStatement;
@@ -114,6 +116,43 @@ final class EntryEnrollmentQueryCountTest extends TestCase
         $csv = (new EventEntriesCsvTransfer())->export(101, false, eventDate: '2000-01-01');
 
         self::assertSame($enrollmentCount, substr_count($csv, 'EligibleRevision'));
+    }
+
+    #[DataProvider('enrollmentCounts')]
+    public function testDifferenceReportUsesFourDataQueriesAsTheNumberOfAthletesGrows(int $enrollmentCount): void
+    {
+        $rows = [];
+        for ($index = 1; $index <= $enrollmentCount; $index++) {
+            $rows[] = [
+                'id' => $index, 'entry_id' => $index, 'club_id' => 201, 'club_name' => 'Synthetic Club',
+                'last_name' => 'Athlete' . $index, 'first_name' => 'Synthetic', 'gender' => 'M',
+                'birth_date' => '2012-01-01', 'weight_kg' => 42.5, 'belt' => 'green',
+                'uses_snapshot' => 1, 'snapshot_at' => '2026-01-01 00:00:00',
+                'type' => 'competitive', 'weight_category' => '-60 kg',
+            ];
+        }
+        $statement = $this->createMock(PDOStatement::class);
+        $statement->expects(self::exactly(4))->method('execute')->with([101])->willReturn(true);
+        $statement->expects(self::once())->method('fetch')->willReturn([
+            'id' => 101, 'date' => '2099-06-01', 'closed' => 1,
+        ]);
+        $statement->expects(self::exactly(3))->method('fetchAll')->willReturn($rows);
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::exactly(4))->method('prepare')->willReturn($statement);
+        $database->expects(self::never())->method('query');
+        $this->databaseConnection->setValue(null, $database);
+
+        $preview = (new EntryDataReviewService($database))->alignmentPreview(101);
+        $report = EntryDataComparison::fromRows(
+            Entry::findByEvent(101, null, true, '2099-06-01'),
+            (new EventEntriesCsvTransfer())->rows(101, true, eventDate: '2099-06-01'),
+            $preview['entries'],
+            '2099-06-01',
+            true
+        );
+
+        self::assertSame($enrollmentCount, $report->total);
+        self::assertSame(0, $report->exportDifferenceCount);
     }
 
     /** @return PDO&MockObject */
