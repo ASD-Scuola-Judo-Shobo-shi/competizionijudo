@@ -351,7 +351,7 @@ final class EventEntriesCsvWorkflowTest extends TestCase
                 poster_file TEXT,
                 info_file TEXT,
                 published INTEGER NOT NULL DEFAULT 0,
-                closed INTEGER NOT NULL DEFAULT 0
+                closed INTEGER NOT NULL DEFAULT 0, archived_at TEXT
             );
             CREATE TABLE event_registration_exceptions (
                 event_id INTEGER NOT NULL,

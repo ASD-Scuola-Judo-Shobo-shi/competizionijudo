@@ -643,7 +643,7 @@ final class EntryDataReviewWorkflowTest extends TestCase
         );
         CREATE TABLE events (id INTEGER PRIMARY KEY, name TEXT, date TEXT, closed INTEGER, published INTEGER,
             location TEXT DEFAULT \'Synthetic Venue\', organizer TEXT, registration_deadline TEXT, type TEXT,
-            description TEXT, notes TEXT, poster_file TEXT, info_file TEXT);
+            description TEXT, notes TEXT, poster_file TEXT, info_file TEXT, archived_at TEXT);
         CREATE TABLE athletes (id INTEGER PRIMARY KEY, club_id INTEGER, last_name TEXT, first_name TEXT,
             gender TEXT, birth_date TEXT, weight_kg REAL, belt TEXT, membership_number TEXT, notes TEXT);
         CREATE TABLE entries (id INTEGER PRIMARY KEY, event_id INTEGER, club_id INTEGER, athlete_id INTEGER,

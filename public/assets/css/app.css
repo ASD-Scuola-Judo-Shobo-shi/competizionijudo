@@ -828,6 +828,28 @@ a.btn-sm:hover {
     margin-top: 26px;
 }
 
+.event-editor-fields {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.event-manager-list {
+    max-height: 16rem;
+    overflow-y: auto;
+}
+
+.event-manager-list label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.event-manager-list input {
+    width: auto;
+}
+
 .event-payment-fieldset {
     min-width: 0;
     margin: 18px 0;

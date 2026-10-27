@@ -5,11 +5,18 @@ club athlete archives, registering athletes, and administering closed-event
 records. This repository supplies application controls; production readiness
 also depends on correct hosting, privacy, mail, backup, and operational setup.
 
-Clubs can create, edit, publish, close, and delete their own tournaments through
-`/clubs/events` and `/clubs/events/details` (POST deletion: `/clubs/events/delete`).
+Clubs can create, edit, publish, close, and archive their own tournaments through
+`/clubs/events` and `/clubs/events/details` (POST archiving: `/clubs/events/archive`).
 Published tournaments use the standard registration and payment workflows.
+A tournament can be managed by multiple clubs. Its creator club and administrators
+can select additional managing clubs in the event form. Shared managers can edit
+and archive the tournament; they cannot change access or permanently delete it.
 Administrators retain control over all tournaments; deleting an organizer club
-preserves its tournaments for administration. Apply migrations before enabling
+preserves its tournaments for administration. Archived tournament settings are
+read-only; the tournaments are hidden from public event lists and closed to registration. Entries and documents
+are preserved under the existing retention rules. Administrators can archive via
+`/admin/events/archive` and retain exclusive access to tournament deletion.
+The Active/Archived filters expose both lists. Apply migrations before enabling
 this feature in production (`composer migrate`).
 
 Administrators can preview formatting across clubs and athlete profiles at

@@ -52,7 +52,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/clubs/events', [\App\Controller\EventManagementController::class, 'clubIndex'], AuthContext::CLUB);
     $router->get('/clubs/events/details', [\App\Controller\EventManagementController::class, 'clubDetails'], AuthContext::CLUB);
     $router->post('/clubs/events/details', [\App\Controller\EventManagementController::class, 'clubDetails'], AuthContext::CLUB);
-    $router->post('/clubs/events/delete', [\App\Controller\EventManagementController::class, 'clubDelete'], AuthContext::CLUB);
+    $router->post('/clubs/events/archive', [\App\Controller\EventManagementController::class, 'clubArchive'], AuthContext::CLUB);
 
     // Events managed by MVC
     $router->get('/events', [EventController::class, 'index']);
@@ -98,6 +98,7 @@ return static function (App\Core\Router $router): void {
     $router->post('/admin/events/update-inline', [\App\Controller\AdminController::class, 'updateEventInline'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/events/export', [\App\Controller\AdminController::class, 'exportEventEntries'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/events/delete', [\App\Controller\AdminController::class, 'deleteEvent'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/events/archive', [\App\Controller\AdminController::class, 'archiveEvent'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/clubs/edit', [\App\Controller\AdminController::class, 'editClub'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/edit', [\App\Controller\AdminController::class, 'editClub'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/logout', [\App\Controller\AdminController::class, 'logout'], AuthContext::AUTHENTICATED);

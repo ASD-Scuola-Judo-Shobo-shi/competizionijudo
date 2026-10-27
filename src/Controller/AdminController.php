@@ -28,6 +28,7 @@ use App\Service\AthleteCsvTransfer;
 use App\Service\DatabasePasswordResetRepository;
 use App\Service\EventEntriesCsvTransfer;
 use App\Service\EventUploadStorage;
+use App\Service\EventArchiver;
 use App\Service\PasswordResetRepository;
 use App\Validation\ClubInputValidator;
 use App\Validation\EventInputValidator;
@@ -392,7 +393,8 @@ final class AdminController extends Controller
             return $this->redirect('/admin/login');
         }
 
-        $total = Event::count();
+        $showArchived = $request->query('archived') === '1';
+        $total = Event::count($showArchived);
         $page = max(1, (int) ($request->query('page', '1')));
         $pagination = paginate($total, $page, 100, 'page', $request->queryParameters());
 
@@ -417,7 +419,8 @@ final class AdminController extends Controller
             $pagination['per_page'],
             $pagination['offset'],
             $sort['column'],
-            $sort['direction']
+            $sort['direction'],
+            $showArchived
         );
 
         $eventIds = array_map(static fn(Event $event): int => $event->id, $events);
@@ -425,6 +428,8 @@ final class AdminController extends Controller
 
         return $this->view('admin/manage_events', [
             'title' => __('admin.events.title'),
+            'showArchived' => $showArchived,
+            'archiveListPath' => '/admin/events',
             'events' => $events,
             'entry_counts' => $counts,
             'pagination' => $pagination,
@@ -468,7 +473,7 @@ final class AdminController extends Controller
         $redirect .= '#event-row-' . $eventId;
         $event = $eventId > 0 ? Event::findById($eventId) : null;
 
-        if ($event === null) {
+        if ($event === null || $event->archived_at !== null) {
             Session::flash(self::EVENT_INLINE_FEEDBACK, [
                 'type' => 'error',
                 'message' => __('tables.update_failed'),
@@ -508,10 +513,19 @@ final class AdminController extends Controller
         $db = Database::connection();
         try {
             $db->beginTransaction();
+            $lock = $db->prepare(
+                'SELECT closed FROM events WHERE id = ? AND archived_at IS NULL'
+                . ($db->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '')
+            );
+            $lock->execute([$event->id]);
+            $current = $lock->fetch(\PDO::FETCH_ASSOC);
+            if ($current === false) {
+                throw new \RuntimeException('Event is no longer editable.');
+            }
             $db->prepare(
                 'UPDATE events
                  SET name = ?, date = ?, location = ?, type = ?, max_participants = ?, published = ?, closed = ?
-                 WHERE id = ?'
+                 WHERE id = ? AND archived_at IS NULL'
             )->execute([
                 $data['name'],
                 $data['date'],
@@ -522,7 +536,7 @@ final class AdminController extends Controller
                 $data['closed'],
                 $event->id,
             ]);
-            if (!$event->closed && $data['closed'] === 1) {
+            if (empty($current['closed']) && $data['closed'] === 1) {
                 (new EntrySnapshotService($db))->consolidate($event->id, $data['date']);
             }
             $db->commit();
@@ -542,6 +556,22 @@ final class AdminController extends Controller
         }
 
         return $this->redirect($redirect, 303);
+    }
+
+    public function archiveEvent(Request $request): Response
+    {
+        Session::start();
+        if (!AuthContext::isAdministrator()) {
+            return $this->redirect('/admin/login');
+        }
+        validate_csrf((string) $request->post('csrf_token'));
+        try {
+            (new EventArchiver(Database::connection()))->archive((int) $request->post('event_id'));
+        } catch (\Throwable $exception) {
+            $this->reportFailure('admin.event_archive_failed', $exception, $request);
+            Session::flash(self::EVENT_INLINE_FEEDBACK, ['type' => 'error', 'message' => __('event_archive.failed')]);
+        }
+        return $this->redirect('/admin/events');
     }
 
     public function deleteEvent(Request $request): Response

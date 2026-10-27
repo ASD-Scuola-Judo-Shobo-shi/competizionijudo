@@ -8,6 +8,7 @@ use App\Core\Logger;
 use App\Model\Database;
 use App\Model\EntrySnapshotService;
 use App\Model\Event;
+use App\Model\EventManagers;
 use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
 
@@ -43,14 +44,16 @@ final class EventEditor
      * } $data
      * @param array<string, array<string, mixed>> $uploads
      * @param list<int> $exceptionClubIds
+     * @param list<int>|null $managerClubIds
      */
     public function save(
         ?Event $event,
         array $data,
         array $uploads,
         array $exceptionClubIds,
-        ?int $ownerClubId,
-        string $correlationId
+        ?int $clubId,
+        string $correlationId,
+        ?array $managerClubIds = null
     ): int {
         $db = Database::connection();
         $eventId = $event->id ?? 0;
@@ -70,18 +73,20 @@ final class EventEditor
             }
 
             $db->beginTransaction();
-            if ($event !== null && $ownerClubId !== null) {
+            if ($event !== null) {
+                $scope = $clubId === null ? '' : ' AND ' . EventManagers::clubScopeSql();
                 $lock = $db->prepare(
-                    'SELECT id FROM events WHERE id = ? AND owner_club_id = ?'
+                    'SELECT * FROM events WHERE id = ? AND archived_at IS NULL' . $scope
                     . ($db->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '')
                 );
-                $lock->execute([$eventId, $ownerClubId]);
-                if ($lock->fetchColumn() === false) {
-                    throw new \RuntimeException('Event ownership changed.');
+                $lock->execute($clubId === null ? [$eventId] : [$eventId, $clubId, $clubId]);
+                $current = $lock->fetch(\PDO::FETCH_ASSOC);
+                if ($current === false) {
+                    throw new \RuntimeException('Event is no longer editable.');
                 }
             }
             if ($event) {
-                $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, max_participants=?, poster_file=?, info_file=?, published=?, closed=?, sepa_account_holder=?, sepa_iban=?, sepa_bic=? WHERE id=?";
+                $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, max_participants=?, poster_file=?, info_file=?, published=?, closed=?, sepa_account_holder=?, sepa_iban=?, sepa_bic=? WHERE id=? AND archived_at IS NULL";
                 $params = [
                     $data['name'],
                     $data['date'],
@@ -101,17 +106,18 @@ final class EventEditor
                     $data['sepa_bic'] !== '' ? $data['sepa_bic'] : null,
                     $eventId,
                 ];
-                if ($ownerClubId !== null) {
-                    $sql .= ' AND owner_club_id = ?';
-                    $params[] = $ownerClubId;
+                if ($clubId !== null) {
+                    $sql .= ' AND ' . EventManagers::clubScopeSql();
+                    $params[] = $clubId;
+                    $params[] = $clubId;
                 }
                 $db->prepare($sql)->execute($params);
-                if (!$event->closed && $data['closed'] === 1) {
+                if (empty($current['closed']) && $data['closed'] === 1) {
                     (new EntrySnapshotService($db))->consolidate($eventId, $data['date']);
                 }
             } else {
-                $ownerColumn = $ownerClubId === null ? '' : ', owner_club_id';
-                $ownerPlaceholder = $ownerClubId === null ? '' : ', ?';
+                $ownerColumn = $clubId === null ? '' : ', owner_club_id';
+                $ownerPlaceholder = $clubId === null ? '' : ', ?';
                 $insertSql = 'INSERT INTO events (name, date, location, organizer, registration_deadline, type, '
                     . 'description, notes, max_participants, poster_file, info_file, published, closed, '
                     . 'sepa_account_holder, sepa_iban, sepa_bic' . $ownerColumn . ') '
@@ -134,8 +140,8 @@ final class EventEditor
                     $data['sepa_iban'] !== '' ? $data['sepa_iban'] : null,
                     $data['sepa_bic'] !== '' ? $data['sepa_bic'] : null,
                 ];
-                if ($ownerClubId !== null) {
-                    $insertParameters[] = $ownerClubId;
+                if ($clubId !== null) {
+                    $insertParameters[] = $clubId;
                 }
                 $db->prepare($insertSql)->execute($insertParameters);
                 $eventId = (int) $db->lastInsertId();
@@ -152,8 +158,15 @@ final class EventEditor
                 $data['registration_options']
             );
             EventRegistrationOption::synchronize($db, $eventId, $options);
-            if ($ownerClubId === null) {
+            if ($clubId === null) {
                 EventRegistrationException::setForEvent($eventId, $exceptionClubIds);
+            }
+            if ($managerClubIds !== null) {
+                $creatorClubId = isset($current) ? (int) ($current['owner_club_id'] ?? 0) : $clubId;
+                if ($clubId !== null && $creatorClubId !== $clubId) {
+                    throw new \RuntimeException('Only the creator club can change managing clubs.');
+                }
+                EventManagers::synchronize($db, $eventId, $managerClubIds);
             }
             $db->commit();
             $persisted = true;

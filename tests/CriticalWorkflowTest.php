@@ -522,6 +522,7 @@ final class CriticalWorkflowTest extends TestCase
                 membership_number TEXT,
                 notes TEXT
             );
+            CREATE TABLE event_managers (event_id INTEGER NOT NULL, club_id INTEGER NOT NULL, PRIMARY KEY (event_id, club_id));
             CREATE TABLE events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -539,7 +540,7 @@ final class CriticalWorkflowTest extends TestCase
                 closed INTEGER NOT NULL DEFAULT 0,
                 sepa_iban TEXT,
                 sepa_bic TEXT,
-                sepa_account_holder TEXT
+                sepa_account_holder TEXT, archived_at TEXT
             );
             CREATE TABLE entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

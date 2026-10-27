@@ -56,7 +56,7 @@ final class EventEntriesPrintTest extends TestCase
              CREATE TABLE events (
                 id INTEGER PRIMARY KEY, name TEXT, date TEXT, location TEXT, organizer TEXT,
                 registration_deadline TEXT, type TEXT, description TEXT, notes TEXT,
-                poster_file TEXT, info_file TEXT, published INTEGER, closed INTEGER
+                poster_file TEXT, info_file TEXT, published INTEGER, closed INTEGER, archived_at TEXT
              );
              CREATE TABLE event_registration_exceptions (event_id INTEGER, club_id INTEGER);
              CREATE TABLE athletes (

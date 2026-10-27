@@ -159,7 +159,7 @@ final class ListFreshnessTest extends TestCase
                 poster_file TEXT,
                 info_file TEXT,
                 published INTEGER NOT NULL,
-                closed INTEGER NOT NULL
+                closed INTEGER NOT NULL, archived_at TEXT
             )'
         );
         $this->database->exec(

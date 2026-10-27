@@ -490,6 +490,7 @@ function assertSchemaContract(PDO $database): void
         'club_terms_acceptances',
         'events',
         'event_registration_options',
+        'event_managers',
         'athletes',
         'entries',
         'password_reset_tokens',
@@ -526,6 +527,9 @@ function assertSchemaContract(PDO $database): void
     assertColumn($database, 'events', 'sepa_iban', 'YES');
     assertColumn($database, 'events', 'sepa_bic', 'YES');
     assertColumn($database, 'events', 'owner_club_id', 'YES');
+    assertColumn($database, 'events', 'archived_at', 'YES');
+    assertIndex($database, 'events', 'idx_events_archive_date', 'archived_at,date,id');
+    assertIndex($database, 'events', 'idx_events_owner_archive_date', 'owner_club_id,archived_at,date,id');
     assertIndex($database, 'events', 'idx_events_owner_date', 'owner_club_id,date,id');
     assertColumn($database, 'event_registration_options', 'fee_cents', 'NO');
     assertColumn($database, 'event_registration_options', 'is_default', 'NO');
@@ -622,6 +626,8 @@ function assertSchemaContract(PDO $database): void
         'entries.registration_option_id=event_registration_options.id',
         'event_registration_options.event_id=events.id',
         'events.owner_club_id=clubs.id',
+        'event_managers.event_id=events.id',
+        'event_managers.club_id=clubs.id',
         'password_reset_tokens.club_id=clubs.id',
     ];
     $statement = $database->query(
@@ -1029,9 +1035,24 @@ function assertClubTournamentWorkflows(PDO $database): void
         $database->query('SELECT snapshot_last_name FROM entries WHERE event_id = 302')->fetchColumn(),
         'Normalization rewrote a frozen snapshot.'
     );
+    App\Model\EventManagers::synchronize($database, 302, [101]);
+    $archiver = new App\Service\EventArchiver($database);
+    assertSameValue(false, $archiver->archive(302, 999), 'An unrelated club archived a tournament.');
+    assertSameValue(true, $archiver->archive(302, 101), 'A managing club could not archive a shared tournament.');
+    assertSameValue(1, (int) $database->query('SELECT COUNT(*) FROM entries WHERE event_id = 302')->fetchColumn(), 'Archiving deleted entries.');
+    assertSameValue(0, (int) $database->query('SELECT published FROM events WHERE id = 302')->fetchColumn(), 'Archived event is published.');
+    assertSameValue(false, $archiver->archive(302, 101), 'Repeated archiving was not idempotent.');
+    $database->prepare('DELETE FROM schema_migrations WHERE version IN (?, ?)')->execute([
+        '20261027_000002_add_event_archiving.sql',
+        '20261027_000003_add_shared_event_management.sql',
+    ]);
+    (new MigrationRunner($database))->run();
+    assertSameValue(1, (int) $database->query('SELECT COUNT(*) FROM event_managers WHERE event_id = 302')->fetchColumn(), 'Migration replay removed managers.');
     $database->exec('DELETE FROM clubs WHERE id = 102');
     $event = $database->query('SELECT name, owner_club_id FROM events WHERE id = 302')->fetch();
     assertSameValue('Synthetic Club Tournament', $event['name'], 'Deleting the club deleted its tournament.');
     assertSameValue(null, $event['owner_club_id'], 'Deleting the club did not clear ownership.');
+    assertSameValue(1, (int) $database->query('SELECT COUNT(*) FROM event_managers WHERE event_id = 302')->fetchColumn(), 'Deleting the creator removed another managing club.');
     $database->exec('DELETE FROM events WHERE id = 302');
+    assertSameValue(0, (int) $database->query('SELECT COUNT(*) FROM event_managers WHERE event_id = 302')->fetchColumn(), 'Deleting a tournament left manager grants.');
 }

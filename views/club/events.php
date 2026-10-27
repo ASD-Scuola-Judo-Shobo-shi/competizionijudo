@@ -7,6 +7,10 @@ declare(strict_types=1);
 ?>
 <div class="card">
     <h2><?= e(__('club_events.title')) ?></h2>
+    <?php require dirname(__DIR__) . '/components/event_archive_filter.php'; ?>
+    <?php if (is_string($archiveError ?? null)) : ?>
+        <p class="notice" role="alert"><?= e($archiveError) ?></p>
+    <?php endif; ?>
     <p><?= e(__('club_events.help')) ?></p>
     <p><a class="btn green" href="<?= e(base_url('/clubs/events/details')) ?>"><?= e(__('club_events.create')) ?></a></p>
     <div class="table-scroll" role="region" tabindex="0" aria-label="<?= e(__('club_events.title')) ?>">
@@ -26,12 +30,14 @@ declare(strict_types=1);
                     <td><?= e(__($event->published ? 'club_events.yes' : 'club_events.no')) ?></td>
                     <td><?= e(__($event->closed ? 'club_events.yes' : 'club_events.no')) ?></td>
                     <td>
-                        <a class="btn btn-sm" href="<?= e(base_url('/clubs/events/details?id=' . $event->id)) ?>"><?= e(__('admin.edit.title')) ?></a>
-                        <form method="post" action="<?= e(base_url('/clubs/events/delete')) ?>" data-confirm="<?= e(__('club_events.delete_confirm')) ?>">
+                        <a class="btn btn-sm" href="<?= e(base_url('/clubs/events/details?id=' . $event->id)) ?>"><?= e(__($event->archived_at === null ? 'admin.edit.title' : 'event_archive.view')) ?></a>
+                        <?php if ($event->archived_at === null) : ?>
+                        <form method="post" action="<?= e(base_url('/clubs/events/archive')) ?>" data-confirm="<?= e(__('event_archive.confirm')) ?>">
                             <?= csrf_field() ?>
                             <input type="hidden" name="event_id" value="<?= $event->id ?>">
-                            <button class="btn red btn-sm" type="submit"><?= e(__('club_events.delete')) ?></button>
+                            <button class="btn red btn-sm" type="submit"><?= e(__('event_archive.archive')) ?></button>
                         </form>
+                        <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>

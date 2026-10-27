@@ -201,7 +201,7 @@ final class InputValidationControllerTest extends TestCase
         $database->expects(self::exactly(2))->method('query')->willReturn($locations, $clubs);
         $database->expects(self::once())
             ->method('prepare')
-            ->with(self::stringContains('WHERE published = 1 AND date >= ?'))
+            ->with(self::stringContains('WHERE published = 1 AND archived_at IS NULL AND date >= ?'))
             ->willReturn($upcomingEvents);
         $database->expects(self::never())->method('beginTransaction');
         $this->setDatabase($database);

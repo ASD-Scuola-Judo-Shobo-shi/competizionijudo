@@ -3,14 +3,27 @@
 declare(strict_types=1);
 
 return [
+    'event_managers' => [
+        'title' => 'Società organizzatrici',
+        'help' => 'Le società selezionate possono modificare e archiviare questo torneo. La società creatrice mantiene l’accesso. Solo la società creatrice e gli amministratori possono modificare questa selezione; l’eliminazione definitiva è riservata agli amministratori.',
+        'invalid' => 'Seleziona società esistenti per gestire questo torneo.',
+    ],
+    'event_archive' => [
+        'archive' => 'Archivia',
+        'confirm' => 'Archiviare questo torneo? Iscrizioni e documenti saranno conservati.',
+        'active' => 'Attivi',
+        'archived' => 'Archiviati',
+        'filter' => 'Archivio tornei',
+        'view' => 'Visualizza',
+        'read_only' => 'Questo torneo è archiviato. Le iscrizioni sono chiuse e le impostazioni del torneo sono di sola lettura.',
+        'failed' => 'Impossibile archiviare il torneo. I suoi dati sono stati conservati.',
+    ],
     'club_events' => [
-        'title' => 'I miei tornei',
-        'help' => 'Crea e gestisci i tornei della tua società. Pubblica un torneo per consentire le iscrizioni delle altre società.',
+        'title' => 'Tornei gestiti',
+        'help' => 'Crea tornei per la tua società o gestisci quelli condivisi con la tua società. Pubblica un torneo per consentire le iscrizioni delle altre società.',
         'create' => 'Crea torneo',
         'actions' => 'Azioni',
-        'delete' => 'Elimina',
-        'delete_confirm' => 'Eliminare questo torneo e tutte le sue iscrizioni?',
-        'empty' => 'La tua società non ha ancora creato tornei.',
+        'empty' => 'La tua società non ha tornei in questo elenco.',
         'yes' => 'Sì',
         'no' => 'No',
     ],
@@ -865,7 +878,7 @@ return [
         'revision_retention' => 'Le revisioni degli atleti consentono la correzione dei dati del torneo. Il processo giornaliero elimina le revisioni non referenziate più vecchie di un anno, conservando la revisione del profilo corrente. Richieste, valori precedenti e proposti, motivi e decisioni dell’amministratore sono eliminati con l’iscrizione al torneo; l’approvazione non rinnova il periodo di conservazione della copia consolidata.',
         'legacy_entry_retention' => 'Per le iscrizioni storiche prive della data di consolidamento, il termine di un anno è calcolato dalla data dell\'evento; anche queste righe sono eliminate dal processo programmato.',
         'account_workflow_retention' => 'I link di conferma della registrazione e di recupero password scadono rispettivamente dopo 24 ore e un\'ora. Una conferma riuscita elimina immediatamente i dati della richiesta; una nuova richiesta o una modifica della password elimina i token precedenti. Il processo programmato elimina ogni giorno le richieste e i token scaduti.',
-        'event_retention' => 'I dati, le impostazioni di iscrizione e le istruzioni di pagamento di un evento sono conservati finché un amministratore non elimina l\'evento, ferme restando le regole specifiche per copie consolidate e documenti.',
+        'event_retention' => 'Le società possono archiviare i propri tornei; l’archiviazione conserva dati dell’evento, impostazioni di iscrizione, istruzioni di pagamento e documenti. Solo gli amministratori possono eliminare i tornei. Restano valide le regole di conservazione delle copie consolidate per eventi chiusi.',
         'upload_retention' => 'I documenti degli eventi sono eliminati quando vengono sostituiti o quando l\'evento viene eliminato.',
         'log_retention' => 'I log applicativi sono soggetti a una cancellazione gestita a livello di hosting dopo non più di {days} giorni; l\'applicazione PHP non esegue direttamente la rotazione.',
         'backup_retention' => 'I backup sono soggetti a una cancellazione gestita dal sistema di backup dopo non più di {days} giorni; l\'applicazione PHP non esegue direttamente la cancellazione.',

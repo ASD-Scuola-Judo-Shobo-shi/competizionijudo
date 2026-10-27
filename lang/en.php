@@ -3,14 +3,27 @@
 declare(strict_types=1);
 
 return [
+    'event_managers' => [
+        'title' => 'Managing clubs',
+        'help' => 'Selected clubs can edit and archive this tournament. The creator club keeps access. Only the creator club and administrators can change this selection; permanent deletion is restricted to administrators.',
+        'invalid' => 'Choose existing clubs to manage this tournament.',
+    ],
+    'event_archive' => [
+        'archive' => 'Archive',
+        'confirm' => 'Archive this tournament? Registrations and documents will be preserved.',
+        'active' => 'Active',
+        'archived' => 'Archived',
+        'filter' => 'Tournament archive',
+        'view' => 'View',
+        'read_only' => 'This tournament is archived. Registrations are closed and tournament settings are read-only.',
+        'failed' => 'The tournament could not be archived. Its data was preserved.',
+    ],
     'club_events' => [
-        'title' => 'My tournaments',
-        'help' => 'Create and manage tournaments for your club. Publish a tournament to open it to registrations from other clubs.',
+        'title' => 'Managed tournaments',
+        'help' => 'Create tournaments for your club or manage tournaments shared with your club. Publish a tournament to open it to registrations from other clubs.',
         'create' => 'Create tournament',
         'actions' => 'Actions',
-        'delete' => 'Delete',
-        'delete_confirm' => 'Delete this tournament and all its registrations?',
-        'empty' => 'Your club has not created any tournaments yet.',
+        'empty' => 'Your club has no tournaments in this list.',
         'yes' => 'Yes',
         'no' => 'No',
     ],
@@ -865,7 +878,7 @@ return [
         'legacy_entry_retention' => 'For historical entries without a consolidation timestamp, the one-year deadline is calculated from the event date; these rows are also deleted by the scheduled retention process.',
         'account_workflow_retention' => 'Registration-confirmation and password-reset links expire after 24 hours and one hour respectively. A successful confirmation immediately deletes the request data; a new request or password change deletes earlier tokens. The scheduled process deletes expired requests and tokens every day.',
         'revision_retention' => 'Athlete revisions support tournament data corrections. The daily purge deletes unreferenced revisions older than one year, retaining the current profile revision. Update requests, before/after values, reasons, and administrator decisions are deleted with their tournament entry; approval does not restart the snapshot retention period.',
-        'event_retention' => 'Event data, registration settings, and payment instructions are retained until an administrator deletes the event, subject to the specific rules for closed-event snapshots and event documents.',
+        'event_retention' => 'Clubs may archive their tournaments; archiving preserves event data, registration settings, payment instructions, and documents. Only administrators can delete tournaments. The existing retention rules for closed-event snapshots still apply.',
         'upload_retention' => 'Event uploads are deleted when replaced or when their event is deleted.',
         'log_retention' => 'Application logs are subject to host-level deletion after no more than {days} days; the PHP application does not perform log rotation itself.',
         'backup_retention' => 'Backups are subject to deletion by the backup system after no more than {days} days; the PHP application does not perform that deletion itself.',

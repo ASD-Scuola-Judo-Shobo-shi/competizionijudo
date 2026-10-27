@@ -18,6 +18,7 @@ use App\Service\EventUploadStorage;
 use PDO;
 use PDOStatement;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
@@ -51,6 +52,8 @@ final class DeleteActionsTest extends TestCase
         $paths = [
             '/admin/clubs/delete',
             '/admin/events/delete',
+            '/admin/events/archive',
+            '/clubs/events/archive',
             '/clubs/delete-athlete',
         ];
 
@@ -81,6 +84,7 @@ final class DeleteActionsTest extends TestCase
 
         $this->assertCsrfRejected(static fn(): Response => $admin->deleteClub($adminRequest));
         $this->assertCsrfRejected(static fn(): Response => $admin->deleteEvent($adminRequest));
+        $this->assertCsrfRejected(static fn(): Response => $admin->archiveEvent($adminRequest));
 
         Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
         $clubRequest = new Request('POST', '/clubs/delete-athlete', [], [
@@ -105,7 +109,15 @@ final class DeleteActionsTest extends TestCase
         self::assertSame(302, $response->status());
     }
 
-    public function testValidAdminRequestDeletesEvent(): void
+    /** @return iterable<string, array{bool}> */
+    public static function administratorEventActions(): iterable
+    {
+        yield 'archive preserves documents' => [true];
+        yield 'delete removes documents' => [false];
+    }
+
+    #[DataProvider('administratorEventActions')]
+    public function testAdminCanArchiveOrPermanentlyDeleteEvent(bool $archive): void
     {
         Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $database = new PDO('sqlite::memory:');
@@ -124,22 +136,30 @@ final class DeleteActionsTest extends TestCase
         mkdir($publicRoot . '/uploads/events', 0755, true);
         file_put_contents($publicRoot . '/uploads/events/old-poster.pdf', 'synthetic');
         file_put_contents($publicRoot . '/uploads/events/old-info.pdf', 'synthetic');
-        $request = new Request('POST', '/admin/events/delete', [], [
+        $request = new Request('POST', $archive ? '/admin/events/archive' : '/admin/events/delete', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '501',
         ]);
 
-        $response = (new AdminController(
+        $controller = new AdminController(
             $this->view,
             $request,
             null,
             null,
             null,
             new EventUploadStorage($publicRoot)
-        ))->deleteEvent($request);
+        );
+        $response = $archive ? $controller->archiveEvent($request) : $controller->deleteEvent($request);
 
         self::assertSame(302, $response->status());
-        self::assertSame(0, (int) $database->query('SELECT COUNT(*) FROM events')->fetchColumn());
+        self::assertSame($archive ? 1 : 0, (int) $database->query('SELECT COUNT(*) FROM events')->fetchColumn());
+        if ($archive) {
+            self::assertNotNull($database->query('SELECT archived_at FROM events')->fetchColumn());
+            self::assertFileExists($publicRoot . '/uploads/events/old-poster.pdf');
+            self::assertFileExists($publicRoot . '/uploads/events/old-info.pdf');
+            unlink($publicRoot . '/uploads/events/old-poster.pdf');
+            unlink($publicRoot . '/uploads/events/old-info.pdf');
+        }
         self::assertFileDoesNotExist($publicRoot . '/uploads/events/old-poster.pdf');
         self::assertFileDoesNotExist($publicRoot . '/uploads/events/old-info.pdf');
         rmdir($publicRoot . '/uploads/events');
@@ -320,12 +340,13 @@ final class DeleteActionsTest extends TestCase
     private function createEventTable(PDO $database): void
     {
         $database->exec(
-            'CREATE TABLE events (
+            'CREATE TABLE event_managers (event_id INTEGER NOT NULL, club_id INTEGER NOT NULL, PRIMARY KEY (event_id, club_id));
+            CREATE TABLE events (
                 id INTEGER PRIMARY KEY, name TEXT NOT NULL, date TEXT NOT NULL, location TEXT NOT NULL,
                 organizer TEXT NOT NULL, registration_deadline TEXT, type TEXT NOT NULL,
                 description TEXT, notes TEXT, max_participants INTEGER, poster_file TEXT, info_file TEXT,
                 published INTEGER NOT NULL, closed INTEGER NOT NULL,
-                sepa_account_holder TEXT, sepa_iban TEXT, sepa_bic TEXT
+                sepa_account_holder TEXT, sepa_iban TEXT, sepa_bic TEXT, archived_at TEXT
             )'
         );
         $database->exec(

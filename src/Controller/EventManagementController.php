@@ -12,11 +12,14 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
 use App\Model\Club;
+use App\Model\Database;
 use App\Model\Entry;
 use App\Model\Event;
+use App\Model\EventManagers;
 use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
 use App\Service\EventEditor;
+use App\Service\EventArchiver;
 use App\Service\EventEntriesCsvTransfer;
 use App\Service\EventUploadStorage;
 use App\Validation\EventInputValidator;
@@ -56,15 +59,19 @@ final class EventManagementController extends Controller
         if ($clubId === null) {
             return $this->redirect('/clubs/login');
         }
-        $pagination = paginate(Event::countOwned($clubId), (int) $request->query('page', 1), 50);
+        $showArchived = $request->query('archived') === '1';
+        $pagination = paginate(Event::countManaged($clubId, $showArchived), (int) $request->query('page', 1), 50, 'page', ['archived' => $showArchived ? '1' : '0']);
         return $this->view('club/events', [
             'title' => __('club_events.title'),
-            'events' => Event::pageOwned($clubId, $pagination['per_page'], $pagination['offset']),
+            'events' => Event::pageManaged($clubId, $pagination['per_page'], $pagination['offset'], $showArchived),
+            'showArchived' => $showArchived,
+            'archiveListPath' => '/clubs/events',
+            'archiveError' => Session::pullFlash('club_event_archive_error'),
             'pagination' => $pagination,
         ]);
     }
 
-    public function clubDelete(Request $request): Response
+    public function clubArchive(Request $request): Response
     {
         Session::start();
         $clubId = AuthContext::clubId();
@@ -72,32 +79,32 @@ final class EventManagementController extends Controller
             return $this->redirect('/clubs/login');
         }
         validate_csrf((string) $request->post('csrf_token'));
-        $eventId = (int) $request->post('event_id');
-        $event = Event::findOwnedById($eventId, $clubId);
-        if ($event !== null) {
-            Event::removeOwned($eventId, $clubId);
-            try {
-                $this->eventUploadStorage->purgeMany([$event->poster_file, $event->info_file]);
-            } catch (\Throwable $exception) {
-                $this->reportFailure('event.upload_purge_failed', $exception, $request);
-            }
+        try {
+            (new EventArchiver(Database::connection()))->archive((int) $request->post('event_id'), $clubId);
+        } catch (\Throwable $exception) {
+            $this->reportFailure('event.archive_failed', $exception, $request);
+            Session::flash('club_event_archive_error', __('event_archive.failed'));
         }
         return $this->redirect('/clubs/events');
     }
 
-    private function details(Request $request, ?int $ownerClubId): Response
+    private function details(Request $request, ?int $clubId): Response
     {
         Session::start();
-        $listPath = $ownerClubId === null ? '/admin/events' : '/clubs/events';
+        $listPath = $clubId === null ? '/admin/events' : '/clubs/events';
         $eventId = (int) ($request->input('event_id') ?? $request->input('id') ?? 0);
         $event = $eventId > 0
-            ? ($ownerClubId === null ? Event::findById($eventId) : Event::findOwnedById($eventId, $ownerClubId))
+            ? ($clubId === null ? Event::findById($eventId) : Event::findManagedById($eventId, $clubId))
             : null;
         if ($eventId > 0 && $event === null) {
             return $this->redirect($listPath);
         }
 
-        $enrolledClubs = $event !== null && $ownerClubId === null
+        if ($event?->archived_at !== null && $request->method() === 'POST') {
+            return $this->redirect($listPath . '?archived=1');
+        }
+
+        $enrolledClubs = $event !== null && $clubId === null
             ? Entry::findClubsByEvent($event->id, null)
             : [];
         $requestedEnrollmentClubId = (int) $request->query('club_id', 0);
@@ -108,7 +115,7 @@ final class EventManagementController extends Controller
         $selectedEnrollmentClubId = in_array($requestedEnrollmentClubId, $enrolledClubIds, true)
             ? $requestedEnrollmentClubId
             : null;
-        $enrollmentTotal = $event !== null && $ownerClubId === null
+        $enrollmentTotal = $event !== null && $clubId === null
             ? Entry::countByEvent($event->id, $selectedEnrollmentClubId)
             : 0;
         $enrollmentPage = max(1, (int) $request->query('enrollment_page', '1'));
@@ -127,7 +134,7 @@ final class EventManagementController extends Controller
             $enrollmentFields,
             'club_name'
         );
-        $enrolledAthletes = $event !== null && $ownerClubId === null
+        $enrolledAthletes = $event !== null && $clubId === null
             ? Entry::pageByEvent(
                 $event->id,
                 $selectedEnrollmentClubId,
@@ -140,8 +147,11 @@ final class EventManagementController extends Controller
             )
             : [];
 
-        $locations = Event::locations($ownerClubId);
-        $clubs = $ownerClubId === null ? Club::eventExceptionChoices() : [];
+        $canManageManagers = $clubId === null || $event === null || $event->owner_club_id === $clubId;
+        $clubChoices = $canManageManagers ? Club::eventExceptionChoices() : [];
+        $managerClubIds = $event !== null ? EventManagers::clubIdsForEvent($event->id) : [];
+        $locations = Event::locations($clubId);
+        $clubs = $clubId === null ? $clubChoices : [];
         $exceptionClubIds = $event !== null ? EventRegistrationException::clubIdsForEvent($event->id) : [];
 
         $error = '';
@@ -214,6 +224,24 @@ final class EventManagementController extends Controller
                 $data['sepa_iban'],
                 $data['sepa_bic']
             ));
+            if ($canManageManagers) {
+                $rawManagers = $request->post('managing_clubs', []);
+                $managerClubIds = [];
+                $validClubIds = array_column($clubChoices, 'id');
+                if (!is_array($rawManagers)) {
+                    $validationErrors[] = 'event_managers.invalid';
+                } else {
+                    foreach ($rawManagers as $managerId) {
+                        $managerId = is_scalar($managerId) ? filter_var($managerId, FILTER_VALIDATE_INT) : false;
+                        if ($managerId === false || !in_array($managerId, $validClubIds, true)) {
+                            $validationErrors[] = 'event_managers.invalid';
+                        } else {
+                            $managerClubIds[] = $managerId;
+                        }
+                    }
+                    $managerClubIds = array_values(array_unique($managerClubIds));
+                }
+            }
             if ($validationErrors !== []) {
                 $error = __($validationErrors[0]);
             }
@@ -229,8 +257,9 @@ final class EventManagementController extends Controller
                         $data,
                         $uploads,
                         $exceptionClubIds,
-                        $ownerClubId,
-                        $request->correlationId()
+                        $clubId,
+                        $request->correlationId(),
+                        $canManageManagers ? $managerClubIds : null
                     );
                     return $this->redirect($listPath);
                 } catch (\Throwable $exception) {
@@ -254,7 +283,10 @@ final class EventManagementController extends Controller
             : Event::upcomingPublishedIncludingClosed(date('Y-m-d'), $upcomingEventLimit);
 
         return $this->view('admin/event_details', [
-            'clubManaged' => $ownerClubId !== null,
+            'clubManaged' => $clubId !== null,
+            'canManageManagers' => $canManageManagers,
+            'managerClubs' => $clubChoices,
+            'managerClubIds' => $managerClubIds,
             'title' => $event !== null
                 ? __('admin.edit.title') . ' - ' . $event->name
                 : __('admin.event_details.title'),

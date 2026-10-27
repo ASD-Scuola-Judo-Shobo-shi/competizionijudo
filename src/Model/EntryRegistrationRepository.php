@@ -109,6 +109,7 @@ final class EntryRegistrationRepository
                    AND athlete.weight_kg IS NOT NULL
                    AND athlete.weight_kg > 0
                    AND event_record.published = 1
+                   AND event_record.archived_at IS NULL
                    AND (
                        event_record.closed = 0
                        OR EXISTS (
@@ -213,6 +214,7 @@ final class EntryRegistrationRepository
              WHERE event_record.id = :event_id
                AND athlete.club_id = :club_id
                AND event_record.published = 1
+                   AND event_record.archived_at IS NULL
                AND (
                    event_record.closed = 0
                    OR EXISTS (
@@ -286,7 +288,7 @@ final class EntryRegistrationRepository
         $eligibilityCheck = $this->database->prepare(
             'SELECT closed FROM events
               WHERE id = ?
-                AND published = 1'
+                AND published = 1 AND archived_at IS NULL'
         );
         $eligibilityCheck->execute([$eventId]);
         $eventInfo = $eligibilityCheck->fetch();
@@ -301,10 +303,11 @@ final class EntryRegistrationRepository
         // Delete the entry if it belongs to the club
         $statement = $this->database->prepare(
             'DELETE FROM entries
-              WHERE event_id = ? AND club_id = ? AND athlete_id = ?'
+              WHERE event_id = ? AND club_id = ? AND athlete_id = ?
+                AND EXISTS (SELECT 1 FROM events WHERE id = ? AND archived_at IS NULL)'
         );
 
-        $deleted = $statement->execute([$eventId, $clubId, $athleteId]);
+        $deleted = $statement->execute([$eventId, $clubId, $athleteId, $eventId]);
         if (!$deleted || $statement->rowCount() === 0) {
             return EntryRegistrationResult::UnsubscribeFailed;
         }

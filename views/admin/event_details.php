@@ -19,6 +19,9 @@ declare(strict_types=1);
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var string $cspNonce */
 $clubManaged ??= false;
+$canManageManagers ??= false;
+$managerClubs ??= [];
+$managerClubIds ??= [];
 $isEdit = $event !== null && $event->id > 0;
 $formRegistrationOptions ??= [[
     'id' => null,
@@ -46,7 +49,11 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
         <div class="notice"><?= e($error) ?></div>
     <?php endif; ?>
 
+    <?php if ($event?->archived_at !== null) : ?>
+        <p class="notice" role="status"><?= e(__('event_archive.read_only')) ?></p>
+    <?php endif; ?>
     <form method="post" class="form-card" enctype="multipart/form-data">
+        <fieldset class="event-editor-fields" <?= $event?->archived_at !== null ? 'disabled' : '' ?>>
         <?= csrf_field() ?>
         <input type="hidden" name="MAX_FILE_SIZE" value="<?= \App\Validation\EventInputValidator::MAX_UPLOAD_BYTES ?>">
         <input type="hidden" name="event_id" value="<?= e((string) ($event->id ?? '')) ?>">
@@ -199,6 +206,21 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
             <label><input type="checkbox" name="closed" value="1" <?= $isEdit && !empty($event->closed) ? 'checked' : '' ?>> <?= e($isEdit ? __('admin.edit.closed') : __('admin.event_details.closed')) ?></label>
         </p>
 
+        <?php if ($canManageManagers && $managerClubs !== []) : ?>
+            <fieldset class="event-payment-fieldset">
+                <legend><?= e(__('event_managers.title')) ?></legend>
+                <p class="field-help"><?= e(__('event_managers.help')) ?></p>
+                <div class="event-manager-list">
+                <?php foreach ($managerClubs as $managerClub) : ?>
+                    <label>
+                        <input type="checkbox" name="managing_clubs[]" value="<?= $managerClub['id'] ?>" <?= in_array($managerClub['id'], $managerClubIds, true) ? 'checked' : '' ?>>
+                        <?= e($managerClub['name']) ?>
+                    </label>
+                <?php endforeach; ?>
+                </div>
+            </fieldset>
+        <?php endif; ?>
+
         <?php if (!empty($clubs)) : ?>
             <label><?= e(__('admin.event_details.registration_exceptions')) ?></label>
             <p class="form-note"><?= e(__('admin.event_details.registration_exceptions_help')) ?></p>
@@ -219,7 +241,10 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
             </div>
         <?php endif; ?>
 
-        <button class="btn green" type="submit"><?= e($isEdit ? __('admin.edit.save') : __('admin.event_details.save')) ?></button>
+        <?php if ($event?->archived_at === null) : ?>
+            <button class="btn green" type="submit"><?= e($isEdit ? __('admin.edit.save') : __('admin.event_details.save')) ?></button>
+        <?php endif; ?>
+        </fieldset>
     </form>
 </div>
 <?php if ($isEdit && !$clubManaged) : ?>

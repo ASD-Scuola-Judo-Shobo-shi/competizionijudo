@@ -11,6 +11,7 @@
             <span class="count-badge"><?= e((string) $pagination['total']) ?></span>
         </h2>
     </header>
+    <?php require dirname(__DIR__) . '/components/event_archive_filter.php'; ?>
 
     <?php if (is_array($inlineFeedback ?? null)) : ?>
         <div class="notice<?= $inlineFeedback['type'] === 'success' ? ' success' : '' ?>" role="status">
@@ -168,15 +169,25 @@
                             </td>
                             <td class="table-actions-cell" data-label="<?= e(__('admin.events.actions')) ?>">
                                 <div class="table-actions admin-table-actions" data-inline-display>
+                                    <?php if ($event->archived_at === null) : ?>
                                     <button class="btn green table-action-button" type="button" data-inline-edit aria-label="<?= e(__('tables.edit_row')) ?>" title="<?= e(__('tables.edit_row')) ?>"><span aria-hidden="true">✏️</span><span class="table-action-label"><?= e(__('tables.edit_row')) ?></span></button>
+                                    <?php endif; ?>
                                     <a class="btn table-action-button" href="<?= e(base_url('/admin/events/export?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__('admin.events.export')) ?>" title="<?= e(__('admin.events.export')) ?>"><span aria-hidden="true">⬇️</span><span class="table-action-label"><?= e(__('admin.events.export')) ?></span></a>
-                                    <a class="btn gray table-action-button" href="<?= e(base_url('/admin/events/details?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
+                                    <a class="btn gray table-action-button" href="<?= e(base_url('/admin/events/details?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__($event->archived_at === null ? 'tables.full_edit' : 'event_archive.view')) ?>" title="<?= e(__($event->archived_at === null ? 'tables.full_edit' : 'event_archive.view')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__($event->archived_at === null ? 'tables.full_edit' : 'event_archive.view')) ?></span></a>
+                                    <?php if ($event->archived_at === null) : ?>
+                                    <form method="post" action="<?= e(base_url('/admin/events/archive?')) ?>" data-confirm="<?= e(__('event_archive.confirm')) ?>">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="event_id" value="<?= (int) $event->id ?>">
+                                        <button class="btn red table-action-button" type="submit" aria-label="<?= e(__('event_archive.archive')) ?>" title="<?= e(__('event_archive.archive')) ?>"><span aria-hidden="true">📦</span><span class="table-action-label"><?= e(__('event_archive.archive')) ?></span></button>
+                                    </form>
+                                    <?php endif; ?>
                                     <form method="post" action="<?= e(base_url('/admin/events/delete?')) ?>" data-confirm="<?= e(__('admin.events.confirm_delete')) ?>">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="event_id" value="<?= (int) $event->id ?>">
                                         <button class="btn red table-action-button" type="submit" aria-label="<?= e(__('admin.events.delete')) ?>" title="<?= e(__('admin.events.delete')) ?>"><span aria-hidden="true">🗑️</span><span class="table-action-label"><?= e(__('admin.events.delete')) ?></span></button>
                                     </form>
                                 </div>
+                                <?php if ($event->archived_at === null) : ?>
                                 <form id="<?= e($inlineFormId) ?>" class="table-actions inline-edit-actions" data-inline-editor method="post" action="<?= e(base_url('/admin/events/update-inline')) ?>">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="event_id" value="<?= (int) $event->id ?>">
@@ -187,6 +198,7 @@
                                     <button class="btn gray table-action-button" type="button" data-inline-cancel aria-label="<?= e(__('tables.cancel')) ?>" title="<?= e(__('tables.cancel')) ?>"><span aria-hidden="true">↩️</span><span class="table-action-label"><?= e(__('tables.cancel')) ?></span></button>
                                     <a class="btn table-action-button" href="<?= e(base_url('/admin/events/details?event_id=' . (int) $event->id)) ?>" aria-label="<?= e(__('tables.full_edit')) ?>" title="<?= e(__('tables.full_edit')) ?>"><span aria-hidden="true">⚙️</span><span class="table-action-label"><?= e(__('tables.full_edit')) ?></span></a>
                                 </form>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

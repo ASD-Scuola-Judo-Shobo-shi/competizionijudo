@@ -25,6 +25,7 @@ final class Event
         public readonly ?string $sepa_iban = null,
         public readonly ?string $sepa_bic = null,
         public readonly ?int $owner_club_id = null,
+        public readonly ?string $archived_at = null,
     ) {
     }
 
@@ -58,6 +59,7 @@ final class Event
             !empty($data['sepa_iban']) ? (string) $data['sepa_iban'] : null,
             !empty($data['sepa_bic']) ? (string) $data['sepa_bic'] : null,
             isset($data['owner_club_id']) ? (int) $data['owner_club_id'] : null,
+            isset($data['archived_at']) ? (string) $data['archived_at'] : null,
         );
     }
 
@@ -66,7 +68,7 @@ final class Event
     {
         $stmt = Database::connection()->prepare(
             'SELECT * FROM events
-             WHERE published = 1 AND closed = 0 AND date >= ?
+             WHERE published = 1 AND archived_at IS NULL AND closed = 0 AND date >= ?
              ORDER BY date ASC, id ASC
              LIMIT ?'
         );
@@ -86,7 +88,7 @@ final class Event
     {
         $stmt = Database::connection()->prepare(
             'SELECT * FROM events
-             WHERE published = 1 AND date >= ?
+             WHERE published = 1 AND archived_at IS NULL AND date >= ?
              ORDER BY date ASC, id ASC
              LIMIT ?'
         );
@@ -109,7 +111,7 @@ final class Event
     ): array {
         $stmt = Database::connection()->prepare(
             'SELECT * FROM events
-             WHERE published = 1 AND date >= ? AND id != ?
+             WHERE published = 1 AND archived_at IS NULL AND date >= ? AND id != ?
              ORDER BY date ASC, id ASC
              LIMIT ?'
         );
@@ -133,7 +135,7 @@ final class Event
 
     public static function findPublishedById(int $id): ?self
     {
-        $stmt = Database::connection()->prepare('SELECT * FROM events WHERE id = ? AND published = 1');
+        $stmt = Database::connection()->prepare('SELECT * FROM events WHERE id = ? AND published = 1 AND archived_at IS NULL');
         $stmt->execute([$id]);
         $row = $stmt->fetch();
 
@@ -142,7 +144,7 @@ final class Event
 
     public static function findPublishedByIdIncludingClosed(int $id): ?self
     {
-        $stmt = Database::connection()->prepare('SELECT * FROM events WHERE id = ? AND published = 1');
+        $stmt = Database::connection()->prepare('SELECT * FROM events WHERE id = ? AND published = 1 AND archived_at IS NULL');
         $stmt->execute([$id]);
         $row = $stmt->fetch();
 
@@ -153,7 +155,7 @@ final class Event
     {
         $stmt = Database::connection()->prepare(
             'SELECT e.* FROM events e
-             WHERE e.id = ? AND e.published = 1
+             WHERE e.id = ? AND e.published = 1 AND e.archived_at IS NULL
                AND (e.closed = 0 
                     OR EXISTS (SELECT 1 FROM entries WHERE event_id = e.id AND club_id = ?)
                     OR EXISTS (SELECT 1 FROM event_registration_exceptions WHERE event_id = e.id AND club_id = ?))'
@@ -174,7 +176,7 @@ final class Event
         $stmt = Database::connection()->prepare(
             'SELECT * FROM events
              WHERE id = ?
-               AND published = 1
+               AND published = 1 AND archived_at IS NULL
                AND (closed = 0 OR EXISTS (
                      SELECT 1 FROM event_registration_exceptions WHERE event_id = ? AND club_id = ?
                  ))
@@ -197,7 +199,7 @@ final class Event
     {
         $stmt = Database::connection()->prepare(
             'SELECT * FROM events
-             WHERE published = 1
+             WHERE published = 1 AND archived_at IS NULL
                AND (closed = 0 OR EXISTS (
                      SELECT 1 FROM event_registration_exceptions WHERE event_id = events.id AND club_id = ?
                  ))
@@ -223,7 +225,7 @@ final class Event
     ): array {
         $stmt = Database::connection()->prepare(
             'SELECT * FROM events
-             WHERE published = 1
+             WHERE published = 1 AND archived_at IS NULL
                AND (closed = 0 OR EXISTS (
                      SELECT 1 FROM event_registration_exceptions WHERE event_id = events.id AND club_id = ?
                  ))
@@ -242,30 +244,37 @@ final class Event
         return array_map(fn(array $r) => self::fromArray($r), $rows ?: []);
     }
 
-    public static function findOwnedById(int $id, int $clubId): ?self
+    public static function findManagedById(int $id, int $clubId): ?self
     {
-        $statement = Database::connection()->prepare('SELECT * FROM events WHERE id = ? AND owner_club_id = ?');
-        $statement->execute([$id, $clubId]);
+        $statement = Database::connection()->prepare(
+            'SELECT * FROM events WHERE id = ? AND ' . EventManagers::clubScopeSql()
+        );
+        $statement->execute([$id, $clubId, $clubId]);
         $row = $statement->fetch();
         return $row ? self::fromArray($row) : null;
     }
 
-    public static function countOwned(int $clubId): int
+    public static function countManaged(int $clubId, bool $archived = false): int
     {
-        $statement = Database::connection()->prepare('SELECT COUNT(*) FROM events WHERE owner_club_id = ?');
-        $statement->execute([$clubId]);
+        $statement = Database::connection()->prepare(
+            'SELECT COUNT(*) FROM events WHERE ' . EventManagers::clubScopeSql() . ' AND archived_at IS '
+            . ($archived ? 'NOT NULL' : 'NULL')
+        );
+        $statement->execute([$clubId, $clubId]);
         return (int) $statement->fetchColumn();
     }
 
     /** @return list<self> */
-    public static function pageOwned(int $clubId, int $limit, int $offset): array
+    public static function pageManaged(int $clubId, int $limit, int $offset, bool $archived = false): array
     {
         $statement = Database::connection()->prepare(
-            'SELECT * FROM events WHERE owner_club_id = ? ORDER BY date DESC, id DESC LIMIT ? OFFSET ?'
+            'SELECT * FROM events WHERE ' . EventManagers::clubScopeSql() . ' AND archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL')
+            . ' ORDER BY date DESC, id DESC LIMIT ? OFFSET ?'
         );
         $statement->bindValue(1, $clubId, \PDO::PARAM_INT);
-        $statement->bindValue(2, max(1, $limit), \PDO::PARAM_INT);
-        $statement->bindValue(3, max(0, $offset), \PDO::PARAM_INT);
+        $statement->bindValue(2, $clubId, \PDO::PARAM_INT);
+        $statement->bindValue(3, max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(4, max(0, $offset), \PDO::PARAM_INT);
         $statement->execute();
         return array_map(fn(array $row) => self::fromArray($row), $statement->fetchAll() ?: []);
     }
@@ -279,17 +288,12 @@ final class Event
             );
         } else {
             $statement = Database::connection()->prepare(
-                'SELECT DISTINCT location FROM events WHERE location != ? AND owner_club_id = ? ORDER BY location ASC'
+                'SELECT DISTINCT location FROM events WHERE location != ? AND ' . EventManagers::clubScopeSql()
+                . ' ORDER BY location ASC'
             );
-            $statement->execute(['', $clubId]);
+            $statement->execute(['', $clubId, $clubId]);
         }
         return array_map(static fn(array $row): string => (string) $row['location'], $statement->fetchAll());
-    }
-
-    public static function removeOwned(int $id, int $clubId): void
-    {
-        $statement = Database::connection()->prepare('DELETE FROM events WHERE id = ? AND owner_club_id = ?');
-        $statement->execute([$id, $clubId]);
     }
 
     public static function remove(int $id): void
@@ -298,9 +302,11 @@ final class Event
         $statement->execute([$id]);
     }
 
-    public static function count(): int
+    public static function count(bool $archived = false): int
     {
-        return (int) Database::connection()->query('SELECT COUNT(*) FROM events')->fetchColumn();
+        return (int) Database::connection()->query(
+            'SELECT COUNT(*) FROM events WHERE archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL')
+        )->fetchColumn();
     }
 
     /** @return list<self> */
@@ -308,7 +314,8 @@ final class Event
         int $limit,
         int $offset,
         string $sort = 'date',
-        string $direction = 'desc'
+        string $direction = 'desc',
+        bool $archived = false
     ): array {
         $sortExpression = match ($sort) {
             'name' => 'e.name',
@@ -323,7 +330,8 @@ final class Event
         };
         $direction = strtolower($direction) === 'desc' ? 'DESC' : 'ASC';
         $statement = Database::connection()->prepare(
-            'SELECT e.* FROM events e ORDER BY ' . $sortExpression . ' ' . $direction . ', e.id ASC'
+            'SELECT e.* FROM events e WHERE e.archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL')
+            . ' ORDER BY ' . $sortExpression . ' ' . $direction . ', e.id ASC'
             . ' LIMIT ? OFFSET ?'
         );
         $statement->bindValue(1, max(1, $limit), \PDO::PARAM_INT);
@@ -338,7 +346,7 @@ final class Event
     {
         $stmt = Database::connection()->prepare(
             'SELECT * FROM events
-             WHERE published = 1
+             WHERE published = 1 AND archived_at IS NULL
              ORDER BY date DESC, id DESC
              LIMIT ?'
         );
@@ -357,7 +365,7 @@ final class Event
     ): array {
         $stmt = Database::connection()->prepare(
             'SELECT * FROM events
-             WHERE published = 1 AND closed = 0 AND date >= ? AND id != ?
+             WHERE published = 1 AND archived_at IS NULL AND closed = 0 AND date >= ? AND id != ?
              ORDER BY date ASC, id ASC
              LIMIT ?'
         );

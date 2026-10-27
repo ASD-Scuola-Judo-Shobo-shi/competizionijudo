@@ -27,7 +27,7 @@ final class AdvertisedRoutesTest extends TestCase
             '/clubs/area' => 'get',
             '/clubs/events' => 'get',
             '/clubs/events/details' => 'get',
-            '/clubs/events/delete' => 'post',
+            '/clubs/events/archive' => 'post',
             '/admin/normalization' => 'get',
             '/clubs/athletes-export' => 'get',
             '/clubs/athletes-import' => 'post',
@@ -42,6 +42,7 @@ final class AdvertisedRoutesTest extends TestCase
             '/admin/clubs/athletes/export' => 'get',
             '/admin/maintenance/athlete-duplicates' => 'get',
             '/admin/events/delete' => 'post',
+            '/admin/events/archive' => 'post',
             '/admin/clubs/delete' => 'post',
         ];
 

@@ -765,6 +765,7 @@ final class AdminClubAthleteWorkflowTest extends TestCase
                 membership_number TEXT,
                 notes TEXT
             );
+            CREATE TABLE event_managers (event_id INTEGER NOT NULL, club_id INTEGER NOT NULL, PRIMARY KEY (event_id, club_id));
             CREATE TABLE events (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -782,7 +783,7 @@ final class AdminClubAthleteWorkflowTest extends TestCase
                 max_participants INTEGER,
                 sepa_account_holder TEXT,
                 sepa_iban TEXT,
-                sepa_bic TEXT
+                sepa_bic TEXT, archived_at TEXT
             )'
         );
     }
@@ -865,7 +866,7 @@ final class AdminClubAthleteWorkflowTest extends TestCase
         ]);
 
         $this->database->prepare(
-            'INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)'
         )->execute([
             101,
             'Synthetic Tournament',

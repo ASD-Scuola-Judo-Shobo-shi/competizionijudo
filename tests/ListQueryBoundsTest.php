@@ -148,7 +148,7 @@ final class ListQueryBoundsTest extends TestCase
                 id INTEGER PRIMARY KEY, name TEXT NOT NULL, date TEXT NOT NULL,
                 location TEXT, organizer TEXT, registration_deadline TEXT, type TEXT,
                 description TEXT, notes TEXT, poster_file TEXT, info_file TEXT,
-                published INTEGER NOT NULL, closed INTEGER NOT NULL
+                published INTEGER NOT NULL, closed INTEGER NOT NULL, archived_at TEXT
             )'
         );
         $this->database->exec(
@@ -181,7 +181,7 @@ final class ListQueryBoundsTest extends TestCase
     private function insertEvent(int $id, string $name, string $date, bool $published, bool $closed): void
     {
         $statement = $this->database->prepare(
-            'INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)'
         );
         $statement->execute([
             $id, $name, $date, 'Synthetic Venue', 'Synthetic Organizer', $date,

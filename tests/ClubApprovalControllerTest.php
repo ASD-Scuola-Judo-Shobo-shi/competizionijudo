@@ -411,7 +411,7 @@ final class ClubApprovalControllerTest extends TestCase
                 info_file TEXT,
                 published INTEGER NOT NULL,
                 closed INTEGER NOT NULL,
-                max_participants INTEGER
+                max_participants INTEGER, archived_at TEXT
             );
             CREATE TABLE entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

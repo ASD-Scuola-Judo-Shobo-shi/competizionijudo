@@ -160,7 +160,7 @@ final class EventController extends Controller
             ? ($isAdministrator ? Event::findById($eventId) : Event::findPublishedById($eventId))
             : null;
         if ($event === null && !$isAdministrator && $eventId > 0) {
-            $event = Event::findOwnedById($eventId, (int) AuthContext::clubId());
+            $event = Event::findManagedById($eventId, (int) AuthContext::clubId());
         }
         $fallback = $isAdministrator ? '/admin/events' : '/events';
         if ($event === null || $event->poster_file === null) {

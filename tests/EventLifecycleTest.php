@@ -21,10 +21,12 @@ use App\Model\EntryRegistrationRepository;
 use App\Model\EntryRegistrationResult;
 use App\Model\EventRegistrationException;
 use App\Model\Event;
+use App\Model\EventManagers;
 use App\Security\CredentialFingerprint;
 use App\Service\EventEntriesCsvTransfer;
 use App\Service\EventRegistrationSelection;
 use App\Service\EventUploadStorage;
+use App\Service\EventArchiver;
 use PDO;
 use PDOStatement;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -1512,7 +1514,7 @@ final class EventLifecycleTest extends TestCase
         self::assertSame(2, (int) $this->database->query('SELECT COUNT(*) FROM entries WHERE snapshot_at IS NOT NULL')->fetchColumn());
     }
 
-    public function testClubCannotReadEditOrDeleteAnotherClubsTournament(): void
+    public function testClubCannotReadEditOrArchiveAnotherClubsTournament(): void
     {
         $this->insertEvent(published: false, description: 'PRIVATE ORGANIZER DATA');
         $this->database->exec('UPDATE events SET owner_club_id = 202 WHERE id = 101');
@@ -1523,8 +1525,8 @@ final class EventLifecycleTest extends TestCase
         self::assertStringNotContainsString('PRIVATE ORGANIZER DATA', $response->content());
         $response = $this->dispatchClubEvent(['event_id' => '101', 'name' => 'FORGED']);
         self::assertSame('/clubs/events', $response->headers()['Location']);
-        $request = new Request('POST', '/clubs/events/delete', [], ['event_id' => '101', 'csrf_token' => csrf_token()]);
-        (new EventManagementController($this->view, $request))->clubDelete($request);
+        $request = new Request('POST', '/clubs/events/archive', [], ['event_id' => '101', 'csrf_token' => csrf_token()]);
+        (new EventManagementController($this->view, $request))->clubArchive($request);
         self::assertSame('Synthetic Event', Event::findById(101)?->name);
         $this->database->exec('UPDATE events SET owner_club_id = NULL WHERE id = 101');
         $this->dispatchClubEvent(['event_id' => '101', 'name' => 'FORGED']);
@@ -1557,10 +1559,10 @@ final class EventLifecycleTest extends TestCase
         self::assertStringNotContainsString('/admin/events/export', $response->content());
     }
 
-    public function testClubEventCreationAndDeletionRequireCsrf(): void
+    public function testClubEventCreationAndArchivingRequireCsrf(): void
     {
         Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
-        foreach (['clubDetails', 'clubDelete'] as $method) {
+        foreach (['clubDetails', 'clubArchive'] as $method) {
             $request = new Request('POST', '/clubs/events/details', [], ['name' => 'Synthetic']);
             try {
                 (new EventManagementController($this->view, $request))->$method($request);
@@ -1572,15 +1574,17 @@ final class EventLifecycleTest extends TestCase
         self::assertSame(0, Event::count());
     }
 
-    public function testClubCanDeleteOnlyItsOwnedTournament(): void
+    public function testClubCanArchiveOnlyItsOwnedTournament(): void
     {
         $this->insertEvent();
         $this->database->exec('UPDATE events SET owner_club_id = 201 WHERE id = 101');
         Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
-        $request = new Request('POST', '/clubs/events/delete', [], ['event_id' => '101', 'csrf_token' => csrf_token()]);
-        $response = (new EventManagementController($this->view, $request))->clubDelete($request);
+        $request = new Request('POST', '/clubs/events/archive', [], ['event_id' => '101', 'csrf_token' => csrf_token()]);
+        $response = (new EventManagementController($this->view, $request))->clubArchive($request);
         self::assertSame('/clubs/events', $response->headers()['Location']);
-        self::assertNull(Event::findById(101));
+        self::assertNotNull(Event::findById(101)?->archived_at);
+        self::assertFalse(Event::findById(101)->published);
+        self::assertTrue(Event::findById(101)->closed);
     }
 
     public function testClubEventEndpointsRejectOtherPrincipals(): void
@@ -1592,27 +1596,30 @@ final class EventLifecycleTest extends TestCase
             }
             $request = new Request('GET', '/clubs/events');
             $controller = new EventManagementController($this->view, $request);
-            foreach (['clubIndex', 'clubDetails', 'clubDelete'] as $method) {
+            foreach (['clubIndex', 'clubDetails', 'clubArchive'] as $method) {
                 self::assertSame('/clubs/login', $controller->$method($request)->headers()['Location']);
             }
         }
     }
 
-    /** @return iterable<string, array{int}> */
+    /** @return iterable<string, array{int, bool}> */
     public static function ownedTournamentCounts(): iterable
     {
-        yield 'one tournament' => [1];
-        yield 'many tournaments' => [75];
+        yield 'one active tournament' => [1, false];
+        yield 'many active tournaments' => [75, false];
+        yield 'one archived tournament' => [1, true];
+        yield 'many archived tournaments' => [75, true];
     }
 
     #[DataProvider('ownedTournamentCounts')]
-    public function testClubTournamentListUsesThreeQueriesRegardlessOfCount(int $count): void
+    public function testClubTournamentListUsesThreeQueriesRegardlessOfCount(int $count, bool $archived): void
     {
         $this->insertEvent();
         $row = $this->database->query('SELECT * FROM events WHERE id = 101')->fetch();
         $row['owner_club_id'] = 201;
+        $row['archived_at'] = $archived ? '2026-01-01 00:00:00' : null;
         $countStatement = $this->createMock(PDOStatement::class);
-        $countStatement->expects(self::once())->method('execute')->with([201])->willReturn(true);
+        $countStatement->expects(self::once())->method('execute')->with([201, 201])->willReturn(true);
         $countStatement->method('fetchColumn')->willReturn($count);
         $list = $this->createMock(PDOStatement::class);
         $list->expects(self::once())->method('execute')->willReturn(true);
@@ -1631,7 +1638,7 @@ final class EventLifecycleTest extends TestCase
         $database->expects(self::never())->method('query');
         $this->databaseConnection->setValue(null, $database);
         Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
-        $request = new Request('GET', '/clubs/events');
+        $request = new Request('GET', '/clubs/events', ['archived' => $archived ? '1' : '0']);
         self::assertSame(200, (new EventManagementController($this->view, $request))->clubIndex($request)->status());
     }
 
@@ -1672,6 +1679,223 @@ final class EventLifecycleTest extends TestCase
         self::assertSame('Standard', Event::findById(101)?->registrationOptions()[0]->name);
     }
 
+    public function testArchivingPreservesEntriesOptionsExceptionsAndSnapshots(): void
+    {
+        $this->seedEntriesForTwoClubs();
+        $this->database->exec("UPDATE events SET owner_club_id = 201, date = '2099-07-01' WHERE id = 101");
+        EventRegistrationException::setForEvent(101, [202]);
+        $archiver = new EventArchiver($this->database);
+        self::assertTrue($archiver->archive(101, 201));
+        $event = Event::findById(101);
+        self::assertNotNull($event?->archived_at);
+        self::assertFalse($event->published);
+        self::assertTrue($event->closed);
+        self::assertSame(2, $this->entryCount());
+        self::assertCount(1, $event->registrationOptions());
+        self::assertSame([202], EventRegistrationException::clubIdsForEvent(101));
+        self::assertSame('uploads/events/poster_synthetic.png', $event->poster_file);
+        $snapshots = $this->database->query('SELECT * FROM entries ORDER BY id')->fetchAll();
+        self::assertNotNull($snapshots[0]['snapshot_at']);
+        self::assertSame('OwnFamily', $snapshots[0]['snapshot_last_name']);
+        self::assertFalse($archiver->archive(101, 201));
+        self::assertSame($event->archived_at, Event::findById(101)?->archived_at);
+        self::assertSame($snapshots, $this->database->query('SELECT * FROM entries ORDER BY id')->fetchAll());
+    }
+
+    public function testArchiveFailureRollsBackSnapshotsAndReportsASafeError(): void
+    {
+        $this->seedEntriesForTwoClubs();
+        $this->database->exec("UPDATE events SET date = '2099-07-01', owner_club_id = 201 WHERE id = 101");
+        $this->database->exec("CREATE TRIGGER reject_snapshot BEFORE UPDATE ON entries WHEN NEW.club_id = 202
+            BEGIN SELECT RAISE(FAIL, 'Synthetic private snapshot failure'); END");
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $request = new Request('POST', '/clubs/events/archive', [], ['csrf_token' => csrf_token(), 'event_id' => '101']);
+        $logger = $this->createMock(\App\Core\Logger::class);
+        $logger->expects(self::once())->method('error');
+        self::assertSame(302, (new EventManagementController($this->view, $request, $logger))->clubArchive($request)->status());
+        self::assertNull(Event::findById(101)?->archived_at);
+        self::assertTrue(Event::findById(101)->published);
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM entries WHERE snapshot_at IS NOT NULL')->fetchColumn());
+        $request = new Request('GET', '/clubs/events');
+        $response = (new EventManagementController($this->view, $request))->clubIndex($request);
+        self::assertStringContainsString(e(__('event_archive.failed')), $response->content());
+        self::assertStringNotContainsString('Synthetic private snapshot failure', $response->content());
+    }
+
+    public function testArchivedEventsAreReadOnlyAndAvailableInBothArchiveLists(): void
+    {
+        $this->insertEvent(date: '2099-07-01');
+        $this->database->exec('UPDATE events SET owner_club_id = 201 WHERE id = 101');
+        (new EventArchiver($this->database))->archive(101, 201);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $request = new Request('GET', '/clubs/events/details', ['id' => '101']);
+        $response = (new EventManagementController($this->view, $request))->clubDetails($request);
+        self::assertStringContainsString(e(__('event_archive.read_only')), $response->content());
+        self::assertStringContainsString('<fieldset class="event-editor-fields" disabled>', $response->content());
+        self::assertSame('/clubs/events?archived=1', $this->dispatchClubEvent(['event_id' => '101', 'name' => 'FORGED'])->headers()['Location']);
+        $request = new Request('GET', '/clubs/events', ['archived' => '1']);
+        $response = (new EventManagementController($this->view, $request))->clubIndex($request);
+        self::assertStringContainsString('Synthetic Event', $response->content());
+        self::assertStringNotContainsString('action="/clubs/events/archive"', $response->content());
+        self::assertStringNotContainsString('/clubs/events/delete', $response->content());
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+        $request = new Request('POST', '/admin/events/details', [], ['event_id' => '101', 'name' => 'FORGED']);
+        self::assertSame('/admin/events?archived=1', (new AdminController($this->view, $request))->eventDetails($request)->headers()['Location']);
+        $request = new Request('POST', '/admin/events/update-inline', [], [
+            'event_id' => '101', 'csrf_token' => csrf_token(), 'published' => '1', 'closed' => '0',
+        ]);
+        self::assertSame(303, (new AdminController($this->view, $request))->updateEventInline($request)->status());
+        self::assertSame('Synthetic Event', Event::findById(101)?->name);
+        self::assertFalse(Event::findById(101)->published);
+        $request = new Request('GET', '/admin/events', ['archived' => '1']);
+        $response = (new AdminController($this->view, $request))->manageEvents($request);
+        self::assertStringContainsString('Synthetic Event', $response->content());
+        self::assertStringContainsString('/admin/events/delete?', $response->content());
+        self::assertStringNotContainsString('data-inline-edit aria-label', $response->content());
+    }
+
+    public function testArchiveExcludesPublicQueriesAndRegistrationEvenWithExceptions(): void
+    {
+        $this->seedEntriesForTwoClubs();
+        EventRegistrationException::setForEvent(101, [201, 202]);
+        (new EventArchiver($this->database))->archive(101);
+        // A drifted visibility flag must not bypass the archive boundary.
+        $this->database->exec('UPDATE events SET published = 1, closed = 0 WHERE id = 101');
+        self::assertNull(Event::findPublishedById(101));
+        self::assertNull(Event::findPublishedByIdIncludingClosed(101));
+        self::assertNull(Event::findPublishedByIdOrClosedWithEntries(101, 201));
+        self::assertNull(Event::findRegistrationEligibleByIdForClub(101, '2026-01-01', 201));
+        self::assertSame([], Event::upcomingPublished('2026-01-01', 10));
+        self::assertSame([], Event::upcomingPublishedIncludingClosed('2026-01-01', 10));
+        self::assertSame([], Event::allPublishedIncludingClosed('2026-01-01', 10));
+        self::assertSame([], Event::nextUpcomingPublishedIncludingClosed(999, '2026-01-01', 10));
+        self::assertSame([], Event::nextUpcomingPublished(999, '2026-01-01', 10));
+        self::assertSame([], Event::nextUpcomingPublishedEligible(999, '2026-01-01', 10, 201));
+        $repository = new EntryRegistrationRepository($this->database);
+        self::assertSame(EntryRegistrationResult::AthleteRejected, $repository->register(101, 201, 303, 501, '2026-01-01'));
+        self::assertSame(EntryRegistrationResult::UnsubscribeFailed, $repository->unregister(101, 201, 301, '2026-01-01'));
+        self::assertSame(2, $this->entryCount());
+    }
+
+    public function testCreatorCanShareDraftTournamentAndRevokeAClubImmediately(): void
+    {
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        self::assertSame(302, $this->dispatchClubEvent(['managing_clubs' => ['202']])->status());
+        self::assertSame([202], EventManagers::clubIdsForEvent(1));
+        self::assertNotNull(Event::findManagedById(1, 202));
+        self::assertSame(1, Event::countManaged(202));
+        self::assertSame(1, Event::pageManaged(202, 50, 0)[0]->id);
+        Session::authenticateClub(202, hash('sha256', 'test-club-credential'));
+        $request = new Request('GET', '/clubs/events/details', ['id' => '1']);
+        $response = (new EventManagementController($this->view, $request))->clubDetails($request);
+        self::assertSame(200, $response->status());
+        self::assertStringNotContainsString('name="managing_clubs[]"', $response->content());
+        $response = $this->dispatchClubEvent(['event_id' => '1', 'name' => 'Shared Tournament Updated', 'managing_clubs' => ['201']]);
+        self::assertSame(302, $response->status());
+        self::assertSame('Shared Tournament Updated', Event::findById(1)?->name);
+        self::assertSame(201, Event::findById(1)?->owner_club_id);
+        self::assertSame([202], EventManagers::clubIdsForEvent(1));
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $this->dispatchClubEvent(['event_id' => '1', 'managing_clubs' => []]);
+        self::assertNull(Event::findManagedById(1, 202));
+        self::assertNotNull(Event::findManagedById(1, 201));
+        self::assertSame(0, Event::countManaged(202));
+        self::assertFalse((new EventArchiver($this->database))->archive(1, 202));
+    }
+
+    public function testAdditionalManagerCanArchiveButClubDeletionRouteDoesNotExist(): void
+    {
+        $this->insertEvent(date: '2099-07-01');
+        $this->database->exec('UPDATE events SET owner_club_id = 201 WHERE id = 101');
+        EventManagers::synchronize($this->database, 101, [202]);
+        Session::authenticateClub(202, hash('sha256', 'test-club-credential'));
+        $request = new Request('POST', '/clubs/events/archive', [], ['csrf_token' => csrf_token(), 'event_id' => '101']);
+        self::assertSame(302, (new EventManagementController($this->view, $request))->clubArchive($request)->status());
+        self::assertNotNull(Event::findById(101)?->archived_at);
+        self::assertSame(1, Event::countManaged(202, true));
+        self::assertSame(1, Event::countManaged(201, true));
+        $router = new \App\Core\Router($this->view);
+        (require dirname(__DIR__) . '/routes/web.php')($router);
+        $this->expectException(\App\Core\HttpException::class);
+        $this->expectExceptionCode(404);
+        $router->dispatch(new Request('POST', '/clubs/events/delete', [], ['event_id' => '101', 'csrf_token' => csrf_token()]));
+    }
+
+    public function testInvalidManagingClubSelectionIsRejectedWithoutCreatingTournament(): void
+    {
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        foreach ([['999'], [['id' => '202']], 'invalid'] as $selection) {
+            $response = $this->dispatchClubEvent(['managing_clubs' => $selection]);
+            self::assertSame(200, $response->status());
+            self::assertStringContainsString(e(__('event_managers.invalid')), $response->content());
+        }
+        self::assertSame(0, Event::count());
+    }
+
+    public function testAdministratorCanShareAnExistingAdministratorTournament(): void
+    {
+        $this->insertEvent();
+        Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+        $request = new Request('POST', '/admin/events/details', [], [
+            'csrf_token' => csrf_token(), 'event_id' => '101', 'name' => 'Admin Shared Tournament', 'date' => '2099-01-02',
+            'location' => 'Synthetic Venue', 'type' => 'only_competitive', 'registration_option_default' => '0',
+            'registration_options' => [['id' => '501', 'name' => 'Standard', 'fee_amount' => '0.00']],
+            'managing_clubs' => ['201', '202'],
+        ]);
+        self::assertSame(302, (new AdminController($this->view, $request))->eventDetails($request)->status());
+        self::assertSame([201, 202], EventManagers::clubIdsForEvent(101));
+        self::assertNotNull(Event::findManagedById(101, 201));
+        self::assertNotNull(Event::findManagedById(101, 202));
+        self::assertNull(Event::findById(101)?->owner_club_id);
+        self::assertTrue((new EventArchiver($this->database))->archive(101));
+        $request = new Request('POST', '/admin/events/delete', [], ['csrf_token' => csrf_token(), 'event_id' => '101']);
+        self::assertSame(302, (new AdminController($this->view, $request))->deleteEvent($request)->status());
+        self::assertNull(Event::findById(101));
+    }
+
+    public function testSaveRechecksArchiveStatusAndRevokedManagementAccess(): void
+    {
+        $this->insertEvent(date: '2099-07-01');
+        $this->database->exec('UPDATE events SET owner_club_id = 201 WHERE id = 101');
+        EventManagers::synchronize($this->database, 101, [202]);
+        $event = Event::findManagedById(101, 202);
+        self::assertNotNull($event);
+        $editor = new \App\Service\EventEditor(new EventUploadStorage(), $this->createStub(\App\Core\Logger::class));
+        $data = [
+            'name' => 'FORGED UPDATE', 'date' => '2099-07-01', 'location' => 'Synthetic Venue',
+            'organizer' => '', 'registration_deadline' => '', 'type' => 'only_competitive', 'description' => '',
+            'notes' => '', 'max_participants' => '', 'published' => 1, 'closed' => 0,
+            'registration_options' => [['id' => 501, 'name' => 'Standard', 'fee_cents' => 0, 'fee_amount' => '0.00', 'is_default' => true]],
+            'sepa_account_holder' => '', 'sepa_iban' => '', 'sepa_bic' => '',
+        ];
+        // A shared manager cannot change access even by calling the persistence boundary directly.
+        try {
+            $editor->save($event, $data, [], [], 202, 'synthetic-correlation', [201]);
+            self::fail('A shared manager changed access.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('creator club', $exception->getMessage());
+        }
+        self::assertSame([202], EventManagers::clubIdsForEvent(101));
+        EventManagers::synchronize($this->database, 101, []);
+        try {
+            $editor->save($event, $data, [], [], 202, 'synthetic-correlation');
+            self::fail('A revoked manager saved a stale form.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('no longer editable', $exception->getMessage());
+        }
+        self::assertSame('Synthetic Event', Event::findById(101)?->name);
+        self::assertFalse($this->database->inTransaction());
+        (new EventArchiver($this->database))->archive(101, 201);
+        try {
+            $editor->save($event, $data, [], [], null, 'synthetic-correlation');
+            self::fail('An administrator saved a stale form after archiving.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('no longer editable', $exception->getMessage());
+        }
+        self::assertNotNull(Event::findById(101)?->archived_at);
+        self::assertFalse(Event::findById(101)->published);
+    }
+
     /** @param array<string, mixed> $overrides */
     private function dispatchClubEvent(array $overrides): Response
     {
@@ -1704,7 +1928,8 @@ final class EventLifecycleTest extends TestCase
             )'
         );
         $this->database->exec(
-            'CREATE TABLE events (
+            'CREATE TABLE event_managers (event_id INTEGER NOT NULL, club_id INTEGER NOT NULL, PRIMARY KEY (event_id, club_id));
+            CREATE TABLE events (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
                 date TEXT NOT NULL,
@@ -1722,7 +1947,7 @@ final class EventLifecycleTest extends TestCase
                 sepa_iban TEXT,
                 sepa_bic TEXT,
                 sepa_account_holder TEXT,
-                owner_club_id INTEGER
+                owner_club_id INTEGER, archived_at TEXT
             )'
         );
         $this->database->exec(

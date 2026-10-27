@@ -265,7 +265,7 @@ final class EntryRegistrationRepositoryTest extends TestCase
                 type TEXT NOT NULL,
                 max_participants INTEGER,
                 published INTEGER NOT NULL,
-                closed INTEGER NOT NULL
+                closed INTEGER NOT NULL, archived_at TEXT
             )'
         );
         $this->database->exec(

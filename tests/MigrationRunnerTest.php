@@ -90,7 +90,7 @@ final class MigrationRunnerTest extends TestCase
         $migrationQuery->method('fetchAll')->willReturn($historicalVersions);
         $recordedVersions = [];
         $recordStatement = $this->createMock(PDOStatement::class);
-        $recordStatement->expects(self::exactly(21))
+        $recordStatement->expects(self::exactly(23))
             ->method('execute')
             ->willReturnCallback(
                 static function (?array $parameters = null) use (&$recordedVersions): bool {
@@ -106,7 +106,7 @@ final class MigrationRunnerTest extends TestCase
             ->willReturn(true);
         $database = $this->createMock(PDO::class);
         $database->expects(self::exactly(3))->method('query')->willReturn($migrationQuery);
-        $database->expects(self::exactly(22))
+        $database->expects(self::exactly(24))
             ->method('prepare')
             ->willReturnOnConsecutiveCalls(
                 $recordStatement,
@@ -130,12 +130,14 @@ final class MigrationRunnerTest extends TestCase
                 $recordStatement,
                 $recordStatement,
                 $recordStatement,
+                $recordStatement,
+                $recordStatement,
                 $recordStatement
             );
-        $database->expects(self::atLeast(21))->method('exec');
-        $database->expects(self::exactly(21))->method('beginTransaction')->willReturn(true);
-        $database->expects(self::exactly(20))->method('inTransaction')->willReturn(true);
-        $database->expects(self::exactly(21))->method('commit')->willReturn(true);
+        $database->expects(self::atLeast(23))->method('exec');
+        $database->expects(self::exactly(23))->method('beginTransaction')->willReturn(true);
+        $database->expects(self::exactly(22))->method('inTransaction')->willReturn(true);
+        $database->expects(self::exactly(23))->method('commit')->willReturn(true);
 
         (new MigrationRunner($database))->run();
 
@@ -161,6 +163,8 @@ final class MigrationRunnerTest extends TestCase
             '20260816_000001_repair_club_terms_acceptance_audit_fields.sql',
             '20261017_000001_create_entry_data_reviews.sql',
             '20261027_000001_add_event_club_ownership.sql',
+            '20261027_000002_add_event_archiving.sql',
+            '20261027_000003_add_shared_event_management.sql',
         ], $recordedVersions);
     }
 
