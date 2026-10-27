@@ -23,6 +23,8 @@ final class Navigation
         '/clubs/forgot-password',
         '/clubs/reset-password',
         '/clubs/area',
+        '/clubs/events',
+        '/clubs/events/details',
         '/clubs',
     ];
     private const ADMIN_PATHS = [
@@ -35,6 +37,7 @@ final class Navigation
         '/admin/events',
         '/admin/events/details',
         '/admin/clubs/edit',
+        '/admin/normalization',
         '/admin/logout',
     ];
 
@@ -93,6 +96,11 @@ final class Navigation
                     'paths' => ['/admin/events/details'],
                 ],
             ];
+            $items[] = [
+                'label' => translate('normalization.title'),
+                'url' => base_url('/admin/normalization'),
+                'paths' => ['/admin/normalization'],
+            ];
             if (\App\Controller\AthleteMaintenanceController::enabled()) {
                 $items[] = [
                     'label' => translate('admin.submenu.athlete_cleanup'),
@@ -121,6 +129,7 @@ final class Navigation
 
         $items[] = ['label' => translate('club.area.submenu.manage'), 'url' => base_url('/clubs/area'), 'paths' => ['/clubs/area'], 'query' => ['view' => ['', 'list']]];
         $items[] = ['label' => translate('club.area.submenu.add'), 'url' => base_url('/clubs/area?view=add'), 'paths' => ['/clubs/area'], 'query' => ['view' => ['add']]];
+        $items[] = ['label' => translate('club_events.title'), 'url' => base_url('/clubs/events'), 'paths' => ['/clubs/events', '/clubs/events/details']];
         $items[] = ['label' => translate('club.area.submenu.logout'), 'url' => base_url('/clubs/logout'), 'paths' => ['/clubs/logout'], 'method' => 'post'];
 
         return $items;

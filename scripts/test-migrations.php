@@ -68,6 +68,7 @@ try {
     runMigrationsTwice($clean);
     assertSchemaContract($clean);
     assertCleanWritesAndReads($clean);
+    assertClubTournamentWorkflows($clean);
 
     $scenario = 'pre-squash upgrade';
     $preSquash = databaseConnection(
@@ -524,6 +525,8 @@ function assertSchemaContract(PDO $database): void
     assertColumn($database, 'events', 'sepa_account_holder', 'YES');
     assertColumn($database, 'events', 'sepa_iban', 'YES');
     assertColumn($database, 'events', 'sepa_bic', 'YES');
+    assertColumn($database, 'events', 'owner_club_id', 'YES');
+    assertIndex($database, 'events', 'idx_events_owner_date', 'owner_club_id,date,id');
     assertColumn($database, 'event_registration_options', 'fee_cents', 'NO');
     assertColumn($database, 'event_registration_options', 'is_default', 'NO');
     assertColumn($database, 'event_registration_options', 'is_active', 'NO');
@@ -618,6 +621,7 @@ function assertSchemaContract(PDO $database): void
         'entries.event_id=event_registration_options.event_id',
         'entries.registration_option_id=event_registration_options.id',
         'event_registration_options.event_id=events.id',
+        'events.owner_club_id=clubs.id',
         'password_reset_tokens.club_id=clubs.id',
     ];
     $statement = $database->query(
@@ -984,4 +988,50 @@ function assertSameValue(mixed $expected, mixed $actual, string $message): void
     if ($expected !== $actual) {
         throw new RuntimeException($message);
     }
+}
+
+function assertClubTournamentWorkflows(PDO $database): void
+{
+    $database->exec(
+        "INSERT INTO clubs (id, federal_code, name, email, phone, contact_first_name, contact_last_name,
+                           city, province, password_hash)
+         VALUES (102, 'SYN-OWNER-102', 'Synthetic Organizer', 'organizer@example.test', '',
+                 'Synthetic', 'Contact', 'Nuoro', 'Provincia di Nuoro', 'synthetic-hash')"
+    );
+    $database->exec(
+        "INSERT INTO events (id, name, date, location, owner_club_id, closed)
+         VALUES (302, 'Synthetic Club Tournament', '2099-07-01', 'Synthetic Venue', 102, 1)"
+    );
+    $database->exec(
+        "INSERT INTO athletes (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt)
+         VALUES (202, 102, ' sYNTHETIC ', ' aTHLETE ', 'M', '2012-01-01', 40, 'blue')"
+    );
+    $database->exec(
+        "INSERT INTO event_registration_options (id, event_id, name, fee_cents, is_default)
+         VALUES (402, 302, 'Standard', 0, 1)"
+    );
+    $database->exec(
+        "INSERT INTO entries (event_id, club_id, athlete_id, registration_option_id,
+                              registration_option_name, registration_fee_cents)
+         VALUES (302, 102, 202, 402, 'Standard', 0)"
+    );
+    (new App\Model\EntrySnapshotService($database))->consolidate(302, '2099-07-01');
+    $service = new App\Service\DataNormalization($database);
+    $records = array_column($service->preview('athletes', 0), null, 'id');
+    assertSameValue(1, $service->apply('athletes', [202 => $records[202]['fingerprint']]), 'Normalization did not apply.');
+    assertSameValue(
+        2,
+        (int) $database->query('SELECT COUNT(*) FROM athlete_revisions WHERE athlete_id = 202')->fetchColumn(),
+        'Normalization did not preserve athlete revision history.'
+    );
+    assertSameValue(
+        ' sYNTHETIC ',
+        $database->query('SELECT snapshot_last_name FROM entries WHERE event_id = 302')->fetchColumn(),
+        'Normalization rewrote a frozen snapshot.'
+    );
+    $database->exec('DELETE FROM clubs WHERE id = 102');
+    $event = $database->query('SELECT name, owner_club_id FROM events WHERE id = 302')->fetch();
+    assertSameValue('Synthetic Club Tournament', $event['name'], 'Deleting the club deleted its tournament.');
+    assertSameValue(null, $event['owner_club_id'], 'Deleting the club did not clear ownership.');
+    $database->exec('DELETE FROM events WHERE id = 302');
 }

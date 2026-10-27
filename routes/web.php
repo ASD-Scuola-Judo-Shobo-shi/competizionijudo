@@ -49,6 +49,11 @@ return static function (App\Core\Router $router): void {
     $router->get('/clubs/athletes-export', [ClubAreaController::class, 'exportAthletes'], AuthContext::CLUB);
     $router->post('/clubs/athletes-import', [ClubAreaController::class, 'importAthletes'], AuthContext::CLUB);
 
+    $router->get('/clubs/events', [\App\Controller\EventManagementController::class, 'clubIndex'], AuthContext::CLUB);
+    $router->get('/clubs/events/details', [\App\Controller\EventManagementController::class, 'clubDetails'], AuthContext::CLUB);
+    $router->post('/clubs/events/details', [\App\Controller\EventManagementController::class, 'clubDetails'], AuthContext::CLUB);
+    $router->post('/clubs/events/delete', [\App\Controller\EventManagementController::class, 'clubDelete'], AuthContext::CLUB);
+
     // Events managed by MVC
     $router->get('/events', [EventController::class, 'index']);
     $router->get('/events/details', [EventController::class, 'details']);
@@ -72,6 +77,8 @@ return static function (App\Core\Router $router): void {
     $router->post('/admin/clubs/athletes/edit', [\App\Controller\AdminAthleteController::class, 'edit'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/athletes/delete', [\App\Controller\AdminAthleteController::class, 'delete'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/athletes/import', [\App\Controller\AdminAthleteController::class, 'import'], AuthContext::ADMINISTRATOR);
+    $router->get('/admin/normalization', [\App\Controller\DataNormalizationController::class, 'review'], AuthContext::ADMINISTRATOR);
+    $router->post('/admin/normalization', [\App\Controller\DataNormalizationController::class, 'review'], AuthContext::ADMINISTRATOR);
     $router->get('/admin/maintenance/athlete-duplicates', [AthleteMaintenanceController::class, 'duplicates'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/maintenance/athlete-duplicates', [AthleteMaintenanceController::class, 'duplicates'], AuthContext::ADMINISTRATOR);
     $router->post('/admin/clubs/update-inline', [\App\Controller\AdminController::class, 'updateClubInline'], AuthContext::ADMINISTRATOR);

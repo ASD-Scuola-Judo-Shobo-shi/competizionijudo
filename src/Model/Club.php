@@ -82,6 +82,16 @@ final class Club
         return $row ? self::fromArray($row) : null;
     }
 
+    /** @return list<array{id:int, name:string}> */
+    public static function eventExceptionChoices(): array
+    {
+        $statement = Database::connection()->query('SELECT id, name FROM clubs ORDER BY name');
+        return array_map(
+            static fn(array $row): array => ['id' => (int) $row['id'], 'name' => (string) $row['name']],
+            $statement->fetchAll() ?: []
+        );
+    }
+
     public static function findById(int $id): ?self
     {
         $stmt = Database::connection()->prepare('SELECT * FROM clubs WHERE id = ?');

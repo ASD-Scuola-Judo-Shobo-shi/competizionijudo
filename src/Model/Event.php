@@ -24,6 +24,7 @@ final class Event
         public readonly ?string $sepa_account_holder = null,
         public readonly ?string $sepa_iban = null,
         public readonly ?string $sepa_bic = null,
+        public readonly ?int $owner_club_id = null,
     ) {
     }
 
@@ -56,6 +57,7 @@ final class Event
             !empty($data['sepa_account_holder']) ? (string) $data['sepa_account_holder'] : null,
             !empty($data['sepa_iban']) ? (string) $data['sepa_iban'] : null,
             !empty($data['sepa_bic']) ? (string) $data['sepa_bic'] : null,
+            isset($data['owner_club_id']) ? (int) $data['owner_club_id'] : null,
         );
     }
 
@@ -238,6 +240,56 @@ final class Event
         $rows = $stmt->fetchAll();
 
         return array_map(fn(array $r) => self::fromArray($r), $rows ?: []);
+    }
+
+    public static function findOwnedById(int $id, int $clubId): ?self
+    {
+        $statement = Database::connection()->prepare('SELECT * FROM events WHERE id = ? AND owner_club_id = ?');
+        $statement->execute([$id, $clubId]);
+        $row = $statement->fetch();
+        return $row ? self::fromArray($row) : null;
+    }
+
+    public static function countOwned(int $clubId): int
+    {
+        $statement = Database::connection()->prepare('SELECT COUNT(*) FROM events WHERE owner_club_id = ?');
+        $statement->execute([$clubId]);
+        return (int) $statement->fetchColumn();
+    }
+
+    /** @return list<self> */
+    public static function pageOwned(int $clubId, int $limit, int $offset): array
+    {
+        $statement = Database::connection()->prepare(
+            'SELECT * FROM events WHERE owner_club_id = ? ORDER BY date DESC, id DESC LIMIT ? OFFSET ?'
+        );
+        $statement->bindValue(1, $clubId, \PDO::PARAM_INT);
+        $statement->bindValue(2, max(1, $limit), \PDO::PARAM_INT);
+        $statement->bindValue(3, max(0, $offset), \PDO::PARAM_INT);
+        $statement->execute();
+        return array_map(fn(array $row) => self::fromArray($row), $statement->fetchAll() ?: []);
+    }
+
+    /** @return list<string> */
+    public static function locations(?int $clubId = null): array
+    {
+        if ($clubId === null) {
+            $statement = Database::connection()->query(
+                'SELECT DISTINCT location FROM events WHERE location != "" ORDER BY location ASC'
+            );
+        } else {
+            $statement = Database::connection()->prepare(
+                'SELECT DISTINCT location FROM events WHERE location != ? AND owner_club_id = ? ORDER BY location ASC'
+            );
+            $statement->execute(['', $clubId]);
+        }
+        return array_map(static fn(array $row): string => (string) $row['location'], $statement->fetchAll());
+    }
+
+    public static function removeOwned(int $id, int $clubId): void
+    {
+        $statement = Database::connection()->prepare('DELETE FROM events WHERE id = ? AND owner_club_id = ?');
+        $statement->execute([$id, $clubId]);
     }
 
     public static function remove(int $id): void

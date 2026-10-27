@@ -6,6 +6,7 @@ namespace Tests;
 
 use App\Controller\AdminController;
 use App\Controller\EventController;
+use App\Controller\EventManagementController;
 use App\Core\Application;
 use App\Core\FileLogger;
 use App\Core\Request;
@@ -25,6 +26,7 @@ use App\Service\EventEntriesCsvTransfer;
 use App\Service\EventRegistrationSelection;
 use App\Service\EventUploadStorage;
 use PDO;
+use PDOStatement;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -1478,6 +1480,210 @@ final class EventLifecycleTest extends TestCase
         );
     }
 
+    public function testClubCreatesAndPublishesATournamentWithServerAssignedOwnership(): void
+    {
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $response = $this->dispatchClubEvent(['owner_club_id' => '202', 'published' => '1']);
+        self::assertSame('/clubs/events', $response->headers()['Location']);
+        $event = Event::findById(1);
+        self::assertNotNull($event);
+        self::assertSame(201, $event->owner_club_id);
+        self::assertTrue($event->published);
+        self::assertNotNull(Event::findRegistrationEligibleByIdForClub(1, '2099-01-01', 202));
+        self::assertSame('Standard', $event->registrationOptions()[0]->name);
+    }
+
+    public function testClubEditsItsTournamentAndClosingFreezesEntrySnapshots(): void
+    {
+        $this->insertEvent(date: '2099-01-02', deadline: '2099-01-01');
+        $this->database->exec('UPDATE events SET owner_club_id = 201 WHERE id = 101');
+        $this->database->exec('INSERT INTO entries (event_id, club_id, athlete_id) VALUES (101, 201, 301), (101, 202, 302)');
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $response = $this->dispatchClubEvent([
+            'event_id' => '101', 'name' => 'Club Tournament Updated', 'closed' => '1',
+            'owner_club_id' => '202',
+            'registration_options' => [['id' => '501', 'name' => 'Standard', 'fee_amount' => '0.00']],
+        ]);
+        self::assertSame('/clubs/events', $response->headers()['Location']);
+        $event = Event::findById(101);
+        self::assertSame('Club Tournament Updated', $event?->name);
+        self::assertSame(201, $event?->owner_club_id);
+        self::assertTrue($event?->closed);
+        self::assertSame(2, (int) $this->database->query('SELECT COUNT(*) FROM entries WHERE snapshot_at IS NOT NULL')->fetchColumn());
+    }
+
+    public function testClubCannotReadEditOrDeleteAnotherClubsTournament(): void
+    {
+        $this->insertEvent(published: false, description: 'PRIVATE ORGANIZER DATA');
+        $this->database->exec('UPDATE events SET owner_club_id = 202 WHERE id = 101');
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $request = new Request('GET', '/clubs/events/details', ['id' => '101']);
+        $response = (new EventManagementController($this->view, $request))->clubDetails($request);
+        self::assertSame('/clubs/events', $response->headers()['Location']);
+        self::assertStringNotContainsString('PRIVATE ORGANIZER DATA', $response->content());
+        $response = $this->dispatchClubEvent(['event_id' => '101', 'name' => 'FORGED']);
+        self::assertSame('/clubs/events', $response->headers()['Location']);
+        $request = new Request('POST', '/clubs/events/delete', [], ['event_id' => '101', 'csrf_token' => csrf_token()]);
+        (new EventManagementController($this->view, $request))->clubDelete($request);
+        self::assertSame('Synthetic Event', Event::findById(101)?->name);
+        $this->database->exec('UPDATE events SET owner_club_id = NULL WHERE id = 101');
+        $this->dispatchClubEvent(['event_id' => '101', 'name' => 'FORGED']);
+        self::assertSame('Synthetic Event', Event::findById(101)?->name);
+    }
+
+    public function testClubListIsPaginatedAndNeverIncludesForeignOrAdminEvents(): void
+    {
+        $this->insertEvent();
+        for ($id = 102; $id <= 156; $id++) {
+            $this->insertAdditionalEvent($id, 'Owned Tournament ' . $id);
+        }
+        $this->database->exec('UPDATE events SET owner_club_id = 201 WHERE id > 101');
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $request = new Request('GET', '/clubs/events', ['page' => '2']);
+        $response = (new EventManagementController($this->view, $request))->clubIndex($request);
+        self::assertSame(200, $response->status());
+        self::assertSame(5, substr_count($response->content(), 'name="event_id"'));
+        self::assertStringNotContainsString('Synthetic Event', $response->content());
+    }
+
+    public function testClubEventFormReusesValidationAndPreservesInvalidInput(): void
+    {
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $response = $this->dispatchClubEvent(['name' => '<Synthetic>', 'date' => 'invalid']);
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(e(__('validation.event_date_invalid')), $response->content());
+        self::assertStringContainsString('&lt;Synthetic&gt;', $response->content());
+        self::assertSame(0, Event::count());
+        self::assertStringNotContainsString('/admin/events/export', $response->content());
+    }
+
+    public function testClubEventCreationAndDeletionRequireCsrf(): void
+    {
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        foreach (['clubDetails', 'clubDelete'] as $method) {
+            $request = new Request('POST', '/clubs/events/details', [], ['name' => 'Synthetic']);
+            try {
+                (new EventManagementController($this->view, $request))->$method($request);
+                self::fail('Expected CSRF rejection.');
+            } catch (\App\Core\HttpException $exception) {
+                self::assertSame(419, $exception->statusCode());
+            }
+        }
+        self::assertSame(0, Event::count());
+    }
+
+    public function testClubCanDeleteOnlyItsOwnedTournament(): void
+    {
+        $this->insertEvent();
+        $this->database->exec('UPDATE events SET owner_club_id = 201 WHERE id = 101');
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $request = new Request('POST', '/clubs/events/delete', [], ['event_id' => '101', 'csrf_token' => csrf_token()]);
+        $response = (new EventManagementController($this->view, $request))->clubDelete($request);
+        self::assertSame('/clubs/events', $response->headers()['Location']);
+        self::assertNull(Event::findById(101));
+    }
+
+    public function testClubEventEndpointsRejectOtherPrincipals(): void
+    {
+        foreach ([false, true] as $admin) {
+            $this->startCleanSession();
+            if ($admin) {
+                Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+            }
+            $request = new Request('GET', '/clubs/events');
+            $controller = new EventManagementController($this->view, $request);
+            foreach (['clubIndex', 'clubDetails', 'clubDelete'] as $method) {
+                self::assertSame('/clubs/login', $controller->$method($request)->headers()['Location']);
+            }
+        }
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function ownedTournamentCounts(): iterable
+    {
+        yield 'one tournament' => [1];
+        yield 'many tournaments' => [75];
+    }
+
+    #[DataProvider('ownedTournamentCounts')]
+    public function testClubTournamentListUsesThreeQueriesRegardlessOfCount(int $count): void
+    {
+        $this->insertEvent();
+        $row = $this->database->query('SELECT * FROM events WHERE id = 101')->fetch();
+        $row['owner_club_id'] = 201;
+        $countStatement = $this->createMock(PDOStatement::class);
+        $countStatement->expects(self::once())->method('execute')->with([201])->willReturn(true);
+        $countStatement->method('fetchColumn')->willReturn($count);
+        $list = $this->createMock(PDOStatement::class);
+        $list->expects(self::once())->method('execute')->willReturn(true);
+        $list->method('fetchAll')->willReturn(array_fill(0, min(50, $count), $row));
+        $club = $this->createMock(PDOStatement::class);
+        $club->expects(self::once())->method('execute')->with([201])->willReturn(true);
+        $club->method('fetch')->willReturn(['id' => 201, 'email' => 'synthetic@example.test']);
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::exactly(3))->method('prepare')->willReturnCallback(
+            static fn(string $sql): PDOStatement => match (true) {
+                str_starts_with($sql, 'SELECT COUNT(*)') => $countStatement,
+                str_contains($sql, 'LIMIT ? OFFSET ?') => $list,
+                default => $club,
+            }
+        );
+        $database->expects(self::never())->method('query');
+        $this->databaseConnection->setValue(null, $database);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $request = new Request('GET', '/clubs/events');
+        self::assertSame(200, (new EventManagementController($this->view, $request))->clubIndex($request)->status());
+    }
+
+    public function testClubFormHidesUnpublishedForeignLocationsAndPreservesAdminExceptions(): void
+    {
+        $this->insertEvent(published: false);
+        $this->insertAdditionalEvent(102, 'Foreign Draft Tournament');
+        $this->database->exec("UPDATE events SET owner_club_id = 201 WHERE id = 101");
+        $this->database->exec("UPDATE events SET owner_club_id = 202, published = 0, location = 'FOREIGN PRIVATE LOCATION' WHERE id = 102");
+        EventRegistrationException::setForEvent(101, [202]);
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $request = new Request('GET', '/clubs/events/details', ['id' => '101']);
+        $response = (new EventManagementController($this->view, $request))->clubDetails($request);
+        self::assertSame(200, $response->status());
+        self::assertStringNotContainsString('FOREIGN PRIVATE LOCATION', $response->content());
+        self::assertStringNotContainsString('registration_exceptions[]', $response->content());
+        $this->dispatchClubEvent(['event_id' => '101', 'registration_exceptions' => ['201']]);
+        self::assertSame([202], EventRegistrationException::clubIdsForEvent(101));
+    }
+
+    public function testForgedRegistrationOptionRollsBackTheOwnedTournamentEdit(): void
+    {
+        $this->insertEvent();
+        $this->insertAdditionalEvent(102, 'Foreign Tournament');
+        $this->database->exec('UPDATE events SET owner_club_id = 201 WHERE id = 102');
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $request = new Request('POST', '/clubs/events/details', [], [
+            'csrf_token' => csrf_token(), 'event_id' => '102', 'name' => 'FORGED EDIT', 'date' => '2099-01-02',
+            'location' => 'Synthetic Venue', 'type' => 'only_competitive', 'registration_option_default' => '0',
+            'registration_options' => [['id' => '501', 'name' => 'Foreign option', 'fee_amount' => '0.00']],
+        ]);
+        $logger = $this->createMock(\App\Core\Logger::class);
+        $logger->expects(self::once())->method('error');
+        $response = (new EventManagementController($this->view, $request, $logger))->clubDetails($request);
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString(e(__('errors.save_failed')), $response->content());
+        self::assertSame('Foreign Tournament', Event::findById(102)?->name);
+        self::assertSame('Standard', Event::findById(101)?->registrationOptions()[0]->name);
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function dispatchClubEvent(array $overrides): Response
+    {
+        $request = new Request('POST', '/clubs/events/details', [], array_replace([
+            'csrf_token' => csrf_token(), 'name' => 'Synthetic Club Tournament', 'date' => '2099-01-02',
+            'location' => 'Synthetic Venue', 'organizer' => 'Synthetic Club', 'type' => 'only_competitive',
+            'registration_deadline' => '2099-01-01', 'registration_option_default' => '0',
+            'registration_options' => [['name' => 'Standard', 'fee_amount' => '0.00']],
+        ], $overrides));
+        return (new EventManagementController($this->view, $request))->clubDetails($request);
+    }
+
     private function createSchemaAndActors(): void
     {
         $this->database->exec(
@@ -1515,7 +1721,8 @@ final class EventLifecycleTest extends TestCase
                 closed INTEGER NOT NULL,
                 sepa_iban TEXT,
                 sepa_bic TEXT,
-                sepa_account_holder TEXT
+                sepa_account_holder TEXT,
+                owner_club_id INTEGER
             )'
         );
         $this->database->exec(

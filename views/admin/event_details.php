@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /** @var \App\Model\Event|null $event */
 /** @var string|null $error */
 /** @var list<string> $locations */
@@ -16,7 +18,8 @@
 /** @var string|null $formSepaBic */
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var string $cspNonce */
-$isEdit = !empty($event);
+$clubManaged ??= false;
+$isEdit = $event !== null && $event->id > 0;
 $formRegistrationOptions ??= [[
     'id' => null,
     'name' => '',
@@ -33,6 +36,9 @@ $enrollmentFields ??= [];
 $selectedEnrollmentClubId ??= null;
 $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
 ?>
+<?php if ($clubManaged) : ?>
+    <p><a href="<?= e(base_url('/clubs/events')) ?>"><?= e(__('club_events.title')) ?></a></p>
+<?php endif; ?>
 <div class="card">
     <h2><?= $isEdit ? e(__('admin.edit.title')) . ' - ' . e($event->name) : e(__('admin.event_details.title')) ?></h2>
 
@@ -43,45 +49,45 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
     <form method="post" class="form-card" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <input type="hidden" name="MAX_FILE_SIZE" value="<?= \App\Validation\EventInputValidator::MAX_UPLOAD_BYTES ?>">
-        <input type="hidden" name="event_id" value="<?= e($event->id ?? '') ?>">
+        <input type="hidden" name="event_id" value="<?= e((string) ($event->id ?? '')) ?>">
 
-        <label><?= e($isEdit ? __('admin.edit.name') : __('admin.event_details.name')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <input name="name" value="<?= e($event->name ?? '') ?>" required>
+        <label for="event-name"><?= e($isEdit ? __('admin.edit.name') : __('admin.event_details.name')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+        <input id="event-name" name="name" value="<?= e($event->name ?? '') ?>" required>
 
-        <label><?= e($isEdit ? __('admin.edit.date') : __('admin.event_details.date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <input type="date" name="date" value="<?= e($event->date ?? '') ?>" required>
+        <label for="event-date"><?= e($isEdit ? __('admin.edit.date') : __('admin.event_details.date')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+        <input type="date" id="event-date" name="date" value="<?= e($event->date ?? '') ?>" required>
 
-        <label><?= e($isEdit ? __('admin.edit.location') : __('admin.event_details.location')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <input name="location" value="<?= e($event->location ?? '') ?>" list="locations_list" required>
+        <label for="event-location"><?= e($isEdit ? __('admin.edit.location') : __('admin.event_details.location')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+        <input id="event-location" name="location" value="<?= e($event->location ?? '') ?>" list="locations_list" required>
         <datalist id="locations_list">
             <?php foreach ($locations as $loc) : ?>
                 <option value="<?= e($loc) ?>">
             <?php endforeach; ?>
         </datalist>
 
-        <label><?= e($isEdit ? __('admin.edit.organizer') : __('admin.event_details.organizer')) ?></label>
-        <input name="organizer" value="<?= e($event->organizer ?? '') ?>">
+        <label for="event-organizer"><?= e($isEdit ? __('admin.edit.organizer') : __('admin.event_details.organizer')) ?></label>
+        <input id="event-organizer" name="organizer" value="<?= e($event->organizer ?? '') ?>">
 
-        <label><?= e($isEdit ? __('admin.edit.registration_deadline') : __('admin.event_details.registration_deadline')) ?></label>
-        <input type="date" name="registration_deadline" value="<?= e($event->registration_deadline ?? '') ?>">
+        <label for="event-registration_deadline"><?= e($isEdit ? __('admin.edit.registration_deadline') : __('admin.event_details.registration_deadline')) ?></label>
+        <input type="date" id="event-registration_deadline" name="registration_deadline" value="<?= e($event->registration_deadline ?? '') ?>">
 
-        <label><?= e($isEdit ? __('admin.edit.type') : __('admin.event_details.type')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
-        <select name="type" required>
+        <label for="event-type"><?= e($isEdit ? __('admin.edit.type') : __('admin.event_details.type')) ?> <span class="required-marker" aria-hidden="true">*</span></label>
+        <select id="event-type" name="type" required>
             <option value="">—</option>
             <option value="only_precompetitive" <?= ($event->type ?? '') === 'only_precompetitive' ? 'selected' : '' ?>><?= e(__('events.type.only_precompetitive')) ?></option>
             <option value="only_competitive" <?= ($event->type ?? '') === 'only_competitive' ? 'selected' : '' ?>><?= e(__('events.type.only_competitive')) ?></option>
             <option value="precompetitive_and_competitive" <?= ($event->type ?? '') === 'precompetitive_and_competitive' ? 'selected' : '' ?>><?= e(__('events.type.precompetitive_and_competitive')) ?></option>
         </select>
 
-        <label><?= e($isEdit ? __('admin.edit.description') : __('admin.event_details.description')) ?></label>
-        <textarea name="description" rows="3"><?= e($event->description ?? '') ?></textarea>
+        <label for="event-description"><?= e($isEdit ? __('admin.edit.description') : __('admin.event_details.description')) ?></label>
+        <textarea id="event-description" name="description" rows="3"><?= e($event->description ?? '') ?></textarea>
 
-        <label><?= e($isEdit ? __('admin.edit.notes') : __('admin.event_details.notes')) ?></label>
+        <label for="event-notes"><?= e($isEdit ? __('admin.edit.notes') : __('admin.event_details.notes')) ?></label>
         <p class="field-help" id="event-notes-help"><?= e(__('admin.event_details.notes_privacy_help')) ?></p>
-        <textarea name="notes" rows="3" maxlength="2000" aria-describedby="event-notes-help"><?= e($event->notes ?? '') ?></textarea>
+        <textarea id="event-notes" name="notes" rows="3" maxlength="2000" aria-describedby="event-notes-help"><?= e($event->notes ?? '') ?></textarea>
 
-        <label><?= e($isEdit ? __('admin.edit.max_participants') : __('admin.event_details.max_participants')) ?></label>
-        <input type="number" name="max_participants" value="<?= e($event?->max_participants ? (string) $event->max_participants : '') ?>" min="1" placeholder="<?= e(__('admin.event_details.max_participants_placeholder')) ?>">
+        <label for="event-max_participants"><?= e($isEdit ? __('admin.edit.max_participants') : __('admin.event_details.max_participants')) ?></label>
+        <input type="number" id="event-max_participants" name="max_participants" value="<?= e($event?->max_participants ? (string) $event->max_participants : '') ?>" min="1" placeholder="<?= e(__('admin.event_details.max_participants_placeholder')) ?>">
 
         <fieldset class="event-payment-fieldset">
             <legend><?= e(__('admin.event_details.registration_options')) ?></legend>
@@ -176,14 +182,14 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
             >
         </fieldset>
 
-        <label><?= e($isEdit ? __('admin.edit.poster') : __('admin.event_details.poster')) ?></label>
-        <input type="file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
+        <label for="event-poster_file"><?= e($isEdit ? __('admin.edit.poster') : __('admin.event_details.poster')) ?></label>
+        <input type="file" id="event-poster_file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->poster_file)) : ?>
-            <p><a href="<?= e(base_url('/admin/events/poster?event=' . (string) $event->id)) ?>" target="_blank"><?= e(__('events.view_current_poster')) ?></a></p>
+            <p><a href="<?= e(base_url(($clubManaged ? '/events/poster?event=' : '/admin/events/poster?event=') . (string) $event->id)) ?>" target="_blank"><?= e(__('events.view_current_poster')) ?></a></p>
         <?php endif; ?>
 
-        <label><?= e($isEdit ? __('admin.edit.info_file') : __('admin.event_details.info_file')) ?></label>
-        <input type="file" name="info_file" accept=".pdf,.jpg,.jpeg,.png">
+        <label for="event-info_file"><?= e($isEdit ? __('admin.edit.info_file') : __('admin.event_details.info_file')) ?></label>
+        <input type="file" id="event-info_file" name="info_file" accept=".pdf,.jpg,.jpeg,.png">
         <?php if ($isEdit && !empty($event->info_file)) : ?>
             <p><a href="<?= e(base_url((string) $event->info_file)) ?>" target="_blank"><?= e(__('events.view_current_info')) ?></a></p>
         <?php endif; ?>
@@ -216,12 +222,12 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
         <button class="btn green" type="submit"><?= e($isEdit ? __('admin.edit.save') : __('admin.event_details.save')) ?></button>
     </form>
 </div>
-<?php if ($isEdit) : ?>
+<?php if ($isEdit && !$clubManaged) : ?>
     <?php require __DIR__ . '/_event_enrolled_athletes.php'; ?>
 <?php endif; ?>
 <?php
 $eventExceptions = [];
-$upcomingEventAction = 'admin_details';
+$upcomingEventAction = $clubManaged ? 'details' : 'admin_details';
 require dirname(__DIR__) . '/components/upcoming_events.php';
 ?>
 <script nonce="<?= e($cspNonce) ?>">

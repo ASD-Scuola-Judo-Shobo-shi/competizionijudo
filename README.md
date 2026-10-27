@@ -5,6 +5,20 @@ club athlete archives, registering athletes, and administering closed-event
 records. This repository supplies application controls; production readiness
 also depends on correct hosting, privacy, mail, backup, and operational setup.
 
+Clubs can create, edit, publish, close, and delete their own tournaments through
+`/clubs/events` and `/clubs/events/details` (POST deletion: `/clubs/events/delete`).
+Published tournaments use the standard registration and payment workflows.
+Administrators retain control over all tournaments; deleting an organizer club
+preserves its tournaments for administration. Apply migrations before enabling
+this feature in production (`composer migrate`).
+
+Administrators can preview formatting across clubs and athlete profiles at
+`/admin/normalization`, then apply selected records. The tool examines 50 records
+per page, detects stale previews, and applies each selection atomically. It
+preserves club ownership, sporting fields, notes, and frozen competition snapshots;
+it does not merge athletes between clubs. Conflicting unique identifiers roll
+back the entire selection and must be resolved through the existing edit forms.
+
 ## Supported features
 
 | Capability | Routes | Access |
