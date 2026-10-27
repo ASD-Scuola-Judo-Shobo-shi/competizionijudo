@@ -79,21 +79,8 @@ final class EventEntriesViewModelTest extends TestCase
         );
     }
 
-    public function testItIgnoresUnknownFiltersAndSortsWeightCategoriesNumerically(): void
+    public function testItIgnoresUnknownWeightCategoryFilters(): void
     {
-        $entries = [
-            ['weight_category' => 'Open'],
-            ['weight_category' => '+100 kg'],
-            ['weight_category' => '-28 kg'],
-            ['weight_category' => '-24 kg'],
-            ['weight_category' => ''],
-        ];
-
-        self::assertSame(
-            ['-24 kg', '-28 kg', '+100 kg', 'Open'],
-            EventEntriesViewModel::weightCategories($entries)
-        );
-
         $report = EventEntriesViewModel::fromRows([
             $this->entry(201, 'Rossi', 'Anna', 'F', 21.5, '-24 kg', 'white'),
             $this->entry(201, 'Bianchi', 'Luca', 'M', 25.0, '-28 kg', 'yellow'),

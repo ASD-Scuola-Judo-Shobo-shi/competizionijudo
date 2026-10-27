@@ -20,6 +20,7 @@ use App\Model\EntryRegistrationResult;
 use App\Model\Event;
 use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
+use App\Presentation\EventEntriesRoster;
 use App\Presentation\EventEntriesViewModel;
 use App\Service\EventEntriesCsvTransfer;
 use App\Service\EventRegistrationSelection;
@@ -790,7 +791,7 @@ final class EventController extends Controller
 
         $currentClubFilters = $this->entryFilters($request, self::CURRENT_CLUB_FILTER_PARAMETERS);
         $rows = Entry::findSnapshotsByEvent($eventId, $clubId);
-        $weightCategories = EventEntriesViewModel::weightCategories($rows);
+        $weightCategories = EventEntriesRoster::weightCategories($rows);
         $weightCategory = $currentClubFilters['weight_category'];
         if ($weightCategory !== '' && !in_array($weightCategory, $weightCategories, true)) {
             return $this->redirect('/events/entries?event=' . $eventId);

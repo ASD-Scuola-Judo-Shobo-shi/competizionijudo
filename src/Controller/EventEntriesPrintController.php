@@ -12,7 +12,7 @@ use App\Core\Session;
 use App\Model\Club;
 use App\Model\Entry;
 use App\Model\Event;
-use App\Presentation\EventEntriesViewModel;
+use App\Presentation\EventEntriesRoster;
 use App\Service\EventEntriesPdf;
 
 final class EventEntriesPrintController extends Controller
@@ -42,8 +42,8 @@ final class EventEntriesPrintController extends Controller
         if ($clubId !== null && $rows === []) {
             return $this->redirect('/admin/events/details?event_id=' . $eventId);
         }
-        $report = EventEntriesViewModel::fromRows($rows, [], null);
-        $pdf = (new EventEntriesPdf($this->view))->renderClubs($event, $report->clubRosters());
+        $entries = EventEntriesRoster::normalizeRows($rows);
+        $pdf = (new EventEntriesPdf($this->view))->renderClubs($event, EventEntriesRoster::clubRosters($entries));
         $filename = $clubId === null
             ? 'all-clubs-athletes-event-' . $eventId . '.pdf'
             : 'club-' . $clubId . '-athletes-event-' . $eventId . '.pdf';
@@ -75,11 +75,11 @@ final class EventEntriesPrintController extends Controller
         }
 
         $rows = Entry::findByEvent($eventId, $clubId, $event->closed, $event->date);
-        $report = EventEntriesViewModel::fromRows($rows, [], $clubId);
+        $entries = EventEntriesRoster::normalizeRows($rows);
         $pdf = (new EventEntriesPdf($this->view))->render(
             $event,
             $club,
-            $report->sortedCurrentClubEntries('athlete', 'asc')
+            EventEntriesRoster::sortedEntries($entries, 'athlete', 'asc')
         );
 
         return new Response($pdf, 200, [
