@@ -501,6 +501,32 @@ final class EventEntriesPrintTest extends TestCase
         $this->assertPdfOmits(Localization::transFor($otherLocale, 'events.entries_pdf_page', $page), $streams);
     }
 
+    /** @return iterable<string, array{string, bool, string}> */
+    public static function pdfStreamPayloads(): iterable
+    {
+        // The zlib checksum for a form-feed byte ends in a carriage return.
+        yield 'compressed trailing carriage return before LF' => ["\f", true, "\n"];
+        yield 'compressed trailing carriage return before CRLF' => ["\f", true, "\r\n"];
+        yield 'compressed trailing line feed' => ["\t", true, "\n"];
+        yield 'uncompressed trailing carriage return' => ["Synthetic text\r", false, "\n"];
+        yield 'uncompressed trailing line feed' => ["Synthetic text\n", false, "\r\n"];
+        yield 'literal stream terminator' => ["Synthetic\nendstream\nremaining text", false, "\n"];
+        yield 'literal stream header' => ["Synthetic\n<< /Length 1 >>\nstream\nX\nendstream", false, "\n"];
+        yield 'binary compressed content' => ["Synthetic\0\r\n\xff", true, "\r\n"];
+    }
+
+    #[DataProvider('pdfStreamPayloads')]
+    public function testPdfStreamDecoderPreservesDeclaredBytes(string $payload, bool $compress, string $lineEnding): void
+    {
+        $encoded = $compress ? gzcompress($payload) : $payload;
+        self::assertIsString($encoded);
+        $dictionary = '<< /Length ' . strlen($encoded) . ($compress ? ' /Filter /FlateDecode' : '') . ' >>';
+        $pdf = "%PDF-1.7\n1 0 obj\n" . $dictionary . $lineEnding
+            . 'stream' . $lineEnding . $encoded . $lineEnding . 'endstream' . $lineEnding . 'endobj';
+
+        self::assertSame($payload, $this->decodedStreams($pdf));
+    }
+
     /** @param array<string, mixed> $query */
     private function adminDownload(array $query = []): Response
     {
@@ -519,17 +545,28 @@ final class EventEntriesPrintTest extends TestCase
         return (new EventEntriesPrintController($this->view, $request))->download($request);
     }
 
-    /** Read the renderer's unencrypted content streams without an external PDF tool. */
+    /** Read the renderer's unencrypted streams using their declared byte lengths. */
     private function decodedStreams(string $pdf): string
     {
-        preg_match_all('~<<(.*?)>>\s*stream\r?\n(.*?)\r?\nendstream~s', $pdf, $matches, PREG_SET_ORDER);
-        self::assertNotEmpty($matches);
         $content = '';
-        foreach ($matches as $match) {
-            $stream = str_contains($match[1], '/FlateDecode') ? gzuncompress($match[2]) : $match[2];
+        $offset = 0;
+        $streamCount = 0;
+        while (preg_match('~<<(.*?)>>\s*stream(?:\r\n|\n|\r)~s', $pdf, $match, PREG_OFFSET_CAPTURE, $offset) === 1) {
+            $dictionary = $match[1][0];
+            self::assertSame(1, preg_match('~/Length\s+(\d+)\b~', $dictionary, $length));
+            $start = $match[0][1] + strlen($match[0][0]);
+            $bytes = substr($pdf, $start, (int) $length[1]);
+            self::assertSame((int) $length[1], strlen($bytes));
+            $offset = $start + strlen($bytes);
+            self::assertSame(1, preg_match('~\G(?:\r\n|\n|\r)endstream\b~', $pdf, $end, 0, $offset));
+            $offset += strlen($end[0]);
+
+            $stream = str_contains($dictionary, '/FlateDecode') ? gzuncompress($bytes) : $bytes;
             self::assertIsString($stream);
             $content .= $stream;
+            $streamCount++;
         }
+        self::assertGreaterThan(0, $streamCount);
 
         return $content;
     }
