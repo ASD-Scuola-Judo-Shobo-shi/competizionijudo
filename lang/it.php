@@ -29,7 +29,7 @@ return [
     ],
     'normalization' => [
         'title' => 'Normalizza dati di società e atleti',
-        'help' => 'Controlla la formattazione tra società: sigle ASD/CS, nomi con iniziali maiuscole, accenti, spazi, email e codici federali. Seleziona i record da aggiornare. Gli atleti restano nelle proprie società; i dati sportivi e le istantanee di gara vengono conservati.',
+        'help' => 'Controlla la formattazione tra società: sigle ASD/CS/S.E., nomi con iniziali maiuscole, accenti, spazi, email e codici federali. Seleziona i record da aggiornare. Gli atleti restano nelle proprie società; i dati sportivi e le istantanee di gara vengono conservati.',
         'data' => 'Dati da controllare',
         'clubs' => 'Società',
         'athletes' => 'Atleti',

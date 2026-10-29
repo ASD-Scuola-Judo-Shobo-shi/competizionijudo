@@ -12,6 +12,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\View;
 use App\Localization;
+use App\Model\Club;
 use App\Model\Database;
 use App\Service\DataNormalization;
 use PDO;
@@ -96,27 +97,40 @@ final class DataNormalizationTest extends TestCase
 
     public function testClubNameRulesArePreviewedAppliedAndIdempotent(): void
     {
-        $name = " a.s.d. c.s. JUDO CITTA' ";
+        $name = " a.s.d. c.s. S.e. JUDO CITTA' ";
         $this->database->prepare('UPDATE clubs SET name = ?, contact_first_name = ? WHERE id = 1')->execute([$name, "GIU'"]);
         $service = new DataNormalization($this->database);
 
         $preview = $service->preview('clubs', 0);
 
-        self::assertSame('ASD CS Judo Città', $preview[0]['changes']['name']['after']);
+        self::assertSame('ASD CS S.E. Judo Città', $preview[0]['changes']['name']['after']);
+        self::assertSame(1, Club::findByName('ASD CS SE Judo Città')?->id);
         self::assertSame('Giù', $preview[0]['changes']['contact_first_name']['after']);
         self::assertSame($name, $this->database->query('SELECT name FROM clubs WHERE id = 1')->fetchColumn());
         self::assertSame(1, $service->apply('clubs', [1 => $preview[0]['fingerprint']]));
-        self::assertSame('ASD CS Judo Città', $this->database->query('SELECT name FROM clubs WHERE id = 1')->fetchColumn());
+        self::assertSame('ASD CS S.E. Judo Città', $this->database->query('SELECT name FROM clubs WHERE id = 1')->fetchColumn());
         self::assertSame([], $service->preview('clubs', 0));
     }
 
-    public function testRuleChangeInvalidatesPreviewsCreatedWithThePreviousRules(): void
+    /** @return iterable<string, array{int|null}> */
+    public static function previousNormalizationVersions(): iterable
+    {
+        yield 'unversioned preview' => [null];
+        yield 'previous name rules' => [2];
+    }
+
+    #[DataProvider('previousNormalizationVersions')]
+    public function testRuleChangeInvalidatesPreviewsCreatedWithThePreviousRules(?int $version): void
     {
         $row = $this->database->query('SELECT * FROM clubs WHERE id = 1')->fetch();
-        $oldFingerprint = hash('sha256', json_encode([
+        $values = [
             'clubs', 1, 0, $row['name'], $row['contact_first_name'], $row['contact_last_name'],
             $row['email'], $row['phone'], $row['address_line'], $row['postal_code'], $row['federal_code'],
-        ], JSON_THROW_ON_ERROR));
+        ];
+        if ($version !== null) {
+            array_unshift($values, $version);
+        }
+        $oldFingerprint = hash('sha256', json_encode($values, JSON_THROW_ON_ERROR));
         $this->expectExceptionMessage('normalization.stale');
 
         (new DataNormalization($this->database))->apply('clubs', [1 => $oldFingerprint]);

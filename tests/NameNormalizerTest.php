@@ -21,9 +21,18 @@ final class NameNormalizerTest extends TestCase
         yield 'dotted CS' => ['c.s. SYNTHETIC JUDO', 'CS Synthetic Judo'];
         yield 'initials CS' => ['c s SYNTHETIC JUDO', 'CS Synthetic Judo'];
         yield 'plain CS' => ['cs SYNTHETIC JUDO', 'CS Synthetic Judo'];
+        yield 'mixed SE' => ['S.e. SYNTHETIC JUDO', 'S.E. Synthetic Judo'];
+        yield 'plain SE' => ['SE SYNTHETIC JUDO', 'S.E. Synthetic Judo'];
+        yield 'lowercase SE' => ['se SYNTHETIC JUDO', 'S.E. Synthetic Judo'];
+        yield 'dotted SE without final dot' => ['s.e SYNTHETIC JUDO', 'S.E. Synthetic Judo'];
+        yield 'spaced SE' => [' s . E . SYNTHETIC JUDO ', 'S.E. Synthetic Judo'];
+        yield 'initials SE' => ['s e SYNTHETIC JUDO', 'S.E. Synthetic Judo'];
+        yield 'canonical SE' => ['S.E. Synthetic Judo', 'S.E. Synthetic Judo'];
+        yield 'SE in parentheses' => ['JUDO (s.e.)', 'Judo (S.E.)'];
         yield 'both acronyms and accents' => ["a.s.d. c.s. JUDO CITTA' GIU’", 'ASD CS Judo Città Giù'];
         yield 'acronyms in parentheses' => ['JUDO (a.s.d.) - c.s.', 'Judo (ASD) - CS'];
         yield 'do not change word fragments' => ['ASDRUBALE CSEN ACCADEMIA', 'Asdrubale Csen Accademia'];
+        yield 'do not change SE word fragments' => ['SERIE SESTO ESEMPIO', 'Serie Sesto Esempio'];
         yield 'do not change embedded initials' => ['XASD JUDO_CS', 'Xasd Judo_Cs'];
         yield 'normalized' => ['ASD Synthetic Judo Città', 'ASD Synthetic Judo Città'];
         yield 'empty' => [" \t\n", ''];
@@ -48,6 +57,7 @@ final class NameNormalizerTest extends TestCase
         yield 'internal apostrophes' => ["D'ANGELO O'CONNOR", "D'angelo O'connor"];
         yield 'internal typographic apostrophe' => ['D’ESPOSITO', 'D’esposito'];
         yield 'person initials remain initials' => ['A.S.D. C.S.', 'A.s.d. C.s.'];
+        yield 'SE is specific to club names' => ['SE S.E.', 'Se S.e.'];
     }
 
     #[DataProvider('personNames')]
@@ -61,6 +71,7 @@ final class NameNormalizerTest extends TestCase
     {
         self::assertSame(NameNormalizer::clubKey("a.s.d. CITTA'"), NameNormalizer::clubKey('ASD Città'));
         self::assertSame(NameNormalizer::clubKey('C.S. SYNTHETIC'), NameNormalizer::clubKey('CS Synthetic'));
+        self::assertSame(NameNormalizer::clubKey('SE SYNTHETIC'), NameNormalizer::clubKey('S.E. Synthetic'));
         self::assertSame(NameNormalizer::personKey("GIU'"), NameNormalizer::personKey('Giù'));
         self::assertSame(NameNormalizer::personKey("O'CONNOR"), NameNormalizer::personKey('O’Connor'));
         self::assertSame(NameNormalizer::personKey("PE\u{0301}REZ"), NameNormalizer::personKey('Pérez'));

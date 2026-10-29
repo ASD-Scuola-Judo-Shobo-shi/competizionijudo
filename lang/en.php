@@ -29,7 +29,7 @@ return [
     ],
     'normalization' => [
         'title' => 'Normalize club and athlete data',
-        'help' => 'Review formatting across clubs: ASD/CS abbreviations, title-cased names, accents, whitespace, email casing and federal codes. Select the records to update. Athletes remain in their clubs; competition snapshots and sporting data are preserved.',
+        'help' => 'Review formatting across clubs: ASD/CS/S.E. abbreviations, title-cased names, accents, whitespace, email casing and federal codes. Select the records to update. Athletes remain in their clubs; competition snapshots and sporting data are preserved.',
         'data' => 'Data to review',
         'clubs' => 'Clubs',
         'athletes' => 'Athletes',

@@ -7,7 +7,7 @@ namespace App\Validation;
 final class NameNormalizer
 {
     // Increment when name rules change so older previews cannot authorize new matches.
-    public const VERSION = 2;
+    public const VERSION = 3;
 
     private const APEX_VOWELS = [
         'a' => 'à', 'e' => 'è', 'i' => 'ì', 'o' => 'ò', 'u' => 'ù',
@@ -39,7 +39,8 @@ final class NameNormalizer
         return preg_replace([
             '/(?<![\p{L}\p{M}\p{N}_])a[.\s]*s[.\s]*d(?>(?:\s*\.)?)(?![\p{L}\p{M}\p{N}_])/iu',
             '/(?<![\p{L}\p{M}\p{N}_])c[.\s]*s(?>(?:\s*\.)?)(?![\p{L}\p{M}\p{N}_])/iu',
-        ], ['ASD', 'CS'], $value) ?? $value;
+            '/(?<![\p{L}\p{M}\p{N}_])s[.\s]*e(?>(?:\s*\.)?)(?![\p{L}\p{M}\p{N}_])/iu',
+        ], ['ASD', 'CS', 'S.E.'], $value) ?? $value;
     }
 
     public static function personKey(string $value): string
