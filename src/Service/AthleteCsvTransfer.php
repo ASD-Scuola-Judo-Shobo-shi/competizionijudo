@@ -10,6 +10,7 @@ use App\Model\Belt;
 use App\Model\Database;
 use App\Model\Gender;
 use App\Validation\AthleteInputValidator;
+use App\Validation\NameNormalizer;
 use DateTimeImmutable;
 use DateTimeZone;
 use RuntimeException;
@@ -629,8 +630,8 @@ final class AthleteCsvTransfer
      */
     private function nameIdentity(array $row): ?string
     {
-        $lastName = $this->identityValue($row['last_name'] ?? '');
-        $firstName = $this->identityValue($row['first_name'] ?? '');
+        $lastName = NameNormalizer::personKey($row['last_name'] ?? '');
+        $firstName = NameNormalizer::personKey($row['first_name'] ?? '');
 
         if ($lastName === '' || $firstName === '') {
             return null;

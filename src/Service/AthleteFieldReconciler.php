@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Model\Belt;
+use App\Validation\NameNormalizer;
 
 final class AthleteFieldReconciler
 {
@@ -88,7 +89,7 @@ final class AthleteFieldReconciler
 
     public function titleCaseName(string $value): string
     {
-        return mb_convert_case($this->cleanText($value), MB_CASE_TITLE, 'UTF-8');
+        return NameNormalizer::person($value);
     }
 
     public function formatWeight(?float $weight): string
@@ -217,10 +218,5 @@ final class AthleteFieldReconciler
         $rank = array_search($belt, Belt::cases(), true);
 
         return is_int($rank) ? $rank : null;
-    }
-
-    private function cleanText(string $value): string
-    {
-        return trim(preg_replace('/\s+/u', ' ', $value) ?? $value);
     }
 }

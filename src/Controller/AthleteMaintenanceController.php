@@ -15,6 +15,7 @@ use App\Core\View;
 use App\Model\Database;
 use App\Service\AthleteDuplicateCleanupResult;
 use App\Service\AthleteDuplicateReconciler;
+use App\Validation\NameNormalizer;
 use Throwable;
 
 final class AthleteMaintenanceController extends Controller
@@ -157,10 +158,12 @@ final class AthleteMaintenanceController extends Controller
         $previewedAt = is_array($preview) && isset($preview['previewed_at']) && is_int($preview['previewed_at'])
             ? $preview['previewed_at']
             : null;
+        $normalizationVersion = is_array($preview) ? ($preview['normalization_version'] ?? null) : null;
         if (
             $previewClubId !== ($clubId ?? 0)
             || $previewedAt === null
             || time() - $previewedAt > self::PREVIEW_MAX_AGE_SECONDS
+            || $normalizationVersion !== NameNormalizer::VERSION
         ) {
             $errors[] = __('admin.athlete_cleanup.errors.preview_required');
         }
@@ -171,6 +174,7 @@ final class AthleteMaintenanceController extends Controller
         Session::set(self::PREVIEW_SESSION_KEY, [
             'club_id' => $clubId ?? 0,
             'previewed_at' => time(),
+            'normalization_version' => NameNormalizer::VERSION,
         ]);
     }
 

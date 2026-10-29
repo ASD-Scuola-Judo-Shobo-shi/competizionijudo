@@ -167,6 +167,40 @@ final class AthleteDuplicateReconcilerTest extends TestCase
         )->fetchColumn());
     }
 
+    public function testDuplicateGroupsUseNormalizedAccentsAndPreserveClubAndBirthDateBoundaries(): void
+    {
+        $this->insertAthlete(1, 201, "PERU'", "GIU'", 'M', '2012-04-05', 50.0, 'green');
+        $this->insertAthlete(2, 201, 'Perù', 'Giù', 'M', '2012-04-05', 50.0, 'green');
+        $this->insertAthlete(3, 202, 'Perù', 'Giù', 'M', '2012-04-05', 50.0, 'green');
+        $this->insertAthlete(4, 201, 'PERÙ', 'GIÙ', 'M', '2013-04-05', 50.0, 'green');
+        $this->insertEntry(10, 100, 201, 2);
+
+        $result = (new AthleteDuplicateReconciler($this->database))->run(true);
+
+        self::assertSame([2], $result->groups[0]['duplicate_ids']);
+        self::assertSame('Perù', $this->athlete(1)['last_name']);
+        self::assertSame('Giù', $this->athlete(1)['first_name']);
+        self::assertSame(1, (int) $this->database->query('SELECT athlete_id FROM entries WHERE id = 10')->fetchColumn());
+        self::assertSame([1, 3, 4], array_map('intval', $this->database->query('SELECT id FROM athletes ORDER BY id')->fetchAll(PDO::FETCH_COLUMN)));
+        self::assertCount(1, $result->nameCollisions);
+        self::assertSame(['2012-04-05', '2013-04-05'], $result->nameCollisions[0]['birth_dates']);
+    }
+
+    public function testNormalizedDuplicatesWithOverlappingEntriesRemainBlocked(): void
+    {
+        $this->insertAthlete(1, 201, "PERU'", "GIU'", 'M', '2012-04-05', 50.0, 'green');
+        $this->insertAthlete(2, 201, 'Perù', 'Giù', 'M', '2012-04-05', 50.0, 'green');
+        $this->insertEntry(10, 100, 201, 1);
+        $this->insertEntry(11, 100, 201, 2);
+
+        $result = (new AthleteDuplicateReconciler($this->database))->run(true);
+
+        self::assertSame([], $result->groups);
+        self::assertSame('overlapping_entries', $result->blockedGroups[0]['reason']);
+        self::assertSame("PERU'", $this->athlete(1)['last_name']);
+        self::assertSame(2, (int) $this->database->query('SELECT COUNT(*) FROM athletes')->fetchColumn());
+    }
+
     public function testClubFilterAndCallerOwnedTransactionLimitTheChanges(): void
     {
         $this->insertAthlete(1, 201, 'Rossi', 'Mario', 'M', '2012-04-05', null, null);

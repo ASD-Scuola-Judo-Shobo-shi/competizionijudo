@@ -229,15 +229,34 @@ final class ClubRegistrationControllerTest extends TestCase
         );
     }
 
+    public function testNormalizedClubNameDuplicateIsRejectedBeforeSendingConfirmation(): void
+    {
+        $this->database->prepare(
+            'INSERT INTO clubs (federal_code, name, email, phone, city, province, contact_first_name, contact_last_name, password_hash)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([
+            'SYN-EXISTING', "a.s.d. SYNTHETIC CITTA'", 'existing@example.test', '0700000000',
+            'Nuoro', 'Provincia di Nuoro', 'Synthetic', 'Contact', 'synthetic-hash',
+        ]);
+        $mailer = new FakePasswordResetMailer();
+
+        $response = $this->submit($mailer, $this->createStub(Logger::class), null, 'ASD Synthetic Città');
+
+        self::assertStringContainsString(e(__('club.register.errors.club_exists')), $response->content());
+        self::assertSame([], $mailer->confirmationSent);
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM club_registration_confirmations')->fetchColumn());
+    }
+
     private function submit(
         FakePasswordResetMailer $mailer,
         Logger $logger,
-        ?AuthenticationThrottle $throttle = null
+        ?AuthenticationThrottle $throttle = null,
+        string $clubName = 'New Synthetic Club'
     ): \App\Core\Response {
         $password = str_repeat('x', PasswordPolicy::MINIMUM_LENGTH);
         $request = new Request('POST', '/clubs/register', [], [
             'csrf_token' => csrf_token(),
-            'name' => 'New Synthetic Club',
+            'name' => $clubName,
             'federal_code' => 'SYN-NEW',
             'email' => 'New.Club@Example.Test',
             'phone' => '0700000000',

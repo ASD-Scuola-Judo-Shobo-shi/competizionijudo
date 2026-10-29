@@ -114,6 +114,22 @@ final class AthleteDuplicateMaintenanceControllerTest extends TestCase
         self::assertSame(2, $this->entryAthlete(10));
     }
 
+    public function testApplyRequiresANewPreviewAfterNormalizationRulesChange(): void
+    {
+        Session::set('athlete_duplicate_cleanup_preview', ['club_id' => 201, 'previewed_at' => time()]);
+        $request = $this->postRequest([
+            'club_id' => '201',
+            'operation' => 'apply',
+            'backup_confirmed' => '1',
+            'confirmation' => AthleteMaintenanceController::CONFIRMATION,
+        ]);
+
+        $response = (new AthleteMaintenanceController($this->view, $request))->duplicates($request);
+
+        self::assertStringContainsString(e(__('admin.athlete_cleanup.errors.preview_required')), $response->content());
+        self::assertSame(2, $this->athleteCount(201));
+    }
+
     public function testPreviewThenApplyMergesOnceAndConsumesThePreviewAuthorization(): void
     {
         $preview = $this->postRequest([

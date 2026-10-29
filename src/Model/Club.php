@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Model;
 
 use App\Security\CredentialFingerprint;
+use App\Validation\NameNormalizer;
 
 final class Club
 {
@@ -75,11 +76,21 @@ final class Club
 
     public static function findByName(string $name): ?self
     {
-        $stmt = Database::connection()->prepare('SELECT * FROM clubs WHERE name = ?');
-        $stmt->execute([$name]);
-        $row = $stmt->fetch();
+        $key = NameNormalizer::clubKey($name);
+        if ($key === '') {
+            return null;
+        }
+        // Compare identity fields in one pass; hydrate only the matching club.
+        $stmt = Database::connection()->prepare('SELECT id, name FROM clubs ORDER BY id');
+        $stmt->execute();
+        while ($row = $stmt->fetch()) {
+            if (NameNormalizer::clubKey((string) $row['name']) === $key) {
+                $stmt->closeCursor();
+                return self::findById((int) $row['id']);
+            }
+        }
 
-        return $row ? self::fromArray($row) : null;
+        return null;
     }
 
     /** @return list<array{id:int, name:string}> */

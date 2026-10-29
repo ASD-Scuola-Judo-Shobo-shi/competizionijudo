@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Validation\NameNormalizer;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -115,7 +116,7 @@ final class DataNormalization
     /** @param array<string, mixed> $row */
     private function fingerprint(string $type, array $row): string
     {
-        $values = [$type, (int) $row['id'], (int) ($row['club_id'] ?? 0)];
+        $values = [NameNormalizer::VERSION, $type, (int) $row['id'], (int) ($row['club_id'] ?? 0)];
         foreach ($this->fields($type) as $field) {
             $values[] = $row[$field];
         }
@@ -129,15 +130,16 @@ final class DataNormalization
     private function changes(string $type, array $row): array
     {
         $changes = [];
-        $names = new AthleteFieldReconciler();
         foreach ($this->fields($type) as $field) {
             if ($row[$field] === null) {
                 continue;
             }
             $before = (string) $row[$field];
             $after = trim(preg_replace('/\s+/u', ' ', $before) ?? $before);
-            if (in_array($field, ['last_name', 'first_name', 'contact_first_name', 'contact_last_name'], true)) {
-                $after = $names->titleCaseName($after);
+            if ($type === 'clubs' && $field === 'name') {
+                $after = NameNormalizer::club($after);
+            } elseif (in_array($field, ['last_name', 'first_name', 'contact_first_name', 'contact_last_name'], true)) {
+                $after = NameNormalizer::person($after);
             } elseif ($field === 'email') {
                 $after = mb_strtolower(trim($before), 'UTF-8');
             } elseif ($field === 'federal_code') {

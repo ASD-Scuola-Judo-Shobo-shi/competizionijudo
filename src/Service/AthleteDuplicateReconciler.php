@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Validation\NameNormalizer;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -438,8 +439,8 @@ final class AthleteDuplicateReconciler
     /** @param array<string, mixed> $athlete */
     private function nameKey(array $athlete): ?string
     {
-        $lastName = mb_strtolower($this->cleanText((string) $athlete['last_name']), 'UTF-8');
-        $firstName = mb_strtolower($this->cleanText((string) $athlete['first_name']), 'UTF-8');
+        $lastName = NameNormalizer::personKey((string) $athlete['last_name']);
+        $firstName = NameNormalizer::personKey((string) $athlete['first_name']);
 
         return $lastName !== '' && $firstName !== ''
             ? $lastName . "\0" . $firstName

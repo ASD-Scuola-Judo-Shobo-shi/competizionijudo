@@ -25,6 +25,12 @@ per page, detects stale previews, and applies each selection atomically. It
 preserves club ownership, sporting fields, notes, and frozen competition snapshots;
 it does not merge athletes between clubs. Conflicting unique identifiers roll
 back the entire selection and must be resolved through the existing edit forms.
+Club names use title case, preserving `ASD` and `CS` in uppercase and collapsing
+their dotted or spaced variants. Word-final vowel/apostrophe forms such as
+`u'` become accented letters (`ù`); apostrophes inside names are preserved.
+Club registration checks, athlete imports, and duplicate cleanup compare these
+normalized names, including equivalent apostrophe and Italian accent encodings.
+Normalization previews created before a rule change must be refreshed.
 
 ## Supported features
 

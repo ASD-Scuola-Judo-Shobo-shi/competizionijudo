@@ -347,6 +347,62 @@ final class AthleteCsvWorkflowTest extends TestCase
         )->fetchColumn());
     }
 
+    public function testImportMatchesExistingNamesAfterAccentNormalization(): void
+    {
+        $this->database->prepare(
+            'INSERT INTO athletes (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt, membership_number)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([303, 201, "PERU'", 'GIU’', 'M', '2012-04-05', 50, 'green', 'OLD-ACCENT']);
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+            'Perù,Giù,M,2012-04-05,50,green,NEW-ACCENT',
+        ]));
+
+        $result = (new AthleteCsvTransfer())->import($path, 201);
+
+        self::assertSame(0, $result->created);
+        self::assertSame(1, $result->updated);
+        self::assertSame([], $result->issues);
+        $athlete = $this->database->query('SELECT last_name, first_name, membership_number FROM athletes WHERE id = 303')->fetch();
+        self::assertSame(['last_name' => 'Perù', 'first_name' => 'Giù', 'membership_number' => 'OLD-ACCENT / NEW-ACCENT'], $athlete);
+    }
+
+    public function testImportDetectsDuplicateNormalizedNamesWithinTheFile(): void
+    {
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+            "PERU',GIU',M,2012-04-05,50,green,ACCENT-ONE",
+            'Perù,Giù,M,2012-04-05,50,green,ACCENT-TWO',
+        ]));
+
+        $result = (new AthleteCsvTransfer())->import($path, 201);
+
+        self::assertSame(1, $result->created);
+        self::assertSame(1, $result->skipped());
+        self::assertSame('club.area.csv.duplicate_name', $result->issues[0]->translationKey);
+    }
+
+    public function testImportReportsAmbiguousNormalizedMatchesWithoutMergingThem(): void
+    {
+        $insert = $this->database->prepare(
+            'INSERT INTO athletes (id, club_id, last_name, first_name, gender, birth_date, weight_kg, belt, membership_number)
+             VALUES (?, 201, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $insert->execute([303, "PERU'", "GIU'", 'M', '2012-04-05', 50, 'green', 'ACCENT-ONE']);
+        $insert->execute([304, 'Perù', 'Giù', 'M', '2012-04-05', 50, 'green', 'ACCENT-TWO']);
+        $path = $this->temporaryCsv(implode("\n", [
+            'last_name,first_name,gender,birth_date,weight_kg,belt,membership_number',
+            'PERÙ,GIÙ,M,2012-04-05,50,green,NEW-ACCENT',
+        ]));
+
+        $result = (new AthleteCsvTransfer())->import($path, 201);
+
+        self::assertSame(0, $result->created);
+        self::assertSame(0, $result->updated);
+        self::assertSame('club.area.csv.ambiguous_match', $result->issues[0]->translationKey);
+        self::assertSame(2, (int) $this->database->query('SELECT COUNT(*) FROM athletes WHERE id IN (303, 304)')->fetchColumn());
+    }
+
     public function testImportMatchesArchivedNamesCaseInsensitively(): void
     {
         $athlete = $this->database->prepare(

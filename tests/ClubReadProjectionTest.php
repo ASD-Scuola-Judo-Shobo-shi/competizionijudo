@@ -9,6 +9,7 @@ use App\Model\Database;
 use PDO;
 use PDOStatement;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
@@ -94,6 +95,53 @@ final class ClubReadProjectionTest extends TestCase
         self::assertSame('SYN-007', $clubs[0]->federal_code);
         self::assertSame('', $clubs[0]->contact_first_name);
         self::assertNull($clubs[0]->postal_code);
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function clubCounts(): iterable
+    {
+        yield 'one club' => [1];
+        yield 'many clubs' => [75];
+    }
+
+    #[DataProvider('clubCounts')]
+    public function testNormalizedNameLookupUsesTwoQueriesAndStreamsIdentityFields(int $clubCount): void
+    {
+        $rows = [];
+        for ($id = 1; $id < $clubCount; $id++) {
+            $rows[] = ['id' => $id, 'name' => 'Other Synthetic Club ' . $id];
+        }
+        $rows[] = ['id' => $clubCount, 'name' => "a.s.d. JUDO CITTA'"];
+        $names = $this->createMock(PDOStatement::class);
+        $names->expects(self::once())->method('execute')->with()->willReturn(true);
+        $names->expects(self::exactly($clubCount))->method('fetch')->willReturnOnConsecutiveCalls(...$rows);
+        $names->expects(self::never())->method('fetchAll');
+        $names->expects(self::once())->method('closeCursor')->willReturn(true);
+        $club = $this->statementReturning([
+            'id' => $clubCount, 'name' => "a.s.d. JUDO CITTA'", 'email' => 'synthetic@example.test',
+        ], $clubCount);
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::exactly(2))->method('prepare')->willReturnCallback(
+            static fn(string $sql): PDOStatement => match ($sql) {
+                'SELECT id, name FROM clubs ORDER BY id' => $names,
+                'SELECT * FROM clubs WHERE id = ?' => $club,
+            }
+        );
+        $this->databaseConnection->setValue(null, $database);
+
+        $result = Club::findByName('ASD Judo Città');
+
+        self::assertSame($clubCount, $result?->id);
+        self::assertSame('synthetic@example.test', $result?->email);
+    }
+
+    public function testNormalizedNameLookupDoesNotQueryForABlankName(): void
+    {
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::never())->method('prepare');
+        $this->databaseConnection->setValue(null, $database);
+
+        self::assertNull(Club::findByName(" \t "));
     }
 
     /** @return PDO&MockObject */

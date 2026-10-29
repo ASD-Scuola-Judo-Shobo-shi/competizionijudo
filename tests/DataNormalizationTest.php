@@ -94,6 +94,34 @@ final class DataNormalizationTest extends TestCase
         self::assertSame([], $service->preview('athletes', 0));
     }
 
+    public function testClubNameRulesArePreviewedAppliedAndIdempotent(): void
+    {
+        $name = " a.s.d. c.s. JUDO CITTA' ";
+        $this->database->prepare('UPDATE clubs SET name = ?, contact_first_name = ? WHERE id = 1')->execute([$name, "GIU'"]);
+        $service = new DataNormalization($this->database);
+
+        $preview = $service->preview('clubs', 0);
+
+        self::assertSame('ASD CS Judo Città', $preview[0]['changes']['name']['after']);
+        self::assertSame('Giù', $preview[0]['changes']['contact_first_name']['after']);
+        self::assertSame($name, $this->database->query('SELECT name FROM clubs WHERE id = 1')->fetchColumn());
+        self::assertSame(1, $service->apply('clubs', [1 => $preview[0]['fingerprint']]));
+        self::assertSame('ASD CS Judo Città', $this->database->query('SELECT name FROM clubs WHERE id = 1')->fetchColumn());
+        self::assertSame([], $service->preview('clubs', 0));
+    }
+
+    public function testRuleChangeInvalidatesPreviewsCreatedWithThePreviousRules(): void
+    {
+        $row = $this->database->query('SELECT * FROM clubs WHERE id = 1')->fetch();
+        $oldFingerprint = hash('sha256', json_encode([
+            'clubs', 1, 0, $row['name'], $row['contact_first_name'], $row['contact_last_name'],
+            $row['email'], $row['phone'], $row['address_line'], $row['postal_code'], $row['federal_code'],
+        ], JSON_THROW_ON_ERROR));
+        $this->expectExceptionMessage('normalization.stale');
+
+        (new DataNormalization($this->database))->apply('clubs', [1 => $oldFingerprint]);
+    }
+
     public function testStaleSelectionRejectsTheEntireBatch(): void
     {
         $service = new DataNormalization($this->database);
