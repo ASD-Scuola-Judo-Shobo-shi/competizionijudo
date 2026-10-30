@@ -11,6 +11,7 @@ use App\Model\Club;
 use App\Model\Event;
 use App\Model\JudoCategory;
 use App\Presentation\EventEntriesViewModel;
+use App\Presentation\EventPosterViewModel;
 use App\Presentation\Navigation;
 use PHPUnit\Framework\TestCase;
 
@@ -124,14 +125,14 @@ final class ViewRenderTest extends TestCase
         $authorized = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => true,
-            'canViewPoster' => false,
+            'posters' => EventPosterViewModel::forEvents([$event], false),
             'loggedInClubId' => null,
             'eventExceptions' => [],
         ], $this->layoutData('/events')));
         $anonymous = $view->render('events/index', array_merge([
             'events' => [$event],
             'canViewEntries' => false,
-            'canViewPoster' => false,
+            'posters' => EventPosterViewModel::forEvents([$event], false),
             'loggedInClubId' => null,
             'eventExceptions' => [],
         ], $this->layoutData('/events')));
@@ -174,12 +175,12 @@ final class ViewRenderTest extends TestCase
 
         $anonymousIndex = $view->render('events/index', array_merge(
             $indexData,
-            ['canViewPoster' => false],
+            ['posters' => EventPosterViewModel::forEvents([$event], false)],
             $this->layoutData('/events')
         ));
         $clubIndex = $view->render('events/index', array_merge(
             $indexData,
-            ['canViewPoster' => true],
+            ['posters' => EventPosterViewModel::forEvents([$event], true)],
             $this->layoutData('/events')
         ));
 
@@ -204,12 +205,12 @@ final class ViewRenderTest extends TestCase
         ];
         $anonymousDetails = $view->render('events/details', array_merge(
             $detailsData,
-            ['canViewPoster' => false],
+            ['poster' => new EventPosterViewModel($event, false)],
             $this->layoutData('/events/details')
         ));
         $clubDetails = $view->render('events/details', array_merge(
             $detailsData,
-            ['canViewPoster' => true],
+            ['poster' => new EventPosterViewModel($event, true)],
             $this->layoutData('/events/details')
         ));
 

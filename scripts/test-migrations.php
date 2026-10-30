@@ -317,8 +317,9 @@ function preparePreSquashDatabase(PDO $database): void
         )"
     );
     $database->exec(
-        "INSERT INTO events (id, name, date, location, published, closed)
-         VALUES (1, 'Synthetic Pre-squash Event', '2026-07-01', 'Synthetic Venue', 1, 1)"
+        "INSERT INTO events (id, name, date, location, published, closed, poster_file)
+         VALUES (1, 'Synthetic Pre-squash Event', '2026-07-01', 'Synthetic Venue', 1, 1,
+                 'uploads/events/poster_legacy_synthetic.pdf')"
     );
     $database->exec(
         "INSERT INTO entries (
@@ -462,6 +463,7 @@ function assertUnrecordedForwardMigrationsCanBeRetried(PDO $database): void
         '20260729_000002_add_event_sepa_payment_details.sql',
         '20260730_000001_repair_registration_payment_schema_drift.sql',
         '20260816_000001_repair_club_terms_acceptance_audit_fields.sql',
+        '20261030_000001_add_public_event_poster.sql',
     ];
     $placeholders = implode(', ', array_fill(0, count($versions), '?'));
     $statement = $database->prepare(
@@ -528,6 +530,7 @@ function assertSchemaContract(PDO $database): void
     assertColumn($database, 'events', 'sepa_bic', 'YES');
     assertColumn($database, 'events', 'owner_club_id', 'YES');
     assertColumn($database, 'events', 'archived_at', 'YES');
+    assertColumn($database, 'events', 'public_poster_file', 'YES');
     assertIndex($database, 'events', 'idx_events_archive_date', 'archived_at,date,id');
     assertIndex($database, 'events', 'idx_events_owner_archive_date', 'owner_club_id,archived_at,date,id');
     assertIndex($database, 'events', 'idx_events_owner_date', 'owner_club_id,date,id');
@@ -779,9 +782,13 @@ function assertCleanWritesAndReads(PDO $database): void
         )"
     );
     $database->exec(
-        "INSERT INTO events (id, name, date, location, published, closed)
-         VALUES (301, 'Synthetic Clean Event', '2026-07-01', 'Synthetic Venue', 1, 0)"
+        "INSERT INTO events (id, name, date, location, published, closed, poster_file, public_poster_file)
+         VALUES (301, 'Synthetic Clean Event', '2026-07-01', 'Synthetic Venue', 1, 0,
+                 'uploads/events/poster_private_synthetic.pdf', 'uploads/events/poster_public_synthetic.png')"
     );
+    $posters = $database->query('SELECT poster_file, public_poster_file FROM events WHERE id = 301')->fetch();
+    assertSameValue('uploads/events/poster_private_synthetic.pdf', $posters['poster_file'], 'Private poster write failed.');
+    assertSameValue('uploads/events/poster_public_synthetic.png', $posters['public_poster_file'], 'Public poster write failed.');
     $database->exec(
         "INSERT INTO event_registration_options (
             id, event_id, name, fee_cents, is_default, is_active, sort_order
@@ -895,7 +902,7 @@ function assertPreSquashDataPreserved(PDO $database): void
     assertSameValue('TEST', $club['affiliation'], 'Pre-squash affiliation was not preserved.');
 
     $event = $database->query(
-        'SELECT name, date, location FROM events WHERE id = 1'
+        'SELECT name, date, location, poster_file, public_poster_file FROM events WHERE id = 1'
     )->fetch();
     if (!is_array($event)) {
         throw new RuntimeException('Pre-squash event fixture disappeared.');
@@ -903,6 +910,12 @@ function assertPreSquashDataPreserved(PDO $database): void
     assertSameValue('Synthetic Pre-squash Event', $event['name'], 'Pre-squash event name changed.');
     assertSameValue('2026-07-01', $event['date'], 'Pre-squash event date changed.');
     assertSameValue('Synthetic Venue', $event['location'], 'Pre-squash event location changed.');
+    assertSameValue(
+        'uploads/events/poster_legacy_synthetic.pdf',
+        $event['poster_file'],
+        'Existing private poster changed during upgrade.'
+    );
+    assertSameValue(null, $event['public_poster_file'], 'Upgrade exposed an existing private poster publicly.');
 
     $athlete = $database->query('SELECT last_name, first_name FROM athletes WHERE id = 1')->fetch();
     if (!is_array($athlete)) {

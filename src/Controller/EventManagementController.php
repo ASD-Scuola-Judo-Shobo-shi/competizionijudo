@@ -273,6 +273,7 @@ final class EventManagementController extends Controller
             $event = Event::fromArray(array_merge([
                 'id' => $event->id ?? 0,
                 'poster_file' => $event->poster_file ?? '',
+                'public_poster_file' => $event->public_poster_file ?? '',
                 'info_file' => $event->info_file ?? '',
             ], $data));
         }
@@ -396,7 +397,7 @@ final class EventManagementController extends Controller
     private function eventUploads(): array
     {
         $uploads = [];
-        foreach (['poster_file', 'info_file'] as $field) {
+        foreach (['poster_file', 'public_poster_file', 'info_file'] as $field) {
             if (
                 isset($_FILES[$field])
                 && is_array($_FILES[$field])

@@ -2,7 +2,7 @@
 /** @var array $events */
 /** @var int|null $loggedInClubId */
 /** @var array<int, bool> $eventExceptions */
-/** @var bool $canViewPoster */
+/** @var array<int, \App\Presentation\EventPosterViewModel> $posters */
 ?>
 <div class="card">
     <?php if (empty($events)) : ?>
@@ -12,13 +12,7 @@
 <?php foreach ($events as $ev) : ?>
         <?php
         $detailsUrl = base_url('/events/details?event=' . (string) $ev->id);
-        $posterUrl = $canViewPoster && $ev->poster_file
-            ? base_url('/events/poster?event=' . (string) $ev->id)
-            : null;
-        $posterExtension = $ev->poster_file
-            ? strtolower(pathinfo($ev->poster_file, PATHINFO_EXTENSION))
-            : '';
-        $isImagePoster = in_array($posterExtension, ['jpg', 'jpeg', 'png'], true);
+        $poster = $posters[$ev->id];
         ?>
         <div class="event-card-public">
             <?php if ($ev->closed) : ?>
@@ -32,9 +26,9 @@
                     href="<?= e($detailsUrl) ?>"
                     aria-label="<?= e(__('events.details') . ': ' . $ev->name) ?>"
                 >
-                    <?php if ($posterUrl && $isImagePoster) : ?>
-                        <img src="<?= e($posterUrl) ?>" alt="<?= e(__('events.poster_alt', ['name' => $ev->name])) ?>">
-                    <?php elseif ($posterUrl) : ?>
+                    <?php if ($poster->url && $poster->isImage) : ?>
+                        <img src="<?= e($poster->url) ?>" alt="<?= e(__('events.poster_alt', ['name' => $ev->name])) ?>">
+                    <?php elseif ($poster->url) : ?>
                         <span class="poster-pdf">
                             <strong><?= e(__('events.poster_pdf')) ?></strong>
                         </span>
@@ -42,7 +36,7 @@
                         <span class="poster-placeholder">
                             <span class="poster-placeholder-label">
                                 <strong>
-                                    <?= e($ev->poster_file
+                                    <?= e($poster->requiresLogin
                                         ? __('events.poster_login_required')
                                         : __('events.poster_not_available')) ?>
                                 </strong>

@@ -22,6 +22,7 @@ use App\Model\EventRegistrationException;
 use App\Model\EventRegistrationOption;
 use App\Presentation\EventEntriesRoster;
 use App\Presentation\EventEntriesViewModel;
+use App\Presentation\EventPosterViewModel;
 use App\Service\EventEntriesCsvTransfer;
 use App\Service\EventRegistrationSelection;
 use App\Service\EventUploadStorage;
@@ -92,7 +93,7 @@ final class EventController extends Controller
             'title' => __('nav.events'),
             'events' => $events,
             'canViewEntries' => $this->canViewEntries(),
-            'canViewPoster' => $loggedInClubId !== null,
+            'posters' => EventPosterViewModel::forEvents($events, $loggedInClubId !== null),
             'loggedInClubId' => $loggedInClubId !== null ? (int) $loggedInClubId : null,
             'eventExceptions' => $this->resolveEventExceptions($events),
         ]);
@@ -125,7 +126,7 @@ final class EventController extends Controller
                 'upcomingEvents' => $upcomingEvents,
                 'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
                 'canViewEntries' => $this->canViewEntries(),
-                'canViewPoster' => $clubId !== null,
+                'poster' => new EventPosterViewModel($event, $clubId !== null),
                 'hasRegistrationException' => $hasRegistrationException,
                 'registrationOptions' => $event->registrationOptions(),
             ]);
@@ -139,7 +140,7 @@ final class EventController extends Controller
             'upcomingEvents' => $upcomingEvents,
             'eventExceptions' => $this->resolveEventExceptions($upcomingEvents),
             'canViewEntries' => $this->canViewEntries(),
-            'canViewPoster' => $clubId !== null,
+            'poster' => null,
             'hasRegistrationException' => false,
             'registrationOptions' => [],
         ]);
@@ -155,20 +156,34 @@ final class EventController extends Controller
             );
         }
 
+        return $this->servePoster($request, false);
+    }
+
+    public function publicPoster(Request $request): Response
+    {
+        return $this->servePoster($request, true);
+    }
+
+    private function servePoster(Request $request, bool $public): Response
+    {
+        $isAdministrator = AuthContext::isAdministrator();
+        $clubId = AuthContext::clubId();
+
         $eventId = (int) ($request->query('event') ?? $request->input('event') ?? 0);
         $event = $eventId > 0
             ? ($isAdministrator ? Event::findById($eventId) : Event::findPublishedById($eventId))
             : null;
-        if ($event === null && !$isAdministrator && $eventId > 0) {
-            $event = Event::findManagedById($eventId, (int) AuthContext::clubId());
+        if ($event === null && $clubId !== null && $eventId > 0) {
+            $event = Event::findManagedById($eventId, $clubId);
         }
         $fallback = $isAdministrator ? '/admin/events' : '/events';
-        if ($event === null || $event->poster_file === null) {
+        $file = $public ? $event?->public_poster_file : $event?->poster_file;
+        if (!$file) {
             return $this->redirect($fallback);
         }
 
         try {
-            $poster = $this->eventUploadStorage->read($event->poster_file);
+            $poster = $this->eventUploadStorage->read($file);
         } catch (Throwable $exception) {
             $this->reportFailure('event.poster_read_failed', $exception, $request);
 

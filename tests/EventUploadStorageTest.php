@@ -60,6 +60,7 @@ final class EventUploadStorageTest extends TestCase
     public function testPosterPathRecognitionCoversCurrentAndLegacyGeneratedNames(): void
     {
         self::assertTrue(EventUploadStorage::isPosterPath('uploads/events/poster_synthetic.png'));
+        self::assertTrue(EventUploadStorage::isPosterPath('uploads/events/poster_public_synthetic.png'));
         self::assertTrue(EventUploadStorage::isPosterPath('/uploads/events/poster20260621.pdf'));
         self::assertFalse(EventUploadStorage::isPosterPath('uploads/events/info_synthetic.pdf'));
         self::assertFalse(EventUploadStorage::isPosterPath('uploads/events/../poster_synthetic.png'));

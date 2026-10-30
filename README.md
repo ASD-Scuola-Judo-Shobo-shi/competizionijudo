@@ -19,6 +19,14 @@ are preserved under the existing retention rules. Administrators can archive via
 The Active/Archived filters expose both lists. Apply migrations before enabling
 this feature in production (`composer migrate`).
 
+Event forms accept separate private and public posters (JPG, PNG or PDF).
+Logged-in clubs see the private poster; visitors see the public poster in its
+place. Clubs also see the public poster when no private one is available.
+Existing posters remain private. Both files are served through controlled
+endpoints; public posters are available to visitors only for published,
+unarchived events. Apply migrations (`composer migrate`) before using the updated
+event editor in production.
+
 Administrators can preview formatting across clubs and athlete profiles at
 `/admin/normalization`, then apply selected records. The tool examines 50 records
 per page, detects stale previews, and applies each selection atomically. It

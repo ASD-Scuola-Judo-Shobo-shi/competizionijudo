@@ -26,6 +26,7 @@ final class Event
         public readonly ?string $sepa_bic = null,
         public readonly ?int $owner_club_id = null,
         public readonly ?string $archived_at = null,
+        public readonly ?string $public_poster_file = null,
     ) {
     }
 
@@ -60,6 +61,7 @@ final class Event
             !empty($data['sepa_bic']) ? (string) $data['sepa_bic'] : null,
             isset($data['owner_club_id']) ? (int) $data['owner_club_id'] : null,
             isset($data['archived_at']) ? (string) $data['archived_at'] : null,
+            !empty($data['public_poster_file']) ? (string) $data['public_poster_file'] : null,
         );
     }
 

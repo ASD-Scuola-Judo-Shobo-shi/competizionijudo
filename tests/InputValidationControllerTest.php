@@ -20,6 +20,7 @@ use App\Validation\EventInputValidator;
 use PDO;
 use PDOException;
 use PDOStatement;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -187,7 +188,16 @@ final class InputValidationControllerTest extends TestCase
         self::assertStringContainsString(e(__('validation.athlete_weight_invalid')), $response->content());
     }
 
-    public function testOversizedEventUploadIsRejectedBeforeDatabaseOrFileWrites(): void
+    /** @return iterable<string, array{string}> */
+    public static function eventUploadFields(): iterable
+    {
+        yield 'private poster' => ['poster_file'];
+        yield 'public poster' => ['public_poster_file'];
+        yield 'info file' => ['info_file'];
+    }
+
+    #[DataProvider('eventUploadFields')]
+    public function testOversizedEventUploadIsRejectedBeforeDatabaseOrFileWrites(string $field): void
     {
         $locations = $this->createMock(PDOStatement::class);
         $locations->method('fetchAll')->willReturn([]);
@@ -206,7 +216,7 @@ final class InputValidationControllerTest extends TestCase
         $database->expects(self::never())->method('beginTransaction');
         $this->setDatabase($database);
         Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
-        $_FILES['poster_file'] = [
+        $_FILES[$field] = [
             'error' => UPLOAD_ERR_OK,
             'size' => EventInputValidator::MAX_UPLOAD_BYTES + 1,
             'tmp_name' => '/not-read-for-oversized-controller-upload',

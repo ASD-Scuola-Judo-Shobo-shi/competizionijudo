@@ -588,7 +588,11 @@ final class AdminController extends Controller
             Event::remove($eventId);
             if ($event !== null) {
                 try {
-                    $this->eventUploadStorage->purgeMany([$event->poster_file, $event->info_file]);
+                    $this->eventUploadStorage->purgeMany([
+                        $event->poster_file,
+                        $event->public_poster_file,
+                        $event->info_file,
+                    ]);
                 } catch (\Throwable $exception) {
                     $this->reportFailure('admin.event_upload_purge_failed', $exception, $request);
                 }

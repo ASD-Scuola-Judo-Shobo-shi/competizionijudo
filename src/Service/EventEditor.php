@@ -61,11 +61,16 @@ final class EventEditor
         $persisted = false;
         try {
             $locandina = $event->poster_file ?? null;
+            $publicPoster = $event->public_poster_file ?? null;
             $informativa = $event->info_file ?? null;
 
             if (isset($uploads['poster_file'])) {
                 $locandina = $this->eventUploadStorage->store($uploads['poster_file'], 'poster_');
                 $storedUploads[] = $locandina;
+            }
+            if (isset($uploads['public_poster_file'])) {
+                $publicPoster = $this->eventUploadStorage->store($uploads['public_poster_file'], 'poster_public_');
+                $storedUploads[] = $publicPoster;
             }
             if (isset($uploads['info_file'])) {
                 $informativa = $this->eventUploadStorage->store($uploads['info_file'], 'info_');
@@ -86,7 +91,7 @@ final class EventEditor
                 }
             }
             if ($event) {
-                $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, max_participants=?, poster_file=?, info_file=?, published=?, closed=?, sepa_account_holder=?, sepa_iban=?, sepa_bic=? WHERE id=? AND archived_at IS NULL";
+                $sql = "UPDATE events SET name=?, date=?, location=?, organizer=?, registration_deadline=?, type=?, description=?, notes=?, max_participants=?, poster_file=?, public_poster_file=?, info_file=?, published=?, closed=?, sepa_account_holder=?, sepa_iban=?, sepa_bic=? WHERE id=? AND archived_at IS NULL";
                 $params = [
                     $data['name'],
                     $data['date'],
@@ -98,6 +103,7 @@ final class EventEditor
                     $data['notes'],
                     $data['max_participants'] !== '' ? (int) $data['max_participants'] : null,
                     $locandina,
+                    $publicPoster,
                     $informativa,
                     $data['published'],
                     $data['closed'],
@@ -119,9 +125,9 @@ final class EventEditor
                 $ownerColumn = $clubId === null ? '' : ', owner_club_id';
                 $ownerPlaceholder = $clubId === null ? '' : ', ?';
                 $insertSql = 'INSERT INTO events (name, date, location, organizer, registration_deadline, type, '
-                    . 'description, notes, max_participants, poster_file, info_file, published, closed, '
+                    . 'description, notes, max_participants, poster_file, public_poster_file, info_file, published, closed, '
                     . 'sepa_account_holder, sepa_iban, sepa_bic' . $ownerColumn . ') '
-                    . 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?' . $ownerPlaceholder . ')';
+                    . 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?' . $ownerPlaceholder . ')';
                 $insertParameters = [
                     $data['name'],
                     $data['date'],
@@ -133,6 +139,7 @@ final class EventEditor
                     $data['notes'],
                     $data['max_participants'] !== '' ? (int) $data['max_participants'] : null,
                     $locandina,
+                    $publicPoster,
                     $informativa,
                     $data['published'],
                     $data['closed'],
@@ -175,6 +182,9 @@ final class EventEditor
                 $replacedUploads = [];
                 if (isset($uploads['poster_file'])) {
                     $replacedUploads[] = $event->poster_file;
+                }
+                if (isset($uploads['public_poster_file'])) {
+                    $replacedUploads[] = $event->public_poster_file;
                 }
                 if (isset($uploads['info_file'])) {
                     $replacedUploads[] = $event->info_file;

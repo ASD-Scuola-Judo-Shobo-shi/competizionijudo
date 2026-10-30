@@ -39,6 +39,7 @@ final class SchemaMigrationTest extends TestCase
                 dirname(__DIR__) . '/migrations/20261027_000001_add_event_club_ownership.sql',
                 dirname(__DIR__) . '/migrations/20261027_000002_add_event_archiving.sql',
                 dirname(__DIR__) . '/migrations/20261027_000003_add_shared_event_management.sql',
+                dirname(__DIR__) . '/migrations/20261030_000001_add_public_event_poster.sql',
             ],
             array_values($migrations)
         );

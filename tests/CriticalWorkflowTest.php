@@ -534,7 +534,7 @@ final class CriticalWorkflowTest extends TestCase
                 description TEXT,
                 notes TEXT,
                 max_participants INTEGER,
-                poster_file TEXT,
+                poster_file TEXT, public_poster_file TEXT,
                 info_file TEXT,
                 published INTEGER NOT NULL DEFAULT 0,
                 closed INTEGER NOT NULL DEFAULT 0,

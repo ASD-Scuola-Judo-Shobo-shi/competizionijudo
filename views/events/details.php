@@ -4,7 +4,7 @@
 /** @var list<\App\Model\Event> $upcomingEvents */
 /** @var array<int, bool> $eventExceptions */
 /** @var bool $canViewEntries */
-/** @var bool $canViewPoster */
+/** @var \App\Presentation\EventPosterViewModel|null $poster */
 /** @var bool $hasRegistrationException */
 /** @var list<\App\Model\EventRegistrationOption>|null $registrationOptions */
 $registrationOptions ??= [];
@@ -12,12 +12,6 @@ $registrationOptions ??= [];
 
 <?php if ($event !== null) : ?>
     <?php
-    $posterUrl = $canViewPoster && $event->poster_file
-        ? base_url('/events/poster?event=' . (string) $event->id)
-        : null;
-    $posterExt = $event->poster_file ? strtolower(pathinfo($event->poster_file, PATHINFO_EXTENSION)) : '';
-    $isImagePoster = in_array($posterExt, ['jpg', 'jpeg', 'png'], true);
-
     $infoRows = array_filter([
         __('events.name')                  => $event->name,
         __('events.date')                  => $event->date,
@@ -31,16 +25,16 @@ $registrationOptions ??= [];
         <div class="event-details-layout">
             <!-- Event Poster -->
             <div class="event-details-poster">
-                <?php if ($posterUrl && $isImagePoster) : ?>
-                    <a href="<?= e($posterUrl) ?>" target="_blank">
-                        <img src="<?= e($posterUrl) ?>" alt="<?= e(__('events.poster_alt', ['name' => $event->name])) ?>">
+                <?php if ($poster->url && $poster->isImage) : ?>
+                    <a href="<?= e($poster->url) ?>" target="_blank">
+                        <img src="<?= e($poster->url) ?>" alt="<?= e(__('events.poster_alt', ['name' => $event->name])) ?>">
                     </a>
-                <?php elseif ($posterUrl) : ?>
+                <?php elseif ($poster->url) : ?>
                     <div class="poster-pdf">
                         <strong><?= e(__('events.poster_pdf')) ?></strong><br>
-                        <a class="btn orange" href="<?= e($posterUrl) ?>" target="_blank" download><?= e(__('events.download_poster')) ?></a>
+                        <a class="btn orange" href="<?= e($poster->url) ?>" target="_blank" download><?= e(__('events.download_poster')) ?></a>
                     </div>
-                <?php elseif ($event->poster_file && !$canViewPoster) : ?>
+                <?php elseif ($poster->requiresLogin) : ?>
                     <div class="poster-placeholder">
                         <span class="poster-placeholder-label">
                             <strong><?= e(__('events.poster_login_required')) ?></strong>

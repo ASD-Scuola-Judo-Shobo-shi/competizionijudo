@@ -90,7 +90,7 @@ final class MigrationRunnerTest extends TestCase
         $migrationQuery->method('fetchAll')->willReturn($historicalVersions);
         $recordedVersions = [];
         $recordStatement = $this->createMock(PDOStatement::class);
-        $recordStatement->expects(self::exactly(23))
+        $recordStatement->expects(self::exactly(24))
             ->method('execute')
             ->willReturnCallback(
                 static function (?array $parameters = null) use (&$recordedVersions): bool {
@@ -106,7 +106,7 @@ final class MigrationRunnerTest extends TestCase
             ->willReturn(true);
         $database = $this->createMock(PDO::class);
         $database->expects(self::exactly(3))->method('query')->willReturn($migrationQuery);
-        $database->expects(self::exactly(24))
+        $database->expects(self::exactly(25))
             ->method('prepare')
             ->willReturnOnConsecutiveCalls(
                 $recordStatement,
@@ -132,12 +132,13 @@ final class MigrationRunnerTest extends TestCase
                 $recordStatement,
                 $recordStatement,
                 $recordStatement,
+                $recordStatement,
                 $recordStatement
             );
-        $database->expects(self::atLeast(23))->method('exec');
-        $database->expects(self::exactly(23))->method('beginTransaction')->willReturn(true);
-        $database->expects(self::exactly(22))->method('inTransaction')->willReturn(true);
-        $database->expects(self::exactly(23))->method('commit')->willReturn(true);
+        $database->expects(self::atLeast(24))->method('exec');
+        $database->expects(self::exactly(24))->method('beginTransaction')->willReturn(true);
+        $database->expects(self::exactly(23))->method('inTransaction')->willReturn(true);
+        $database->expects(self::exactly(24))->method('commit')->willReturn(true);
 
         (new MigrationRunner($database))->run();
 
@@ -165,6 +166,7 @@ final class MigrationRunnerTest extends TestCase
             '20261027_000001_add_event_club_ownership.sql',
             '20261027_000002_add_event_archiving.sql',
             '20261027_000003_add_shared_event_management.sql',
+            '20261030_000001_add_public_event_poster.sql',
         ], $recordedVersions);
     }
 

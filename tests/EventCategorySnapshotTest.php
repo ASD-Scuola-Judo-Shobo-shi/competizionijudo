@@ -133,7 +133,7 @@ final class EventCategorySnapshotTest extends TestCase
             CREATE TABLE events (
                 id INTEGER PRIMARY KEY, name TEXT NOT NULL, date TEXT NOT NULL,
                 location TEXT NOT NULL, organizer TEXT, registration_deadline TEXT, type TEXT,
-                description TEXT, notes TEXT, max_participants INTEGER, poster_file TEXT, info_file TEXT,
+                description TEXT, notes TEXT, max_participants INTEGER, poster_file TEXT, public_poster_file TEXT, info_file TEXT,
                 published INTEGER NOT NULL, closed INTEGER NOT NULL, sepa_iban TEXT, sepa_bic TEXT, sepa_account_holder TEXT, archived_at TEXT
             )'
         );

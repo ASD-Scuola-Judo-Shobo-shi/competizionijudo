@@ -131,11 +131,13 @@ final class DeleteActionsTest extends TestCase
              (501, 'Synthetic event', '2099-07-01', 'Test city', '', '', 'only_competitive', '', '',
               NULL, 'uploads/events/old-poster.pdf', 'uploads/events/old-info.pdf', 1, 0)"
         );
+        $database->exec("UPDATE events SET public_poster_file = 'uploads/events/poster_public_old.pdf' WHERE id = 501");
         $this->setDatabase($database);
         $publicRoot = sys_get_temp_dir() . '/competizionijudo-delete-' . bin2hex(random_bytes(8));
         mkdir($publicRoot . '/uploads/events', 0755, true);
         file_put_contents($publicRoot . '/uploads/events/old-poster.pdf', 'synthetic');
         file_put_contents($publicRoot . '/uploads/events/old-info.pdf', 'synthetic');
+        file_put_contents($publicRoot . '/uploads/events/poster_public_old.pdf', 'synthetic');
         $request = new Request('POST', $archive ? '/admin/events/archive' : '/admin/events/delete', [], [
             'csrf_token' => csrf_token(),
             'event_id' => '501',
@@ -157,17 +159,30 @@ final class DeleteActionsTest extends TestCase
             self::assertNotNull($database->query('SELECT archived_at FROM events')->fetchColumn());
             self::assertFileExists($publicRoot . '/uploads/events/old-poster.pdf');
             self::assertFileExists($publicRoot . '/uploads/events/old-info.pdf');
+            self::assertFileExists($publicRoot . '/uploads/events/poster_public_old.pdf');
             unlink($publicRoot . '/uploads/events/old-poster.pdf');
             unlink($publicRoot . '/uploads/events/old-info.pdf');
+            unlink($publicRoot . '/uploads/events/poster_public_old.pdf');
         }
         self::assertFileDoesNotExist($publicRoot . '/uploads/events/old-poster.pdf');
         self::assertFileDoesNotExist($publicRoot . '/uploads/events/old-info.pdf');
+        self::assertFileDoesNotExist($publicRoot . '/uploads/events/poster_public_old.pdf');
         rmdir($publicRoot . '/uploads/events');
         rmdir($publicRoot . '/uploads');
         rmdir($publicRoot);
     }
 
-    public function testReplacingEventUploadPurgesPreviousFile(): void
+    /** @return iterable<string, array{string, bool}> */
+    public static function posterReplacementCases(): iterable
+    {
+        yield 'private replacement' => ['poster_file', false];
+        yield 'public replacement' => ['public_poster_file', false];
+        yield 'private rollback' => ['poster_file', true];
+        yield 'public rollback' => ['public_poster_file', true];
+    }
+
+    #[DataProvider('posterReplacementCases')]
+    public function testReplacingEventUploadPurgesOnlyTheReplacedFileAfterCommit(string $field, bool $fail): void
     {
         Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
         $database = new PDO('sqlite::memory:');
@@ -181,6 +196,11 @@ final class DeleteActionsTest extends TestCase
              (502, 'Synthetic event', '2099-07-01', 'Test city', '', '', 'only_competitive', '', '',
               NULL, 'uploads/events/old-poster.png', NULL, 1, 0)"
         );
+        $database->exec("UPDATE events SET public_poster_file = 'uploads/events/poster_public_old.png' WHERE id = 502");
+        if ($fail) {
+            $database->exec("CREATE TRIGGER reject_event_update BEFORE UPDATE ON events
+                BEGIN SELECT RAISE(FAIL, 'Synthetic event update failure'); END");
+        }
         $database->exec(
             "INSERT INTO event_registration_options (
                 id, event_id, name, fee_cents, is_default, is_active, sort_order
@@ -191,12 +211,13 @@ final class DeleteActionsTest extends TestCase
         $publicRoot = sys_get_temp_dir() . '/competizionijudo-replace-' . bin2hex(random_bytes(8));
         mkdir($publicRoot . '/uploads/events', 0755, true);
         file_put_contents($publicRoot . '/uploads/events/old-poster.png', 'synthetic old image');
+        file_put_contents($publicRoot . '/uploads/events/poster_public_old.png', 'synthetic old public image');
         $temporaryUpload = $publicRoot . '/new-poster.png';
         file_put_contents(
             $temporaryUpload,
             base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true)
         );
-        $_FILES['poster_file'] = [
+        $_FILES[$field] = [
             'name' => 'new-poster.png',
             'type' => 'image/png',
             'tmp_name' => $temporaryUpload,
@@ -227,6 +248,8 @@ final class DeleteActionsTest extends TestCase
                 return rename($source, $destination);
             }
         );
+        $logger = $this->createMock(\App\Core\Logger::class);
+        $logger->expects($fail ? self::once() : self::never())->method('error');
 
         try {
             $response = (new AdminController(
@@ -234,17 +257,32 @@ final class DeleteActionsTest extends TestCase
                 $request,
                 null,
                 null,
-                null,
+                $logger,
                 $storage
             ))->eventDetails($request);
 
-            self::assertSame(302, $response->status(), strip_tags($response->content()));
-            self::assertFileDoesNotExist($publicRoot . '/uploads/events/old-poster.png');
-            $storedPath = (string) $database->query('SELECT poster_file FROM events WHERE id = 502')->fetchColumn();
-            self::assertMatchesRegularExpression('#^uploads/events/poster_.*\.png$#', $storedPath);
-            self::assertFileExists($publicRoot . '/' . $storedPath);
+            $paths = [
+                'poster_file' => 'uploads/events/old-poster.png',
+                'public_poster_file' => 'uploads/events/poster_public_old.png',
+            ];
+            $stored = $database->query('SELECT poster_file, public_poster_file FROM events WHERE id = 502')->fetch(PDO::FETCH_ASSOC);
+            if ($fail) {
+                self::assertSame(200, $response->status());
+                self::assertStringContainsString(e(__('errors.save_failed')), $response->content());
+                self::assertSame($paths, $stored);
+                self::assertCount(2, glob($publicRoot . '/uploads/events/*') ?: []);
+            } else {
+                self::assertSame(302, $response->status(), strip_tags($response->content()));
+                self::assertFileDoesNotExist($publicRoot . '/' . $paths[$field]);
+                $prefix = $field === 'poster_file' ? 'poster_' : 'poster_public_';
+                self::assertMatchesRegularExpression('#^uploads/events/' . $prefix . '.*\.png$#', $stored[$field]);
+                self::assertFileExists($publicRoot . '/' . $stored[$field]);
+            }
+            $otherField = $field === 'poster_file' ? 'public_poster_file' : 'poster_file';
+            self::assertSame($paths[$otherField], $stored[$otherField]);
+            self::assertFileExists($publicRoot . '/' . $paths[$otherField]);
         } finally {
-            unset($_FILES['poster_file']);
+            unset($_FILES[$field]);
             foreach (glob($publicRoot . '/uploads/events/*') ?: [] as $file) {
                 unlink($file);
             }
@@ -344,7 +382,7 @@ final class DeleteActionsTest extends TestCase
             CREATE TABLE events (
                 id INTEGER PRIMARY KEY, name TEXT NOT NULL, date TEXT NOT NULL, location TEXT NOT NULL,
                 organizer TEXT NOT NULL, registration_deadline TEXT, type TEXT NOT NULL,
-                description TEXT, notes TEXT, max_participants INTEGER, poster_file TEXT, info_file TEXT,
+                description TEXT, notes TEXT, max_participants INTEGER, poster_file TEXT, public_poster_file TEXT, info_file TEXT,
                 published INTEGER NOT NULL, closed INTEGER NOT NULL,
                 sepa_account_holder TEXT, sepa_iban TEXT, sepa_bic TEXT, archived_at TEXT
             )'

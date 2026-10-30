@@ -169,6 +169,226 @@ final class EventLifecycleTest extends TestCase
         }
     }
 
+    /** @return iterable<string, array{bool, ?string, ?string, ?string, bool}> */
+    public static function posterVisibilityCases(): iterable
+    {
+        yield 'guest sees public image' => [false, 'png', 'png', '/events/public-poster?event=101', true];
+        yield 'club sees private image' => [true, 'png', 'png', '/events/poster?event=101', true];
+        yield 'guest cannot see private image' => [false, 'png', null, null, false];
+        yield 'club sees existing private image' => [true, 'png', null, '/events/poster?event=101', true];
+        yield 'club falls back to public image' => [true, null, 'png', '/events/public-poster?event=101', true];
+        yield 'guest sees public PDF' => [false, 'png', 'pdf', '/events/public-poster?event=101', false];
+        yield 'club sees private PDF' => [true, 'pdf', 'png', '/events/poster?event=101', false];
+        yield 'no posters for guest' => [false, null, null, null, false];
+        yield 'no posters for club' => [true, null, null, null, false];
+    }
+
+    #[DataProvider('posterVisibilityCases')]
+    public function testPublicPagesSelectThePosterForTheCurrentAudience(
+        bool $loggedIn,
+        ?string $privateExtension,
+        ?string $publicExtension,
+        ?string $expectedUrl,
+        bool $image
+    ): void {
+        $this->insertEvent(date: '2099-07-01');
+        $this->database->prepare('UPDATE events SET poster_file = ?, public_poster_file = ? WHERE id = 101')->execute([
+            $privateExtension ? 'uploads/events/poster_synthetic.' . $privateExtension : null,
+            $publicExtension ? 'uploads/events/poster_public_synthetic.' . $publicExtension : null,
+        ]);
+        if ($loggedIn) {
+            Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        }
+        foreach (['index', 'details'] as $action) {
+            $request = new Request('GET', '/events/' . $action, ['event' => '101']);
+            $response = (new EventController($this->view, $request))->$action($request);
+            self::assertSame(200, $response->status());
+            $html = $response->content();
+            self::assertStringNotContainsString('uploads/events/poster', $html);
+            if ($expectedUrl === null) {
+                self::assertStringNotContainsString('/events/poster?event=101', $html);
+                self::assertStringNotContainsString('/events/public-poster?event=101', $html);
+                self::assertStringContainsString(e(__($privateExtension
+                    ? 'events.poster_login_required'
+                    : 'events.poster_not_available')), $html);
+            } elseif ($image) {
+                self::assertStringContainsString('src="' . $expectedUrl . '"', $html);
+            } else {
+                self::assertStringContainsString(e(__('events.poster_pdf')), $html);
+                self::assertStringNotContainsString('src="' . $expectedUrl . '"', $html);
+                if ($action === 'details') {
+                    self::assertStringContainsString('href="' . $expectedUrl . '"', $html);
+                }
+            }
+            if (!$loggedIn) {
+                self::assertStringNotContainsString('/events/poster?event=101', $html);
+            } elseif ($privateExtension !== null) {
+                self::assertStringNotContainsString('/events/public-poster?event=101', $html);
+            }
+        }
+    }
+
+    /** @return iterable<string, array{string, bool, bool, bool, int}> */
+    public static function publicPosterAccessCases(): iterable
+    {
+        yield 'guest published' => ['guest', true, false, true, 200];
+        yield 'guest draft' => ['guest', false, false, true, 302];
+        yield 'guest archived' => ['guest', true, true, true, 302];
+        yield 'guest private only' => ['guest', true, false, false, 302];
+        yield 'club published' => ['club', true, false, true, 200];
+        yield 'club foreign draft' => ['club', false, false, true, 302];
+        yield 'club foreign archive' => ['club', true, true, true, 302];
+        yield 'manager draft preview' => ['manager', false, false, true, 200];
+        yield 'administrator draft preview' => ['admin', false, false, true, 200];
+        yield 'administrator archive preview' => ['admin', true, true, true, 200];
+    }
+
+    #[DataProvider('publicPosterAccessCases')]
+    public function testPublicPosterEndpointScopesAccessAndNeverReturnsThePrivateFile(
+        string $principal,
+        bool $published,
+        bool $archived,
+        bool $hasPublicPoster,
+        int $expectedStatus
+    ): void {
+        $this->insertEvent(published: $published);
+        $this->database->prepare(
+            'UPDATE events SET owner_club_id = 201, archived_at = ?, public_poster_file = ? WHERE id = 101'
+        )->execute([
+            $archived ? '2026-01-01 00:00:00' : null,
+            $hasPublicPoster ? 'uploads/events/poster_public_synthetic.pdf' : null,
+        ]);
+        if ($principal === 'admin') {
+            Session::authenticateAdministrator(hash('sha256', 'test-administrator-credential'));
+        } elseif ($principal !== 'guest') {
+            Session::authenticateClub($principal === 'manager' ? 201 : 202, hash('sha256', 'test-club-credential'));
+        }
+        $publicRoot = sys_get_temp_dir() . '/competizionijudo-public-poster-' . bin2hex(random_bytes(8));
+        mkdir($publicRoot . '/uploads/events', 0755, true);
+        $publicContents = "%PDF-1.4\nSynthetic public poster\n%%EOF";
+        file_put_contents($publicRoot . '/uploads/events/poster_public_synthetic.pdf', $publicContents);
+        try {
+            $request = new Request('GET', '/events/public-poster', ['event' => '101', 'file' => 'poster_file']);
+            $response = (new EventController(
+                $this->view,
+                $request,
+                null,
+                null,
+                new EventUploadStorage($publicRoot)
+            ))->publicPoster($request);
+            self::assertSame($expectedStatus, $response->status());
+            if ($expectedStatus === 200) {
+                self::assertSame($publicContents, $response->content());
+                self::assertSame('application/pdf', $response->headers()['Content-Type']);
+                self::assertSame('attachment; filename="poster_public_synthetic.pdf"', $response->headers()['Content-Disposition']);
+                self::assertSame('private, no-store, max-age=0', $response->headers()['Cache-Control']);
+                self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
+            } else {
+                self::assertSame('/events', $response->headers()['Location']);
+            }
+        } finally {
+            unlink($publicRoot . '/uploads/events/poster_public_synthetic.pdf');
+            rmdir($publicRoot . '/uploads/events');
+            rmdir($publicRoot . '/uploads');
+            rmdir($publicRoot);
+        }
+    }
+
+    public function testPublicPosterRouteIsPublicAndDoesNotFallBackToThePrivatePoster(): void
+    {
+        $this->insertEvent();
+        $application = new Application(dirname(__DIR__));
+        (require dirname(__DIR__) . '/routes/web.php')($application->router());
+        $response = $application->handle(new Request('GET', '/events/public-poster', ['event' => '101']));
+        self::assertSame(302, $response->status());
+        self::assertSame('/events', $response->headers()['Location']);
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function publicPosterListSizes(): iterable
+    {
+        yield 'one event' => [1];
+        yield 'many events' => [50];
+    }
+
+    #[DataProvider('publicPosterListSizes')]
+    public function testPublicPosterListUsesOneQueryRegardlessOfEventCount(int $count): void
+    {
+        $this->insertEvent();
+        $row = $this->database->query('SELECT * FROM events WHERE id = 101')->fetch();
+        $row['public_poster_file'] = 'uploads/events/poster_public_synthetic.png';
+        $statement = $this->createMock(PDOStatement::class);
+        $statement->method('bindValue')->willReturn(true);
+        $statement->expects(self::once())->method('execute')->willReturn(true);
+        $statement->method('fetchAll')->willReturn(array_fill(0, $count, $row));
+        $database = $this->createMock(PDO::class);
+        $database->expects(self::once())->method('prepare')->willReturn($statement);
+        $database->expects(self::never())->method('query');
+        $this->databaseConnection->setValue(null, $database);
+        $request = new Request('GET', '/events');
+        $response = (new EventController($this->view, $request))->index($request);
+        self::assertSame($count, substr_count($response->content(), 'src="/events/public-poster?event=101"'));
+    }
+
+    public function testClubCanCreateSeparatePostersAndPreviewThemAfterValidationErrors(): void
+    {
+        Session::authenticateClub(201, hash('sha256', 'test-club-credential'));
+        $publicRoot = sys_get_temp_dir() . '/competizionijudo-create-posters-' . bin2hex(random_bytes(8));
+        mkdir($publicRoot, 0755, true);
+        $privateFile = $publicRoot . '/private.png';
+        $publicFile = $publicRoot . '/public.pdf';
+        file_put_contents($privateFile, base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+            true
+        ));
+        file_put_contents($publicFile, "%PDF-1.4\nSynthetic public poster\n%%EOF");
+        $originalFiles = $_FILES;
+        foreach (['poster_file' => $privateFile, 'public_poster_file' => $publicFile] as $field => $file) {
+            $_FILES[$field] = ['name' => basename($file), 'tmp_name' => $file, 'size' => filesize($file), 'error' => UPLOAD_ERR_OK];
+        }
+        $storage = new EventUploadStorage($publicRoot, static fn(string $source, string $destination): bool => rename($source, $destination));
+        $data = [
+            'csrf_token' => csrf_token(), 'name' => 'Synthetic Two Poster Event', 'date' => '2099-07-01',
+            'location' => 'Synthetic Venue', 'type' => 'only_competitive', 'published' => '1',
+            'registration_options' => [['name' => 'Standard', 'fee_amount' => '0.00']],
+            'registration_option_default' => '0',
+        ];
+        try {
+            $request = new Request('POST', '/clubs/events/details', [], $data);
+            $response = (new EventManagementController($this->view, $request, null, $storage))->clubDetails($request);
+            self::assertSame(302, $response->status(), strip_tags($response->content()));
+            $event = Event::findById(1);
+            self::assertNotNull($event);
+            self::assertSame(201, $event->owner_club_id);
+            self::assertMatchesRegularExpression('#^uploads/events/poster_.*\.png$#', $event->poster_file);
+            self::assertMatchesRegularExpression('#^uploads/events/poster_public_.*\.pdf$#', $event->public_poster_file);
+            self::assertFileExists($publicRoot . '/' . $event->poster_file);
+            self::assertFileExists($publicRoot . '/' . $event->public_poster_file);
+
+            $_FILES = [];
+            foreach (['GET', 'POST'] as $method) {
+                $request = new Request($method, '/clubs/events/details', ['id' => '1'], array_replace($data, ['event_id' => '1', 'name' => '']));
+                $response = (new EventManagementController($this->view, $request, null, $storage))->clubDetails($request);
+                self::assertSame(200, $response->status());
+                self::assertStringContainsString('name="poster_file"', $response->content());
+                self::assertStringContainsString('name="public_poster_file"', $response->content());
+                self::assertStringContainsString('href="/events/poster?event=1"', $response->content());
+                self::assertStringContainsString('href="/events/public-poster?event=1"', $response->content());
+                self::assertStringNotContainsString('uploads/events/poster', $response->content());
+            }
+            self::assertSame($event->poster_file, Event::findById(1)?->poster_file);
+            self::assertSame($event->public_poster_file, Event::findById(1)?->public_poster_file);
+        } finally {
+            $_FILES = $originalFiles;
+            foreach (glob($publicRoot . '/uploads/events/*') ?: [] as $file) {
+                unlink($file);
+            }
+            rmdir($publicRoot . '/uploads/events');
+            rmdir($publicRoot . '/uploads');
+            rmdir($publicRoot);
+        }
+    }
+
     /**
      * @return iterable<string, array{bool, bool, string, string|null, bool}>
      */
@@ -1940,7 +2160,7 @@ final class EventLifecycleTest extends TestCase
                 description TEXT,
                 notes TEXT,
                 max_participants INTEGER,
-                poster_file TEXT,
+                poster_file TEXT, public_poster_file TEXT,
                 info_file TEXT,
                 published INTEGER NOT NULL,
                 closed INTEGER NOT NULL,

@@ -191,8 +191,16 @@ $enrollmentPagination ??= paginate(0, 1, 50, 'enrollment_page');
 
         <label for="event-poster_file"><?= e($isEdit ? __('admin.edit.poster') : __('admin.event_details.poster')) ?></label>
         <input type="file" id="event-poster_file" name="poster_file" accept=".pdf,.jpg,.jpeg,.png">
+        <p class="field-help"><?= e(__('events.private_poster_help')) ?></p>
         <?php if ($isEdit && !empty($event->poster_file)) : ?>
             <p><a href="<?= e(base_url(($clubManaged ? '/events/poster?event=' : '/admin/events/poster?event=') . (string) $event->id)) ?>" target="_blank"><?= e(__('events.view_current_poster')) ?></a></p>
+        <?php endif; ?>
+
+        <label for="event-public_poster_file"><?= e(__('events.public_poster')) ?></label>
+        <input type="file" id="event-public_poster_file" name="public_poster_file" accept=".pdf,.jpg,.jpeg,.png">
+        <p class="field-help"><?= e(__('events.public_poster_help')) ?></p>
+        <?php if ($isEdit && !empty($event->public_poster_file)) : ?>
+            <p><a href="<?= e(base_url('/events/public-poster?event=' . (string) $event->id)) ?>" target="_blank"><?= e(__('events.view_current_public_poster')) ?></a></p>
         <?php endif; ?>
 
         <label for="event-info_file"><?= e($isEdit ? __('admin.edit.info_file') : __('admin.event_details.info_file')) ?></label>

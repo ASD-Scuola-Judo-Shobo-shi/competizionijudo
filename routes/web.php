@@ -58,6 +58,7 @@ return static function (App\Core\Router $router): void {
     $router->get('/events', [EventController::class, 'index']);
     $router->get('/events/details', [EventController::class, 'details']);
     $router->get('/events/poster', [EventController::class, 'poster'], AuthContext::CLUB);
+    $router->get('/events/public-poster', [EventController::class, 'publicPoster']);
     $router->get('/events/entries', [EventController::class, 'entries']);
     $router->get('/events/entries/export', [EventController::class, 'exportClubEntries'], AuthContext::CLUB);
     $router->get('/events/entries/print', [\App\Controller\EventEntriesPrintController::class, 'download'], AuthContext::CLUB);

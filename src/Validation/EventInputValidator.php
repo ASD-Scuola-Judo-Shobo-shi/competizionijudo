@@ -73,7 +73,7 @@ final class EventInputValidator
             }
         }
 
-        foreach (['poster_file', 'info_file'] as $field) {
+        foreach (['poster_file', 'public_poster_file', 'info_file'] as $field) {
             $uploadError = self::uploadError($uploads[$field] ?? null);
             if ($uploadError !== null) {
                 $errors[] = $uploadError;
