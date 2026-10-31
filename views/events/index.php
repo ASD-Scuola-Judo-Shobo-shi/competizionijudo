@@ -15,12 +15,12 @@
         $poster = $posters[$ev->id];
         ?>
         <div class="event-card-public">
-            <?php if ($ev->closed) : ?>
-                <div class="event-badge-closed event-closed-badge event-closed-badge--corner">
-                    <?= e(__('events.closed')) ?>
-                </div>
-            <?php endif; ?>
             <div class="event-poster">
+                <?php if ($ev->closed) : ?>
+                    <div class="event-closed-badge event-closed-badge--poster">
+                        <?= e(__('events.closed')) ?>
+                    </div>
+                <?php endif; ?>
                 <a
                     class="event-poster-link"
                     href="<?= e($detailsUrl) ?>"

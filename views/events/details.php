@@ -25,6 +25,11 @@ $registrationOptions ??= [];
         <div class="event-details-layout">
             <!-- Event Poster -->
             <div class="event-details-poster">
+                <?php if ($event->closed) : ?>
+                    <div class="event-closed-badge event-closed-badge--poster">
+                        <?= e(__('events.closed')) ?>
+                    </div>
+                <?php endif; ?>
                 <?php if ($poster->url && $poster->isImage) : ?>
                     <a href="<?= e($poster->url) ?>" target="_blank">
                         <img src="<?= e($poster->url) ?>" alt="<?= e(__('events.poster_alt', ['name' => $event->name])) ?>">
@@ -48,14 +53,6 @@ $registrationOptions ??= [];
                     </div>
                 <?php endif; ?>
             </div>
-
-            <?php if ($event->closed) : ?>
-                <div class="badge-container">
-                    <span class="badge badge-closed event-closed-badge">
-                        <?= e(__('events.closed')) ?>
-                    </span>
-                </div>
-            <?php endif; ?>
 
             <!-- Event Details -->
             <div class="event-details-info">
