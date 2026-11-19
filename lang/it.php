@@ -947,6 +947,8 @@ return [
     'a11y' => [
         'skip_to_content' => 'Vai al contenuto principale',
         'language_selector' => 'Selettore lingua',
+        'play_judoka_animation' => 'Avvia animazione dei judoka',
+        'stop_judoka_animation' => 'Ferma animazione dei judoka',
         'use_light_theme' => 'Passa al tema chiaro',
         'use_dark_theme' => 'Passa al tema scuro',
         'main_navigation' => 'Navigazione principale',

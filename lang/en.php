@@ -947,6 +947,8 @@ return [
     'a11y' => [
         'skip_to_content' => 'Skip to main content',
         'language_selector' => 'Language selector',
+        'play_judoka_animation' => 'Play judoka animation',
+        'stop_judoka_animation' => 'Stop judoka animation',
         'use_light_theme' => 'Switch to light theme',
         'use_dark_theme' => 'Switch to dark theme',
         'main_navigation' => 'Main navigation',

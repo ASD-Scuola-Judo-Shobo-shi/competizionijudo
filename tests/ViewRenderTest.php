@@ -469,6 +469,33 @@ final class ViewRenderTest extends TestCase
         self::assertStringContainsString('html[data-theme="dark"] .poster-placeholder', $css);
     }
 
+    public function testJudokaControlIsLocalizedBesideTheLanguageSelector(): void
+    {
+        foreach (['en', 'it'] as $locale) {
+            Localization::setLocale($locale);
+            $_GET = [];
+            $view = new View(dirname(__DIR__) . '/views');
+            $html = $view->render('static/index', $this->layoutData('/'));
+
+            self::assertMatchesRegularExpression(
+                '#<form class="lang-switch"[^>]*>.*?</form>\s*<button[^>]*id="judoka-trigger"#s',
+                $html
+            );
+            self::assertStringContainsString('data-play-label="' . e(__('a11y.play_judoka_animation')) . '"', $html);
+            self::assertStringContainsString('data-stop-label="' . e(__('a11y.stop_judoka_animation')) . '"', $html);
+            self::assertStringContainsString(
+                '<script src="' . e(asset_url('assets/js/judoka-animation.js')) . '" defer></script>',
+                $html
+            );
+            self::assertStringContainsString(
+                'data-sprite-url="' . e(asset_url('assets/judoka-greet-spar.png')) . '"',
+                $html
+            );
+            self::assertMatchesRegularExpression('#data-judoka-animation[^>]*aria-hidden="true"\s+hidden>#s', $html);
+            self::assertFileExists(dirname(__DIR__) . '/public/assets/judoka-greet-spar.png');
+        }
+    }
+
     public function testExistingLogoAppearsInPageHeadingAndHomepage(): void
     {
         Localization::setLocale('en');

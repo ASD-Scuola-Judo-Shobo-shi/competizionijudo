@@ -42,6 +42,14 @@ Normalization previews created before a rule change must be refreshed.
 
 ## Supported features
 
+The header's judogi button, beside the language selector, starts or stops the
+decorative judoka animation on desktop and mobile. The equal-height athletes
+walk in, bow, briefly spar, bow again, and return to their entry edge. Automatic
+appearances follow random 90–150 second pauses while the page is visible.
+The sprite loads only when needed. Reduced motion disables automatic visits;
+the button still offers a stationary greeting/sparring routine without travel.
+Leaving the page cancels an active visit. See [animation notes](docs/judoka-animation.md).
+
 | Capability | Routes | Access |
 | --- | --- | --- |
 | Public events and event details | `/events`, `/events/details` | Public |

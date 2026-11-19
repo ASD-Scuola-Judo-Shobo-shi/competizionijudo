@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /** @var string $appName */
 /** @var string $favicon */
 /** @var string $locale */
@@ -30,6 +32,7 @@
 
     <link rel="icon" href="<?= $favicon ?>">
     <link rel="stylesheet" href="<?= e(asset_url('assets/css/app.css')) ?>">
+    <script src="<?= e(asset_url('assets/js/judoka-animation.js')) ?>" defer></script>
     <script nonce="<?= e($cspNonce) ?>">
         (function() {
             try {
@@ -107,6 +110,17 @@
                         <option value="en" <?= $locale === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
                     </select>
                 </form>
+                <button
+                    type="button"
+                    class="theme-toggle judoka-trigger"
+                    id="judoka-trigger"
+                    aria-pressed="false"
+                    aria-label="<?= e(__('a11y.play_judoka_animation')) ?>"
+                    data-play-label="<?= e(__('a11y.play_judoka_animation')) ?>"
+                    data-stop-label="<?= e(__('a11y.stop_judoka_animation')) ?>"
+                    title="<?= e(__('a11y.play_judoka_animation')) ?>">
+                    <span aria-hidden="true">🥋</span>
+                </button>
                 <button
                     type="button"
                     class="theme-toggle"
@@ -214,6 +228,18 @@
             <a href="<?= e(base_url('/terms')) ?>"><?= e(__('terms.footer_link')) ?></a>
         </div>
     </footer>
+
+    <div
+        class="judoka-animation"
+        data-judoka-animation
+        data-state="idle"
+        data-sprite-url="<?= e(asset_url('assets/judoka-greet-spar.png')) ?>"
+        aria-hidden="true"
+        hidden>
+        <div class="judoka-animation__walker">
+            <div class="judoka-animation__sprite"></div>
+        </div>
+    </div>
 
     <script nonce="<?= e($cspNonce) ?>">
         (function() {
