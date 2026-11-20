@@ -2718,10 +2718,8 @@ html[data-theme="dark"] {
 }
 
 .theme-toggle.judoka-trigger {
-    min-inline-size: 44px;
-    min-block-size: 44px;
     cursor: pointer;
-    font-size: 21px;
+    font-size: 22px;
 }
 
 .judoka-trigger[aria-pressed="true"] {

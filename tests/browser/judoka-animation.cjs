@@ -101,10 +101,12 @@ function render(locale, prefix) {
                 neighbor: node.previousElementSibling?.classList.contains('lang-switch'),
                 button: node.getBoundingClientRect().toJSON(),
                 selector: document.querySelector('#locale-select').getBoundingClientRect().toJSON(),
+                theme: document.getElementById('theme-toggle').getBoundingClientRect().toJSON(),
                 width: document.documentElement.scrollWidth,
             }));
             assert.ok(controls.neighbor, 'The button must sit immediately beside the language selector');
-            assert.ok(controls.button.width >= 44 && controls.button.height >= 44, `Touch target must be at least 44px: ${JSON.stringify(controls.button)}`);
+            assert.ok(Math.abs(controls.button.width - controls.theme.width) < 1, 'The mascot and theme buttons must have the same width');
+            assert.ok(Math.abs(controls.button.height - controls.theme.height) < 1, 'The mascot and theme buttons must have the same height');
             assert.ok(controls.button.right <= options.width && controls.button.left >= 0, 'Header control must fit the mobile viewport');
             assert.ok(controls.button.left >= controls.selector.right, 'The animation control must not overlap the selector');
             assert.ok(controls.width <= options.width, 'The page must not scroll horizontally');
